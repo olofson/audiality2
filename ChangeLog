@@ -1,0 +1,668 @@
+===============================================================================
+20130102: First release under the new name: Audiality 2, version 1.9.0!
+===============================================================================
+
+20130102:
+	* Added 'filter12' 12 dB/oct resonant bp/lp/hp filter unit.
+	* Added demos/tests for 'filter12' to test.a2s.
+	* Units are no longer asked to process zero frames.
+	* Proper linear pitch cutoff ramping in 'filter12'; coefficient ramping
+	  only within fragments.
+
+20130101:
+	* Added 'limiter' unit. (Port of the old hardwired one.)
+	* Added single channel configuration to 'limiter'.
+	* Made quick mono conversions of EvilNoises and K2Intro.
+	* Compiler checks for 'return' instructions in the wrong place, as
+	  those would crash the VM. (This should never happen, so the VM has no
+	  stack check.)
+	* Added bank info pane to a2test.c.
+	* Added 'fbdelay' unit.
+
+20121231:
+	* Cracked the "random loud sounds" bug: wtosc a2o_wavetable() wasn't
+	  clearing the output buffer when the pitch went supersonic, allowing
+	  old audio to leak into the mix in certain cases, depending on buffer
+	  usage patterns.
+
+20121228:
+	* Added 'dbgunit' for script controlled debugging.
+
+20121227:
+	* API calls that can set the API status now reset it to A2_OK if all
+	  goes well.
+	* a2c_Try() macro now resets the compiler error status.
+	* Added NEG VM instruction.
+
+20121226:
+	* Back to encoding wave handles as fixed point integer values on the
+	  code/VM level! (We still have f20 numbers inside the instructions...)
+	* A2_voice.flags now initialized in all cases.
+	* Added dirty a2_InstaKillAllVoices() hack to avoid disaster if
+	  unloading objects while they're in use by a realtime context.
+	* Fixed legato mode (CTRL + F-keys) in a2test.c.
+	* Added A2_RTERRORS flag that enables realtime safe error reporting
+	  from engine contexts.
+
+20121225:
+	* Cleaned up the "implicit API ownership" logic:
+		* All API calls that create new objects set the A2_APIOWNED
+		  flag on the returned handles.
+		* a2_Assign() and a2_Export() now clear any A2_APIOWNED flag.
+	* Wave creation/uploading API changed according to the above change.
+	* Banks don't count exports as dependencies, but instead make sure that
+	  any exports added are listed as dependencies. (This hopefully avoids
+	  a few nasty situations that can othewise occur if application code
+	  manually adds exports with a2_Export()...)
+	* 'run' is deprecated! Prints a compiler warning that explains why...
+	* Fixed A2_WAVEPOST; it came out A2_MAXFRAG frames bigger than needed!
+	* Added 'handle' field to A2_voice, so we can detach handles properly.
+
+20121224:
+	* Removed the audio/audio->Process checks in the API calls.
+	  (We don't have a context if there's no driver!)
+	* Added realtime error reporting mechanism for non-critical errors.
+	* Added a2_KillSub() for killing all subvoices of a voice.
+	* Added a2_SendSub() for sending to all subvoices of a voice.
+	* Wired the API message pump to commonly used/relevant API calls;
+	  a2_Now(), a2_Starta(), a2_Playa(), a2_Senda(), a2_SendSuba(),
+	  a2_Kill() and a2_KillSub().
+	* Added CMake Debug target flags for the test directory.
+	* Reworked a2test.c for the new API.
+
+20121223:
+	* Added another lock-free FIFO for responses to the API context.
+	* Message oriented internal API for the FIFOs.
+	* Removed the voice groups and switched to a handle based voice API.
+	* Internal voice messages are now called events; A2_event.
+	* Variable size messages in the lock-free FIFOs.
+
+20121222:
+	* Cleaned up, generic driver interface, ready to transparently support
+	  additional types of drivers.
+	* Added driver registry, allowing applications to add drivers that can
+	  be used exactly like the builtin ones.
+	* Added proper "stream" audio driver for a2_Read().
+	* Added a2_String() and a2_Name().
+	* Added string constants to the language and engine. (A2_TSTRING)
+	* Added a2_Export().
+	* a2_RegisterUnit(), a2_NewBank() etc no longer export or assign; they
+	  just create objects!
+
+20121221:
+	* Added a2_Assign().
+	* Added A2_nametab and A2_handletab internal utilities. (utilities.c)
+	* a2_CloseCompiler() now cleans up the lexer states properly. (Fixes
+	  memory leaks after compile errors in certain situations.)
+	* Only TK_VALUE symbols are 16.16 fixed point - all others are integer!
+	* Fixed some incorrect uses of strncmp().
+
+20121220:
+	* Added compiler.h.
+	* Added A2_export, for A2_bank exports only.
+	* New bank/object access API:
+		* a2_Get() which takes a node handle and a path string and
+		  returns the handle of the corresponding object.
+		* a2_GetExport() and a2_GetExportName() to list the exports of
+		  objects that have them.
+	* Confined A2_symbol to be a compiler internal only. Compiler grabs
+	  exports directly from objects instead.
+	* '_' is now a valid character in A2S symbol names!
+
+20121219:
+	* Made A2_wave a public interface, moving all of the playback
+	  implementation details to units that use waves. (They all still have
+	  to agree with the way the engine prepares the waves, though, as we
+	  don't want waves tied to specific oscillator units!)
+	* Moved wave management code and builtin waves into waves.c.
+	* Removed the somewhat broken a2_CustomWave() API. (Waves are now
+	  public data that's supposed to be accessible by external addon
+	  oscillator units!)
+	* Added type names to rchm.
+	* a2_TypeName() now wired to rchm; returns NULL for "unknown!"
+	* a2_WaveAlloc() renamed a2_WaveNew() and removed the length argument.
+	* a2_WaveWrite() now just buffers the data is is - allocation,
+	  conversion and processing is done by a2_WavePrepare().
+
+20121218:
+	* Each program entry point has its own private code buffer now.
+	* Added stacked A2_coder object to keep track of where VM code goes.
+	* Added A2_handleflags, and moved other flags out of the way, so we
+	  can send handle flags along with the other flags internally.
+	* Added a2_UnloadAll() as a quick way of decreasing the reference
+	  count on all banks loaded via a2_LoadString() and a2_Load().
+
+20121217:
+	* The xinsert unit now makes a callback with (NULL, 0, 0, <userdata>)
+	  when the unit is destroyed, or the callback is replaced.
+	* Added lock-free handle manager with reference counting; rchm.[ch].
+	* Eliminated A2_object - bank objects now use the RCHM instead.
+	* Eliminated a2_UntangleBank(), a2_CheckWaves() etc. It should all rely
+	  on the handle refcounting now!
+	* Replaced the A2_program 'eps' array with a map to 'funcs'.
+
+20121216:
+	* Masking off the CLOSE/DESTROY flags when forwarding init flags, as
+	  these are actually per-object resource management flags...!
+	* Moved the core processing and VM code into core.c.
+
+20121215:
+	* Added the a2_Read() API. (Uses the "dummy" audio driver.)
+	* Implemented the Run() method on the "dummy" audio driver.
+	* Added A2_I24, representing the internal buffer fixed point format,
+	  to A2_sampleformats.
+	* Samples changed to int32_t everywhere. (Was 'int' in some places.)
+	* a2_WaveWrite() etc will now return A2_BADFORMAT instead of failing
+	  silently if they receive an unsupported format code.
+	* Removed bogus 6 dB attenuation in gui_oscilloscope().
+	* Added Audiality 2 logo to a2test.
+	* Compile errors before code generation has been enabled no longer
+	  result in empty programs that crash the VM. (New bug that impacted
+	  voice struct defs.)
+	* Added pulse1 through pulse9 waves.
+
+20121214:
+	* Updated the test program, a2test.c to the current API.
+	* Implemented stereo oscilloscopes in a2test.c.
+	* Removed the stereo-only master output restriction.
+	* Removed a2_SelectSysDriver() and a2_SelectAudioDriver().
+	* Added driver pointer arguments to a2_Open(), allowing drivers to be
+	  specified directly. Specify NULL for defaults.
+	* Drivers now have a separate Destroy() method; Close() is now only
+	  supposed to close the device!
+	* Engine states take responsibility for any state changes they make to
+	  drivers; state creates driver - state destroys driver, etc.
+	* Audio driver buffer format changed to 24 bits. (8.24 fixed point.)
+	* JACK driver now keeps its library handle and function pointers in the
+	  driver struct, allowing multiple driver instances in the process.
+	* Removed nonsense arbitrary 24 dB attenuation in  a2_ProcessMaster().
+	* Added A2_config API, eliminating the increasing number of arguments
+	  to a2_Open() and a2_SubState(). This structure also doubles as the
+	  public interface to the current configuration of a running state!
+	* Split the master/substate shared parts out into A2_sharedstate.
+	* Unit Initialize() method now gets the A2_config instead of the state.
+	* An in-use A2_config has a pointer to the state using it.
+	* Driver Open() methods now get the A2_config, instead of Audiality
+	  messing directly with fields in the driver structs.
+
+===============================================================================
+20121213: ChipSound officially renamed as Audiality 2!
+-------------------------------------------------------------------------------
+	* Project name is "audiality2", to avoid conflicts.
+	* Development branch version bumped to 1.9.0.
+	* API prefixes changed from cs_/CS_ to a2_/A2_.
+	* C headers go in include/Audiality2
+	* Script file extension changed from .csl to .a2s.
+===============================================================================
+
+20121213:
+	* Added cs_Hermite2c()/cs_Hermite2().
+	* New logo, web site updates...
+
+20121212:
+	* Actually wired local functions to the correct array in all places...
+	* panmix unit:
+		* Panning outside the [-1, 1] range now clamps the louder
+		  channel while feeding the other channel back in inverted.
+		* 2 in/1 out now implements pan as a crossfade control.
+	* Minor optimization in cs_SetRamp(); no need to set rr->delta there!
+
+20121211:
+	* Removed the buffer pointer arrays from units. **inputs and **outputs
+	  in CS_unit are now managed by the host instead.
+	* Removed the CS_voice 'input' and 'output' CS_bus pointers.
+	* CS_voice now has a raw noutputs/outputs pair for the sole purpose of
+	  pointing subvoices to the right place.
+	* Removed the CS_structitem inputs/outputs channel index arrays, as we
+	  haven't implemented explicit wiring yet anyway.
+	* Implemented replacing mode for all 'panmix' variants.
+	* Sensible compile errors when trying to use '*' channel wildcards
+	  where there can be no inputs or outputs.
+
+20121210:
+	* Documented subvoice audio routing and the 'inline' unit.
+	* Added cs_Tap() API for tapping audio out of groups, as opposed to
+	  cs_Insert() which expects the callback to overwrite them buffers with
+	  output audio.
+	* Proper 'xinsert' unit that handles the cs_Tap() and cs_Insert() APIs.
+	* Added YM3812 style waveforms; halfsine, abssine and quartersine.
+	* Optimized the wtosc replacing/adding callbacks by means of inline DSP
+	  code, avoiding buffer clearing and wrapper function call overhead.
+	* Autowiring tracks the current chain channel count and throws a
+	  compile error if there's a mismatch.
+
+20121209:
+	* Local functions now have their own, dynamically allocated array of
+	  entry point structs.
+	* Voices now default to having no units if there's no struct statement!
+	* Compile error for inserting a unit with inputs first in a chain!
+	* Documented the modular voice structures and autowiring a little.
+
+20121208:
+	* Added builtin waveforms 'pulse5' through 'pulse50'.
+	* 'def's are now be exported when on the top level scope. (Use '.def'
+	  to keep them from being exported from the module.)
+
+20121207:
+	* Added replacing/adding Process distinction to the unit API.
+
+20121205:
+	* Unit input counts now also support '*' for scaling to the voice
+	  output channel count.
+	* Unit I/O count '*' now means "match output channel count". The new
+	  '>' token means that, and also tells the autowiring to target the
+	  output rather than scratch buffers.
+	* Voice structures using '*' now set CS_program.buffers to a negative
+	  value, to tell voices to ensure that there are enough scratch buffers
+	  to match the output bus.
+
+20121204:
+	* Added 'descriptor' field to CS_unit.
+	* Removed the Deinitialize callback from CS_unit.
+	* Turned the cs_Inline() 'insert' hack unit into a real unit.
+
+20121202:
+	* Removed the hardwired master output effects.
+
+20121201:
+	* Removed some obsolete issues from the TODO.
+	* Added register name collision check in csc_AddUnit().
+	* Added default (0, 1, 2, ...) unit I/O wiring for units.
+	* Added 2 channel (stereo) input support to the panmix unit.
+
+20121130:
+	* Removed most errors mentioning registers. (VM registers are no longer
+	  directly visible on the CS scripting level.)
+	* Added the csc_Varible() rule, as a subset to csc_SimplExp(), also
+	  implementing namespaces.
+	* Unit namespaces working properly in the compiler.
+
+20121129:
+	* CS_unit ninputs/noutputs init moved to the host side, and the
+	  corresponding arguments removed from the Initialize() callback.
+	* More voice structure wiring logic moved into the compiler.
+	* Default autowiring logic:
+		* Any unit having inputs adds scratch buffers to the voice.
+		* Last unit in chain sends to the voice output bus. (Other
+		  units send to the scratch buffers, if any.)
+
+20121128:
+	* Added CS_NESTLIMIT check and error code.
+	* cs_AddUnit() now wires inputs and outputs as specified by the new
+	  info in the CS_structitem.
+
+20121127:
+	* Rewrote the error handling using macros to keep the contents of
+	  CS_errors and the cs_errnames[] array in one place.
+	* Rewrote the VM instruction/opcode declarations using macros.
+	* Moved voice struct config and wiring info into the programs, so
+	  cs_PopulateVoice() can just trivially build voices to specification.
+
+20121126:
+	* Fixed CS_voice.input initialization bug that caused voices to
+	  randomly mix into the wrong buffers at times.
+	* Added variable input/output count support to the compiler.
+
+20121124:
+	* Removed various messy debug code that should no longer be needed.
+	* Added variable input/output counts support to the unit API.
+	* Adapted wtosc and panmix to the new API.
+
+20121123:
+	* Implemented voice nesting level based scratch buffer management.
+	* Implemented automatic voice wiring based on unit I/O configuration.
+
+20121122:
+	* Rudimentary implementation of the struct {} construct.
+
+20121121:
+	* Removed the hardwired panmix unit for voices without a struct {} def.
+	* Added check for redefinition of program message handler entry points.
+	* CS_FIRSTCONTROLREG wired to CS_FIXEDREGS. (No hardwired registers use
+	  the write callbacks at this point!)
+	* cs_VoiceFree() doesn't clear cwrite for the fixed registers, as these
+	  should never be used!
+
+20121119:
+	* Solved the "late message" bug! The VM/message processing loop in
+	  cs_VoiceProcess() wasn't capping s_end to the time of the next
+	  message when breaking out due to the cs_VoiceProcessMessages() return
+	  code. Both exits are now the same code path.
+	* Cleaned up and removed various debug code.
+
+20121117:
+	* Added sub-fragment processing support to cs_VoiceProcess() etc.
+	* Hardwired inline subvoice processing. (Subvoices before local units.)
+	* VM timer is now bumped before subvoice and unit processing, to avoid
+	  breaking the "timer = 0" notification from terminated voices.
+
+20121116:
+	* Simple hardwired buffer management system.
+
+20121115:
+	* Fixed timing bug in the RETURN instruction; now checks the timer
+	  after popping the VM stack!
+	* Fixed RETURN so it doesn't hang voices sleeping in END instructions.
+	* Removed the temporary mixing buffer hack.
+
+20121114:
+	* Separate DUMPCODE and DUMPCODERT macros for compiler and VM dumping.
+	* Moved CS_ramper and cs_Noise() into a new public csdsp.h header.
+	* Added linear and Hermite interpolators for 16 bit data to csdsp.h.
+
+20121113:
+	* Fixed the quick hack 'run' construct. (Used wrong SPAWN instruction!)
+	* CS_voice.cwrite[] is now cleared when voices are freed, touching only
+	  the indices that have actually been used for control registers.
+	* Added SPAWNR and SPAWNDR to the right case block in csc_Code().
+
+20121105:
+	* Disabled JACK library unloading. Once loaded, it stays loaded.
+
+20121031:
+	* cs_Close() now closes the audio driver before shutting down the API.
+
+20121030:
+	* Added 'wait' instruction to the compiler.
+	* Fixed the WAIT instruction. (Needs to set the VM timer...)
+
+20121029:
+	* Added panmix unit.
+	* Removed hardwired vol and pan registers.
+
+20121027:
+	* Fixed the RETURN (cs_VoicePop()) PC for non-interrupt returns.
+	* Removed "cs" prefix from voice unit source files.
+
+20121026:
+	* Removed wtosc SPITCH and SAMPLITUDE registers.
+	* Added hardwired TRANSPOSE (tr) control register.
+	* Added local functions and a new CALL instruction.
+
+20121023:
+	* Added extern "C" etc to the public headers, for C++ applications.
+
+20120915:
+	* Switched to SFIFO 2.0.
+
+20120911:
+	* cs_VoiceCall() can now only call entry points of the currently
+	  running program.
+	* Added cs_VoiceStart() to start a program on a new voice, including
+	  populating the voice with units as specified by the program.
+	* Added skeleton code for struct declarations to the compiler.
+	* Compiler throws in a default wtosc, unless a voice structure has been
+	  declared.
+	* CS_cstate renamed as CS_compiler.
+	* Fixed cs_DeleteSymbol() so it doesn't screw up the symbol stack...
+	* Removed remaining traces of the former hardwired control registers.
+
+20120910:
+	* Rearranged the VM instruction enumeration a bit.
+	* Implemented a smarter register write tracker, that uses an array of
+	  register indices along with the mask to avoid scanning the whole bit
+	  mask whenever one or more registers have changed.
+	* SLEEP instruction that works much like END, except execution can be
+	  continued by a message handler executing a WAKE instruction.
+	* Reimplemented the cs_Insert() API via an internal voice unit.
+
+20120909:
+	* Removed the RUN instructions and the ability to call one program from
+	  within another. (This feature is of limited use, has seemingly dodgy
+	  behavior, and now opens up a massive can of worms with the dynamic
+	  voice structures!)
+	* Voices now populated with units as specified by started programs.
+	* Added RETURN instruction for ending message handlers, avoiding logic
+	  for both that and program END in one VM instruction.
+	* Removed the bogus state dependent logic that was in the code path
+	  that's now in RETURN instruction. (Message handlers always run in the
+	  CS_INTERRUPT state!)
+	* Added approximate WAIT instruction that goes to sleep until the
+	  specified subvoice has terminated. Note that in terms of ramping of
+	  local control registers, WAIT behaves like END (that is, changes are
+	  applied instantly), as there is no known time frame.
+		NOTE:
+			This is a simple hack that's only buffer accurate. Do
+			not use for anything where timing is critical!
+
+20120908:
+	* Added some documentation in csunits.h.
+	* Added CS_unit.registers field that allows a unit to directly access
+	  the VM registers that it's wired to.
+	* CS_cregisters moved to csvm.h.
+	* Reduced the size of some overkill size struct fields.
+
+20120907:
+	* Filled in most of csunits.h.
+	* Moved bank object cleanup into proper destructor callbacks.
+	* Implemented cs_RegisterUnit().
+	* Eliminated SDL.h from csinternals.h. (Only the SDL driver should ever
+	  touch that!)
+	* Moved some generally interesting VM internals into a public struct
+	  CS_vmstate, making it available to unit implementations.
+	* Replaced PHASE and PHASER instructions with a 'phase' control
+	  register on the 'wtosc' oscillator. (Non-ramping!)
+
+20120906:
+	* Added CS_NOMIP for streaming and large waveforms that don't need
+	  mipmapping. (Uses padding for interpolation and looping, unless the
+	  pitch is too high, in which case it switches to a slightly slower
+	  inner loop.)
+	* Oscillators no longer get a state pointer. (They could stash one in
+	  their CS_wave variant or something if they REALLY need it...)
+	* The 'noise' oscillator keeps the state global RNG state in the
+	  "noise" CS_wave struct.
+
+20120905:
+	* Added cs_OpenSubState().
+	* Added public low level waveform management API; cs_WaveAlloc(),
+	  cs_WaveWrite() and cs_WavePrepare().
+
+20120903:
+	* Fixed the newly broken RNG in cs_Noise().
+	* Fixed some warnings from the debug build.
+	* cs_Close() no longer closes the sysdriver before freeing pools!
+	* Fixed buffer clearing when the trylock fails in the jack driver.
+	* DEBUG only defined for Debug build - not Maintainer.
+	* Fixed some more warnings in cstest.c in Maintainer mode.
+	* Build as a shared library on all platforms by default.
+
+20120902:
+	* Added dummy audio driver. (Not yet wired; needs to either flush
+	  queued events, or do actual processing in a timer driven thread.)
+
+20120830:
+	* Added cs_LastError().
+	* Adapted cstest.c to the updated API.
+
+20120819:
+	* Oscillator callbacks get the CS_state they belong to.
+
+20120818:
+	* API calls take a CS_state argument as needed.
+
+20120817:
+	* cs_Noise() inline takes a plain accumulator; not a CS_state.
+	* cs_Rand() wired to its own, dedicated RNG state accumulator.
+
+20120814:
+	* Removed the global CS_state.
+
+20120705:
+	* Tweaked compressor/limiter scaling and default threshold level.
+
+20120702:
+	* Fixed final stage clipping in the JACK and SDL drivers.
+	* JACK driver final clipping now ACTUALLY disabled by default.
+
+20120701:
+	* Moved CS_PCPU*AVG calculations into the engine context, to avoid
+	  locking in the *GlobalProps() API calls.
+	* Added cs_GetMicros(), for more accurate (as in, useful) CPU load
+	  tracking.
+	* cs_GetTicks() never relies on SDL; always host APIs.
+
+20120630:
+	* Added Un*x and Win32 implementations of cs_GetTicks().
+	* Fixed a bunch of compiler warnings with the Debug switches.
+
+20120629:
+	* Added locking calls to CS_audiodriver.
+	* Limiter now using 64 bit maths and stdint.h int64_t.
+	* Added cs_GetTicks().
+	* Both SDL and JACK are now optional. SDL is the default, if
+	  present. Should build without audio drivers!
+	* Fixed SDLmain linkage for the library and cstest application.
+	* Added -d (driver selection) switch to cstest.
+
+20120625:
+	* Added driver selection API. (Still sticking with the simple
+	  cs_Open() call for now.)
+
+20120624:
+	* Loading libjack.so dynamically.
+	* Xrun handling to prevent certain JACK implementations from
+	  freezing the whole system on overload.
+	* Added 'flags' fields to the CS_*driver structs for passing init
+	  flags from the API calls.
+	* Added GS_NOAUTOCNX flag, disabling autoconnect in the JACK driver.
+
+20120622:
+	* Implemented JACK audio driver.
+
+20120617:
+	* Hardwired 2 channel limit moved to cs_Open(); drivers should now
+	  support arbitrary channel counts.
+
+20120613:
+	* Ported chipsound.c to the new driver APIs.
+	* Implemented SDL audio driver.
+
+20120516:
+	* Implemented default system driver. (malloc/free wrapper)
+
+20120515:
+	* Bumped version to 0.2.0. (Core API changes.)
+	* Removed ALSA MIDI support. (The real API is much more powerful
+	  anyway, so it's better to implement MIDI and similar externally.)
+	* Added system and audio driver interfaces.
+	* Using the sysdriver rtalloc()/rtfree() calls for object types
+	  that may have to be allocated from the realtime context.
+
+20120313:
+	* cstest.c:
+		* Hacked a quick demo mode.
+		* Messages now go into the GUI status box.
+		* Changed window size to 800x480.
+		* Removed the DT-42 stuff from gui.[ch].
+		* Added instructions on the main screen.
+	* Added K2Trance to the demo songs.
+
+20120312:
+	* Slapped on a zlib license on, including sfifo.
+	* Added PulseTronic to the demo songs.
+	* Added rudimentary versioning.
+
+20120310:
+	* Eliminated the SDL audio locking in cs_Now().
+	* Added cfg-release and cfg-mingw-release scripts.
+
+20120309:
+	* Disabled timestamp warning messages, but not "corrections".
+
+20120306:
+	* Added simple limiter from Audiality.
+
+20120226:
+	* Fixed DETACH messages; they now spin the VM, so it actually wakes
+	  up if the voice is sleeping in an END instruction.
+	* Messages for undefined handlers are now correctly ignored again!
+
+20120219:
+	* cs_VoiceProcess() ignores message processing errors. (Nothing we
+	  can do about them anyway, and messages to undefined handlers
+	  SHOULD just be ignored!)
+	* Ending voices now hangs around for pending messages, even after
+	  having been detached.
+
+20120218:
+	* CSM_MESSAGE now sets the VM timer correctly, so the handler is
+	  actually executed before further message processing...
+	* Smarter group driver; does a 100 ms fade when getting a volume
+	  message, then goes back to sleep.
+
+20120217:
+	* Voice->voice messages are now sent using the message queues.
+
+20120216:
+	* Added DEBUG and DEBUGR VM instructions.
+	* Added 'wge' and 'wle' constructs.
+	* END instruction will now apply any pending register changes.
+	* Updated the Kate syntax highlighting xml.
+	* All TK_IF* and TK_WHILE* variants eliminated. (The keywords are
+	  registered along with the corresponding VM opcodes anyway.)
+	* "Fixed" SEND* timing issues. (Actually just quantizing the to
+	  the start of the current fragment.)
+	* PHASE now adjusts for subsample accurate timing.
+
+20120215:
+	* Hardwired global state eliminated from most of the engine.
+	* Messages within a sample frame are now processed (including
+	  running handler VM code) in the order received, rather than
+	  pushed and processed in reverse order.
+
+20120214:
+	* Added JGE and JLE instructions.
+	* 'wg' and 'wl' constructs fixed, using the above.
+	* Added 'jge', 'jle', 'ifge' and 'ifle' constructs.
+	* Fixed cs_regnames[] for proper VM code dumping.
+
+20120212:
+	* Added 'now_fragstart' for internal message timing, to avoid
+	  screwing up API timestamping when there are multiple fragments
+	  per audio buffer.
+	* Added locking in cs_Now() for the now_frames/now_ticks pair.
+	* cs_PumpMessages() now reads from FIFO directly into new message.
+
+20120211:
+	* cs_Now() can no longer jump backwards in time!
+
+20120210:
+	* Fixed compiler bug that broke 'kill N'.
+	* MIDI disabled by default. (Using EEL MIDI in Kobo II sfxtest.)
+	* Added cs_SendGroup() interface.
+	* Builtin csgroupdriver now handles message 1(); volume control.
+	* The 'p' register is no longer inherited by spawned voices!
+	* Added CS_TIMESTAMP open flag to enable manual timestamp control
+	  via cs_Now() and cs_Wait(). (Late events will be adjusted to
+	  play ASAP regardless!)
+
+20111207:
+	* API "autotiming" feature fixed; now makes a proper timestamp
+	  test that doesn't break when the timer wraps.
+
+20111204:
+	* cs_PumpMessages() adjusts late events before injecting them.
+	* API messages are now handled correctly... it seems. :-)
+
+20111203:
+	* Removed the work buffer hack.
+	* Added 'sa' secondary amplitude register, that is inherited
+	  similar to 'sp'.
+	* Added lock-free FIFO to avoid locking in most realtime calls.
+	* Added timestamped message passing system.
+	* Split the asynchronous API part out into csapi.c.
+	* Split banks, symbols etc out into csbank.c.
+
+20111126:
+	* Temporary hack: Always use work buffers, so 'vol' will work
+	  properly.
+
+20111125:
+	* Fixed internal error return code in cs_ObjAlloc().
+
+20110823:
+	* ALSA is now detected by CMake, setting CS_ALSA_MIDI if present.
+	* Using custom code instead of the non-portable strndup().
+	* Special case to build a static lib for Win32.
+	* Added pkg-config .pc file.

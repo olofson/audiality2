@@ -1,0 +1,545 @@
+def title	"Test"
+def version	"1.0"
+def description	"Various Audiality 2 tests and demo code"
+def author	"David Olofson"
+def copyright	"Copyright (C) 2010-2013 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+
+// Plain .5 amplitude sine wave with 10 ms de-click attack and release.
+Sine(P V=1)
+{
+	struct { wtosc, panmix }
+	w sine, p P
+	a (V * .5), d 10
+	end
+.rel	a 0, d 10
+	1() { force rel }
+}
+
+
+// Noise excited oscillator, based on a resonant filter
+FilterPitch(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w noise, p (P + 1), lp 0, bp 0, hp 1
+	q 2, set q, cutoff P, set cutoff
+	a (V * .01), set a
+	end
+.rel	a 0, d 100
+	d 2000		// Needed because of long tails with high resonance!
+	1() { force rel }
+}
+
+
+MusicBox(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w pulse1, p -2, lp 0, bp 1, hp .5
+	q (2 + P), ifl (q - 1) { q 1 }, set q
+	cutoff P, set cutoff
+	a (V * .1), set a, d 1
+	*a .5, set a, w noise, p 4, a 0, d 5
+	d 4000
+}
+
+
+// Music box with "stop" feature
+MusicBox2(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w pulse1, p -2, lp 0, bp 1, hp .5
+	q 3, set q, cutoff P, set cutoff
+	a (V * .1), set a, d 1
+	*a .5, set a, w noise, p 4, a 0, d 5
+	end
+.rel	a (V * .01), set a, a 0, d 5
+	q 0, d 10
+	d 500
+	1() { force rel }
+}
+
+
+// Test of filter "free ramping" cutoff response
+FSweep(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w saw, a (V * .1), set a, p P, lp 0, bp 1, hp 0
+	q .1, set q
+	cutoff (P + 8), set cutoff
+	cutoff P,	d 5000
+	a 0,	d 500
+}
+
+
+// "Forced" cutoff ramping - supposed to sound identical to FSweep
+FSweepRef(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w saw, a (V * .1), set a, p P, lp 0, bp 1, hp 0
+	q .1, set q
+	cutoff (P + 8), set cutoff
+	80 {
+		-cutoff .1,	d 62.5
+	}
+	a 0,	d 500
+}
+
+
+Pig(P V=1)
+{
+	struct { wtosc, filter12, panmix }
+	w saw, a (V * .2), set a, p P
+	lp 1, bp 1, hp 0, q 100, set q, cutoff (P + 6), set cutoff
+	cutoff (P + 1), q .01,	d 100
+	cutoff (P + .5),	d 500
+	a 0,			d 500
+	end
+.rel	a 0, cutoff P, q 0, d 100
+	d 500
+	1() { force rel }
+}
+
+
+PhattPig(P V=1)
+{
+	struct { wtosc 0 1, wtosc o2 0 1, filter12, panmix }
+	!detune (.005 * (1 - P))
+	ifl (detune - .001) { detune .001 }
+	w pulse30, a (V * .1), set a, p (P - detune)
+	o2.w pulse20, o2.a (V * .1), set o2.a, o2.p (P + detune)
+	lp 1, bp 1, hp 0
+	q 3, set q, cutoff (P + 6), set cutoff
+	cutoff (P + 3), q .03, d 100
+	cutoff (P + 2), q .01, d 100
+	cutoff (P + .5), d 500
+	a 0, o2.a 0,	d 500
+	end
+.rel	a 0, o2.a 0, cutoff (P - 1), q 0, d 100
+	d 500
+	1() { force rel }
+}
+
+
+Unity()
+{
+	struct { wtosc, panmix }
+	vol 1, set vol
+	w sine
+	a 1,	d 100
+		d 3000
+	a 0,	d 100
+}
+
+
+PanTest()
+{
+	struct { wtosc, panmix }
+	w noise, p 1
+	vol .2, set vol
+	a 1,	d 100
+		d 1000
+	pan 2,	d 1000
+	pan -2,	d 2000
+	pan 0,	d 1000
+		d 1000
+	a 0,	d 100
+}
+
+
+WaveXFade()
+{
+	struct { wtosc 0 1, wtosc o2, panmix }
+	vol .5, set vol
+	// NOTE:
+	//	This referring to waves by numbers doesn't really work!
+	//	They're not getting handles in any particular order, so this
+	//	will just be trying to play all sorts of objects - not
+	//	just waves.
+	w 0, a 1, set a, p -1
+	o2.w 1, o2.p -1
+	for {
+		o2.a 1, a 0, d 1000
+		+w 2
+		o2.a 0, a 1, d 1000
+		+o2.w 2
+	}
+}
+
+
+RampTest(P V=1)
+{
+	struct { wtosc }
+	w sine; p P; a 1; d 1000
+	for { d 1000 }
+.Decay	a 0; d 1000
+	1() { force Decay }
+}
+
+/*
+TODO: Update these to A2S!
+flute1(pitch vel=1)
+{
+	struct { wtosc }
+	-pitch 2
+	w saw; p pitch; a 0; !ta 0; !per (p2d (p * 1.001 + 1.01)); !er .1
+.l	+ta (vel - ta * er); a ta; d per
+	a 0; d per
+	d (per * 2)
+	p (pitch + rand .02)
+	jnz vel l
+	jg (ta - .001) l
+
+	1()		{ vel 0; er .03 }
+	2(npitch)	{ pitch (npitch - 1) }
+}
+
+// BLIT test; true BLIT with asynchronous impulses
+.imp(pitch amp)
+{
+	struct { wtosc }
+	w sine; phase 0; a amp; set a; p pitch; a 0; d 10
+}
+blit(pitch vel=1)
+{
+	struct { wtosc }
+	p2d pitch pitch
+	!reso (rand 3 + 1)
+	!i 100
+.l	imp reso vel; *vel .95; d pitch
+	loop i l
+}
+
+play(pitch vel=1)
+{
+	struct { wtosc }
+.l	!pch pitch
+	!i 4
+.l2	blit pch vel
+	+pch 3n
+	td 4
+	loop i l2
+	jump l
+}
+
+// "Fake" BLIT that scales impulse length to match period; uses only one voice
+.imp2(pitch de amp)
+{
+	struct { wtosc }
+	w sine; phase 0; p pitch; a amp; set a
+	a 0; d de
+}
+blit2(pitch vel)
+{
+	struct { wtosc }
+	p2d pitch pitch
+	!reso 1000f
+	!dreso 1n; *dreso pitch; *dreso .1
+.l	run imp2 reso pitch vel
+	-reso dreso
+	jump l
+}
+
+play2()
+{
+	struct { wtosc }
+	!pitch -2
+	!i 12
+.l	blit2 pitch .5
+	+pitch 2n
+	d 400
+	kill *
+	d 100
+	loop i l
+}
+
+def testwave square
+
+test1()
+{
+	struct { wtosc }
+	p 5; a 1; w testwave
+	!i 500
+.l	td 1; -p .02
+	loop i l
+}
+
+test2()
+{
+	struct { wtosc }
+	p .5; a 1; w testwave
+	!i 200
+.l	td 1; -p .005
+	loop i l
+}
+
+test3()
+{
+	struct { wtosc }
+	p 4; a 1; w testwave
+	!i 200
+.l	td 1; +p .02
+	loop i l
+}
+
+synctest(pitch vel=1)
+{
+	struct { wtosc }
+	p2d !per pitch
+	w saw; p pitch; +p .5; a vel
+.l	!i 50
+.l2	+p .01; w saw; phase 0; d per
+	w square; d per
+	loop i l2
+	w square
+	i 50
+.l3	+p .02; phase 0; d per
+	loop i l3
+	w sine; +p 1
+	i 50
+.l4	-p .04; phase 0; d per
+	loop i l4
+	jump l
+}
+
+sync1(pitch vel=1 drive)
+{
+	struct { wtosc }
+	p2d !per pitch; *per .5
+	w saw; p pitch; +p .5; +p drive; a vel
+.l	+p .01; w saw; phase 0; d per
+	w square; d per
+	jump l
+}
+
+sync2(pitch vel=1)
+{
+	struct { wtosc }
+	p2d !per pitch
+	w saw; p pitch; +p .5; a vel
+.l	+p .02; phase 0; d per
+	jump l
+}
+
+sync3(pitch vel=1)
+{
+	struct { wtosc }
+	p2d !per pitch
+	w saw; p pitch; +p 1.5; a vel
+.l	+p .04; phase 0; d per
+	jump l
+}
+
+// Two-note arpeggio at random pitch
+randnote()
+{
+	struct { wtosc }
+	w saw; a .3; rand p 2; -p 1; quant p 1n
+	!i 100
+.l	td 2
+	+p 5n; td 2
+	-p 5n; *a .8
+	loop i l
+}
+
+// Random 4-tone chord arpeggio
+randarp(pch vel=1)
+{
+	struct { wtosc }
+//rand pch 2; -pch 1; quant pch 1n; vel .3
+	w saw; a vel; set a
+	rand !n1 3n; quant n1 1n; +n1 2n; +n1 pch
+	rand !n2 3n; quant n2 1n; +n2 2n; +n2 n1
+	rand !n3 3n; quant n3 1n; +n3 2n; +n3 n2
+	!i 100
+.l	p pch; td 2
+	p n1; td 2
+	p n2; td 2
+	p n3; td 2
+	*a .8
+	loop i l
+}
+
+// Powerup Icon 2
+powerup2()
+{
+	struct { wtosc }
+	w triangle; rand p 1; +p 2; a 1; set a
+	!i 12
+.l	td .2; -p 1n
+	loop i l
+	i 15
+.l2		!j 20
+.down		td .2; -p 1n; *a .99
+		loop j down
+		j 20
+.up		td .2; +p 1n; *a .99
+		loop j up
+	loop i l2
+}
+
+// Magic
+.bell()
+{
+	struct { wtosc }
+	w triangle
+	rand a .4; set a
+	rand p 1.5; +p 4.5; quant p 2n
+	!i 50
+.l	*a .9; d 10
+	loop i l
+	a 0; d 10
+}
+magic()
+{
+	for {
+		bell
+		td (rand 2 + .01)
+	}
+}
+
+// Rain
+.drip2()
+{
+	struct { wtosc }
+	w noise
+	rand a .4; +a .1; set a
+	rand p 4; +p 4
+	!i 20
+.l	td .1; *a .6
+	loop i l
+}
+.rain2()
+{
+	struct { wtosc }
+	w noise
+	!per 0
+.l	rand p .5; +p 5
+	rand a .05; +a .1
+	run drip2
+	rand per 10; +per .1; td per
+	jump l
+}
+.drip()
+{
+	struct { wtosc }
+	w square
+	rand a 1; set a
+	rand p 4; +p 1; td .1
+	w noise; +p 3
+	!i 20
+.l	td .1; *a .6
+	loop i l
+}
+rain()
+{
+	struct { wtosc }
+	rain2
+	w noise
+	!per 0
+.l	rand p .5; +p 2
+	rand a .05; +a .05
+	run drip
+	rand per 40; +per .1; td per
+	jump l
+}
+
+// Submarine sonar
+sonar()
+{
+	struct { wtosc }
+	!max 1
+	w square; a max; p 1000f; d 5
+	a max; d 30
+	a 0; d 15
+	w triangle
+	!i 150
+.l	rand p .07; +p 1000f
+	rand a max; *max .95
+	d 30
+	loop i l
+}
+
+FM1(P V=1)
+{
+	struct { wtosc }
+	a V, set a, w sine
+	!per (p2d (P + tr) * .5)
+	!depth 1
+	wg (a - .001) {
+		p (P + depth), d per
+		p (P - depth), d per
+		*depth .98
+		*a .99
+	}
+}
+FM2(P V=1)
+{
+	struct { wtosc }
+	a V, set a, w sine
+	!per (p2d (P + tr) / 3)
+	!depth 1
+	wg (a - .001) {
+		p (P + depth), d per
+		p (P - depth), d (per * 2)
+		*depth .98
+		*a .99
+	}
+}
+FM3(P V=1)
+{
+	struct { wtosc }
+	a V, set a, w sine
+	!per (p2d (P + tr) * .5)
+	!depth 2
+	wg (a - .001) {
+		phase 0
+		p (P + (depth * .47)), d per
+		p (P - depth), d per
+		*depth .99
+		*a .99
+	}
+}
+FM4(P V=1)
+{
+	struct { wtosc }
+	a V, set a, w sine
+	!per (p2d (P + tr) * .5)
+	wg (a - .001) {
+		p (P + 1), d per
+		p (P + 2), d per
+		*a .99
+	}
+}
+FM5(P V=1)
+{
+	struct { wtosc }
+	a V, set a, w sine
+	!per (p2d (P + tr) * .5)
+	!depth 2
+	wg (a - .001) {
+		p (P + (depth * .5)), d per
+		p (P - (depth * .75)), d per
+		*a .99
+	}
+}
+
+FMAM(P V=1 Reso=2)
+{
+	struct { wtosc }
+	w sine
+	+Reso ((2 - P) * .25)
+	!per (p2d (P + tr) / 3)
+	!dR (per / 300 + .05)
+	!dV (.998 - (per / 500))
+	wg (V - .001) {
+		p (P + Reso), phase 0
+		a V, d per
+		d per
+		a 0, d per
+		*Reso (1 - dR), *dR .95
+		*V dV
+	}
+}
+*/

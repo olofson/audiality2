@@ -1,0 +1,834 @@
+def title	"Kobo II Epilogue"
+def version	"1.0"
+def description	"\"Thank You\" outro track for Kobo II"
+def author	"David Olofson"
+def copyright	"Copyright (C) 2011-2013 David Olofson"
+def license	"CC BY-NC-ND 3.0"
+def a2sversion	"1.9"
+
+.Rumble(P V=1 attack=1 decay=3 Pan)
+{
+	struct { wtosc, panmix }
+	vol V
+	pan Pan
+	-P 3
+	*attack (1000 / 20)
+	*decay (1000 / 20)
+	w sine, a 0, set a
+	!da (1 / attack)
+	attack {
+		p (P + rand 1), +a da, d 20
+	}
+	da (1 / decay)
+	decay {
+		p (P + rand 1), -a da, d 20
+	}
+}
+
+.Str0(P V Attack Decay Detune S)
+{
+	struct { wtosc, panmix }
+	pan (Detune * 50)
+	w qsine, !aa 0, !Ta (V * .1), phase (rand 1)
+	+P Detune
+	p P, !er (Attack * .1)
+.rt	wg (V + aa - .001) {
+		+p (P - p * .4 + rand .02 - .01)
+		+aa (Ta - aa * er), Ta (V * rand .2), a (aa * S)
+		d (rand 5 + 2.5)
+	}
+	a 0, d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV, er (Attack * .1), wake rt
+		} else {
+			V NV, er (Decay * .1)
+		}
+	}
+	2(NP) { P (NP + Detune) }
+}
+.Strings(P V=1 Attack=.3 Decay=.2)
+{
+	!Voices (7 - P quant 1)
+	ifl (Voices - 2) {
+		Voices 2
+	}
+	def Spread .03
+	!s 1
+	!detune (0 - (Spread / 2))
+	Voices {
+		0:Str0 P V Attack Decay detune s
+		+detune (Spread / Voices)
+		s (neg s)
+	}
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.sdn(Vel Color)
+{
+	struct { wtosc }
+	w noise, p (5.5 + Color), a (Vel * .15), set a
+	*a .5,	d 30
+	*a .5,	d 40
+	wg (a - .001) {
+		*a .8,	d 50
+	}
+	a 0, d 200
+}
+.SD(Vel=1 Color)
+{
+	struct { wtosc }
+	sdn Vel Color
+	w square, p (1.25 + Color), a (Vel * .5), set a
+	5 {
+		-p .2, d 1
+	}
+	w square, *a .5
+	15 {
+		-p .1, d 2
+	}
+	a 0, d 10
+	w noise, a (Vel * .1), set a
+	wg (a - .01) {
+		p 5, d 20
+		p 3, d 20
+		*a .8
+	}
+	a 0, d 200
+}
+
+.BD(Vel=1)
+{
+	struct { wtosc }
+	w square, a (Vel * .4), p 1.5
+	3 {
+		d 3, -p .8
+	}
+	w sine, a (Vel * .3)
+	7 {
+		d 16, -p .3
+	}
+	a 0, d 5
+	w noise, p 1.5, a (Vel * .02), d 50
+	a 0, d 300
+}
+
+.C0(pitch amp wave rmax dl)
+{
+	struct { wtosc, panmix }
+	pan (rand .25)
+	w wave, a amp, set a, +tr pitch
+	!rmh (rmax * .25)
+	200 {	p (rand rmax - rmh), *rmax .997, *rmh .997, *a .997, d 1 }
+	40 {
+		100 {	p (rand rmax - rmh), d 1 }
+		*a .85, *rmax .99, *rmh .99
+	}
+	a 0, d 10
+}
+.Cymbal(P V=1)
+{
+	C0 (P + 5.3) (V * .5) saw 1 .03
+	C0 (P + 4) (V * .3) saw 2 .04
+	C0 (P + 3.5) (V * .2) square 2 .05
+	C0 (P + 2.7) (V * .15) sine 1.5 .06
+	C0 (P + 2) (V * .1) sine 2.5 .07
+}
+
+.Electro()
+{
+	struct { wtosc, panmix }
+	pan (rand 1 - .5)
+	w saw, a 0
+	3 {
+		p 5, +a .07
+		11 {
+			d 1, -p .2
+		}
+	}
+	*a .5
+	20 {
+		p 3.7, *a .8
+		10 {
+			d 1, -p .2
+		}
+	}
+	a 0, d 10
+}
+
+.Zap(Bars)
+{
+	*Bars 2
+	Bars {
+				td .9
+		Electro,	td 2
+		Electro,	td 1.1
+				td 4
+	}
+	1() { kill * }
+}
+
+.HatNoise(pitch vel wave spread decay)
+{
+	struct { wtosc }
+	!env vel
+	w wave, p pitch, a env
+	!da (vel / decay)
+	decay {
+		p (rand spread + pitch), a env, -env da, d 1
+	}
+}
+.Hat(Vel=1 Len=1)
+{
+	HatNoise 7000f (Vel * .2) triangle .6 (50 * Len)
+	HatNoise 5500f (Vel * .15) triangle .5 (300 * Len)
+	HatNoise 3000f (Vel * .04) triangle .4 (250 * Len)
+	HatNoise 2500f (Vel * .03) triangle .3 (200 * Len)
+}
+
+.HH(Bars Vel=1 Fade=1)
+{
+	struct { inline, panmix }
+	*Bars 4
+	Bars {
+					td 1
+		Hat (Vel * .6) .2,	td 1
+		Hat Vel,		td 2
+		*Vel Fade
+	}
+	1() { kill * }
+}
+
+.PXBeat1()
+{
+	BD,	td 4
+	SD,	td 4
+
+	BD,	td 4
+	SD,	td 3
+	SD,	td 1
+}
+.PXBeat2()
+{
+	BD,	td 4
+	SD,	td 4
+
+	BD,	td 4
+	SD,	td 4
+}
+.PXBeat3()
+{
+	BD,	td 4
+	SD,	td 3
+	SD,	td 1
+
+	BD,	td 1
+	SD,	td 2
+	BD,	td 1
+	SD,	td 3
+	SD,	td 1
+}
+.PXPattern()
+{
+	struct { inline, panmix }
+	PXBeat1,	td 16
+	PXBeat2,	td 16
+	PXBeat1,	td 16
+	PXBeat3,	td 16
+	1() { kill * }
+}
+
+.LowBD(Bars=4)
+{
+	struct { inline, panmix }
+	Bars (Bars * 2 - 1)
+	BD,	td 8
+	Bars {
+		BD .5,	td 8
+	}
+}
+
+.ResoBass(P V=1 Reso=1 Wave=triangle)
+{
+	struct { wtosc, panmix }
+	a (V * .2), set a, +Reso P, w Wave
+	P p2d (P + tr)
+	wg (V - .001) {
+		phase 0, p Reso, a V, set a
+		a 0, d P
+		-Reso 1n
+		*V .7
+	}
+	!i (500 / P), !mv (1 - (1 / (.1 * i)))
+	i {
+		phase 0, p Reso, a V, set a, a 0, d P
+		-Reso .1n, *V mv
+	}
+}
+.Reso(P V=1 Wave=triangle)
+{
+	!r .5
+.rt	while V {
+		32 {	ResoBass P (V * .3) r Wave, +r .1, td 1 }
+		32 {	ResoBass P (V * .3) r Wave, -r .1, td 1 }
+	}
+	1(NV) { V NV, wake rt }
+	2(NP) { P NP }
+}
+
+.ResoLoop(P Wave=triangle)
+{
+// The .5 timings are a hack to ensure that quantized messages are processed
+// BEFORE the notes are triggered...
+	1:Reso (P - 7n) .5 Wave
+	for {
+				td 1.5
+		1<2 (P - 5n),	td 10
+		1<2 (P - 2n),	td 2
+		1<2 (P - 5n),	td 2
+
+		1<2 (P - 7n),	td 2
+		1<2 (P - 5n),	td 14
+		1<2 (P - 7n)
+
+				td 2
+		1<2 (P - 5n),	td 10
+		1<2 (P - 2n),	td 2
+		1<2 (P - 5n),	td 2
+
+		1<2 (P - 7n),	td 2
+		1<2 (P - 5n),	td 6
+		1<2 (P - 2n),	td 2
+		1<2 (P + 2n),	td 2
+		1<2 (P + 5n),	td 2
+		1<2 (P + 10n),	td 2
+
+		1<2 (P - 7n),	td .5
+	}
+.stop	1<1
+	1() { force stop }
+}
+
+.Fill()
+{
+	struct { inline, panmix }
+	!ramp .1
+	4 {
+		SD ramp ramp, td .25, +ramp .1
+	}
+	4 {
+		SD, td 1
+	}
+}
+
+.SoftArp(P V=1 Maj=0)
+{
+	struct { wtosc, panmix }
+	w qsine
+	a V, +tr P, !aa a
+	sa0(PP VV)
+	{
+		pan (rand 1 - .5), set pan
+		p PP, a VV,	td .01
+		a 0,		td .49
+	}
+	7 {
+		sa0 12n aa
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		*aa .75
+		sa0 (15n + Maj) aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		sa0 12n aa
+		*aa .75
+		sa0 19n aa
+		sa0 7n aa
+		sa0 12n aa
+		sa0 (15n + Maj) aa
+		+tr 1, *aa .75
+	}
+}
+
+.Kl(Vel Decay Wave Base Period Pan)
+{
+	struct { wtosc, panmix }
+	pan Pan
+	!warble (rand .05 + .1)
+	!bend (rand .002 - .001)
+	w Wave; a Vel, set a, +tr (rand .2 + Base)
+	wg (a - .001) {
+		p 0
+		10 {
+			+p warble, d Period
+		}
+		+warble bend
+		*a Decay
+	}
+}
+.Metallic(P V=1)
+{
+	def W square
+	Kl (V * .15) .94 W (P + rand 1) (rand .1 + .2) (rand 1 - .5)
+	Kl (V * .15) .92 W (P + rand 1 + .5) (rand .1 + .2) -.7
+	Kl (V * .15) .9 W (P + rand 1 + 1) (rand .1 + .2) .7
+}
+
+.Metalloop(P V=1 DP=.1 Bars=4)
+{
+	Bars {
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 1
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 2
+		Metallic P V,	+P DP,	td 1
+		Metallic P V,	+P DP,	td 2
+	}
+}
+
+.Pad()
+{
+	def Vel .3
+	1:Strings 2n Vel,	2:Strings 5n Vel,	3:Strings 7n Vel, td 32
+	3<1
+							3:Strings 9n Vel, td 32
+	2<1, 3<1
+				2:Strings 4n Vel,	3:Strings 8n Vel, td 32
+	1<1, 3<1
+	1:Strings 1n Vel,				3:Strings 7n Vel, td 32
+	1<1, 2<1, 3<1
+	1(NV) { *<1 NV }
+}
+
+.sbass(P V)
+{
+	struct { wtosc }
+	p P, w hsine, a V, d 10
+	a 0, d 1000
+	end
+.stop	a 0, d 100
+	1() { force stop }
+}
+.Bass(P V=1 R=5.5)
+{
+	struct { inline 0 *, wtosc, panmix }
+	-P 2
+	1:sbass P (V * .25)
+	2:sbass (P + 7n) (V * .15)
+	3:sbass (P + 1) (V * -.2)
+	4:sbass (P + 2) (V * .05)
+	+R P
+	a (V * .2), set a, +R P, w sine
+	P p2d (P + tr)
+	tr 0
+	wg (V - .001) {
+		phase 0, p R, a (V * .5), set a
+		a 0, d P
+		-R .3
+		*V .8
+	}
+	1() { *<1 }
+}
+
+.bl1()
+{
+		1:Bass -10n,	td 1
+	1<1,	1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass -7n,	td 1
+	1<1,	1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass -5n,	td 2
+	1<1,			td 6
+}
+.bl2()
+{
+		1:Bass -7n,	td 1
+	1<1,	1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass 0,	td 1
+	1<1,			td 1
+		1:Bass -5n,	td 3
+	1<1,			td 8
+}
+.bl3()
+{
+		1:Bass -10n,	td 1
+	1<1,	1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass -5n,	td 1
+	1<1,			td 1
+		1:Bass -7n,	td 1
+	1<1,	1:Bass -5n,	td 2
+	1<1,			td 8
+}
+.Bassline()
+{
+	bl1,	td 16
+	bl2,	td 16
+	bl1,	td 16
+	bl3,	td 16
+}
+
+.CuteSaw(P V=1 Pan)
+{
+	struct { wtosc, panmix }
+	pan Pan, set pan
+	!P0 tr, +P tr, w saw, p P, a 0, !er .05, !vib 0, !tvib .01
+.rt	wg (V + a - .001) {
+		tr (vib * 6)
+		12 {	-tr vib, +p (P - p * .8), +a (V - a * er), d 5 }
+		12 {	+tr vib, +p (P - p * .8), +a (V - a * er), d 5 }
+		+vib (tvib - vib * .1)
+	}
+	a 0, d 5
+	1(NV) {
+		V NV
+		if NV {
+			vib .005, tvib .005, er .05, wake rt
+		} else {
+			tvib .02, er .02
+		}
+	}
+	2(NP) { P (P0 + NP), p P }
+}
+.BreakMelo(P V=1 Pan)
+{
+	+tr P
+	def I CuteSaw
+	1:I 7n V Pan,			td 1
+	1<2 6n,				td 1
+	1<2 7n,				td 1
+	1<2 10n,			td 1
+	1<2 7n,				td 1
+	1<2 6n,				td 1
+	1<2 7n,				td 1
+	1<2 14n,			td 1
+	1<2 7n,				td 4
+	1<1,				td 4
+
+	1:I 14n V Pan, 			td 6
+	1<1,				td 2
+	1:I 10n V Pan, 			td 6
+	1<1,				td 2
+
+	1:I 9n V Pan, 			td 8
+	1<1 (V * .5),			td 4
+	1<1 (V * .25),			td 4
+
+	1<1, 1:I 7n V Pan,		td 4
+	2:I (-1 + 7n) (V * .5) Pan,	td 4
+	3:I (1 + 7n) (V * .5) Pan,	td 4
+	4:I (2 + 7n) (V * .5) Pan,	td 2
+	1<1, 2<1, 3<1, 4<1,		td 2
+}
+
+.OutroMelo(P V=1 Pan)
+{
+	+tr P
+	1:CuteSaw 7n V Pan,	td 1
+	1<2 6n,			td 1
+	1<2 7n,			td 1
+	1<2 8n,			td 1
+	1<2 7n,			td 1
+	1<2 6n,			td 1
+	1<2 7n,			td 1
+	1<2 8n,			td 1
+	1<2 7n,			td 4
+	1<1 (V * .6),		td 4
+	1<1 (V * .4),		td 4
+	1<1,			td 4
+}
+
+.ChorusMelo(P V=1 Pan)
+{
+	+tr P
+	def I CuteSaw
+	1:I 7n V Pan,		td 1	//
+	1<2 12n,		td 1
+	1<1,			td 1
+	1:I 14n V Pan,		td 4
+	1<1 (V * .7),		td 4
+	1<1,			td 1
+				td 2
+	1:I 12n V Pan,		td 1
+	1<2 7n,			td 1
+
+	1<2 5n,			td 1	//
+	1<2 12n,		td 1
+	1<1,			td 1
+	1:I 14n V Pan,		td 4
+	1<1,			td 1
+	1:I 14n V Pan,		td 1
+	1<2 12n,		td 1
+	1<2 7n,			td 1
+	1<2 12n,		td 2
+	1<2 14n,		td 3
+
+	1<1, 1:I 17n V Pan,	td 7	//
+	1<1,			td 1
+	1:I 16n V Pan,		td 6
+	1<1,			td 1
+	1:I 12n V Pan,		td 1
+
+	1<2 14n,		td 8	//
+	1<1,			td 8
+
+	1:I 16n V Pan,		td 1	//
+	1<2 14n,		td 2
+	1<2 8n,			td 4
+	1<1 (V * .7),		td 4
+	1<1,			td 1
+
+	1:I 17n V Pan,		td 2
+	1<2 16n,		td 4
+	1<1,			td 2
+
+	1:I 19n V Pan,		td 1
+	1<2 16n,		td 1
+	1<2 17n,		td 1
+	1<2 16n,		td 1
+	1<2 8n,			td 1
+	1<1,			td 1
+
+	1:I 17n V Pan,		td 1
+	1<2 16n,		td 1
+	1<2 8n,			td 1
+	1<1,			td 3
+
+	1:I 17n V Pan,		td 1
+	1<2 16n,		td 1
+	1<2 7n,			td 3
+	1<1,			td 1
+
+	1:I 10n V Pan,		td 1
+	1<2 14n,		td 1
+	1<2 16n,		td 6
+	1<2 14n,		td 1
+	1<2 13n, 1<1 (V * .9),	td 1
+	1<2 16n, 1<1 (V * .8),	td 1
+	1<2 13n, 1<1 (V * .7),	td 1
+	1<2 14n, 1<1 (V * .6),	td 1
+	1<2 13n, 1<1 (V * .5),	td 1
+	1<2 16n, 1<1 (V * .4), 	td 1
+	1<2 13n, 1<1 (V * .3),	td 1
+	1<2 14n, 1<1 (V * .2),	td 1
+	1<2 13n, 1<1 (V * .1),	td 1
+	1<2 16n, 		td 1
+	1<1
+}
+
+.BreakMeloEcho(P V=1)
+{
+	struct { inline 0 2, fbdelay 2 > }
+	fbdelay (tick * 6), fbgain .4
+	ldelay (tick * 4), lgain .4
+	rdelay (tick * 5), rgain .4
+	1:BreakMelo P (V * .6)
+	wait 1, d 8000
+}
+
+.OutroMeloEcho(P V=1)
+{
+	struct { inline 0 2, fbdelay 2 > }
+	fbdelay (tick * 6), fbgain .4
+	ldelay (tick * 4), lgain .4
+	rdelay (tick * 5), rgain .4
+	1:OutroMelo P (V * .6)
+	wait 1, d 8000
+}
+
+.ChorusMeloEcho(P V=1)
+{
+	struct { inline 0 2, fbdelay 2 > }
+	fbdelay (tick * 6), fbgain .3
+	ldelay (tick * 4), lgain .3
+	rdelay (tick * 5), rgain .3
+	ChorusMelo (P - .005) (V * .3) -.5
+	1:ChorusMelo (P + 1.005) (V * .2) .2
+	wait 1, d 5000
+}
+
+.Intro()
+{
+	// Pre-intro
+	Rumble 1 .2 1 2 -.5, Rumble 0 .2 .5 3 .5, td 8
+
+	1:Strings (7n - 2) .2 .05 .01
+	2:Strings (7n - 3) .3 .07 .005
+	3:Strings (7n - 4) .4 .1 .005, td 11
+	1<1, 2<1, 3<1, Fill, td 5
+
+	// Intro
+	Cymbal -.3 .25, Cymbal .3 .25, Metalloop 2 .3 0 4, LowBD, 7:Zap 4
+	4:ResoLoop -2 sine
+	5:ResoLoop -1 saw
+	6:ResoLoop -5n triangle
+			td 52
+	7<1,		td 7
+	kill *, Fill,	td 5
+}
+
+.Chorus(P)
+{
+	Cymbal -.5 .25, Cymbal 0 .25, HH 4, PXPattern, Zap 4
+	ChorusMeloEcho P .5
+
+	+tr P
+	Bassline
+	5:Pad
+	SoftArp -5n .3 2n
+	1:ResoLoop -2 sine
+	2:ResoLoop -1 saw
+	3:ResoLoop -5n triangle
+			td 64
+
+	-tr P
+	Cymbal -1 .25, HH 4, PXPattern, Zap 4
+	+tr P
+	Bassline
+	1<1, 1:ResoLoop -2 sine
+	2<1, 2:ResoLoop -1 saw
+	3<1, 3:ResoLoop -5n triangle
+	-tr P
+			td 64
+	1<1, 2<1, 3<1
+}
+
+.Break()
+{
+	BreakMeloEcho 0 .15
+	4:Strings (7n - 2) .1, 5:Strings (7n - 3) .5
+	LowBD
+	Metalloop -1.5 .35 .2 2
+	-tr 1, SoftArp -5n .3 2n, +tr 1
+	2<1, 2:ResoLoop -1 triangle
+		td 32
+	Metalloop 1.5 .35 -.2 2, td 18
+	4<1, 5<1, td 7
+	2<1, 3<1, td 2
+	Fill,	td 5
+}
+
+.b2fill1()
+{
+	struct { inline, panmix }
+	BD,		td 6
+	!ramp .1
+	8 {
+		SD ramp ramp,	td .25
+		+ramp .05
+	}
+}
+.b2fill2()
+{
+	struct { inline, panmix }
+	BD, Cymbal -.5 .25, Cymbal 0 .25,			td 6
+	!ramp .1
+	8 {
+		SD ramp ramp,					td .25
+		+ramp .05
+	}
+}
+.Break2()
+{
+	5:Strings -5n .2, 6:Strings -2n .2, 7:Strings 2n .2
+	Cymbal -.5 .25, Cymbal 0 .25
+	SoftArp -5n .4 2n
+	4:PXPattern, 8:Zap 4, 9:HH 4
+	2:ResoLoop -1 saw
+	3:ResoLoop -5n triangle,				td 32
+	6<2 0n, 7<2 3n,						td 24
+	5<1, 6<1, 7<1
+	2<1, 3<1
+	4<1, 8<1, 9<1
+	b2fill1,						td 8
+
+	5:Strings -5n .25, 6:Strings -2n .25, 7:Strings 2n .25
+	Cymbal -1 .25
+	Bassline
+	PXPattern, Zap 4, HH 4
+	1:ResoLoop -2 sine
+	2<1, 2:ResoLoop -1 saw
+	3<1, 3:ResoLoop -5n triangle,				td 32
+	6<2 0n, 7<2 3n,						td 32
+	1<1, 2<1, 3<1,		5<1, 6<1, 7<1,
+
+	b2fill2,						td 8
+}
+
+.PostChorus()
+{
+	4:Strings (7n - 2) .1, 5:Strings (7n - 3) .4
+	LowBD, HH 4, Zap 7
+	Metalloop 2 .4 -.05 7
+	1:ResoLoop -2 sine,
+	2:ResoLoop -1 saw,
+	3:ResoLoop -5n triangle, td 64
+
+	LowBD
+	SoftArp -5n .3 2n
+	2<1, 2:ResoLoop -1 triangle,
+	1<1, td 50
+	4<1, 5<1, td 7
+	2<1, 3<1, td 2
+	Fill, td 5
+}
+
+.fbd()
+{
+	struct { inline, panmix }
+	BD .5
+}
+.Finale()
+{
+	Cymbal -2 .2
+	OutroMeloEcho 0 .07,
+	Metalloop 3 .15 -.3 2
+	Rumble 0 .1 .1 3
+	LowBD 2, HH 2 1 .5,	td 32
+	fbd,			td 16
+}
+
+.Main()
+{
+	tempo 108 4
+	for {
+		run Intro
+		run Chorus
+		run Break
+		run Chorus
+		OutroMeloEcho 0 .2,	run PostChorus
+		run Break2
+		run Chorus
+		BreakMeloEcho 0 .2,	run PostChorus
+		run Finale
+	}
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 160, fbgain .1
+	ldelay 300, lgain .1
+	rdelay 350, rgain .1
+	+tr P, vol V, set vol
+.rep	1:Main, wait 1
+	if L { jump rep }
+	end
+.stop	10 { *vol .7, d 100 }
+	vol 0, d 100
+	kill *
+	1() { force stop }
+}

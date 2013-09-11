@@ -1,0 +1,253 @@
+def title	"Official Audiality 2 Jingle"
+def version	"1.0"
+def description	"Audiality 2 jingle, originally made for Kobo II"
+def author	"David Olofson"
+def copyright	"Copyright (C) 2012 David Olofson"
+def license	"CC BY 3.0"
+def a2sversion	"1.9"
+
+.Sonar(P V=1 Pan)
+{
+	struct { wtosc, panmix }
+	pan Pan
+	!max V,	w square, a (max * .25), p P, d 30
+	a 0, d 15
+	w triangle
+	400 {
+		p (P + rand .2 - .1)
+		rand a max; *max .98
+		d 15
+	}
+	a 0, d 100
+}
+
+.Bell(V)
+{
+	struct { wtosc, panmix }
+	pan (rand 3 - 1.5)
+	w triangle
+	rand a V, set a
+	rand p 1.5, +p 4, quant p 2n
+	*a .5, d 10
+	*a .5, d 15
+	*a .5, d 50
+	a 0, d 150
+}
+.Magic()
+{
+	!V .01, !TV 1
+	wg (V - .001) {
+		Bell (V * .01), d (rand 15)
+		+V (TV - V * .007)
+	}
+	1(NV) { TV NV }
+}
+
+.Str0(P V Attack Decay Detune S)
+{
+	struct { wtosc, panmix }
+	pan (Detune * 80)
+	w qsine, !aa 0, !Ta (V * .01), phase (rand 1)
+	+P Detune
+	p P, !er (Attack * .1)
+.rt	wg (V + aa - .0001) {
+		+p (P - p * .4 + rand .02 - .01)
+		+aa (Ta - aa * er), Ta (V * rand .2), a (aa * S)
+		d (rand 5 + 2.5)
+	}
+	a 0, d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV, er (Attack * .1), wake rt
+		} else {
+			V NV, er (Decay * .1)
+		}
+	}
+	2(NP) { P (NP + Detune) }
+}
+.Strings(P V=1 Attack=.3 Decay=.1)
+{
+	!Voices (10 - (P * 2) quant 1)
+	ifl (Voices - 2) {
+		Voices 2
+	}
+	def Spread .04
+	!detune (0 - (Spread / 2))
+	!s 1
+	Voices {
+		0:Str0 P V Attack Decay detune s
+		+detune (Spread / Voices)
+		s (neg s)
+	}
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.Chords()
+{
+	struct { inline 0 2, panmix 2 > }
+	def I Strings
+	!S -3n
+	1:I (S - 3) .5 .1,	2:I (S - 2) .3 .07,	3:I (S + 2) .2 .02
+	15 {
+		1<2 (S - 3), 2<2 (S - 2), 3<2 (S + 2), *S .8,	td 1
+	}
+	1<2 -3, 2<2 -2, 3<2 2
+	4:I 4n .2,		5:I 7n .2,		6:I 12n .2
+	td 4
+	4<1, 4:I 5n .25,	5<1, 5:I 10n .25,	6<1, 6:I 14n .25
+	td 4
+	4<1, 4:I 7n .3,		5<1, 5:I 12n .3,	6<1, 6:I 16n .3
+	td 4
+	12 {
+		*vol .9,	td 1
+	}
+	24 {
+		*vol .8,	td 1
+	}
+	*<1
+}
+
+.BackArp(P V=1 Maj=0)
+{
+	struct { wtosc, panmix 1 2, fbdelay  }
+	vol .2, set vol
+	fbdelay (tick * 2), fbgain .3
+	ldelay (tick * 3), lgain .3
+	rdelay (tick * 5), rgain .3
+	w qsine
+	+tr P, !aa 0
+	sa0(PP VV)
+	{
+		pan (rand 3 - 1.5), set pan
+		p PP, a VV,	td .1
+		a 0,		td .4
+	}
+	2 {
+		+aa (V / 6)
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		+aa (V / 6)
+		sa0 12n aa
+		sa0 (15n + Maj) aa
+		+aa (V / 6)
+		sa0 24n aa
+	}
+	wg (aa - .001) {
+		-tr .05n,	sa0 0 aa
+		-tr .05n,	sa0 (3n + Maj) aa
+		-tr .05n,	sa0 7n aa
+		-tr .05n,	sa0 12n aa
+		-tr .05n,	sa0 (15n + Maj) aa
+		-tr .05n,	sa0 24n aa
+		*aa .6
+	}
+}
+
+.SoftArp(P V=1 Maj=0)
+{
+	struct { wtosc, panmix 1 2, fbdelay }
+	vol .2, set vol
+	fbdelay (tick * 3), fbgain .3
+	ldelay (tick * 4), lgain .3
+	rdelay (tick * 5), rgain .3
+	w qsine
+	a V, +tr P, !aa a
+	sa0(PP VV)
+	{
+		pan (rand 1.5 - .75), set pan
+		p PP, a VV,	td .1
+		a 0,		td .4
+	}
+	wg (aa - .0001) {
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		sa0 12n aa
+		sa0 (15n + Maj) aa
+		sa0 19n aa
+		*aa .65
+	}
+}
+
+.Explo0(P V Wave Attack Period PP)
+{
+	struct { wtosc, panmix }
+	pan PP
+	+P tr, w Wave, !x 1, a V, -P 3, tr Attack, !DP (Period * .01)
+	200 {
+		*tr .98, p (P + rand x), +x .01, d Period, +Period DP
+	}
+	400 {
+		*tr .98, p (P + rand x), -x .0025, *a .995, d Period, +Period DP
+	}
+	tr P
+	600 {
+		rand p x, *a .993, d 2.5
+	}
+}
+.Explosion(P V=.2 Period=2)
+{
+	+tr P
+	Explo0 -1 (V * 2) sine 3 Period 0
+	Explo0 0 (V * .4) sine 2 (Period * .8) -.3
+	Explo0 .2 (V * .4) sine 3.5 (Period * .7) .3
+	d 30
+	Explo0 .5 (V * .2) triangle 2 (Period * .6) -.6
+	d 20
+	Explo0 1 (V * .2) triangle 2 (Period * .5) .6
+	d 100
+	Explo0 1.2 (V * .2) triangle 1 (Period * .4) -1.5
+	d 50
+	Explo0 1.3 (V * .2) triangle 1.2 (Period * .3) 1.5
+}
+
+.Main()
+{
+	tempo 120 4
+	Chords,					BackArp -9n .4 3n,	td 4
+	1:Magic,							td 4
+	Explosion,							td 16
+	Sonar .97 .25 -1.5, Sonar 1.03 .25 1.5, SoftArp 1 .6 1n,	td 8
+	1<1
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *	// Inline all subvoices
+		fbdelay * *
+		panmix * >	// Apply pan and volume and send to master
+	}
+
+	// fbdelay setup
+	fbdelay 345, fbgain .3
+	ldelay 456, lgain .3
+	rdelay 567, rgain .3
+
+	// Transposition + volume - no fade-in
+	+tr P, vol V, set vol
+
+	// Loop if requested
+.rep	1:Main
+	wait 1
+	d 2000
+	if L {
+		jump rep
+	}
+	end
+.stop
+	// Fade out
+	10 {
+		*vol .7
+		d 100
+	}
+	vol 0, d 100
+	kill *
+
+	// "Stop" message handler
+	1() {
+		force stop
+	}
+}

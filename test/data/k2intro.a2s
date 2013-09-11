@@ -1,0 +1,882 @@
+def title	"Kobo II Intro + Title Song"
+def version	"1.0"
+def description	"(Straight mono conversion)"
+def author	"David Olofson"
+def copyright	"Copyright (C) 2011-2012 David Olofson"
+def license	"CC BY-NC-ND 3.0"
+def a2sversion	"1.9"
+
+.Flute0(P V=1 Wave)
+{
+	struct { wtosc }
+	!P0 tr, +P tr, w Wave, p P, a 0, !er .05, !vib 0, !tvib .005
+.rt	wg (V + a - .001) {
+		tr (vib * 6 + rand .01)
+		12 {	-tr vib, +p (P - p * .3), +a (V - a * er), d 5 }
+		12 {	+tr vib, +p (P - p * .3), +a (V - a * er), d 5 }
+		+vib (tvib - vib * .1)
+	}
+	a 0, d 5
+	1(NV) {
+		V NV
+		if NV {
+			vib .005, tvib .005, er .05, wake rt
+		} else {
+			tvib .02, er .02
+		}
+	}
+	2(NP) { P (P0 + NP) }
+}
+
+.Flute(P V=1)
+{
+	1:Flute0 (P + 1.01) V triangle
+	2:Flute0 (P - 1) (V * .2) saw
+	1(NV) { 1<1 NV, 2<1 (NV * .2) }
+	2(NP) { 1<2 (NP + 1.01), 2<2 (NP - 1) }
+}
+
+.Str0(P V Attack Decay detune)
+{
+	struct { wtosc }
+	w saw, a 0, !Ta (V * .1), phase (rand 1)
+	+P detune
+	p P, !er (Attack * .1)
+.rt	wg (V + a - .001) {
+		+p (P - p * .4 + rand .02 - .01)
+		+a (Ta - a * er), Ta (V * rand .2)
+		d (rand 5 + 2.5)
+	}
+	a 0, d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV, er (Attack * .1), wake rt
+		} else {
+			V NV, er (Decay * .1)
+		}
+	}
+	2(NP) { P (NP + detune) }
+}
+.Strings(P V=1 Attack=.3 Decay=.2)
+{
+	!Voices (7 - P quant 1)
+	ifl (Voices - 2) {
+		Voices 2
+	}
+	def Spread .02
+	!detune (0 - (Spread / 2))
+	Voices {
+		0:Str0 P V Attack Decay detune
+		+detune (Spread / Voices)
+	}
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.OctStrings(P V=1)
+{
+	1:Strings (P + 1) V .5 .2
+	2:Strings (P - 1) V .2 .4
+	1(NV) { *<1 NV }
+	2(NP) { 1<2 (NP + 1), 2<2 (NP - 1) }
+}
+
+.NBurst(P V=1)
+{
+	struct { wtosc }
+	w noise, p (P + 6), a (V * .8), set a
+	50 {	*a .99, *p .96, d 2 }
+	40 {	*a .92, -p .01, d 50 }
+}
+
+.NBurst2(P V=1)
+{
+	struct { wtosc }
+	w noise, p (P + 3.5), a V, set a, *a .5, d 10
+	-p 2
+	60 {	*a .9, d 50 }
+}
+
+.sdn(V)
+{
+	struct { wtosc }
+	w noise, p 5.5, a V, set a, d 2
+	p 5, *a .4, d 20
+	*a .2, d 100
+	100 {
+		!D (rand 15 + 5)
+		p 4.5, *a .95, d D
+		p 6, d D
+	}
+}
+.SDrum(P V=1)
+{
+	struct { wtosc }
+	sdn V
+	w square, p (P + 2), a V, set a
+	10 {	-p .2, d 1 }
+	d 5
+	-p .2, d 5
+	5 {
+		!D (rand 2 + 3)
+		w saw, -p .51, d D
+		w square, +p .5, *a .7, d D
+	}
+	*a .5, !p0 (p - .8)
+	1000 {	p (rand 1.5 + p0), *a .99, d 1 }
+}
+
+.HHClosed(P V=1)
+{
+	struct { wtosc }
+	w square, a (V * .2), set a, p 6
+	3 {	d 1, -p .5 }
+	200 {	p (rand 1.5 + 4.5), *a .95, d .5 }
+}
+
+.HHOpen(P V=1)
+{
+	struct { wtosc }
+	w square, a (V * .2), set a, p 6
+	3 {	d 1, -p .5 }
+	600 {	p (rand 1.5 + 4.5), *a .993, d .5 }
+}
+
+.HH0()
+{
+	!aa 1
+	32 {	HHClosed 0 aa, *aa .8,	td 1 }
+}
+
+.HH1()
+{
+	def c HHClosed, def o HHOpen
+	8 {
+		c,		td 1
+		c 0 .5,		td 1
+		c 0 .25,	td 1
+		c 0 .5,		td 1
+		o 0 .5,		td 12
+	}
+}
+
+.HH2()
+{
+	def c HHClosed, def o HHOpen
+	8 {
+		c,	td 1
+		c,	td 1
+		c,	td 1
+		c,	td 1
+
+		o,	td 1
+		c,	td .5
+		c,	td .5
+		c,	td 1
+		o,	td 1
+
+		c,	td 1
+		c,	td 1
+		c,	td 1
+		c,	td .5
+		c,	td .5
+
+		o,	td 1
+		c,	td 1
+		c,	td 1
+		c,	td .5
+		c,	td .5
+	}
+}
+
+.bdnoise(P V)
+{
+	struct { wtosc }
+	w noise, p (P + 4), a (V * .2), set a
+	20 {	*a .95, -p .1, d 3 }
+	a 0, d 1000
+}
+.BDrum(P V=1)
+{
+	struct { wtosc }
+	bdnoise P V
+	w sine, p (P + 4), a V, set a
+	5 {	-p .9, d 1 }
+	d 10
+	5 {	-p .2, d 2 }
+	d 20
+	20 {	-p .1, d 10 }
+	d 30
+	a 0, d 100
+	d 1000
+}
+
+.tn(P V)
+{
+	struct { wtosc }
+	w noise, p (P + 6), a (V * .5), set a, d 10
+	-p 2
+	100 {	-p .07, *a .8, d 10 }
+}
+.Tom(P V=1)
+{
+	struct { wtosc }
+	tn P V
+	w saw, p (P + 3), a V, set a
+	10 {	-p .35, d 1 }
+	w triangle
+	7 {
+		-p .15, *a .9, d 10
+		+p 3n, d 10
+		-p 3n
+	}
+	20 {
+		-p .01, *a .8, d 10
+		+p 3n, d 10
+		-p 3n
+	}
+}
+
+.SoftArp(P V=1 Maj=0)
+{
+	struct { wtosc }
+	sa0(PP VV)
+	{
+		a VV, p PP,	td .01
+		*a .25,		td .49
+	}
+	w sine, a V, +tr P, !aa a
+	7 {
+		sa0 12n aa
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		*aa .75
+		sa0 (15n + Maj) aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		sa0 12n aa
+		*aa .75
+		sa0 19n aa
+		sa0 7n aa
+		sa0 12n aa
+		sa0 (15n + Maj) aa
+		+tr 1, *aa .75
+	}
+}
+
+.SoftArp2(P V=1 Maj=0)
+{
+	struct { wtosc }
+	sa0(PP VV)
+	{
+		a VV, p PP,	td .01
+		*a .25,		td .49
+	}
+	w sine, a V, +tr P, !aa a
+	40 {
+		sa0 12n aa
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		*aa .75
+	}
+}
+
+.Explo0(P V=1 Wave Attack)
+{
+	struct { wtosc }
+	+P tr, w Wave, !x 1.5, a V, -P 3, tr Attack, !D 1
+	200 {	*tr .98, p (P + rand x), +x .01, d D, +D .005 }
+	800 {	*tr .98, p (P + rand x), -x .0025, *a .999, d D, +D .005 }
+	tr P
+	800 {	rand p x, *a .995, d 2.5 }
+}
+.Explosion(P V=1)
+{
+	+tr P
+	Explo0 0 V sine 2
+	Explo0 -1 V sine 4
+	Explo0 .5 (V * .5) triangle 5
+	Explo0 1.5 (V * .25) sine 3
+}
+
+.PulseOct(P V=1)
+{
+	struct { wtosc }
+	w saw, p P
+	wg V {
+		+p 1, a V, set a, a 0, td .5, *V .9
+		-p 1, a V, set a, a 0, td .5, *V .9
+		+p 3, a V, set a, a 0, td .5, *V .9
+		-p 1, a V, set a, a 0, td .5, *V .9
+		-p 2, -V .001
+	}
+}
+
+.subs(P V W)
+{
+	struct { wtosc }
+	w W
+.rt	p (P + 2), a V, d 1
+	10 { -p .2, d 1 }
+	wg (V + a - .001) {
+		+p (P - p * .1), +a ((V * .7) - a * .2), d 5
+	}
+	1(NV) { V NV, wake rt }
+	2(NP) { P NP }
+}
+.Sub(P V=1)
+{
+	1:subs P V triangle
+	2:subs (P + 1) (V * .15) saw
+	1(NV) { 1<1 NV, 2<1 (NV * .15) }
+	2(NP) { 1<2 NP, 2<2 (NP + 1) }
+}
+
+.SubPulse(P V=1 Dur=2)
+{
+	struct { wtosc }
+	!np P, w triangle, !oct 0
+.rt	while V {
+		p (np + (oct % 3 % 2)), +oct 1, %oct 8
+		phase 0, a V, a V, td .125
+		td .125
+		a 0, td (Dur - .25)
+	}
+	1(NV) { V NV, wake rt }
+	2(NP) { np NP }
+}
+
+.ResoBass(P V=1 Reso)
+{
+	struct { wtosc }
+	p (P + 2), w square, a (V * .2), set a
+	a 0, d 5
+	+Reso (P + 1.5), w sine
+	P p2d (P + tr)
+	10 {
+		phase 0, p Reso, a V, set a
+		a 0, d P
+		-Reso 1n
+		*V .8
+	}
+	!i (500 / P), !mv (1 - (1 / (.1 * i)))
+	i {
+		phase 0, p Reso, a V, set a, a 0, d P
+		-Reso .1n, *V mv
+	}
+}
+
+.rl(p1 v v1 r r1 cnt=16)
+{
+	-p1 24n
+	!dv ((v1 - v) / cnt)
+	!dr ((r1 - r) / cnt)
+	cnt {	ResoBass p1 v r, +v dv, +r dr, td 2 }
+}
+.rl2(p1 v v1 r r1 cnt=16)
+{
+	*cnt 2,
+	!dv ((v1 - v) / cnt)
+	!dr ((r1 - r) / cnt)
+	-r .5, -p1 24n, /cnt 8
+	cnt {
+		4 {	ResoBass p1 v r, +v dv, +r dr, +r .3, td 1 }
+		4 {	ResoBass p1 v r, +v dv, +r dr, -r .3, td 1 }
+	}
+}
+.rl3(p1 v v1 r r1 cnt=16)
+{
+	*cnt 2,
+	-p1 24n
+	!dv ((v1 - v) / cnt)
+	!dr ((r1 - r) / cnt)
+	cnt {	ResoBass p1 v r, +v dv, +r dr, td 1 }
+}
+.ResoIn(P V=1)
+{
+	run rl P	.1 (V * .5)	0 .16
+	run rl P	(V * .5) V	.16 0
+}
+.Reso1(P V=1 P2=0 Ins=rl)
+{
+	+P2 P
+	run Ins P	V V	0 .4	8
+	run Ins P2	V V	.4 .8	8
+	run Ins P	V V	.8 1.6	16
+}
+.Reso2(P V=1 P2=0 Ins=rl)
+{
+	+P2 P
+	run Ins P	V V	1.6 1.2	8
+	run Ins P2	V V	1.2 .8	8
+	run Ins P	V V	.8 0	16
+}
+.ResoOut(P V=1)
+{
+	run rl P	V (V * .5)	0 .16	8
+	run rl P	(V * .5) 0	.16 0	8
+}
+
+.EvilSyncBass(P V=1 Drive)
+{
+	struct { wtosc }
+	+P tr, tr 0, p P
+	*V .5
+	!per (p2d P * .5)
+	a V, set a
+	p 5, w noise, phase 0, d 2
+	p (P + 2), w square, d per
+	w saw, p (P + .5 + Drive)
+	!ma .99, !dp .01
+	wg (a - .01) {
+		+p dp, w saw, phase 0, d per
+		*a ma, w square, d per
+	}
+	a 0, set a
+	1() { *a .5, *ma .85, +p 1, /per 4, *<1 }
+}
+
+.c0(P amp wave rmax D)
+{
+	struct { wtosc }
+	w wave, a amp, set a, +tr P
+	!rmh (rmax * .25)
+	200 {	p (rand rmax - rmh), *rmax .997, *rmh .997, *a .995, d D }
+	40 {
+		100 {	p (rand rmax - rmh), d D }
+		*a .85, *rmax .99, *rmh .99
+	}
+}
+.Cymbal(P V=1)
+{
+	tr P
+	c0 5.3 V saw 1 .5
+	c0 4 (V * .8) saw 2 .7
+	c0 3.5 (V * .6) square 2 .8
+	c0 2.7 (V * .3) sine 1.5 1
+	c0 2 V sine 2.5 1.2
+}
+.LowCymbal(P V=1)
+{
+	tr P
+	c0 5 V saw 1 .8
+	c0 4 (V * .8) saw 2 1
+	c0 3 (V * .6) square 2 1.2
+	c0 2.2 (V * .3) sine 1.5 1.35
+	c0 1.5 V sine 2.5 1.5
+}
+
+.Drone(P V=1)
+{
+	def i EvilSyncBass, +tr (P - 36n)
+	1:i 0 V 2.5,	td .5,	1<1
+			td 1.5
+	1:i 0 V 1,	td 30,	1<1
+	1:i 0 V 2,	td .5,	1<1
+			td 1.5
+	1:i 0 V 0,	td 30,	1<1
+}
+
+.Heavy(P V=1 P2=0)
+{
+	def i EvilSyncBass, +tr (P - 36n)
+	1:i 0 V 1,	td .5,	1<1
+			td .5
+	1:i 7n V 1.5,	td .5,	1<1
+			td .5
+	1:i 1 V 2,	td 2,	1<1
+	1:i 0 V 1.5,	td .5,	1<1
+			td .5
+	1:i 7n V 2,	td .5,	1<1
+			td .5
+	1:i 1 V 2.5,	td 2,	1<1
+			td 8
+	+tr P2
+	1:i 0 V 1,	td .5,	1<1
+			td 1.5
+	1:i 0 V 1,	td .5,	1<1
+			td 5.5
+	1:i 1 V 2,	td 2.5,	1<1
+			td .5
+	1:i 0 V 0,	td 1,	1<1
+			td 4
+}
+
+.PreTheme(Tr)
+{
+	def i Flute, +tr (Tr + 1)
+	1:i -12n .4,	td 1
+	1<2 -10n,	td 1
+	1<2 -7n,	td 1
+	1<2 -2n,	td 1,	1<1
+}
+
+.MeloTheme(Tr)
+{
+	def i Flute, +tr (Tr + 1)
+	1:i 0 .5,	td 8
+	1<2 7n,		td 7
+	1<2 3n,		td 1
+	1<2 10n,	td 8,	1<1
+			td 3
+	1:i 3n .5,	td 1
+	1<2 5n,		td 2
+	1<2 10n,	td 2
+	1<2 7n,		td 8
+	1<1 .3,		td 8,	1<1
+	td 12
+	1:i -5n .5,	td 2
+	1<2 -2n,	td 2
+	1<2 0,		td 8
+	1<2 7n,		td 4
+	1<2 10n,	td 4
+	1<2 3n,		td 6
+	1<2 2n,		td 6
+	1<2 7n,		td 2
+	1<2 -2n,	td 2
+	1<2 0,		td 8
+	1<1 .3,		td 8,	1<1
+	td 16
+}
+
+.Fx1(Tr)
+{
+	td 8
+	+tr Tr, PulseOct -1 .5
+	td 8, *<1
+}
+
+.Fx2(Tr)
+{
+	td 8
+	+tr Tr, PulseOct 1 .3
+	td 8, *<1
+}
+
+.Perc2()
+{
+	tr 0
+	BDrum 0 .5,	HH1,	td 8
+	NBurst 0 .5,		td 22
+	BDrum -4n .25,		td 2
+	BDrum 0 .5,		td 8
+	NBurst2 0 .5,		td 19
+	Tom 7n .02,		td .5
+	Tom 7n .03,		td .5
+	Tom 7n .05,		td .5
+	Tom 7n .1,		td .5
+	Tom 7n .25,		td .5
+	Tom 7n .1,		td .5
+	Tom 7n .05,		td .5
+	Tom 7n .03,		td .5
+	Tom 7n .02,		td .5
+	Tom 7n .01,		td .5
+
+	BDrum 0 .5,		td 8
+	NBurst 0 .5,		td 22
+	BDrum -4n .25,		td 2
+	BDrum 0 .5,		td 8
+	NBurst2 0 .5,		td 19
+	Tom 7n .02,		td .5
+	Tom 7n .03,		td .5
+	Tom 7n .05,		td .5
+	Tom 7n .1,		td .5
+	Tom 7n .25,		td 1
+	Tom 3n .5,		td 1
+	Tom,			td 1
+}
+
+.p30()
+{
+	BDrum,		td 4
+	BDrum,		td 4
+	SDrum,		td 7
+	BDrum -4n .5,	td 1
+	BDrum,		td 6
+}
+.p3a()
+{
+	run p30
+	Tom 7n .02,	td .5
+	Tom 7n .03,	td .5
+	Tom 7n .05,	td .5
+	Tom 7n .1,	td .5
+	SDrum, NBurst2,	td 8
+}
+.p3b()
+{
+	run p30
+	SDrum 0 .05,	td .5
+	SDrum 0 .1,	td .5
+	SDrum 0 .2,	td .5
+	SDrum 0 .4,	td .5
+	SDrum, NBurst2
+}
+.Perc3()
+{
+	tr 0
+	HH2
+	run p3a
+	run p3b,	td 7
+	BDrum -4n .5,	td 1
+	run p3a
+	run p3b,	td 3
+	Tom 7n .02,	td .5
+	Tom 7n .03,	td .5
+	Tom 7n .05,	td .5
+	Tom 7n .1,	td .5
+	Tom 7n .25,	td 1
+	Tom 3n .5,	td 1
+	Tom,		td 1
+}
+
+.Bass1(Tr)
+{
+	+tr Tr
+	1:SubPulse -3 1, 2:SubPulse -2 .5,	Reso1,	Drone 0 .4,	td 64
+						Reso2,	Drone 0 .4,	td 64
+	1<1, 2<1
+}
+
+.SubLoop(Tr)
+{
+	+tr (Tr - 2)
+	2 {
+		1:Sub -5n,	td 3,	1<1
+		1:Sub 3n,	td 3,	1<1
+		1:Sub 0,	td 3,	1<1
+				td 3
+		1:Sub 0,	td 1,	1<1
+				td 3
+
+		1:Sub 0,	td 4,	1<1
+		1:Sub -1,	td 2,	1<1
+		1:Sub 0,	td 1,	1<1
+				td 5
+		1:Sub 0,	td 2,	1<1
+		1:Sub 3n,	td 1,	1<1
+				td 1
+
+		1:Sub -5n,	td 3,	1<1
+		1:Sub 3n,	td 3,	1<1
+		1:Sub 0,	td 3,	1<1
+				td 3
+		1:Sub 0,	td 1,	1<1
+				td 3
+
+		1:Sub 0,	td 4,	1<1
+				td 2
+		1:Sub 0,	td 1,	1<1
+				td 5
+		1:Sub -1,	td 3,	1<1
+				td 1
+	}
+}
+
+.BassSP(Tr P2)
+{
+	+tr (Tr - 3)
+	1:SubPulse 0 1 1,	2:SubPulse 1 .5 1,	td 16
+	1<2 P2,			2<2 (P2 + 1),		td 16
+	1<2 0,			2<2 1,			td 32
+	1<1,			2<1
+}
+
+.BassT(Tr)
+{
+	+tr Tr
+	BassSP 0 -2n,	Reso1 0 1 -2n,	Heavy 0 .7 -2n,	td 32
+					Heavy 0 .7,	td 32
+	BassSP 0 -2n,	Reso2 0 1 -2n,	Heavy 0 .7 -2n,	td 32
+					Heavy 0 .7,	td 32
+}
+
+.Bass3(Tr)
+{
+	+tr Tr
+	Reso1 -1 .5 0 rl, Reso1 2 .5 7n rl2, Strings -2 .6, Strings 7n .3
+							td 64
+	Reso2 -1 .5 0 rl, Reso2 2 .5 7n rl2,		td 64
+	*<1
+}
+
+.St(Tr)
+{
+	def i Strings, def v .3, +tr (Tr + 1)
+	1:i 0 v,	2:i 3n v,	3:i 7n v,	td 16
+	1<2 -2n,			3<2 5n,		td 16
+	1<2 0,		2<2 7n,				td 16
+			2<2 2n,		3<2 -5n,	td 16
+	*<1
+}
+
+.St2(Tr)
+{
+	def i OctStrings, def v .8, +tr (Tr + 1)
+	1:i 0 v,	td 6,	1<1
+	1:i 7n v,	td 6,	1<1
+	1:i 3n v,	td 4,	1<1
+	1:i 5n v,	td 6,	1<1
+	1:i 10n v,	td 6,	1<1
+	1:i 5n v,	td 4,	1<1
+	1:i 7n v,	td 16,	1<1
+	1:i 3n v,	td 6,	1<1
+	1:i 2n v,	td 6,	1<1
+	1:i 0 v,	td 4,	1<1
+
+	1:i 10n v,	td 6,	1<1
+	1:i 8n v,	td 6,	1<1
+	1:i 7n v,	td 4,	1<1
+	1:i 5n v,	td 6,	1<1
+	1:i 7n v,	td 6,	1<1
+	1:i 8n v,	td 4,	1<1
+	1:i 7n v,	td 16,	1<1
+	1:i 7n .6,	td 8,	1<1
+			td 8
+}
+
+.ArpM(Tr TrS)
+{
+	+tr Tr
+	SoftArp 0 .6,		St TrS,	td 16
+	SoftArp -2n .5 -1n,		td 16
+	SoftArp -5n .7 2n,		td 32
+}
+
+.Perc1Fill()
+{
+	tr 0
+	Tom 7n .02,			td .5
+	Tom 7n .03,			td .5
+	Tom 7n .05,			td .5
+	Tom 7n .1,			td .5
+	Tom 7n .25,			td 1
+	Tom 3n .5,			td 1
+	Tom,				td 1
+}
+.Perc1()
+{
+	tr 0
+	BDrum 0 .3,		td 20
+	HH0,			td 10
+	BDrum -4n .25,		td 2
+	BDrum 0 .5,		td 8
+	NBurst -4n .5
+}
+.BassI()
+{
+	struct { inline, panmix }
+	vol .1, set vol, vol .3
+	1:Strings -2 .6,	2:OctStrings 0 .2,	td 6
+	ResoIn, Drone 0 .2,	vol .5,			td 32
+	vol 1,						td 24
+	vol 0, *<1,					td 8
+}
+.LongIntro()
+{
+	BassI,				td 6
+	Perc1,	SoftArp -2 1,		td 32
+		SoftArp -1 .8 -1n,	td 32
+}
+.ShortIntro()
+{
+	Perc1Fill,	td 1
+	PreTheme,	td 4
+}
+
+.Theme()
+{
+	Perc3,	BassT, LowCymbal 0 .5,	ArpM,	MeloTheme,	td 64
+			Cymbal 0 .2,	ArpM,			td 64
+}
+
+.PostTheme()
+{
+	SubLoop, Perc2,	Bass3,	LowCymbal -1 .3, ArpM 0 -1,	St2,	td 32
+									td 32
+			Cymbal 0 .1,		ArpM 0 -1,		td 32
+									td 32
+}
+
+.Inter()
+{
+	Perc2,	Bass1,	Explosion 0 .3,	LowCymbal -1 .3,	Fx1,	td 32
+					SoftArp -2,			td 32
+					Cymbal 0 .1,		Fx2,	td 32
+					SoftArp -1 .8 -1n,		td 28
+	PreTheme 4n,							td 4
+}
+
+.Inter2()
+{
+	SubLoop, Perc2,	Bass3,	Explosion 0 .3,	LowCymbal -1 .3,	td 32
+					SoftArp -2,			td 32
+					Cymbal 0 .1,			td 32
+					SoftArp -1 .8 -1n,		td 28
+	PreTheme,							td 4
+}
+
+.Outro()
+{
+	ResoOut, Explosion 0 .5, LowCymbal -1 .2, SoftArp2 -1 1 2n, td 32
+}
+
+.Main(L I)
+{
+	tempo 94 4
+	!Tr0 tr, !Tr 2n
+	if I	// Intro?
+	{
+		LongIntro, td 65
+	}
+	ifz (I - 2)	// Intro only?
+	{
+		end
+	}
+.rep
+	tr (Tr0 + Tr - 2n)
+	run ShortIntro
+	run Theme
+	run PostTheme
+	run Inter
+	+tr 4n, run Theme, -tr 4n
+	run Inter2
+	run Theme
+	run PostTheme
+	run Outro
+	td 16
+	+Tr (rand 2n quant 1n + 1n), %Tr 4n
+	if L {	// Loop?
+		jump rep
+	}
+}
+
+Song(P V=1 L=1 I=1)
+{
+	struct {
+		inline 0 1	// Inline all subvoices
+		panmix 1 >	// Apply pan and volume and send to master
+	}
+
+	// Transposition + volume - no fade-in
+	+tr P, vol (V * .3), set vol
+
+	1:Main L I
+	wait 1
+	end
+.stop
+	// Fade out
+	10 {
+		*vol .7
+		d 100
+	}
+	vol 0, d 100
+	kill *
+
+	// "Stop" message handler
+	1() {
+		force stop
+	}
+}

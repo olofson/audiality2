@@ -1,0 +1,569 @@
+Overview
+--------
+Audiality 2 is an interactive, structured realtime audio engine that
+generates sound and music using a tree of voices, driven by user
+defined programs running on a virtual machine.
+
+Each voice is controlled by a program that can be given initial
+arguments, and receive messages for realtime control. A program can
+(recursively) spawn other programs on subvoices, and control these
+by sending messages.
+
+Timing is subsample accurate, and durations can be specified in
+milliseconds, or in terms of user defined musical ticks.
+
+
+Modular Voice Structure
+-----------------------
+Audiality 2 voices are modular. When a program is started, the audio
+DSP part of the voice it will run on is constructed from audio DSP
+units as specified by the program.
+
+By default, a voice has no units, and cannot directly produce sound,
+but it can still spawn and control subvoices. Output is sent to the
+nearest 'subvoices' unit up the graph.
+
+If no explicit wiring is specified [not yet implemented!], units are
+autowired according to these rules:
+
+	1) Units form chains, the outputs of one unit being wired to
+	   the inputs of the next unit.
+
+	2) A unit with inputs cannot start a chain.
+
+	3) A unit explicitly wired to the voice output (> for output
+	   channel count) terminates the current chain.
+
+	4) A unit with only outputs...
+		a) ...when placed in a chain, mixes into the audio
+		   from the previous units.
+		b) ...when there is no chain (first unit, or chain
+		   terminated due to rule 3), and the next unit has
+		   no inputs, sends to the voice output.
+
+	5) The last unit specified in a struct declaration always
+	   sends to the voice output.
+
+
+Voice Structures - Strange Cases
+--------------------------------
+Consider this structure definition:
+
+	struct {
+		wtosc
+		wtosc
+		panmix
+	}
+
+Intuition would have it that we get two oscillators side by side
+(summing), then processed by the panmix stage. But, no! Since the
+first oscillator looks ahead in the chain and sees the second one,
+which has no inputs, it decides it is the end of its chain, and thus
+decides to send to the voice output instead. As a result, we get two
+separate chains; one with an oscillator sending directly to the first
+channel of the voice output, and one with an oscillator and a panmix
+stage.
+
+
+Subvoices
+---------
+Voices spanwed by programs run as subvoices of the voice the program
+is running on, recursively forming a tree structure, where audio
+flows towards the root node.
+
+There are two ways of running subvoices; decoupled and inline.
+
+Decoupled subvoices send their output to the same destination as
+their parent voice, and as such, they are essentially independent of
+any audio processing that the parent voice may be doing.
+
+Inline subvoices are wired into the modular voice structure of their
+parent voice by means of the 'inline' unit, allowing their output to
+be processed by the units of their parent voice.
+
+
+/////////////////////////////////////////////////////////////////////
+//                                                                 //
+//                            WARNING                              //
+//                                                                 //
+//         The rest of this file is slightly out of date!          //
+//                                                                 //
+/////////////////////////////////////////////////////////////////////
+
+
+The Audiality 2 language
+----------------------
+The Audiality 2 language is a small, domain specific language. It has
+rudimentary control flow instructions, expressions with no operator
+precedence rules (evaluation is invariably done left to right), and
+integrated cooperative threading with message passing.
+
+The language itself has only a single type: real number. (In the
+current implementation, 16:16 fixed point.) However, Audiality 2 also
+has static objects, such as waves and programs, that are referenced
+by handle.
+
+Keywords as well as symbol names are case sensitive.
+
+Comments:
+	// Single line comment
+
+	/* Multiline
+	   comment */
+
+	A single line comment can start anywhere, begins with // and
+	ends with a "newline". That is, both full line and
+	"end-of-line" comments are allowed, and use the same syntax.
+
+	A multiline comment starts with /*, ends with */, and may
+	contain newlines. Code may follow a multiline comment on the
+	same line, after the terminating */.
+
+Immediate values:
+	[-][integer][.[fractional]][conversion]
+
+	That is, no leading zero is required; a fractional number can
+	start with '.'.
+	   'conversion' specifies a conversion to be performed on the
+	value after parsing it, allowing for example pitch values to
+	be expressed in Hz or MIDI style note numbers instead of the
+	native 1.0/octave linear pitch units.
+	   Note that conversions have no effect on code generation or
+	run-time operation; they are merely a convenience feature of
+	the parser.
+
+	Available conversions:
+		f	"Frequency." The value is interpreted as a
+			frequency in Hz, and is converted to linear
+			pitch.
+
+		n	"Note." The value is interpreted as a twelve-
+			tone note number, and is converted to linear
+			pitch. That is, the value is divided by 12.
+
+Labels:
+	.label
+
+	Labels are declared with a preceding '.'. Label names must
+	start with a letter ('a'..'z'), followed by any number of
+	letters or decimal figures.
+	   It is allowed to continue with another statement directly
+	on the same line, after a label declaration.
+
+Variables:
+	!var 2; p var	// Declare 'var', init to 2 and write to p
+	rand !random 42	// Declare !random and init using rand
+
+	The Audiality 2 language provides access to the VM registers as
+	named variables. Control registers have predeclared names,
+	but the remaining general purpose registers can be allocated
+	and named by picking a suitable name and prepending it with
+	'!' (exclamation mark). Variable naming rules are the same as
+	for labels.
+
+	A variable can only be declared in a way that will guarantee
+	that it is initialized before reading. Due to the simplicity
+	of the parser/assembler, this currently means that a variable
+	has to be initialized by the statement in which it occurs, ie
+	it has to be the target of an assignment or a write-only
+	target term of a statement.
+
+Directives:
+	def <symbol> <value>
+
+	Define <symbol> to <value>, so that any occurences of
+	<symbol> evaluate to <value>.
+
+Instructions:
+	<instruction> <arg> <EOS>
+	<instruction> <args...> <EOS>
+
+	Depending on the instruction, there can be zero or more
+	arguments. An argument can be a register name, a label
+	name, a constant name, or an immediate value.
+
+	<EOS> (end-of-statement) can be ';' or ',' (for multiple
+	statements on a single line), or "newline".
+
+	Instructions:
+		sleep	return
+		:	<	run	kill	force
+		jump	loop	jz	jnz	jg	jl
+		if	ifz	ifg	ifl	else
+		while	wz	wg	wl
+		tick	d	td
+		phase	set
+
+Expressions:
+	(<arg> [<op> <arg> [<op> <arg> ...]])
+
+	In most places where an argument is expected, it is possible
+	to use an expression, enclosed in parentheses. Audiality 2
+	expressions are evaluated from left to right, without
+	exception, that is, there is no operator precedence.
+
+	Operators:
+		+	-	*	/	%
+		quant	rand	p2d
+
+In-place operations:
+	<op> <arg>
+	<op> <arg1> <arg2>
+
+	Most operators can be used for in-place operations on
+	variables and control registers. This can be thought of as
+	the operator being shorthand for an instruction that takes
+	the target as the first argument.
+
+Assignment shorthand:
+	<register> <value>
+	<register> <register>
+
+	The internal MOVE and LOAD* instructions are not available in
+	the Audiality 2 language. Instead, a variable name followed by
+	another variable name, or an immediate value, is used as a
+	shorthand assignment syntax. The appropriate VM instruction
+	is inferred by the compiler.
+
+Control registers:
+	w	Oscillator waveform
+	p	Oscillator Pitch (linear pitch)
+	sp	Oscillator Secondary Pitch (linear pitch)
+	a	Oscillator Amplitude
+	tick	Musical tick duration (milliseconds)
+
+	Some control registers ramp internally, rather than instantly
+	accepting new values. The duration of these ramps is
+	controlled indirectly by the timing instructions, so that the
+	control arrives at the new value as the VM continues to run
+	after a delay.
+	   When desired, such control registers can be instantly set
+	to the current target using the 'set' instruction.
+
+Predefined constants:
+	off		(Mute and stop oscillator)
+	square		(Square/pulse waveform)
+	saw		(Sawtooth waveform)
+	triangle	(Triangular waveform)
+	noise		(Sample & hold noise generator)
+
+Programs and message handlers:
+	progname(argname=<defval> argname ...)
+	{
+		1(argname argname=<defval> ...)
+		{
+			...
+		}
+
+		2(argname argname ...)
+		...
+	}
+
+	.localprog(...)
+	{
+		...
+	}
+
+	Programs are normally exported, but can be kept local (ie
+	only visible to code in the same file) by prepending the name
+	in the declaration with a '.' (period). The CS_EXPORTALL flag
+	to cs_Open() overrides this, essentially ignoring the '.'.
+
+	Naming rules are the same as for variables and labels.
+
+	Message handlers are declared inside programs, using their
+	integer entry point indices for names. Message handlers
+	cannot contain timing instructions, such as d, td or sleep.
+
+	Arguments can be considered equivalent to local variables,
+	initialized with the incoming argument values.
+
+	Arguments that are not specified by the caller are by default
+	initialized to zero, but different default values can be
+	specified in the declaration argument list by appending '='
+	followed by the desired value after the argument name.
+
+Program and message handler arguments:
+	The number and meaning of arguments is defined entirely by
+	the program code, but it is recommended that all programs use
+	a similar convention, for easier reuse and interoperability.
+	   Here are my suggested conventions, which should cover most
+	musical applications as well as 3D sound effects:
+
+		SomeSound(Pitch Velocity=1 Modulation X Y Z)
+		{
+			1(Velocity=0 ReleaseVel=1) {}
+			2(Pitch) {}
+			3(Modulation) {}
+			4(X Y Z) {}
+		}
+
+		Pitch:		Linear pitch.
+		Velocity:	Note gate and power/velocity.
+		ReleaseVel	Release velocity for Velocity 0.
+		Modulation:	Vibrato, filter cutoff, drive etc.
+		X, Y, Z:	3D pan position.
+
+	The logic is that the program arguments intialize internal
+	"controls", that can then be changed in real time using the
+	corresponding messages.
+	   The Velocity control should be implemented so that setting
+	it to a non-zero value triggers a new "event", ie a musical
+	note or a new sound event, or just fading to a different
+	power level, whereas setting it to zero switches to a
+	decaying state. In MIDI terms, these operations would
+	correspond to NoteOn and NoteOff, respectively.
+	   The Velocity control should be interpreted as note
+	velocity or power, akin to MIDI NoteOn velocity. Changing the
+	Velocity control from zero to a non-zero value is logically
+	similar to M MIDI NoteOn, whereas setting it to zero would
+	correspond to MIDI NoteOff. A series of non-zero values would
+	be similar to MIDI "pressure".
+	   To implement MIDI style NoteOff velocity, an additional
+	argument is used for message 1, with Velocity 0.
+	   Preferably, a program should implement repeated Velocity
+	on/off transitions in a way that allows clean, seamless
+	monophonic control. If Velocity is set to a non-zero value
+	after the main program has finished, the program is expected
+	to restart in a appropriate way.
+
+Linear Pitch:
+	The oscillator frequency is controlled using "linear pitch";
+	a unit that is very handy in musical applications, as it maps
+	trivially to octaves and notes. Adding 1 doubles the
+	frequency (ie one octave up) whereas subtracting 1 halves the
+	frequency (one octave down) - and the neat part is that this
+	works at ANY pitch!
+	  For musical notes, the twelve-tone equal tempered scale is
+	the most common scale, and in terms of "1.0 per octave"
+	linear pitch, that is expressed as 1/12 per semitone. The
+	assembler has a handy conversion 'n' for this, so you can
+	simply type things like "p 7n" or "+p 3n".
+	   Audiality 2 defines pitch 0.0 as "C0", which resolves to
+	261.626 Hz. Uploaded waveforms can have a period length of
+	any integer number of samples, and pitch control is based on
+	those periods, rather than sample rate.
+
+Pitch inheritance:
+	As a program starts on a new voice, the secondary pitch
+	register 'sp' is initialized with the sum of 'p' and 'sp' of
+	the parent voice or group. This allows transparent
+	transposition, greatly simplifying musical algorithms and
+	"song data" encoding.
+	   If absolute pitch control is desired, in percussion or
+	hardsync or granular synthesis, for example, it is a simple
+	matter of starting the program with 'sp 0' to reset the
+	inherited transposition.
+	   Some programs can be simplified and optimized by using
+	both pitch registers for modulation. Pitch inheritance can
+	still be implemented correctly by reading the initial 'sp'
+	value, and feeding that value inte the algorithm in a
+	suitable fashion.
+
+Instruction set:
+
+	end
+		End function/program/handler and return to caller.
+		If there is no caller, wait for the voice to be
+		detached, then detach any subvoices and wait for
+		them to finish, and finally kill the voice.
+	    NOTE:
+		Message handlers are still working until the voice is
+		actually killed! Thus, a program may end with
+		subvoices running "indefinitely", using messages to
+		control those voices.
+
+	jump <label>
+		Jump to <label>.
+
+	jz/jnz/jg/jl <expr> <label>
+		Jump to <label> if <expr> is zero, non-zero, greater
+		than zero or less than zero, respectively.
+
+	loop <var> <label>
+		Subtract 1 from <var> and if the result is non-zero,
+		jump to <label>.
+
+	d <expr>
+		Delay execution by <expr> milliseconds.
+
+	tempo <bpm> <tpb>
+		Set the tempo and time signature for subsequent td
+		instructions. <bpm> is the tempo in beats per minute,
+		and <tpb> is the number of ticks per beat.
+		   "Beat" here is commonly referred to as a quarter
+		not, but as Audiality 2 deals in beats and ticks only,
+		the more general term "beat" is more appropriate.
+	    NOTE:
+		In the current implementation, this merely sets the
+		'tick' register accordingly; there are no internal
+		concepts of tempo or time signatures.
+
+	td <expr>
+		Delay execution by <expr> musical ticks.
+
+	+<var> <expr>	(Addition)
+	-<var> <expr>	(Subtraction)
+	*<var> <expr>	(Multiplication)
+	/<var> <expr>	(Division)
+	%<var> <expr>	(Modulus, ie remainder of integer division)
+		In-place versions of the respective operations.
+
+	quant <var> <expr>
+		Quantize the value in <var> to granularity <expr>.
+
+	rand <var> <expr>
+		Load a pseudo-random number in the range [0, <expr>]
+		into <var>.
+
+	p2d <delay> <pitch>
+		Converts linear <pitch> into period in the form of a
+		millisecond <delay> value for use with 'delay'.
+
+	set <reg>
+		Instantly loads the current register value, without
+		ramping. This can also be used to stop a ramp in
+		progress in conjunction with the 'force' or 'wake'
+		instructions.
+
+	[run] <program> [<arg> [<arg> ...]]
+		Run <program> until it ends, then continue execution
+		of the current program. The 'run' keyword can be
+		ommited if <program> is a symbol declared as a
+		program, but must be used when calling via variable.
+	    NOTE:
+		While the called program is running, the message
+		handlers of that program will be active in place of
+		the ones of the calling program!
+
+	[<id>]&<program> [<arg> [<arg> ...]]
+		Spawn a new voice, running <program>. <id> is a
+		number or register specifying the subvoice slot to
+		assign the new voice to. If 'id' is not specified,
+		the voice is spawned in detached state. Zero or more
+		arguments can be passed to the program, in the same
+		way as arguments are passed by the cs_Start*() API
+		calls.
+		   <id> 0 is special in that it can hold multiple
+		subvoices. When starting a new voice on <id> 0, any
+		previous voices remain attached. Messages sent to
+		<id> 0 are sent to all subvoices with that <id>.
+	    Tech:
+		A spawned voice is always processed after the voice
+		that spawned it, allowing zero latency sample
+		accurate control via the '>' instruction, without
+		buffer splitting penalty.
+
+	kill <id>
+		Instantly stop and kill subvoice <id>, as started
+		with '&'. Passing '*' for <id> kills all subvoices.
+
+	> <id> <message> [<arg> [<arg> ...]]
+		Send <message> with the specified arguments to voice
+		<id>. <message> is an integer value indicating the
+		message handler to receive the message. If <id> is
+		'*', the message is sent to all subvoices - including
+		any detached voices that are still running.
+
+	< <message> [<arg> [<arg> ...]]
+		Send <message> with the specified arguments to the
+		voice itself.
+	    Tech:
+		This is essentially a direct subroutine call; there
+		are no events enqueued or anything like that.
+
+	force <label>
+		Abort any delays or ending state, and have the main
+		program continue at <label>.
+	    NOTE:
+		This does NOT actually jump to the specified label,
+		but rather modifies the VM state that is reloaded as
+		the message handler ends.
+
+	wake <label>
+		If the main program has finished, this is equivalent
+		to 'force <label>', otherwise, it does nothing.
+
+
+Internal VM instruction set
+---------------------------
+(NOT UP TO DATE!)
+
+Below is the actual, complete instruction set of the VM, along with
+encoding details. Details are subject to change! For normal VM
+assembly programming, consult the official instruction set documentet
+above.
+
+Instructions are 32 bits, with the top 5 bits reserved for the
+opcode, the next 4 bits for register index, and the remaining 23 bits
+used for immediate values and other arguments. Most of these
+arguments are encoded as "f20"; 20 bit (4:16) floating point values.
+
+SLEEP
+	Halt program until detached and all subvoices finished.
+
+RETURN
+	Return to caller, or wait for subvoices to finish, then kill.
+
+JUMP pos
+	Jump to the absolute code position specified by the unsigned
+	23 bit integer value 'pos'.
+
+LOOP r pos
+	Decrement register 'r' and jump conditionally to the absolute
+	code position specified by the unsigned 23 bit integer value
+	'pos'.
+
+DELAY t
+	Delay execution by 't' seconds, where 't' is an f20 value.
+
+TDELAY t
+	Delay execution by 't' ticks, where 't' is an f20 value.
+
+TDELAYR r
+	Delay execution by the number of ticks specified by register
+	'r'.
+
+LOAD r v
+	Load immediate f20 value 'v' into register 'r'.
+
+LOADR to from
+	Copy value from register 'from' to register 'to'.
+
+ADD r v
+	Add immediate f20 value 'v' to register 'r'. (SUB is
+	implemented by negating the argument!)
+
+MUL r v
+	Multiply register 'r' by immediate f20 value 'v'.
+
+ADDR r from
+	Add value of register 'from' to register 'r'.
+
+SUBR r from
+	Subtract value of register 'from' from register 'r'.
+
+MULR r from
+	Multiply register 'r' by the value of register 'from'.
+
+RAND r mag
+	Load a pseudo-random number in the range [0, mag] into
+	register 'r'. 'mag' is an f20 value.
+
+RANDR r magr
+	Load a pseudo-random number in the range [0, marg] into
+	register 'r'. 'magr' is a register index.
+
+PUSH v
+	Push immediate f20 value 'v' onto the argument stack.
+
+PUSHR r
+	Push value from register 'r' onto the argument stack.
+
+SPAWN id program
+	Spawn a new voice and have it run 'program' with the
+	arguments on the argument stack, if any. 'id' is the voice
+	id register that will store the id of the new voice.
+
+RUN program
+	Run 'program' on the current voice.

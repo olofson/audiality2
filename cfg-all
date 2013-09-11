@@ -1,0 +1,51 @@
+#!/bin/sh
+echo "=========================================================="
+echo "Setting up build directories for all targets..."
+echo "=========================================================="
+SOURCEDIR=$(pwd)
+mkdir ../Audiality2build
+
+echo
+echo "========================"
+echo "Release, host native"
+echo "========================"
+mkdir ../Audiality2build/release
+cd ../Audiality2build/release
+cmake $SOURCEDIR -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE="Release"
+ln -s $SOURCEDIR/test/data test/data
+cd $SOURCEDIR
+
+echo
+echo "========================"
+echo "Maintainer, host native"
+echo "========================"
+mkdir ../Audiality2build/maintainer
+cd ../Audiality2build/maintainer
+cmake $SOURCEDIR -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE="Maintainer"
+ln -s $SOURCEDIR/test/data test/data
+cd $SOURCEDIR
+
+echo
+echo "========================"
+echo "Debug, host native"
+echo "========================"
+mkdir ../Audiality2build/debug
+cd ../Audiality2build/debug
+cmake $SOURCEDIR -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE="Debug"
+ln -s $SOURCEDIR/test/data test/data
+cd $SOURCEDIR
+
+echo
+echo "========================"
+echo "Release, MinGW32"
+echo "========================"
+mkdir ../Audiality2build/mingw-release
+cd ../Audiality2build/mingw-release
+cmake -G "MSYS Makefiles" $SOURCEDIR -DCMAKE_INSTALL_PREFIX=/mingw -DCMAKE_BUILD_TYPE="Release"
+ln -s $SOURCEDIR/test/data test/data
+cd $SOURCEDIR
+
+echo
+echo "=========================================================="
+echo "Done!"
+echo "=========================================================="
