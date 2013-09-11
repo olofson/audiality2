@@ -1,3 +1,36 @@
+
+===============================================================================
+This file will no longer be updated. Please check the git log!
+===============================================================================
+
+20130911:
+	* Moved the project to GitHub! (https://github.com/olofson/audiality2)
+	* The cfg-all script now creates build directories inside the source
+	  tree. (Doesn't matter when we're using git.)
+
+20130909:
+	* Autowiring default behavior changed: Units will now output to ANY
+	  unit with inputs down the chain; not just the next unit. This means a
+	  set of wtosc units followed by a panmix, will all be wired to the
+	  inputs of that last unit. Previously, all but the last wtosc would be
+	  wired to the voice master output by default.
+
+20130907:
+	* Removed 'phase' from the instructions list in the syntax highlighting
+	  xml. (It's been a control register of the wtosc unit since way before
+	  the Audiality 2 rename!)
+
+20130524:
+	* Infinite loop check disabled when issuing instructions that will be
+	  fixed up later.
+
+20130420:
+	* A2WT_* symbols renamed A2_W*.
+
+20130328:
+	* Minor comment/documentation corrections.
+	* a2_IncRef() renamed as a2_Retain(), to match ZeeDraw style.
+
 ===============================================================================
 20130102: First release under the new name: Audiality 2, version 1.9.0!
 ===============================================================================

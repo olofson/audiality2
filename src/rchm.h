@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------.
-        rchm.h - Reference Counting Handle Manager 0.1                        |
+        rchm.h - Reference Counting Handle Manager 0.2                        |
  .----------------------------------------------------------------------------'
- | Copyright (C) 2012 David Olofson <david@olofson.net>
+ | Copyright (C) 2012-2013 David Olofson <david@olofson.net>
  |
  | This software is provided 'as-is', without any express or implied warranty.
  | In no event will the authors be held liable for any damages arising from the
@@ -252,7 +252,7 @@ static inline void *rchm_Grab(RCHM_manager *m, RCHM_handle h, RCHM_typecode tc)
  * Returns RCHM_INVALIDHANDLE if the handle is invalid, or RCHM_FREEHANDLE in
  * the handle is in the free pool.
  */
-static inline RCHM_errors rchm_IncRef(RCHM_manager *m, RCHM_handle h)
+static inline RCHM_errors rchm_Retain(RCHM_manager *m, RCHM_handle h)
 {
 	RCHM_handleinfo *hi = rchm_Locate(m, h);
 	if(!hi)

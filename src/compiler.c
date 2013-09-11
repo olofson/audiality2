@@ -196,12 +196,17 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_JL:
 	  case OP_JGE:
 	  case OP_JLE:
-		if(arg < 0)
-			a2c_Throw(c, A2_BADJUMP);
-		if(arg == cdr->pos)
-			a2c_Throw(c, A2_INFLOOP);
-		if(arg > cdr->pos)
-			a2c_Throw(c, A2_BADJUMP);
+		if(arg == A2_UNDEFJUMP)
+			arg = 0;
+		else
+		{
+			if(arg < 0)
+				a2c_Throw(c, A2_BADJUMP);
+			if(arg == cdr->pos)
+				a2c_Throw(c, A2_INFLOOP);
+			if(arg > cdr->pos)
+				a2c_Throw(c, A2_BADJUMP);
+		}
 		break;
 	  case OP_SPAWN:
 	  case OP_SPAWND:
@@ -1442,6 +1447,24 @@ static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 	return 0;
 }
 
+
+/* Check if 'si' or any other items down the chain have inputs. */
+static int downstream_inputs(A2_structitem *si)
+{
+	while(si)
+	{
+		/*
+		 * NOTE: ninputs is already checked against unit min/max, so we
+		 *       can only ever get values that mean "there are inputs",
+		 *	 and of course, 0.
+		 */
+		if(si->ninputs)
+			return 1;
+		si = si->next;
+	}
+	return 0;
+}
+
 static void a2c_StructDef(A2_compiler *c)
 {
 	A2_program *p = c->coder->program;
@@ -1517,12 +1540,11 @@ static void a2c_StructDef(A2_compiler *c)
 			 * output bus and grabs the channel count from there at
 			 * instantiation. Other units use the default (minimum)
 			 * channel count.
-			 *    If there's no chain, and the next unit cannot or
-			 * doesn't have inputs, we also send to the voice output.
+			 *    If there's no chain going, and no later units
+			 * have inputs, we also send to the voice output.
 			 */
 			if(!si->next || (!chainchannels &&
-					(!si->next->ninputs || !si->next->
-					unitdesc->mininputs)))
+					!downstream_inputs(si->next)))
 				si->noutputs = A2_IO_WIREOUT;
 			else
 				si->noutputs = si->unitdesc->minoutputs;
@@ -1692,7 +1714,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 {
 	int fixpos, loopto = c->coder->pos;
 	a2c_SimplExp(c, -1);
-	a2c_Branch(c, op, c->l.token, c->l.val, 0, &fixpos);
+	a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
 	a2c_SkipLF(c);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
@@ -1701,7 +1723,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		int fixelse = c->coder->pos;
 		if(loop)
 			a2c_Throw(c, A2_NEXPELSE);
-		a2c_Code(c, OP_JUMP, 0, 0);	/* To skip over 'else' body */
+		a2c_Code(c, OP_JUMP, 0, A2_UNDEFJUMP);	/* To skip over 'else' body */
 		if(fixpos >= 0)		/* False condition lands here! */
 		{
 			c->coder->code[fixpos] |= c->coder->pos;

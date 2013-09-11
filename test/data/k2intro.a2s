@@ -1,8 +1,8 @@
 def title	"Kobo II Intro + Title Song"
-def version	"1.0"
-def description	"(Straight mono conversion)"
+def version	"1.1"
+def description	"(Slightly edited mono conversion)"
 def author	"David Olofson"
-def copyright	"Copyright (C) 2011-2012 David Olofson"
+def copyright	"Copyright 2011-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -30,17 +30,19 @@ def a2sversion	"1.9"
 
 .Flute(P V=1)
 {
+	struct { inline, panmix }
 	1:Flute0 (P + 1.01) V triangle
 	2:Flute0 (P - 1) (V * .2) saw
 	1(NV) { 1<1 NV, 2<1 (NV * .2) }
 	2(NP) { 1<2 (NP + 1.01), 2<2 (NP - 1) }
 }
 
-.Str0(P V Attack Decay detune)
+.Str0(P V Attack Decay Detune)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
+	pan (Detune * 100)
 	w saw, a 0, !Ta (V * .1), phase (rand 1)
-	+P detune
+	+P Detune
 	p P, !er (Attack * .1)
 .rt	wg (V + a - .001) {
 		+p (P - p * .4 + rand .02 - .01)
@@ -55,7 +57,7 @@ def a2sversion	"1.9"
 			V NV, er (Decay * .1)
 		}
 	}
-	2(NP) { P (NP + detune) }
+	2(NP) { P (NP + Detune) }
 }
 .Strings(P V=1 Attack=.3 Decay=.2)
 {
@@ -81,12 +83,18 @@ def a2sversion	"1.9"
 	2(NP) { 1<2 (NP + 1), 2<2 (NP - 1) }
 }
 
-.NBurst(P V=1)
+.nb(P V=1 Pan)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
+	pan Pan, set pan
 	w noise, p (P + 6), a (V * .8), set a
 	50 {	*a .99, *p .96, d 2 }
 	40 {	*a .92, -p .01, d 50 }
+}
+.NBurst(P V=1)
+{
+	nb P (V * .5) -1.25
+	nb P (V * .5) 1.25
 }
 
 .NBurst2(P V=1)
@@ -239,13 +247,14 @@ def a2sversion	"1.9"
 
 .SoftArp(P V=1 Maj=0)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
 	sa0(PP VV)
 	{
+		pan (rand 1 - .5), set pan
 		a VV, p PP,	td .01
 		*a .25,		td .49
 	}
-	w sine, a V, +tr P, !aa a
+	w triangle, a V, +tr P, !aa a
 	7 {
 		sa0 12n aa
 		sa0 0 aa
@@ -267,13 +276,14 @@ def a2sversion	"1.9"
 
 .SoftArp2(P V=1 Maj=0)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
 	sa0(PP VV)
 	{
+		pan (rand 1 - .5), set pan
 		a VV, p PP,	td .01
 		*a .25,		td .49
 	}
-	w sine, a V, +tr P, !aa a
+	w triangle, a V, +tr P, !aa a
 	40 {
 		sa0 12n aa
 		sa0 0 aa
@@ -285,7 +295,8 @@ def a2sversion	"1.9"
 
 .Explo0(P V=1 Wave Attack)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
+	pan (rand 1 - .5), set pan
 	+P tr, w Wave, !x 1.5, a V, -P 3, tr Attack, !D 1
 	200 {	*tr .98, p (P + rand x), +x .01, d D, +D .005 }
 	800 {	*tr .98, p (P + rand x), -x .0025, *a .999, d D, +D .005 }
@@ -328,21 +339,30 @@ def a2sversion	"1.9"
 }
 .Sub(P V=1)
 {
-	1:subs P V triangle
-	2:subs (P + 1) (V * .15) saw
-	1(NV) { 1<1 NV, 2<1 (NV * .15) }
-	2(NP) { 1<2 NP, 2<2 (NP + 1) }
+	struct { inline, filter12 }
+	lp .5, bp .3, hp .3, cutoff P, q .03
+	1:subs (P - 1) V saw
+	2:subs (P + 1) (V * .5) saw
+	1(NV) { 1<1 NV, 2<1 (NV * .5) }
+	2(NP) { 1<2 (NP - 1), 2<2 (NP + 1), cutoff P }
 }
 
-.SubPulse(P V=1 Dur=2)
+SubPulse(P V=1 Dur=2)
 {
-	struct { wtosc }
-	!np P, w triangle, !oct 0
+	struct { wtosc, wtosc o2, filter12 }
+	!np P, !oct 0
+	w saw, o2.w triangle
+	lp 1, bp 1, hp 0
 .rt	while V {
-		p (np + (oct % 3 % 2)), +oct 1, %oct 8
-		phase 0, a V, a V, td .125
+		q .02, set q, cutoff (P + 5), set cutoff
+		p (np + (oct % 3 % 2))
+		o2.p (p - 1)
+		+oct 1, %oct 8
+		phase 0, o2.phase 0
+		a (V * .2), o2.a V, td .125
 		td .125
-		a 0, td (Dur - .25)
+		q .005, cutoff (P + .8), *a .25, *o2.a .5, td (Dur * .25 - .25)
+		cutoff (P + .5), a 0, o2.a 0, td (Dur * .75)
 	}
 	1(NV) { V NV, wake rt }
 	2(NP) { np NP }
@@ -396,11 +416,13 @@ def a2sversion	"1.9"
 }
 .ResoIn(P V=1)
 {
+	struct { inline, panmix }
 	run rl P	.1 (V * .5)	0 .16
 	run rl P	(V * .5) V	.16 0
 }
 .Reso1(P V=1 P2=0 Ins=rl)
 {
+	struct { inline, panmix }
 	+P2 P
 	run Ins P	V V	0 .4	8
 	run Ins P2	V V	.4 .8	8
@@ -408,6 +430,7 @@ def a2sversion	"1.9"
 }
 .Reso2(P V=1 P2=0 Ins=rl)
 {
+	struct { inline, panmix }
 	+P2 P
 	run Ins P	V V	1.6 1.2	8
 	run Ins P2	V V	1.2 .8	8
@@ -415,6 +438,7 @@ def a2sversion	"1.9"
 }
 .ResoOut(P V=1)
 {
+	struct { inline, panmix }
 	run rl P	V (V * .5)	0 .16	8
 	run rl P	(V * .5) 0	.16 0	8
 }
@@ -440,7 +464,8 @@ def a2sversion	"1.9"
 
 .c0(P amp wave rmax D)
 {
-	struct { wtosc }
+	struct { wtosc, panmix }
+	pan (rand 1 - .5)
 	w wave, a amp, set a, +tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh), *rmax .997, *rmh .997, *a .995, d D }
@@ -557,6 +582,7 @@ def a2sversion	"1.9"
 
 .Perc2()
 {
+	struct { inline, panmix }
 	tr 0
 	BDrum 0 .5,	HH1,	td 8
 	NBurst 0 .5,		td 22
@@ -616,6 +642,7 @@ def a2sversion	"1.9"
 }
 .Perc3()
 {
+	struct { inline, panmix }
 	tr 0
 	HH2
 	run p3a
@@ -632,16 +659,34 @@ def a2sversion	"1.9"
 	Tom,		td 1
 }
 
+.Drop(P V=1)
+{
+	struct { wtosc, panmix }
+	-P 3, !D 3
+	w sine, p (P + 3), a (V * .9)
+	100 {
+		+p (P - p * .023), d D, +D .2
+	}
+	50 {
+		-p .01, d 70
+	}
+	50 {
+		+p .01, *a .95, d 100
+	}
+	a 0, d 1000
+}
+
 .Bass1(Tr)
 {
+	struct { inline, panmix }
 	+tr Tr
-	1:SubPulse -3 1, 2:SubPulse -2 .5,	Reso1,	Drone 0 .4,	td 64
-						Reso2,	Drone 0 .4,	td 64
-	1<1, 2<1
+	Drop,	Reso1,	Drone 0 .4,	td 64
+	Drop,	Reso2,	Drone 0 .4,	td 64
 }
 
 .SubLoop(Tr)
 {
+	struct { inline, panmix }
 	+tr (Tr - 2)
 	2 {
 		1:Sub -5n,	td 3,	1<1
@@ -677,6 +722,7 @@ def a2sversion	"1.9"
 
 .BassSP(Tr P2)
 {
+	struct { inline, panmix }
 	+tr (Tr - 3)
 	1:SubPulse 0 1 1,	2:SubPulse 1 .5 1,	td 16
 	1<2 P2,			2<2 (P2 + 1),		td 16
@@ -686,6 +732,7 @@ def a2sversion	"1.9"
 
 .BassT(Tr)
 {
+	struct { inline, panmix }
 	+tr Tr
 	BassSP 0 -2n,	Reso1 0 1 -2n,	Heavy 0 .7 -2n,	td 32
 					Heavy 0 .7,	td 32
@@ -695,6 +742,7 @@ def a2sversion	"1.9"
 
 .Bass3(Tr)
 {
+	struct { inline, panmix }
 	+tr Tr
 	Reso1 -1 .5 0 rl, Reso1 2 .5 7n rl2, Strings -2 .6, Strings 7n .3
 							td 64
@@ -714,7 +762,7 @@ def a2sversion	"1.9"
 
 .St2(Tr)
 {
-	def i OctStrings, def v .8, +tr (Tr + 1)
+	def i OctStrings, def v .7, +tr (Tr + 1)
 	1:i 0 v,	td 6,	1<1
 	1:i 7n v,	td 6,	1<1
 	1:i 3n v,	td 4,	1<1
@@ -733,7 +781,7 @@ def a2sversion	"1.9"
 	1:i 7n v,	td 6,	1<1
 	1:i 8n v,	td 4,	1<1
 	1:i 7n v,	td 16,	1<1
-	1:i 7n .6,	td 8,	1<1
+	1:i 7n (v * .7),td 8,	1<1
 			td 8
 }
 
@@ -747,6 +795,7 @@ def a2sversion	"1.9"
 
 .Perc1Fill()
 {
+	struct { inline, panmix }
 	tr 0
 	Tom 7n .02,			td .5
 	Tom 7n .03,			td .5
@@ -758,6 +807,7 @@ def a2sversion	"1.9"
 }
 .Perc1()
 {
+	struct { inline, panmix }
 	tr 0
 	BDrum 0 .3,		td 20
 	HH0,			td 10
@@ -767,7 +817,7 @@ def a2sversion	"1.9"
 }
 .BassI()
 {
-	struct { inline, panmix }
+	struct { inline 0 *, panmix * > }
 	vol .1, set vol, vol .3
 	1:Strings -2 .6,	2:OctStrings 0 .2,	td 6
 	ResoIn, Drone 0 .2,	vol .5,			td 32
@@ -856,12 +906,16 @@ def a2sversion	"1.9"
 Song(P V=1 L=1 I=1)
 {
 	struct {
-		inline 0 1	// Inline all subvoices
-		panmix 1 >	// Apply pan and volume and send to master
+		inline 0 *
+		fbdelay * *
+		panmix * >
 	}
+	fbdelay 160, fbgain .1
+	ldelay 300, lgain .1
+	rdelay 350, rgain .1
 
 	// Transposition + volume - no fade-in
-	+tr P, vol (V * .3), set vol
+	+tr P, vol (V * .4), set vol
 
 	1:Main L I
 	wait 1

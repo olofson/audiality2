@@ -1,8 +1,8 @@
 def title	"Kobo II Epilogue"
-def version	"1.0"
+def version	"1.1"
 def description	"\"Thank You\" outro track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright (C) 2011-2013 David Olofson"
+def copyright	"Copyright 2011-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -395,12 +395,11 @@ def a2sversion	"1.9"
 {
 	def Vel .3
 	1:Strings 2n Vel,	2:Strings 5n Vel,	3:Strings 7n Vel, td 32
-	3<1
-							3:Strings 9n Vel, td 32
-	2<1, 3<1
-				2:Strings 4n Vel,	3:Strings 8n Vel, td 32
-	1<1, 3<1
-	1:Strings 1n Vel,				3:Strings 7n Vel, td 32
+							3<2 9n,		td 32
+				2<2 4n,			3<2 8n,		td 32
+	1<2 1n,			2<2 3n,			3<2 7n,		td 8
+	1<2 1n,			2<2 4n,			3<2 9n,		td 8
+	1<2 0n,			2<2 3n,			3<2 6n,		td 16
 	1<1, 2<1, 3<1
 	1(NV) { *<1 NV }
 }
@@ -416,7 +415,7 @@ def a2sversion	"1.9"
 }
 .Bass(P V=1 R=5.5)
 {
-	struct { inline 0 *, wtosc, panmix }
+	struct { inline, wtosc, panmix }
 	-P 2
 	1:sbass P (V * .25)
 	2:sbass (P + 7n) (V * .15)
@@ -435,46 +434,53 @@ def a2sversion	"1.9"
 	1() { *<1 }
 }
 
-.bl1()
+.bl1(n1 n2 n3 n4)
 {
-		1:Bass -10n,	td 1
-	1<1,	1:Bass -5n,	td 1
+		1:Bass n1,	td 1
+	1<1,	1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass -5n,	td 1
+		1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass -7n,	td 1
-	1<1,	1:Bass -5n,	td 1
+		1:Bass n2,	td 1
+	1<1,	1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass -5n,	td 2
+		1:Bass n4,	td 2
 	1<1,			td 6
 }
-.bl2()
+.bl2(n1 n2 n3)
 {
-		1:Bass -7n,	td 1
-	1<1,	1:Bass -5n,	td 1
+		1:Bass n2,	td 1
+	1<1,	1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass 0,	td 1
+		1:Bass n1,	td 1
 	1<1,			td 1
-		1:Bass -5n,	td 3
+		1:Bass n3,	td 3
 	1<1,			td 8
 }
-.bl3()
+.bl3(n1 n2 n3)
 {
-		1:Bass -10n,	td 1
-	1<1,	1:Bass -5n,	td 1
+		1:Bass n1,	td 1
+	1<1,	1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass -5n,	td 1
+		1:Bass n3,	td 1
 	1<1,			td 1
-		1:Bass -7n,	td 1
-	1<1,	1:Bass -5n,	td 2
+		1:Bass n2,	td 1
+	1<1,	1:Bass n3,	td 2
 	1<1,			td 8
 }
 .Bassline()
 {
-	bl1,	td 16
-	bl2,	td 16
-	bl1,	td 16
-	bl3,	td 16
+	bl1 -10n -7n -5n -5n,	td 16
+	bl2 0 -7n -5n,		td 16
+	bl1 -10n -7n -5n -5n,	td 16
+	bl3 -10n -7n -5n,	td 16
+}
+.Bassline2()
+{
+	bl1 -10n -10n -8n -8n,	td 16
+	bl2 -3n -10n -8n,	td 16
+	bl1 -9n -10n -9n -14n,	td 16
+	bl3 -3n -12n -10n,	td 16
 }
 
 .CuteSaw(P V=1 Pan)
@@ -605,23 +611,20 @@ def a2sversion	"1.9"
 
 	1:I 17n V Pan,		td 1
 	1<2 16n,		td 1
-	1<2 7n,			td 3
+	1<2 7n,			td 1.5
+	1<1,			td 1.5
+
+	1:I 16n V Pan,		td 1
+	1<2 17n,		td 1
+	1<2 16n,		td 1
+	1<2 10n,		td 2
+	1<1 (V * .7),		td 2
 	1<1,			td 1
 
-	1:I 10n V Pan,		td 1
-	1<2 14n,		td 1
-	1<2 16n,		td 6
-	1<2 14n,		td 1
-	1<2 13n, 1<1 (V * .9),	td 1
-	1<2 16n, 1<1 (V * .8),	td 1
-	1<2 13n, 1<1 (V * .7),	td 1
-	1<2 14n, 1<1 (V * .6),	td 1
-	1<2 13n, 1<1 (V * .5),	td 1
-	1<2 16n, 1<1 (V * .4), 	td 1
-	1<2 13n, 1<1 (V * .3),	td 1
-	1<2 14n, 1<1 (V * .2),	td 1
-	1<2 13n, 1<1 (V * .1),	td 1
-	1<2 16n, 		td 1
+	1:I 16n V Pan,		td 1
+	1<2 17n,		td 1
+	1<2 16n,		td 1
+	1<2 9n,			td 8
 	1<1
 }
 
@@ -688,12 +691,12 @@ def a2sversion	"1.9"
 	1:ResoLoop -2 sine
 	2:ResoLoop -1 saw
 	3:ResoLoop -5n triangle
+	-tr P
 			td 64
 
-	-tr P
 	Cymbal -1 .25, HH 4, PXPattern, Zap 4
 	+tr P
-	Bassline
+	Bassline2
 	1<1, 1:ResoLoop -2 sine
 	2<1, 2:ResoLoop -1 saw
 	3<1, 3:ResoLoop -5n triangle
@@ -717,6 +720,67 @@ def a2sversion	"1.9"
 	Fill,	td 5
 }
 
+.CuteSine(P V=1 Pan)
+{
+	struct { wtosc, panmix }
+	pan Pan, set pan
+	!P0 tr, +P tr, w asine, p P, a 0, !er .01, !vib 0, !tvib .005
+.rt	wg (V + a - .001) {
+		tr (vib * 6)
+		12 {	-tr vib, +p (P - p * .3), +a (V - a * er), d 5 }
+		12 {	+tr vib, +p (P - p * .3), +a (V - a * er), d 5 }
+		+vib (tvib - vib * .1)
+	}
+	a 0, d 5
+	1(NV) {
+		V NV
+		if NV {
+			vib .005, tvib .005, er .05, wake rt
+		} else {
+			tvib .02, er .02
+		}
+	}
+	2(NP) { P (P0 + NP) }
+}
+.Appre(P1 P2 P3 Vel Pan Tr)
+{
+	+tr Tr
+	1:CuteSine P1 Vel Pan
+	2 {
+		1<2 P1,			td 1
+		4 {
+			1<2 P2,			td 1
+			1<2 P3,			td 1
+			1<2 P1,			td 1
+		}
+		1<2 P2,			td 1
+		1<2 P3,			td 1
+		1<2 P2,			td 1
+	}
+	1<2 P1,			td 1
+	9 {
+		*Vel .85, 1<1 Vel
+		1<2 P2,			td 1
+		1<2 P3,			td 1
+		1<2 P1,			td 1
+	}
+	1<1
+}
+.Appre1(P1 P2 P3 Vel)
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 705, fbgain .4
+	ldelay 277, lgain .6
+	rdelay 396, rgain .6
+	Appre P1 P2 P3 Vel -.25 1
+	td 2
+	Appre P1 P2 P3 (Vel * .4) 1.5
+	td 80
+}
 .b2fill1()
 {
 	struct { inline, panmix }
@@ -739,6 +803,7 @@ def a2sversion	"1.9"
 }
 .Break2()
 {
+	Appre1 -5n 0n 2n .15
 	5:Strings -5n .2, 6:Strings -2n .2, 7:Strings 2n .2
 	Cymbal -.5 .25, Cymbal 0 .25
 	SoftArp -5n .4 2n
@@ -751,6 +816,7 @@ def a2sversion	"1.9"
 	4<1, 8<1, 9<1
 	b2fill1,						td 8
 
+	Appre1 0n 2n 7n .13
 	5:Strings -5n .25, 6:Strings -2n .25, 7:Strings 2n .25
 	Cymbal -1 .25
 	Bassline

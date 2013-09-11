@@ -58,7 +58,7 @@ struct A2_config
 
 /*
  * Create a configuration, initialized to sensible defaults based on the
- * arguments. Arguments set to -1 or NULL are interpreted as default values,
+ * arguments. Arguments set to -1 are interpreted as default values,
  * currently;
  *	samplerate	48000
  *	buffer		1024
@@ -72,8 +72,8 @@ struct A2_config
  * environment.
  *
  * NOTE:
- *	The returned A2_config must be closed using a2_CloseConfig(), whether
- *	or not the config has been used with an engine state!
+ *	The returned A2_config must be closed using a2_CloseConfig(), unless
+ *	the A2_STATECLOSE flag is used, and the config is used with a2_Open().
  */
 A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags);
 

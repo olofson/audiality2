@@ -2,7 +2,7 @@ def title	"Official Audiality 2 Jingle"
 def version	"1.0"
 def description	"Audiality 2 jingle, originally made for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright (C) 2012 David Olofson"
+def copyright	"Copyright 2012 David Olofson"
 def license	"CC BY 3.0"
 def a2sversion	"1.9"
 

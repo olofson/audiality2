@@ -131,11 +131,11 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 }
 
 
-A2_errors a2_IncRef(A2_state *st, A2_handle handle)
+A2_errors a2_Retain(A2_state *st, A2_handle handle)
 {
 	if(!st->ss)
 		return A2_NOTRUNNING;
-	return rchm_IncRef(&st->ss->hm, handle);
+	return rchm_Retain(&st->ss->hm, handle);
 }
 
 
@@ -432,6 +432,8 @@ static inline void a2r_em_kill(A2_state *st, A2_apimessage *am)
 	if(!hi->d.data)
 		return;
 	a2_VoiceKill(st, (A2_voice *)hi->d.data);
+	am->b.action = A2MT_DETACH;
+	a2_writemsg(st->toapi, am, A2_MSIZE(b.action));
 }
 
 static inline void a2r_em_killsub(A2_state *st, A2_apimessage *am)

@@ -71,10 +71,10 @@ extern "C" {
 /* Type of waveform data */
 typedef enum A2_wavetypes
 {
-	A2WT_OFF = 0,		/* "off" wave - silence */
-	A2WT_NOISE,		/* "noise" wave - pitched S&H RNG */
-	A2WT_WAVE,		/* Plain waveform */
-	A2WT_MIPWAVE		/* Mipmapped waveform */
+	A2_WOFF = 0,		/* "off" wave - silence */
+	A2_WNOISE,		/* "noise" wave - pitched S&H RNG */
+	A2_WWAVE,		/* Plain waveform */
+	A2_WMIPWAVE		/* Mipmapped waveform */
 } A2_wavetypes;
 
 /* A2_wave data for plain and mipmapped wavetables */

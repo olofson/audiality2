@@ -185,7 +185,7 @@ const char *a2_Name(A2_state *st, A2_handle handle);
 /*
  * Attempt to increase the reference count of 'handle' by one.
  */
-A2_errors a2_IncRef(A2_state *st, A2_handle handle);
+A2_errors a2_Retain(A2_state *st, A2_handle handle);
 
 /*
  * Decrease the reference count of 'handle' by one. If the reference count

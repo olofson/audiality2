@@ -55,11 +55,11 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 	w->period = period;
 	switch(w->type)
 	{
-	  case A2WT_OFF:
-	  case A2WT_NOISE:
+	  case A2_WOFF:
+	  case A2_WNOISE:
 		break;
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 		w->flags |= A2_UNPREPARED;
 		break;
 	}
@@ -80,10 +80,10 @@ static A2_errors a2_wave_alloc(A2_wave *w, unsigned length)
 	int i, miplevels;
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
+	  case A2_WWAVE:
 		miplevels = 1;
 		break;
-	  case A2WT_MIPWAVE:
+	  case A2_WMIPWAVE:
 		miplevels = A2_MIPLEVELS;
 		break;
 	  default:
@@ -129,10 +129,10 @@ static void a2_wave_render_mipmaps(A2_wave *w)
 	int i;
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 		a2_wave_fix_pad(w, 0);
-		if(w->type == A2WT_MIPWAVE)
+		if(w->type == A2_WMIPWAVE)
 			break;
 	  default:
 		return;
@@ -243,8 +243,8 @@ static void a2_discard_upload_buffers(A2_wave *w)
 {
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 		while(w->upload)
 		{
 			A2_uploadbuffer *ub = w->upload;
@@ -264,8 +264,8 @@ static A2_errors a2_apply_upload_buffers(A2_wave *w)
 {
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 		while(w->upload)
 		{
 			A2_errors res;
@@ -295,8 +295,8 @@ static unsigned a2_calc_upload_length(A2_wave *w)
 {
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 	  {
 		A2_uploadbuffer *ub = w->upload;
 		unsigned size = 0;
@@ -328,8 +328,8 @@ A2_errors a2_WaveWrite(A2_state *st, A2_handle wave, unsigned offset,
 		return A2_BADWAVE;
 	switch(w->type)
 	{
-	  case A2WT_WAVE:
-	  case A2WT_MIPWAVE:
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
 		if(w->flags & A2_UNPREPARED)
 			return a2_add_upload_buffer(w, offset, fmt, data, size);
 		else
@@ -408,7 +408,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	int16_t buf[SC_WPER];
 
 	/* "off" wave - dummy oscillator */
-	res |= a2_wave_upload(st, bank, "off", A2WT_OFF, 0, 0, 0, NULL, 0);
+	res |= a2_wave_upload(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
 
 	/* 1..50% duty cycle pulse waves. ("square" is "pulse50") */
 	for(i = 1; i <= 50; i += i < 10 ? 1 : 5)
@@ -420,14 +420,14 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		for(++s; s < SC_WPER; ++s)
 			buf[s] = -32767;
 		snprintf(name, sizeof(name), "pulse%d", i);
-		res |= a2_wave_upload(st, bank, name, A2WT_MIPWAVE, SC_WPER,
+		res |= a2_wave_upload(st, bank, name, A2_WMIPWAVE, SC_WPER,
 				A2_LOOPED, A2_I16, buf, sizeof(buf));
 	}
 
 	/* Sawtooth wave */
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = s * 65534 / SC_WPER - 32767;
-	res |= a2_wave_upload(st, bank, "saw", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "saw", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 
 	/* Triangle wave */
@@ -435,29 +435,29 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		buf[(5 * SC_WPER / 4 - s - 1) % SC_WPER] =
 				buf[s + SC_WPER / 4] =
 				s * 65534 * 2 / SC_WPER - 32767;
-	res |= a2_wave_upload(st, bank, "triangle", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "triangle", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 
 	/* Sine wave, absolute sine, half sine and quarter sine */
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = sin(s * 2.0f * M_PI / SC_WPER) * 32767.0f;
-	res |= a2_wave_upload(st, bank, "sine", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "sine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	for(s = SC_WPER / 2; s < SC_WPER; ++s)
 		buf[s] = -buf[s];
-	res |= a2_wave_upload(st, bank, "asine", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "asine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	for(s = SC_WPER / 2; s < SC_WPER; ++s)
 		buf[s] = 0;
-	res |= a2_wave_upload(st, bank, "hsine", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "hsine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	for(s = 0; s < SC_WPER / 4; ++s)
 		buf[s + SC_WPER / 2] = buf[s];
-	res |= a2_wave_upload(st, bank, "qsine", A2WT_MIPWAVE, SC_WPER,
+	res |= a2_wave_upload(st, bank, "qsine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 
 	/* SID style noise generator - special oscillator */
-	res |= (s = a2_wave_upload(st, bank, "noise", A2WT_NOISE, 256,
+	res |= (s = a2_wave_upload(st, bank, "noise", A2_WNOISE, 256,
 			A2_LOOPED, 0, NULL, 0));
 	if(s >= 0)
 	{
@@ -483,13 +483,13 @@ static RCHM_errors a2_WaveDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle 
 	a2_InstaKillAllVoices(st);
 	switch(w->type)
 	{
-	  case A2WT_OFF:
-	  case A2WT_NOISE:
+	  case A2_WOFF:
+	  case A2_WNOISE:
 		break;
-	  case A2WT_WAVE:
+	  case A2_WWAVE:
 		free(w->d.wave.data[0]);
 		break;
-	  case A2WT_MIPWAVE:
+	  case A2_WMIPWAVE:
 		for(i = 0; i < A2_MIPLEVELS; ++i)
 			free(w->d.wave.data[i]);
 		break;

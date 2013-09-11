@@ -305,32 +305,32 @@ static A2_errors a2o_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 static void a2o_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
 	A2_wtosc *o = (A2_wtosc *)u;
-	A2_wavetypes wt = A2WT_OFF;
+	A2_wavetypes wt = A2_WOFF;
 	value >>= 16;
 	if((o->wave = a2_GetWave(o->state, value)))
 		wt = o->wave->type;
 	switch(wt)
 	{
 	  default:
-	  case A2WT_OFF:
+	  case A2_WOFF:
 		if(o->flags & A2_PROCADD)
 			u->Process = a2o_OffAdd;
 		else
 			u->Process = a2o_Off;
 		break;
-	  case A2WT_NOISE:
+	  case A2_WNOISE:
 		if(o->flags & A2_PROCADD)
 			u->Process = a2o_NoiseAdd;
 		else
 			u->Process = a2o_Noise;
 		break;
-	  case A2WT_WAVE:
+	  case A2_WWAVE:
 		if(o->flags & A2_PROCADD)
 			u->Process = a2o_WavetableNoMipAdd;
 		else
 			u->Process = a2o_WavetableNoMip;
 		break;
-	  case A2WT_MIPWAVE:
+	  case A2_WMIPWAVE:
 		if(o->flags & A2_PROCADD)
 			u->Process = a2o_WavetableAdd;
 		else

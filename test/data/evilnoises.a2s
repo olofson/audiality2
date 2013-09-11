@@ -2,7 +2,7 @@ def title	"Evil Noises"
 def version	"1.0"
 def description	"The second ChipSound song ever written (straight mono conversion)"
 def author	"David Olofson"
-def copyright	"Copyright (C) 2011 David Olofson"
+def copyright	"Copyright 2011 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -585,10 +585,7 @@ def a2sversion	"1.9"
 
 Song(P V=1 L=0)
 {
-	struct {
-		inline 0 1	// Inline all subvoices
-		panmix 1 >	// Apply pan and volume and send to master
-	}
+	struct { inline, panmix }
 
 	// Transposition + volume - no fade-in
 	+tr P, vol (V * .3), set vol

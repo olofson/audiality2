@@ -1,7 +1,7 @@
 /*
  * compiler.h - Audiality 2 Script (a2s) compiler
  *
- * Copyright (C) 2010-2012 David Olofson <david@olofson.net>
+ * Copyright (C) 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -107,6 +107,9 @@ struct A2_symbol
 	int		value;		/* Symbol value or sub-token */
 	int		index;		/* Physical object index or similar */
 };
+
+/* Illegal jump target PC to delay checks for fixups */
+#define	A2_UNDEFJUMP	0xff000000
 
 /* Branch fixup entry */
 struct A2_fixup
