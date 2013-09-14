@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright (C) 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2012 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

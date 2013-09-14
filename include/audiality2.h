@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright (C) 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -278,6 +278,7 @@ int a2_UnloadAll(A2_state *st);
  * A2_errors error code.
  */
 /*TODO:*/
+/*FIXME: What about reading multiple channels...? */
 int a2_Read(A2_state *st, A2_handle handle,
 		A2_sampleformats fmt, void *buffer, unsigned size);
 

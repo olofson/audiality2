@@ -1,7 +1,7 @@
 /*
  * limiter.c - Audiality 2 compressor/limiter unit
  *
- * Copyright (C) 2001-2002, 2009, 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2001-2002, 2009, 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

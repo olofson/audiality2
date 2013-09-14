@@ -1,7 +1,7 @@
 /*
  * gui.c - Tracker style GUI
  *
- * Copyright (C) 2006, 2011-2012 David Olofson <david@olofson.net>
+ * Copyright 2006, 2011-2012 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

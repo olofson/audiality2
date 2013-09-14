@@ -1,7 +1,7 @@
 
 ===========================================================================
 NOTE: The demo songs provided with Audiality 2 are part of the commercial
-NOTE: game Kobo II, Copyright (C) 2012 David Olofson. All rights reserved.
+NOTE: game Kobo II, Copyright 2013 David Olofson. All rights reserved.
 NOTE: You may play these songs using the Audiality test program a2test.c.
 NOTE: For any other uses, please contact the author!
 ===========================================================================
@@ -9,7 +9,7 @@ NOTE: For any other uses, please contact the author!
 The license below, commonly known as the zlib license, applies to the
 software, except for the aforementioned demo songs:
 
-  Copyright (C) 2011-2012 David Olofson <david@olofson.net>
+  Copyright 2011-2013 David Olofson <david@olofson.net>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages

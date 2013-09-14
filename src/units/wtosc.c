@@ -1,7 +1,7 @@
 /*
  * wtosc.c - Audiality 2 wavetable oscillator unit
  *
- * Copyright (C) 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

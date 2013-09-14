@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------.
         rchm.h - Reference Counting Handle Manager 0.2                        |
  .----------------------------------------------------------------------------'
- | Copyright (C) 2012-2013 David Olofson <david@olofson.net>
+ | Copyright 2012-2013 David Olofson <david@olofson.net>
  |
  | This software is provided 'as-is', without any express or implied warranty.
  | In no event will the authors be held liable for any damages arising from the
