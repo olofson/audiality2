@@ -46,8 +46,8 @@ typedef struct A2_wtosc
 {
 	A2_unit		header;
 	unsigned	flags;		/* Init flags (for wave changing) */
-	unsigned	phase;		/* Phase (16:16 fixp, 1.0/per) */
-	unsigned	dphase;		/* Increment (16:16 fixp, 1.0/per) */
+	unsigned	phase;		/* Phase (24:8 fixp, 1.0/per) */
+	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/per) */
 	int		noise;		/* Current noise sample (S&H) */
 	A2_ramper	a;
 	A2_wave		*wave;		/* Current waveform */
@@ -78,12 +78,13 @@ static inline void a2o_noise(A2_unit *u, unsigned offset, unsigned frames,
 	unsigned s, end = offset + frames;
 	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
+	unsigned dph = o->dphase >> 8;
 	A2_wave_noise *wdata = &o->wave->d.noise;
 	a2_PrepareRamp(&o->a, frames);
 	for(s = offset; s < end; ++s)
 	{
-		unsigned nph = o->phase + o->dphase;
-		if((o->dphase >= 32768) || ((nph ^ o->phase) >> 15))
+		unsigned nph = o->phase + dph;
+		if((dph >= 32768) || ((nph ^ o->phase) >> 15))
 			o->noise = a2_Noise(&wdata->state) - 32767;
 		o->phase = nph;
 		if(add)
@@ -108,13 +109,16 @@ static void a2o_Noise(A2_unit *u, unsigned offset, unsigned frames)
 static inline void a2o_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 		int add)
 {
-	unsigned s, mm, ph;
+	unsigned s, mm, ph, dph;
 	unsigned end = offset + frames;
 	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
-	unsigned dph = o->dphase * w->period >> 8;
 	int16_t *d;
+	if(o->dphase > 0x000fffff)
+		dph = (o->dphase >> 8) * w->period >> 8;
+	else
+		dph = o->dphase * w->period >> 16;
 	a2_PrepareRamp(&o->a, frames);
 	/* FIXME: Cache, or do something smarter... */
 	for(mm = 0; (dph > A2_MAXPHINC) && (mm < A2_MIPLEVELS - 1); ++mm)
@@ -165,14 +169,17 @@ static void a2o_Wavetable(A2_unit *u, unsigned offset, unsigned frames)
 static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
 		unsigned frames, int add)
 {
-	unsigned s, ph;
+	unsigned s, ph, dph;
 	unsigned end = offset + frames;
 	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
-	unsigned dph = o->dphase * w->period >> 8;
 	unsigned perfixp = w->d.wave.size[0] << 8;
 	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
+	if(o->dphase > 0x000fffff)
+		dph = (o->dphase >> 8) * w->period >> 8;
+	else
+		dph = o->dphase * w->period >> 16;
 	a2_PrepareRamp(&o->a, frames);
 	ph = o->phase;
 	if(w->flags & A2_LOOPED)
@@ -250,7 +257,7 @@ static void a2o_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 static inline void a2_OscFrequency(A2_unit *u, int samplerate, float f)
 {
 	A2_wtosc *o = (A2_wtosc *)u;
-	o->dphase = f * 65536.0f / samplerate;
+	o->dphase = f * (65536.0f * 256.0f) / samplerate;
 }
 
 
@@ -266,6 +273,7 @@ static inline void a2_OscPhase(A2_wtosc *o, int ph, unsigned sst)
 		return;
 	}
 	o->phase = ph * o->wave->period >> 8;
+//FIXME: Is this correct...?
 	o->phase -= (sst * o->dphase) * o->wave->period >> 16;
 }
 
