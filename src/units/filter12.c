@@ -86,10 +86,11 @@ static inline void a2f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	for(s = offset; s < end; ++s)
 	{
 		int f = f0 >> 12;
+		int d1 = f12->d1 >> 4;
 		int q = f12->q.value >> 12;
-		int l = f12->d2 + (f * f12->d1 >> 12);
-		int h = (in[s] >> 5) - l - (q * f12->d1 >> 12);
-		int b = (f * h >> 12) + f12->d1;
+		int l = f12->d2 + (f * d1 >> 8);
+		int h = (in[s] >> 5) - l - (q * d1 >> 8);
+		int b = (f * (h >> 4) >> 8) + f12->d1;
 		int fout = (l * f12->lp + b * f12->bp + h * f12->hp) >> 3;
 		if(add)
 			out[s] += fout;
