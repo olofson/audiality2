@@ -308,7 +308,6 @@ static unsigned a2_calc_upload_length(A2_wave *w)
 			unsigned end = ub->offset + ub->size;
 			if(end > size)
 				size = end;
-printf("---- %p: %d ==> %d\n", w, ub->size, size);
 			ub = ub->next;
 		}
 		return size;
