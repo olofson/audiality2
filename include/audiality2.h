@@ -77,12 +77,13 @@ const char *a2_ErrorString(unsigned errorcode);
 	Versioning
 ---------------------------------------------------------*/
 
-/* Return version of the linked Audiality 2 library. */
+/* Return version of the Audiality 2 headers the application was built with. */
 static inline unsigned a2_HeaderVersion(void)
 {
 	return A2_VERSION;
 }
 
+/* Return version of the linked Audiality 2 library. */
 unsigned a2_LinkedVersion(void);
 
 
@@ -95,10 +96,10 @@ unsigned a2_LinkedVersion(void);
  * specified, a default configuration is created.
  * 
  * If a driver in a provided configuration is already open, the 'samplerate',
- * 'buffer', 'channels' and 'flags' arguments are ignored, and the corresponding values are instead
- * retrieved from the driver. In this case, the driver will NOT be closed with
- * the state, unless the application sets the A2_STATECLOSE flag in the driver's
- * 'flag' field.
+ * 'buffer', 'channels' and 'flags' arguments are ignored, and the corresponding
+ * values are instead retrieved from the driver. In this case, the driver will
+ * NOT be closed with the state, unless the application sets the A2_STATECLOSE
+ * flag in the driver's 'flag' field.
  *
  * A driver provided by the application will NOT be destroyed by Audiality as
  * the state is closed, unless the application sets the A2_STATEDESTROY flag in
@@ -256,7 +257,7 @@ A2_handle a2_NewString(A2_state *st, const char *string);
  *
  * NOTE:
  *	This call should generally NOT be used by applications that manage
- *	objects explicitly! It still affects objects after a2_IncRef() has been
+ *	objects explicitly! It still affects objects after a2_Retain() has been
  *	used on them.
  */
 int a2_UnloadAll(A2_state *st);
@@ -267,6 +268,7 @@ int a2_UnloadAll(A2_state *st);
 ---------------------------------------------------------*/
 
 /*
+TODO:
  * Run a state (or substate), converting the output and writing it to memory.
  *
  * NOTE:
@@ -274,20 +276,17 @@ int a2_UnloadAll(A2_state *st);
  *	method. Typically the "dummy" driver is used for this, and this is the
  *	default driver for states created with a2_SubState().
  *
- * Returns the number of sample frames (not bytes!) actually read, or a negated
- * A2_errors error code.
+ * Returns the number of sample frames (not bytes!) actually rendered into the
+ * buffer, or a negated A2_errors error code.
  */
-/*TODO:*/
-/*FIXME: What about reading multiple channels...? */
-int a2_Read(A2_state *st, A2_handle handle,
-		A2_sampleformats fmt, void *buffer, unsigned size);
+int a2_Run(A2_state *st, A2_sampleformats fmt, void *buffer, unsigned size);
 
-/*TODO: Render CSL program into wave. */
+/*TODO: Render A2S program into wave. */
 A2_handle a2_RenderWave(A2_state *st, A2_handle bank, const char *name,
 		unsigned period, int flags, unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv);
 
-/*TODO: Render CSL program, provided as source code string, into wave. */
+/*TODO: Render A2S program, provided as source code string, into wave. */
 A2_handle a2_RenderString(A2_state *st, A2_handle bank, const char *name,
 		unsigned period, int flags, unsigned samplerate, unsigned length,
 		const char *source);
@@ -431,18 +430,33 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice);
 ---------------------------------------------------------*/
 
 /*
- * Set up 'callback' to receive audio from 'group'. The callback will run as
- * the final stage of 'group', allowing it to capture the post pan, post volume
- * controls audio that is sent to the master group. 'userdata' will be passed
- * as is to 'callback'.
+ * Set up 'callback' to receive audio from 'voice'. The callback will be called
+ * by the Process() method of the first 'xinsert' unit found in the voice.
+ *
+ * The root voice and groups created with a2_NewGroup() have an 'xinsert' unit
+ * last in their chains.
+ *
+ * To use this with any other voice, the voice needs to run a program that
+ * includes at 'xinsert' unit somewhere in its structure, or this call will fail
+ * with A2_NOXINSERT.
+ *
+ * Note that 'xinsert' does not need to be the last unit in a chain, so it's
+ * entirely possible to use it for probing the signal at any point in the voice
+ * structure.
+ *
+ * Returns A2_OK (0) if the operation was successful, or an error code such as:
+ *	A2_EXPUNIT	voice has no units
+ *	A2_NOXINSERT	no 'xinsert' unit found
+ *	A2_BADVOICE	'voice' is not actually the handle of a voice
  */
 A2_errors a2_Tap(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
 		void *userdata);
 
 /*
- * Set up 'callback' to run as the final stage of 'group', allowing it to
- * process the post pan, post volume controls audio before it is sent to the
- * master group. 'userdata' will be passed as is to 'callback'.
+ * Similar to a2_Tap(), but the callback will be able to alter the audio
+ * buffers in order to process or generate audio. This is essentially a quick
+ * and dirty way of injecting custom DSP effects without implementing proper
+ * voice units.
  */
 A2_errors a2_Insert(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
 		void *userdata);
@@ -489,19 +503,6 @@ typedef enum A2_properties
 
 int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p);
 A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v);
-
-/*TODO:
-	* Remove A2_properties!
-
-int a2_PropertyCount(A2_state *st, A2_handle h);
-const char *a2_PropertyName(A2_state *st, A2_handle h, unsigned p);
-
-double a2_GetPropertyd(A2_state *st, A2_handle h, unsigned p);
-A2_errors a2_SetPropertyd(A2_state *st, A2_handle h, unsigned p, double v);
-
-const char *a2_GetPropertys(A2_state *st, A2_handle h, unsigned p);
-A2_errors a2_SetPropertys(A2_state *st, A2_handle h, unsigned p, const char *s);
-*/
 
 #ifdef __cplusplus
 };
