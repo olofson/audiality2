@@ -32,6 +32,15 @@
 #	define	a2o_Inter	a2_Lerp
 #endif
 
+/*
+ * Maximum supported number of sample frames in a wave.
+ * 
+ * NOTE:
+ *	As it is, this needs to leave room for the phase accumulator to run
+ *	slightly beyond the end of the wave, or the stop/loop logic won't work!
+ */
+#define	A2_WTOSC_MAXLENGTH	(0x01000000 - A2_WAVEPRE - A2_WAVEPOST)
+
 /* Control register frame enumeration */
 typedef enum A2O_cregisters
 {
@@ -319,7 +328,21 @@ static void a2o_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
 		wt = o->wave->type;
 	switch(wt)
 	{
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
+		if(o->wave->d.wave.size[0] > A2_WTOSC_MAXLENGTH)
+		{
+/* FIXME: Error/warning message here! */
+			wt = A2_WOFF;
+		}
+		break;
 	  default:
+		break;
+	}
+	switch(wt)
+	{
+	  default:
+/* FIXME: Error/warning message here! */
 	  case A2_WOFF:
 		if(o->flags & A2_PROCADD)
 			u->Process = a2o_OffAdd;
