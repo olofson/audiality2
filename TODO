@@ -120,11 +120,6 @@ TODO: -------------------------------------------------------------------------
 	* Need to keep track of where messages were allocated, as we might be
 	  using different memory managers!
 
-* Build a streaming oscillator + API over the upload mechanism of A2_wave! We
-  just need to send the A2_uploadbuffers via messages instead, so they can be
-  added safely in the realtime context + perhaps updating some buffer status
-  info, so the oscillator doesn't have to scan the list all the time.
-
 * Simple on-demand waves: Register symbols with userdata + callback that the
   compiler runs whenever it hits one of these. This could actually be used for
   anything - not just waves.
@@ -506,8 +501,6 @@ TODO: -------------------------------------------------------------------------
 		  effects, like compressor/limiter.
 
 TESTING:
-	* Does granular synthesis (subsample accurate phase control) work
-	  properly now?
 	* Test CS_NOMIP with Valgrind!
 
 * Instructions + syntax for indexing and interpolating values out of waveforms!
@@ -669,14 +662,6 @@ CRITICAL:
 	  doesn't understand that it can't use 'alt' for temporary storage
 	  when it's also used later in the expression.
 
-	* Compiler bug: 'if' statement first in program results in "Jump
-	  would cause infinite loop." Two bugs:
-		* Check is for branch target == current code position, but
-		  branch target is 0 at this point, as it's not yet been
-		  fixed up!
-		* For constructs that need fixups, this test should be
-		  done after the fixup - not when issuing the instruction!
-
 ---------------------------------------------------------------------------
 
 * What about the remaining uses of the SDL audio lock?
@@ -783,12 +768,6 @@ CRITICAL:
 
 	* Convert Modulation parameters to [0, 1] "sensible" range!!!
 
-	* Streaming oscillator! That's how to implement streaming; start
-	  a voice that uses the streaming oscillator, and enqueue data for
-	  it using a call like this:
-		CS_errors cs_WaveStream(unsigned id, CS_sampleformats fmt,
-				void *data, unsigned size);
-
 	* Binary files! Make the CSL compiler optional. Packed VM code? Or
 	  is it better to just leave that to lzma or bzip2? Hint: Just
 	  dropping the null bytes actually makes the compressed file one
@@ -801,13 +780,6 @@ CRITICAL:
 
 	* Instructions to wait for a one-shot wave to end, and/or test if
 	  it is still playing.
-
-	* MML parser!? How do we wire MML commands to programs and
-	  messages? One would probably want to differentiate between mono
-	  and poly modes, even though a single MML string is actually
-	  monophonic by design. Well, most variants known as MML are, but
-	  of course, we could invent one that separates note lengths from
-	  timing.
 
 	* Editor/synth application with:
 		* ALSA and/or other MIDI interface
@@ -958,13 +930,6 @@ Ideas:
 	  need, so we can pre-allocate sufficient resources to handle it
 	  in a realtime safe manner.
 
-	* Another way to reduce the realtime issues with heavy songs would
-	  be to support buffered streaming from a low priority thread.
-	  Like the off-line rendering context, this low priority thread
-	  can share all "static" data (programs, waves etc) with the
-	  realtime state, so it's essentially just a partition of the
-	  graph.
-
 	* The 'run' mechanism causes all sorts of problems, including
 	  complicating or even breaking the design! Just for starters,
 	  I've already been bitten by the "messages go to the program
@@ -994,37 +959,6 @@ Ideas:
 	  tick duration. If the bank doesn't have a default, the engine's
 	  global default is used, and that can be changed by the host
 	  application.
-
-	* Use this instead of Audiality until A2 is ready for use!!! We'll
-	  need:
-		* N channel panning, at least stereo!
-
-		* Output busses for FX. (Build around the voice tree!)
-
-			* We need some way of having a group sending its
-			  output to a specific group, rather than through
-			  its parents.
-
-		* Waveform loading/streaming from file and memory.
-		  (Mostly for rendering sounds using the EEL FFTSynth
-		  and other EEL scripts.)
-
-			* CSASM directive to import waveform data by
-			  passing a string via some callback API. This
-			  will allow .csa files to call EEL scripts,
-			  custom application code and whatnot to load
-			  or render waveforms, without ChipSound having
-			  to deal with any details!
-
-			* CSASM directive to import a shared waveform by
-			  name. Maybe this is actually covered by the
-			  above? Waveforms are immutable! So, if you pass
-			  the same name, arguments and whatnot, it should
-			  be safe to return the cached waveform, rather
-			  than calling the loader/renderer callback again.
-
-			* Directive for rendering CSASM program output
-			  into waveforms?
 
 	* Add an API for setting tick, pitch and whatnot of groups! (That
 	  is, the initial values that voices inherit.)
