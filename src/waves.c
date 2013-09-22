@@ -174,32 +174,31 @@ static void a2_wave_render_mipmaps(A2_wave *w)
 static A2_errors a2_do_write(A2_wave *w, unsigned offset,
 		A2_sampleformats fmt, const void *data, unsigned length)
 {
-	int s = offset;
-	int smax = offset + length;
+	int s;
 	int size = w->d.wave.size[0];
-	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
-	if(smax > size)
+	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE + offset;
+	if(offset + length > size)
 		return A2_INDEXRANGE;
 	switch(fmt)
 	{
 	  case A2_I8:
-		for( ; s < smax; ++s)
+		for(s = 0; s < length; ++s)
 			d[s] = ((int8_t *)data)[s] << 8;
 		break;
 	  case A2_I16:
-		for( ; s < smax; ++s)
+		for(s = 0; s < length; ++s)
 			d[s] = ((int16_t *)data)[s];
 		break;
 	  case A2_I24:
-		for( ; s < smax; ++s)
+		for(s = 0; s < length; ++s)
 			d[s] = ((int32_t *)data)[s] >> 16;
 		break;
 	  case A2_I32:
-		for( ; s < smax; ++s)
+		for(s = 0; s < length; ++s)
 			d[s] = ((int32_t *)data)[s] >> 16;
 		break;
 	  case A2_F32:
-		for( ; s < smax; ++s)
+		for(s = 0; s < length; ++s)
 			d[s] = ((float *)data)[s] * 32767.0f;
 		break;
 	  default:
@@ -214,18 +213,22 @@ static A2_errors a2_add_upload_buffer(A2_wave *w, unsigned offset,
 {
 	A2_uploadbuffer *lastub = w->upload;
 	A2_uploadbuffer *ub = (A2_uploadbuffer *)malloc(sizeof(A2_uploadbuffer));
+	int ss = a2_sample_size(fmt);
+	if(!ss)
+		return -A2_BADFORMAT;
 	if(!ub)
 		return A2_OOMEMORY;
 	ub->next = NULL;
-	ub->data = malloc(size);
+	ub->data = malloc(size * ss);
 	if(!ub->data)
 	{
 		free(ub);
 		return A2_OOMEMORY;
 	}
 	ub->fmt = fmt;
+	ub->offset = offset;
 	ub->size = size;
-	memcpy(ub->data, data, size);
+	memcpy(ub->data, data, size * ss);
 	if(lastub)
 	{
 		while(lastub->next)
@@ -233,7 +236,7 @@ static A2_errors a2_add_upload_buffer(A2_wave *w, unsigned offset,
 		lastub->next = ub;
 	}
 	else
-		w->upload = ub->next;
+		w->upload = ub;
 	return A2_OK;
 }
 
@@ -302,14 +305,10 @@ static unsigned a2_calc_upload_length(A2_wave *w)
 		unsigned size = 0;
 		while(ub)
 		{
-			unsigned end;
-			int ss = a2_sample_size(ub->fmt);
-			if(ss)
-			{
-				end = ub->offset + ub->size / ss;
-				if(end > size)
-					size = end;
-			}
+			unsigned end = ub->offset + ub->size;
+			if(end > size)
+				size = end;
+printf("---- %p: %d ==> %d\n", w, ub->size, size);
 			ub = ub->next;
 		}
 		return size;
@@ -330,10 +329,16 @@ A2_errors a2_WaveWrite(A2_state *st, A2_handle wave, unsigned offset,
 	{
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
+	  {
+		int ss = a2_sample_size(fmt);
+		if(!ss)
+			return A2_BADFORMAT;
+		size /= ss;
 		if(w->flags & A2_UNPREPARED)
 			return a2_add_upload_buffer(w, offset, fmt, data, size);
 		else
 			return a2_do_write(w, offset, fmt, data, size);
+	  }
 	  default:
 		return A2_WRONGTYPE;
 	}
@@ -348,6 +353,8 @@ A2_handle a2_WaveUpload(A2_state *st,
 	A2_handle h;
 	A2_wave *w;
 	int ss = a2_sample_size(fmt);
+	if(!ss)
+		return -A2_BADFORMAT;
 	if((h = a2_WaveNew(st, wt, period, flags)) < 0)
 		return h;
 	if(!(w = a2_GetWave(st, h)))
@@ -400,6 +407,43 @@ static A2_handle a2_wave_upload(A2_state *st, A2_handle bank, const char *name,
 	}
 	return h;
 }
+
+#if 0
+A2_handle a2_test_render(A2_state *st, A2_handle bank, const char *name,
+		unsigned frames)
+{
+	A2_errors res;
+	A2_handle h;
+	int i;
+	int s = 0;
+	int16_t buf[SC_WPER];
+	if((h = a2_WaveNew(st, A2_WMIPWAVE, SC_WPER, 0)) < 0)
+		return h;
+	while(s < frames)
+	{
+		for(i = 0; (i < SC_WPER) && (s < frames); ++i)
+			buf[i] = sin(s++ * 2.0f * M_PI / 1000 +
+					sin(s * .0001) * 10) * 32767.0f;
+		if((res = a2_WaveWrite(st, h, s - i, A2_I16, buf,
+				i * sizeof(int16_t))))
+		{
+			a2_Release(st, h);
+			return -res;
+		}
+	}
+	if((res = a2_WavePrepare(st, h)))
+	{
+		a2_Release(st, h);
+		return -res;
+	}
+	if((res = a2_Export(st, bank, h, name)))
+	{
+		a2_Release(st, h);
+		return -res;
+	}
+	return h;
+}
+#endif
 
 A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 {
@@ -468,8 +512,11 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 #if 0
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = sin(s * (1 + s * .1) * .0005) * 32767;
-	res |= a2_wave_upload(st, 0, "chirp", SC_WPER, A2_LOOPED,
+	res |= a2_wave_upload(st, bank, "chirp", SC_WPER, A2_LOOPED,
 			A2_I16, buf, sizeof(buf));
+#endif
+#if 0
+	res |= a2_test_render(st, bank, "longsweep", 16777084);
 #endif
 	return res < 0 ? A2_OOMEMORY : A2_OK;
 }
