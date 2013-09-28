@@ -111,8 +111,8 @@ typedef struct RCHM_manager
 	RCHM_handle	nexthandle;	/* Next handle to try if pool empty */
 
 	/* Table of info about registered types */
-	int		ntypes;		/* Size of arrays */
-	RCHM_typeinfo	*types;		/* Callbacks */
+	int		ntypes;
+	RCHM_typeinfo	*types;
 } RCHM_manager;
 
 

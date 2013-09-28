@@ -1,7 +1,7 @@
 /*
  * types.h - Audiality 2 basic data types
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -36,9 +36,6 @@ typedef	int A2_handle;
 typedef struct A2_driver A2_driver;
 typedef struct A2_config A2_config;
 typedef struct A2_state A2_state;
-
-typedef unsigned char A2_gid;	/* Group ID; gid 0 is the hardwired "root" */
-typedef unsigned short A2_vid;	/* Voice ID; 0 is "no ID", ie detached */
 
 /* Object types (Also used for RCHM handle type tagging!) */
 typedef enum A2_otypes
@@ -112,6 +109,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_OUTOFREGS,	"Out of VM registers")\
   \
   A2_DEFERR(A2_NOTRUNNING,	"Audiality not initialized or running")\
+  A2_DEFERR(A2_NOTIMPLEMENTED,	"Operation or feature not implemented")\
   A2_DEFERR(A2_OPEN,		"Error opening file")\
   A2_DEFERR(A2_NODRIVER,	"No driver of the required type available")\
   A2_DEFERR(A2_DRIVERNOTFOUND,	"Specified driver not found")\
@@ -228,14 +226,6 @@ typedef enum A2_initflags
 	A2_STATECLOSE =	0x20000000,	/* Will be closed by engine state */
 	A2_CFGCLOSE =	0x40000000,	/* Will be closed by configuration */
 } A2_initflags;
-
-
-/*---------------------------------------------------------
-	Insert callback API
----------------------------------------------------------*/
-
-typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
-		unsigned frames, void *userdata);
 
 #ifdef __cplusplus
 };

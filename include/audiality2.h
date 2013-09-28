@@ -429,6 +429,9 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice);
 	Simplified "plugin" interface
 ---------------------------------------------------------*/
 
+typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
+		unsigned frames, void *userdata);
+
 /*
  * Set up 'callback' to receive audio from 'voice'. The callback will be called
  * by the Process() method of the first 'xinsert' unit found in the voice.

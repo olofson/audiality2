@@ -1,7 +1,7 @@
 /*
  * waves.h - Audiality 2 waveform API and unit programming interface
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -114,13 +114,11 @@ typedef enum A2_waveflags
 {
 	A2_LOOPED =	0x00000100,	/* Waveform is looped */
 /*TODO*/A2_NORMALIZE =	0x00010000,	/* Normalize waveform amplitude */
-/*TODO*/A2_WRAP =	0x00020000,	/* Wrap/mix until finished (???????) */
 /*TODO*/A2_XFADE =	0x00040000,	/* Crossfade to make seamless */
 /*TODO*/A2_REVMIX =	0x00080000,	/* Mix in reversed to make seemless */
 	A2_CLEAR =	0x00100000,	/* Clear (silence) the waveform */
 	A2_UNPREPARED =	0x01000000,	/* Not prepared - DO NOT PLAY! */
 } A2_waveflags;
-
 
 /*
  * Upload a waveform for use by wavetable oscillators. Returns the handle of the
