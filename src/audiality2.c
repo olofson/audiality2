@@ -107,11 +107,8 @@ static void type_registry_cleanup(A2_state *st)
 int a2_UnloadAll(A2_state *st)
 {
 	int count = 0;
-	RCHM_manager *hm;
+	RCHM_manager *hm = &st->ss->hm;
 	RCHM_handle h;
-	if(!st->ss)
-		return A2_NOTRUNNING;
-	hm = &st->ss->hm;
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
 		RCHM_handleinfo *hi = rchm_Get(hm, h);
@@ -135,12 +132,9 @@ int a2_UnloadAll(A2_state *st)
 static int a2_unlock_all(A2_state *st)
 {
 	int count = 0;
-	RCHM_manager *hm;
+	RCHM_manager *hm = &st->ss->hm;
 	RCHM_handle h;
-	if(!st->ss)
-		return 0;
 	DBG(fprintf(stderr, "=== a2_unlock_all() ===\n");)
-	hm = &st->ss->hm;
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
 		DBG(const char *s = a2_String(st, h);)
@@ -264,8 +258,8 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 
 static void a2_CloseSharedState(A2_state *st)
 {
-	if(!st->ss)
-		return;
+/*	if(!st->ss)
+		return;*/
 	type_registry_cleanup(st);
 	rchm_Cleanup(&st->ss->hm);
 	if(st->ss->c)

@@ -53,19 +53,14 @@ A2_otypes a2_TypeOf(A2_state *st, A2_handle handle)
 
 const char *a2_TypeName(A2_state *st, A2_otypes type)
 {
-	if(!st->ss)
-		return NULL;
 	return rchm_TypeName(&st->ss->hm, type);
 }
 
 
 const char *a2_String(A2_state *st, A2_handle handle)
 {
-	char *sb;
 	RCHM_handleinfo *hi;
-	if(!st->ss)
-		return NULL;
-	sb = st->ss->strbuf;
+	char *sb = st->ss->strbuf;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
 	switch(hi->typecode)
@@ -111,8 +106,6 @@ const char *a2_String(A2_state *st, A2_handle handle)
 const char *a2_Name(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi;
-	if(!st->ss)
-		return NULL;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
 	switch(hi->typecode)
@@ -133,16 +126,12 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 
 A2_errors a2_Retain(A2_state *st, A2_handle handle)
 {
-	if(!st->ss)
-		return A2_NOTRUNNING;
 	return rchm_Retain(&st->ss->hm, handle);
 }
 
 
 A2_errors a2_Release(A2_state *st, A2_handle handle)
 {
-	if(!st->ss)
-		return A2_NOTRUNNING;
 	return -rchm_Release(&st->ss->hm, handle);
 }
 

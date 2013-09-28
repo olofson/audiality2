@@ -193,8 +193,6 @@ A2_handle a2_NewString(A2_state *st, const char *string)
 {
 	A2_handle h;
 	A2_string *s;
-	if(!st->ss)
-		return -A2_NOTRUNNING;
 	if(!(s = (A2_string *)calloc(1, sizeof(A2_string))))
 		return -A2_OOMEMORY;
 	if(!(s->buffer = strdup(string)))
@@ -218,8 +216,6 @@ A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
 {
 	A2_errors res;
 	RCHM_handleinfo *hi;
-	if(!st->ss)
-		return A2_NOTRUNNING;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
 	switch(hi->typecode)
@@ -251,8 +247,6 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
 {
 	A2_errors res;
 	RCHM_handleinfo *hi;
-	if(!st->ss)
-		return A2_NOTRUNNING;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
 	if(!name)
