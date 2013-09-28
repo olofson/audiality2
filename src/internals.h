@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -130,6 +130,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 /* Size of temporary string buffers (bytes) */
 #define	A2_TMPSTRINGSIZE	256
 
+typedef struct A2_typeinfo A2_typeinfo;
 typedef struct A2_string A2_string;
 typedef struct A2_bank A2_bank;
 typedef struct A2_program A2_program;
@@ -322,6 +323,82 @@ typedef enum A2_opcodes
 #define	A2_FIRSTCONTROLREG	A2_FIXEDREGS
 
 void a2_DumpIns(unsigned *code, unsigned pc);
+
+
+/*---------------------------------------------------------
+	Stream interface internals
+---------------------------------------------------------*/
+
+/*
+ * Stream interface/instance (see <audiality2/stream.h>)
+ *
+ * NOTE:
+ *	Objects supporting the stream interface need to have a pointer to one
+ *	of these as the FIRST field in their instance struct!
+ */
+struct A2_stream
+{
+	A2_state	*state;		/* State this stream belongs to */
+	void		*object;	/* Object this stream belongs to */
+	void		*streamdata;	/* Stream implementation data */
+	A2_handle	handle;		/* Target object handle */
+	unsigned	flags;		/* Stream init and state flags */
+	unsigned	position;	/* Current stream position */
+
+	/*
+	 * a2_Read() backend. (Optional; operations will fail if not specified!)
+	 */
+	A2_errors (*Read)(A2_stream *str,
+			A2_sampleformats fmt, void *buffer, unsigned size);
+
+	/*
+	 * a2_Write() backend. (Optional; operations will fail if not specified!)
+	 */
+	A2_errors (*Write)(A2_stream *str,
+			A2_sampleformats fmt, const void *data, unsigned size);
+
+	/*
+	 * a2_[SG]etPos() backends. (Optional; the 'position' field is updated
+	 * directly if no callback is specified.)
+	 */
+	A2_errors (*SetPos)(A2_stream *str, unsigned offset);
+	unsigned (*GetPos)(A2_stream *str);
+
+	/*
+	 * a2_Flush() backend. (Optional; operations will do nothing and always
+	 * suceed if this callback is not specified.)
+	 */
+	A2_errors (*Flush)(A2_stream *str);
+
+	/*
+	 * a2_StreamClose() backend. (Optional; if this callback is not
+	 * specified, the Flush() callback, if specified, will be called
+	 * instead.)
+	 */
+	A2_errors (*Close)(A2_stream *str);
+};
+
+typedef A2_errors (*A2_stropen_cb)(A2_stream *str);
+
+
+/*---------------------------------------------------------
+	Engine type registry
+---------------------------------------------------------*/
+
+struct A2_typeinfo
+{
+	/* Engine state (for destructors) */
+	A2_state	*state;
+
+	/*
+	 * Open a stream on an object of this type. Leave this NULL if the
+	 * stream interface is not supported!
+	 */
+	A2_stropen_cb	OpenStream;
+};
+
+A2_errors a2_RegisterType(A2_state *st, A2_otypes otype, const char *name,
+		RCHM_destructor_cb destroy, A2_stropen_cb stropen);
 
 
 /*---------------------------------------------------------
@@ -787,15 +864,6 @@ A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames);
 /*---------------------------------------------------------
 	Waves
 ---------------------------------------------------------*/
-
-struct A2_uploadbuffer
-{
-	A2_uploadbuffer		*next;
-	void			*data;
-	A2_sampleformats	fmt;
-	unsigned		offset;
-	unsigned		size;
-};
 
 A2_errors a2_InitWaves(A2_state *st, A2_handle bank);
 A2_errors a2_RegisterWaveTypes(A2_state *st);

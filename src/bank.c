@@ -32,10 +32,10 @@
 	Object/handle management
 ---------------------------------------------------------*/
 
-static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle h)
+static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	int i;
-	A2_state *st = (A2_state *)td;
+	A2_state *st = ((A2_typeinfo *)ti)->state;
 	A2_bank *b = (A2_bank *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
@@ -48,10 +48,10 @@ static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle 
 	return 0;
 }
 
-static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle h)
+static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	int i;
-	A2_state *st = (A2_state *)td;
+	A2_state *st = ((A2_typeinfo *)ti)->state;
 	A2_program *p = (A2_program *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
@@ -69,7 +69,7 @@ static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *td, RCHM_hand
 	return RCHM_OK;
 }
 
-static RCHM_errors a2_UnitDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle h)
+static RCHM_errors a2_UnitDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
@@ -77,7 +77,7 @@ static RCHM_errors a2_UnitDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle 
 	return RCHM_OK;
 }
 
-static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle h)
+static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	A2_string *s = (A2_string *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
@@ -89,18 +89,17 @@ static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *td, RCHM_handl
 
 A2_errors a2_RegisterBankTypes(A2_state *st)
 {
-	RCHM_manager *m = &st->ss->hm;
-	RCHM_errors res;
-	res = rchm_RegisterType(m, A2_TBANK, "bank", a2_BankDestructor, st);
+	A2_errors res = a2_RegisterType(st, A2_TBANK, "bank",
+			a2_BankDestructor, NULL);
 	if(!res)
-		res = rchm_RegisterType(m, A2_TPROGRAM, "program",
-				a2_ProgramDestructor, st);
+		res = a2_RegisterType(st, A2_TPROGRAM, "program",
+				a2_ProgramDestructor, NULL);
 	if(!res)
-		res = rchm_RegisterType(m, A2_TUNIT, "unit",
-				a2_UnitDestructor, st);
+		res = a2_RegisterType(st, A2_TUNIT, "unit",
+				a2_UnitDestructor, NULL);
 	if(!res)
-		res = rchm_RegisterType(m, A2_TSTRING, "string",
-				a2_StringDestructor, st);
+		res = a2_RegisterType(st, A2_TSTRING, "string",
+				a2_StringDestructor, NULL);
 	if(res)
 		return res;
 	return A2_OK;

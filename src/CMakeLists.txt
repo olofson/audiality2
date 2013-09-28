@@ -10,6 +10,7 @@ include_directories(${AUDIALITY2_SOURCE_DIR}/src/drivers)
 set(sources
 	audiality2.c
 	core.c
+	stream.c
 	waves.c
 	bank.c
 	api.c

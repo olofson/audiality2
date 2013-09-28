@@ -787,9 +787,9 @@ void a2_InstaKillAllVoices(A2_state *st)
 }
 
 
-static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle h)
+static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
-	A2_state *st = (A2_state *)td;
+	A2_state *st = ((A2_typeinfo *)ti)->state;
 	A2_apimessage am;
 	am.target = h;
 	am.b.action = A2MT_RELEASE;
@@ -799,11 +799,11 @@ static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *td, RCHM_handle
 
 A2_errors a2_RegisterAPITypes(A2_state *st)
 {
-	A2_errors res = rchm_RegisterType(&st->ss->hm, A2_TVOICE, "voice",
-			a2_VoiceDestructor, st);
+	A2_errors res = a2_RegisterType(st, A2_TVOICE, "voice",
+			a2_VoiceDestructor, NULL);
 	if(!res)
-		res = rchm_RegisterType(&st->ss->hm, A2_TDETACHED, "detached",
-			NULL, st);
+		res = a2_RegisterType(st, A2_TDETACHED, "detached",
+			NULL, NULL);
 	return res;
 }
 

@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -62,6 +62,41 @@ A2_errors a2_LastError(void)
 unsigned a2_LinkedVersion(void)
 {
 	return A2_VERSION;
+}
+
+
+/*---------------------------------------------------------
+	Engine type registry
+---------------------------------------------------------*/
+
+A2_errors a2_RegisterType(A2_state *st, A2_otypes otype, const char *name,
+		RCHM_destructor_cb destroy, A2_stropen_cb stropen)
+{
+	A2_errors res;
+	RCHM_manager *m = &st->ss->hm;
+	A2_typeinfo *ti = (A2_typeinfo *)calloc(1, sizeof(A2_typeinfo));
+	if(!ti)
+		return A2_OOMEMORY;
+	ti->state = st;
+	ti->OpenStream = stropen;
+	res = rchm_RegisterType(m, otype, name, destroy, ti);
+	if(res)
+		free(ti);
+	return res;
+}
+
+
+static void type_registry_cleanup(A2_state *st)
+{
+	int i;
+	RCHM_manager *m = &st->ss->hm;
+	for(i = 0; i < m->ntypes; ++i)
+	{
+		A2_typeinfo *ti = (A2_typeinfo *)rchm_TypeUserdata(m, i);
+		if(!ti)
+			continue;
+		free(ti);
+	}
 }
 
 
@@ -231,6 +266,7 @@ static void a2_CloseSharedState(A2_state *st)
 {
 	if(!st->ss)
 		return;
+	type_registry_cleanup(st);
 	rchm_Cleanup(&st->ss->hm);
 	if(st->ss->c)
 		a2_CloseCompiler(st->ss->c);

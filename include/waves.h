@@ -24,6 +24,7 @@
 #define A2_WAVES_H
 
 #include "audiality2.h"
+#include "stream.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -90,11 +91,10 @@ typedef struct A2_wave_noise
 	uint32_t	state;
 } A2_wave_noise;
 
-typedef struct A2_uploadbuffer A2_uploadbuffer;
-
 /* A2_object: Waveform with mipmaps */
 typedef struct A2_wave
 {
+	A2_stream	*uploadstream;
 	A2_wavetypes	type;
 	unsigned	flags;		/* A2_LOOPED, A2_NOMIP etc */
 	unsigned	period;		/* Fundamental period length */
@@ -102,7 +102,6 @@ typedef struct A2_wave
 		A2_wave_noise	noise;		/* A2WT_NOISE */
 		A2_wave_wave	wave;		/* A2WT_WAVE, A2WT_MIPWAVE */
 	} d;
-	A2_uploadbuffer	*upload;	/* (Used when uploading) */
 } A2_wave;
 
 
@@ -138,59 +137,46 @@ TODO:	A2_REVMIX	Mix wave with a reversed version of itself.
  * A2_XFADE and A2_REVMIX are intended for looped waves, although they (sort of)
  * work on one-shot waves as well.
  *
- * 'fmt' is the sample format code for the 'data'.
+ * 'fmt', 'data' and 'size': See a2_Write() in audiality2/stream.h.
  *
- * 'data' points to the raw waveform data to convert and upload. If NULL, the
- * resulting waveform will be allocated, and the contents left undefined. If
- * the A2_CLEAR flag is set, 'data' is ignored, and the waveform is cleared.
- * 
- * 'size' is the size in BYTES of 'data'. (This is still used to calculate the
- * waveform size when 'data' is NULL and/or A2_CLEAR is used.)
+ * Returns the handle of the wave, or a negated A2_errors error code.
+ *
+ * NOTE:
+ *	The returned handle can be opened with a2_StreamOpen() and used with the
+ *	stream API (see a2_WaveNew()), but as the wave has been automatically
+ *	prepared, it's not possible to change the length of it.
  */
 A2_handle a2_WaveUpload(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
-
 /*
- * Allocate a waveform for use by wavetable oscillators. Returns the handle of
- * the waveform, or a negative error code.
- * 
- * 'period', 'flags': See a2_UploadWave()!
+ * Allocate a waveform for use by wavetable oscillators, and open a stream for
+ * writing audio data.
  *
- * 'length' is the length of the waveform (mipmap level 0) in sample frames.
- */
-A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags);
-
-/*
- * Upload raw waveform data to an existing wave.
- * 
- * 'wave' is the waveform index as returned by a2_WaveAlloc() or
- * a2_UploadWave().
+ * This call creates an empty, unprepared wave that can be written with the
+ * desired amount of data using the stream API. (a2_Write(), a2_SetPos() etc.)
  *
- * 'fmt', 'data', 'size': See a2_UploadWave()!
+ * To actually apply the data written to the wave, use a2_Flush() or
+ * a2_StreamClose(). This will render mipmaps and pad zones as needed to play
+ * the wave correctly.
  *
- * 'offset' is the first sample frame of the waveform to write.
+ * The first flush (or stream close) will determine the length of the wave and
+ * allocate the realtime playback buffers for it. The length of the wave cannot
+ * be changed after this, and writing past the end of the wave will fail,
+ * returning A2_INDEXRANGE. However, the wave can still be altered by further
+ * stream writes, flushing again to apply the updates.
  *
  * NOTE:
- *	Once a2_WavePrepare() has been called on a wave:
+ *	Flags A2_NORMALIZE, A2_XFADE and A2_REVMIX will result in undefined
+ *	behavior if a wave is modified after the initial flush. Only use these
+ *	flags for "write once" waves!
  *
- *		* The size of the wave is fixed! a2_WaveWrite() can be used for
- *		  modifying the wave in place, but writing past the end of the
- *		  wave will fail, returning A2_INDEXRANGE.
+ * 'period', 'flags': See a2_WaveUpload()!
  *
- * 		* Flags A2_NORMALIZE, A2_WRAP, A2_XFADE and A2_REVMIX will
- *		  result in undefined behavior if a2_WaveWrite() is called.
+ * Returns the handle of the wave, or a negated A2_errors error code.
  */
-A2_errors a2_WaveWrite(A2_state *st, A2_handle wave, unsigned offset,
-		A2_sampleformats fmt, const void *data, unsigned size);
-
-/*
- * Prepare a waveform for playback after it's been modified via a2_WaveWrite().
- * This calculates mipmaps and pad zones as needed for correct interpolation.
- */
-A2_errors a2_WavePrepare(A2_state *st, A2_handle wave);
-
+A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags);
 
 /*
  * Get A2_wave struct from handle. Returns NULL if the handle is invalid, or if
