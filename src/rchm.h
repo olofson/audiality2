@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------------.
-        rchm.h - Reference Counting Handle Manager 0.2                        |
+        rchm.h - Reference Counting Handle Manager 0.3                        |
  .----------------------------------------------------------------------------'
  | Copyright 2012-2013 David Olofson <david@olofson.net>
  |
@@ -130,8 +130,20 @@ RCHM_errors rchm_RegisterType(RCHM_manager *m, RCHM_typecode tc,
  * Returns NULL if the type has not been registered, or the requested
  * information was not provided.
  */
-const char *rchm_TypeName(RCHM_manager *m, RCHM_typecode tc);
-void *rchm_TypeUserdata(RCHM_manager *m, RCHM_typecode tc);
+static inline const char *rchm_TypeName(RCHM_manager *m, RCHM_typecode tc)
+{
+	if(tc >= m->ntypes)
+		return NULL;
+	return m->types[tc].name;
+}
+
+static inline void *rchm_TypeUserdata(RCHM_manager *m, RCHM_typecode tc)
+{
+	if(tc >= m->ntypes)
+		return NULL;
+	return m->types[tc].userdata;
+}
+
 
 /* Add a new block of handles, adding the handles to the pool */
 RCHM_errors rchm_AddBlock(RCHM_manager *m, int bi);

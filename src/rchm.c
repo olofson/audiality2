@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------.
-        rchm.c - Reference Counting Handle Manager 0.2                        |
+        rchm.c - Reference Counting Handle Manager 0.3                        |
  .----------------------------------------------------------------------------'
- | Copyright 2012 David Olofson <david@olofson.net>
+ | Copyright 2012-2013 David Olofson <david@olofson.net>
  |
  | This software is provided 'as-is', without any express or implied warranty.
  | In no event will the authors be held liable for any damages arising from the
@@ -48,22 +48,6 @@ RCHM_errors rchm_RegisterType(RCHM_manager *m, RCHM_typecode tc,
 	else
 		m->types[tc].name = NULL;
 	return RCHM_OK;
-}
-
-
-const char *rchm_TypeName(RCHM_manager *m, RCHM_typecode tc)
-{
-	if(tc >= m->ntypes)
-		return NULL;
-	return m->types[tc].name;
-}
-
-
-void *rchm_TypeUserdata(RCHM_manager *m, RCHM_typecode tc)
-{
-	if(tc >= m->ntypes)
-		return NULL;
-	return m->types[tc].userdata;
 }
 
 
