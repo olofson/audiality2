@@ -55,8 +55,8 @@ typedef struct A2_wtosc
 {
 	A2_unit		header;
 	unsigned	flags;		/* Init flags (for wave changing) */
-	unsigned	phase;		/* Phase (24:8 fixp, 1.0/per) */
-	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/per) */
+	unsigned	phase;		/* Phase (24:8 fixp, 1.0/sample) */
+	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/period) */
 	int		noise;		/* Current noise sample (S&H) */
 	A2_ramper	a;
 	A2_wave		*wave;		/* Current waveform */
@@ -281,9 +281,8 @@ static inline void a2_OscPhase(A2_wtosc *o, int ph, unsigned sst)
 		o->phase = 0;
 		return;
 	}
+	ph += sst * (o->dphase >> 8) >> 8;
 	o->phase = ph * o->wave->period >> 8;
-//FIXME: Is this correct...?
-	o->phase -= (sst * o->dphase) * o->wave->period >> 16;
 }
 
 
@@ -387,7 +386,7 @@ static void a2o_Amplitude(A2_unit *u, A2_vmstate *vms, int value, int frames)
 static void a2o_Phase(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
 	A2_wtosc *o = (A2_wtosc *)u;
-	a2_OscPhase(o, value, vms->timer && 0xff);
+	a2_OscPhase(o, value, vms->timer & 0xff);
 }
 
 static const A2_crdesc regs[] =
