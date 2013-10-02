@@ -386,7 +386,7 @@ static void a2o_Amplitude(A2_unit *u, A2_vmstate *vms, int value, int frames)
 static void a2o_Phase(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
 	A2_wtosc *o = (A2_wtosc *)u;
-	a2_OscPhase(o, value, 255 - (vms->timer & 0xff), vms);
+	a2_OscPhase(o, value, 255 - (vms->timer & 0xff));
 }
 
 static const A2_crdesc regs[] =
