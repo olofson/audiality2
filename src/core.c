@@ -669,15 +669,6 @@ static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
 	return ((uint64_t)d * v->s.r[R_TICK] >> 8) * st->msdur >> 32;
 }
 
-#if 0
-/* Convert absolute musical tick to delta from current audio frame time */
-static inline unsigned a2_VoiceTick2t(A2_state *st, A2_voice *v, unsigned frame)
-{
-	unsigned fragtime = (frame << 8) + v->s.timer;
-	return ((uint64_t)d * v->s.r[R_TICK] >> 8) * st->msdur >> 32;
-}
-#endif
-
 /*
  * Execute VM instructions until a timing instruction is executed, or the
  * program ends. Returns A2_OK as long as the VM program wants to keep running.
@@ -697,6 +688,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 	a2_RTInit(&rt);
 	while(1)
 	{
+		unsigned dt;
 		unsigned ins = code[v->s.pc];
 		A2_opcodes op = ins >> 26;
 		unsigned reg = (ins >> 21) & 0x1f;
@@ -742,14 +734,17 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			st->instructions += (A2_INSLIMIT - inscount);
 			return A2_OK;
 		  case OP_RETURN:
+		  {
+			unsigned now = v->s.timer;
 			if(a2_VoicePop(st, v))
 			{
 				/* Return from interrupt */
 				code = v->program->funcs[v->s.func].code;
 				if(v->s.state >= A2_ENDING)
 					continue;
-				else
-					goto timing2;
+				dt = v->s.timer;
+				v->s.timer = now;
+				goto timing_interrupt;
 			}
 			else
 			{
@@ -757,6 +752,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 				code = v->program->funcs[v->s.func].code;
 				continue;
 			}
+		  }
 		  case OP_CALL:
 			DBG(if(!arg)
 				printf("Tried to CALL function 0!\n");)
@@ -814,28 +810,17 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Timing */
 		  case OP_DELAY:
-			v->s.timer += (int64_t)a2_f2i(arg) * st->msdur >> 24;
+			dt = (int64_t)a2_f2i(arg) * st->msdur >> 24;
 			goto timing;
 		  case OP_DELAYR:
-			v->s.timer += (int64_t)r[reg] * st->msdur >> 24;
+			dt = (int64_t)r[reg] * st->msdur >> 24;
 			goto timing;
-#if 1
 		  case OP_TDELAY:
-			v->s.timer += a2_VoiceTicks2t(st, v, a2_f2i(arg));
+			dt = a2_VoiceTicks2t(st, v, a2_f2i(arg));
 			goto timing;
 		  case OP_TDELAYR:
-			v->s.timer += a2_VoiceTicks2t(st, v, r[reg]);
+			dt = a2_VoiceTicks2t(st, v, r[reg]);
 			goto timing;
-#else
-		  case OP_TDELAY:
-			v->s.ticktimer += a2_f2i(arg);
-			v->s.timer = a2_VoiceTick2t(st, v, frame);
-			goto timing;
-		  case OP_TDELAYR:
-			v->s.ticktimer += r[reg];
-			v->s.timer = a2_VoiceTick2t(st, v, frame);
-			goto timing;
-#endif
 
 		/* Arithmetics */
 		  case OP_SUBR:
@@ -1080,15 +1065,6 @@ TODO:
 		  case OP_FORCE:
 		  {
 			A2_stackentry *se = v->stack;
-#if 0
-/*
-FIXME: Should this actually ever happen? How do we execute a FORCE instruction
-FIXME: if we're not running a program...!? (Ran into this when testing K2 with
-FIXME: lots of old CSL that wouldn't compile.)
-*/
-			if(!se)
-				break;
-#endif
 			while(se->prev && (se->state == A2_INTERRUPT))
 				se = se->prev;
 			se->pc = arg;
@@ -1116,15 +1092,16 @@ FIXME: lots of old CSL that wouldn't compile.)
 		continue;
 	  timing:
 		++v->s.pc;
-	  timing2:
-		if(v->s.timer >= 256)
+	  timing_interrupt:
+		if(v->s.timer + dt >= 256)
 		{
-			a2_RTApply(&rt, st, v, v->s.timer >> 8);
+			a2_RTApply(&rt, st, v, dt >> 8);
+			v->s.timer += dt;
 			v->s.state = A2_WAITING;
 			st->instructions += (A2_INSLIMIT - inscount);
 			return A2_OK;
 		}
-		continue;
+		v->s.timer += dt;
 	}
 }
 
