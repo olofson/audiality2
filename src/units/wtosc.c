@@ -266,7 +266,7 @@ static void a2o_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 static inline void a2_OscFrequency(A2_unit *u, int samplerate, float f)
 {
 	A2_wtosc *o = (A2_wtosc *)u;
-	o->dphase = f * (65536.0f * 256.0f) / samplerate;
+	o->dphase = f * 16777216.0f / samplerate + 0.5f;
 }
 
 

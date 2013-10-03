@@ -666,7 +666,8 @@ static inline void a2_RTApply(A2_regtracker *rt, A2_state *st, A2_voice *v,
 /* Convert musical tick duration to audio frame delta time */
 static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
 {
-	return ((uint64_t)d * v->s.r[R_TICK] >> 8) * st->msdur >> 32;
+	return ((((uint64_t)d * v->s.r[R_TICK] + 127) >> 8) *
+			st->msdur + 0x7fffffff) >> 32;
 }
 
 /*
@@ -810,10 +811,10 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Timing */
 		  case OP_DELAY:
-			dt = (int64_t)a2_f2i(arg) * st->msdur >> 24;
+			dt = ((int64_t)a2_f2i(arg) * st->msdur + 0x7fffff) >> 24;
 			goto timing;
 		  case OP_DELAYR:
-			dt = (int64_t)r[reg] * st->msdur >> 24;
+			dt = ((int64_t)r[reg] * st->msdur + 0x7fffff) >> 24;
 			goto timing;
 		  case OP_TDELAY:
 			dt = a2_VoiceTicks2t(st, v, a2_f2i(arg));
@@ -838,7 +839,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			break;
 		  case OP_P2DR:
 			r[reg] = 65536000.0f / (powf(2.0f, r[arg] *
-					(1.0f / 65536.0f)) * A2_MIDDLEC);
+					(1.0f / 65536.0f)) * A2_MIDDLEC) + 0.5f;
 			a2_RTMark(&rt, reg);
 			break;
 		  case OP_NEGR:
@@ -1070,7 +1071,6 @@ TODO:
 			se->pc = arg;
 			se->timer = 0;
 			se->state = A2_RUNNING;
-/*TODO: Have units read back their states into their control registers! */
 			break;
 		  }
 
