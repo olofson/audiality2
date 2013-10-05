@@ -429,6 +429,12 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice);
 	Simplified "plugin" interface
 ---------------------------------------------------------*/
 
+/*
+ * Callback prototype for a2_SetTapCallback() and a2_SetInsertCallback().
+ *
+ * This will be called with (NULL, 0, 0, <userdata>) as notification when the
+ * callback is removed/replaced, or the xinput unit is destroyed.
+ */
 typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata);
 
@@ -452,17 +458,17 @@ typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
  *	A2_NOXINSERT	no 'xinsert' unit found
  *	A2_BADVOICE	'voice' is not actually the handle of a voice
  */
-A2_errors a2_Tap(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
-		void *userdata);
+A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata);
 
 /*
- * Similar to a2_Tap(), but the callback will be able to alter the audio
- * buffers in order to process or generate audio. This is essentially a quick
- * and dirty way of injecting custom DSP effects without implementing proper
- * voice units.
+ * Similar to a2_SetTapCallback(), but the callback will be able to alter the
+ * audio buffers in order to process or generate audio. This is essentially a
+ * quick and dirty way of injecting custom DSP effects without implementing
+ * proper voice units.
  */
-A2_errors a2_Insert(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
-		void *userdata);
+A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata);
 
 
 /*---------------------------------------------------------

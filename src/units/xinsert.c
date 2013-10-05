@@ -215,8 +215,8 @@ static A2_errors a2_xinsert_locked(A2_state *st, A2_voice *v,
 }
 
 
-A2_errors a2_Tap(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
-		void *userdata)
+A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata)
 {
 	A2_errors res;
 	A2_voice *v = a2_GetVoice(st, voice);
@@ -228,8 +228,8 @@ A2_errors a2_Tap(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
 	return res;
 }
 
-A2_errors a2_Insert(A2_state *st, A2_handle voice, A2_xinsert_cb callback,
-		void *userdata)
+A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata)
 {
 	A2_errors res;
 	A2_voice *v = a2_GetVoice(st, voice);
