@@ -44,11 +44,17 @@ typedef struct A2_limiter
 } A2_limiter;
 
 
-static inline void a2l_process11(A2_unit *u, unsigned offset, unsigned frames,
-		int add)
+static inline A2_limiter *limiter_cast(A2_unit *u)
 {
+	return (A2_limiter *)u;
+}
+
+
+static inline void limiter_process11(A2_unit *u, unsigned offset,
+		unsigned frames, int add)
+{
+	A2_limiter *lim = limiter_cast(u);
 	unsigned s, end = offset + frames;
-	A2_limiter *lim = (A2_limiter *)u;
 	int32_t *in = u->inputs[0];
 	int32_t *out = u->outputs[0];
 	for(s = offset; s < end; ++s)
@@ -72,14 +78,14 @@ static inline void a2l_process11(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2l_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
+static void limiter_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2l_process11(u, offset, frames, 1);
+	limiter_process11(u, offset, frames, 1);
 }
 
-static void a2l_Process11(A2_unit *u, unsigned offset, unsigned frames)
+static void limiter_Process11(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2l_process11(u, offset, frames, 0);
+	limiter_process11(u, offset, frames, 0);
 }
 
 
@@ -99,11 +105,11 @@ static void a2l_Process11(A2_unit *u, unsigned offset, unsigned frames)
  * relatively centered), this limiter gets an extra 3 dB
  * compared to a limiter that checks (L+R).
  */
-static inline void a2l_process22(A2_unit *u, unsigned offset, unsigned frames,
-		int add)
+static inline void limiter_process22(A2_unit *u, unsigned offset,
+		unsigned frames, int add)
 {
+	A2_limiter *lim = limiter_cast(u);
 	unsigned s, end = offset + frames;
-	A2_limiter *lim = (A2_limiter *)u;
 	int32_t *in0 = u->inputs[0];
 	int32_t *in1 = u->inputs[1];
 	int32_t *out0 = u->outputs[0];
@@ -138,22 +144,22 @@ static inline void a2l_process22(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2l_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
+static void limiter_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2l_process22(u, offset, frames, 1);
+	limiter_process22(u, offset, frames, 1);
 }
 
-static void a2l_Process22(A2_unit *u, unsigned offset, unsigned frames)
+static void limiter_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2l_process22(u, offset, frames, 0);
+	limiter_process22(u, offset, frames, 0);
 }
 
 
-static A2_errors a2l_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
+	A2_limiter *lim = limiter_cast(u);
 	int *ur = u->registers;
-	A2_limiter *lim = (A2_limiter *)u;
 
 	ur[A2LR_RELEASE] = 64 << 16;
 	ur[A2LR_THRESHOLD] = 1 << 16;
@@ -168,29 +174,29 @@ static A2_errors a2l_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
 		{
-		  case 1: u->Process = a2l_Process11Add; break;
-		  case 2: u->Process = a2l_Process22Add; break;
+		  case 1: u->Process = limiter_Process11Add; break;
+		  case 2: u->Process = limiter_Process22Add; break;
 		}
 	else
 		switch(u->ninputs)
 		{
-		  case 1: u->Process = a2l_Process11; break;
-		  case 2: u->Process = a2l_Process22; break;
+		  case 1: u->Process = limiter_Process11; break;
+		  case 2: u->Process = limiter_Process22; break;
 		}
 
 	return A2_OK;
 }
 
 
-static void a2l_Release(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void limiter_Release(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_limiter *lim = (A2_limiter *)u;
+	A2_limiter *lim = limiter_cast(u);
 	lim->release = (value << 8) / lim->samplerate;
 }
 
-static void a2l_Threshold(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void limiter_Threshold(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_limiter *lim = (A2_limiter *)u;
+	A2_limiter *lim = limiter_cast(u);
 	lim->threshold = (unsigned)(value << 8);
 	if(lim->threshold < 256)
 		lim->threshold = 256;
@@ -198,8 +204,8 @@ static void a2l_Threshold(A2_unit *u, A2_vmstate *vms, int value, int frames)
 
 static const A2_crdesc regs[] =
 {
-	{ "release",	a2l_Release		},	/* A2LR_RELEASE */
-	{ "threshold",	a2l_Threshold		},	/* A2LR_THRESHOLD */
+	{ "release",	limiter_Release		},	/* A2LR_RELEASE */
+	{ "threshold",	limiter_Threshold	},	/* A2LR_THRESHOLD */
 	{ NULL,	NULL				}
 };
 
@@ -214,6 +220,6 @@ const A2_unitdesc a2_limiter_unitdesc =
 	1, A2L_MAXCHANNELS,	/* [min,max]outputs */
 
 	sizeof(A2_limiter),	/* instancesize */
-	a2l_Initialize,		/* Initialize */
+	limiter_Initialize,	/* Initialize */
 	NULL			/* Deinitialize */
 };

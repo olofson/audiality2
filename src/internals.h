@@ -854,8 +854,8 @@ static inline A2_voice *a2_voice_from_vms(A2_vmstate *vms)
 ---------------------------------------------------------*/
 
 /* Process callbacks for the 'inline' unit */
-void a2i_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames);
-void a2i_Process(A2_unit *u, unsigned offset, unsigned frames);
+void a2_inline_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames);
+void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames);
 
 /* Audio driver callback - this is what drives the whole engine! */
 A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames);

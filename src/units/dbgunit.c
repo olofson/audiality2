@@ -1,7 +1,7 @@
 /*
  * dbgunit.c - Audiality 2 debug unit
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -34,12 +34,18 @@ typedef struct A2_dbgunit
 } A2_dbgunit;
 
 
-volatile static unsigned a2d_instance_count = 0;
-
-
-static void a2d_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+static inline A2_dbgunit *dbgunit_cast(A2_unit *u)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	return (A2_dbgunit *)u;
+}
+
+
+volatile static unsigned dbgunit_instance_count = 0;
+
+
+static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+{
+	A2_dbgunit *du = dbgunit_cast(u);
 	int i, s;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
@@ -58,9 +64,9 @@ static void a2d_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static void a2d_Process(A2_unit *u, unsigned offset, unsigned frames)
+static void dbgunit_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	A2_dbgunit *du = dbgunit_cast(u);
 	int i, s;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
@@ -79,17 +85,17 @@ static void a2d_Process(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static void a2d_ProcessAddNI(A2_unit *u, unsigned offset, unsigned frames)
+static void dbgunit_ProcessAddNI(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	A2_dbgunit *du = dbgunit_cast(u);
 	fprintf(stderr, "dbgunit[%u]: ProcessAddNI() o: %u, f: %u\n",
 			du->instance, offset, frames);
 }
 
 
-static void a2d_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
+static void dbgunit_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	A2_dbgunit *du = dbgunit_cast(u);
 	int i;
 	fprintf(stderr, "dbgunit[%u]: ProcessNI() o: %u, f: %u\n",
 			du->instance, offset, frames);
@@ -98,28 +104,28 @@ static void a2d_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static A2_errors a2d_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	A2_dbgunit *du = dbgunit_cast(u);
 	if(u->ninputs && (u->ninputs != u->noutputs))
 		return A2_IODONTMATCH;
-	du->instance = ++a2d_instance_count;
+	du->instance = ++dbgunit_instance_count;
 	du->state = cfg->state;
 	du->voice = a2_voice_from_vms(vms);
 	if(u->ninputs)
 	{
 		if(flags & A2_PROCADD)
-			u->Process = a2d_ProcessAdd;
+			u->Process = dbgunit_ProcessAdd;
 		else
-			u->Process = a2d_Process;
+			u->Process = dbgunit_Process;
 	}
 	else
 	{
 		if(flags & A2_PROCADD)
-			u->Process = a2d_ProcessAddNI;
+			u->Process = dbgunit_ProcessAddNI;
 		else
-			u->Process = a2d_ProcessNI;
+			u->Process = dbgunit_ProcessNI;
 	}
 	fprintf(stderr, "dbgunit[%u]: Initialize(), %s mode\n", du->instance,
 			flags & A2_PROCADD ? "adding" : "replacing");
@@ -127,9 +133,9 @@ static A2_errors a2d_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
-static void a2d_Deinitialize(A2_unit *u, A2_state *st)
+static void dbgunit_Deinitialize(A2_unit *u, A2_state *st)
 {
-	A2_dbgunit *du = (A2_dbgunit *)u;
+	A2_dbgunit *du = dbgunit_cast(u);
 	fprintf(stderr, "dbgunit[%u]: Deinitialize()\n", du->instance);
 }
 
@@ -149,6 +155,6 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 	0, A2_MAXCHANNELS,	/* [min,max]outputs */
 
 	sizeof(A2_dbgunit),	/* instancesize */
-	a2d_Initialize,		/* Initialize */
-	a2d_Deinitialize	/* Deinitialize */
+	dbgunit_Initialize,	/* Initialize */
+	dbgunit_Deinitialize	/* Deinitialize */
 };

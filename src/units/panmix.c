@@ -1,7 +1,7 @@
 /*
  * panmix.c - Audiality 2 PanMix unit
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -42,11 +42,17 @@ typedef struct A2_panmix
 } A2_panmix;
 
 
-static inline void a2pm_process11(A2_unit *u, unsigned offset, unsigned frames,
-		int add)
+static inline A2_panmix *panmix_cast(A2_unit *u)
 {
+	return (A2_panmix *)u;
+}
+
+
+static inline void panmix_process11(A2_unit *u, unsigned offset,
+		unsigned frames, int add)
+{
+	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	A2_panmix *pm = (A2_panmix *)u;
 	int32_t *in = u->inputs[0];
 	int32_t *out = u->outputs[0];
 	a2_PrepareRamp(&pm->vol, frames);
@@ -60,22 +66,22 @@ static inline void a2pm_process11(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2pm_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2pm_process11(u, offset, frames, 1);
+	panmix_process11(u, offset, frames, 1);
 }
 
-static void a2pm_Process11(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process11(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2pm_process11(u, offset, frames, 0);
+	panmix_process11(u, offset, frames, 0);
 }
 
 
-static inline void a2pm_process12(A2_unit *u, unsigned offset, unsigned frames,
-		int add, int clamp)
+static inline void panmix_process12(A2_unit *u, unsigned offset,
+		unsigned frames, int add, int clamp)
 {
+	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	A2_panmix *pm = (A2_panmix *)u;
 	int32_t *in = u->inputs[0];
 	int32_t *out0 = u->outputs[0];
 	int32_t *out1 = u->outputs[1];
@@ -109,31 +115,31 @@ static inline void a2pm_process12(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2pm_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process12(u, offset, frames, 1, 1);
+		panmix_process12(u, offset, frames, 1, 1);
 	else
-		a2pm_process12(u, offset, frames, 1, 0);
+		panmix_process12(u, offset, frames, 1, 0);
 }
 
-static void a2pm_Process12(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process12(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process12(u, offset, frames, 0, 1);
+		panmix_process12(u, offset, frames, 0, 1);
 	else
-		a2pm_process12(u, offset, frames, 0, 0);
+		panmix_process12(u, offset, frames, 0, 0);
 }
 
-static inline void a2pm_process21(A2_unit *u, unsigned offset, unsigned frames,
-		int add, int clamp)
+static inline void panmix_process21(A2_unit *u, unsigned offset,
+		unsigned frames, int add, int clamp)
 {
+	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	A2_panmix *pm = (A2_panmix *)u;
 	int32_t *in0 = u->inputs[0];
 	int32_t *in1 = u->inputs[1];
 	int32_t *out = u->outputs[0];
@@ -162,32 +168,32 @@ static inline void a2pm_process21(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2pm_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process21(u, offset, frames, 1, 1);
+		panmix_process21(u, offset, frames, 1, 1);
 	else
-		a2pm_process21(u, offset, frames, 1, 0);
+		panmix_process21(u, offset, frames, 1, 0);
 }
 
-static void a2pm_Process21(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process21(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process21(u, offset, frames, 0, 1);
+		panmix_process21(u, offset, frames, 0, 1);
 	else
-		a2pm_process21(u, offset, frames, 0, 0);
+		panmix_process21(u, offset, frames, 0, 0);
 }
 
 
-static inline void a2pm_process22(A2_unit *u, unsigned offset, unsigned frames,
-		int add, int clamp)
+static inline void panmix_process22(A2_unit *u, unsigned offset,
+		unsigned frames, int add, int clamp)
 {
+	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	A2_panmix *pm = (A2_panmix *)u;
 	int32_t *in0 = u->inputs[0];
 	int32_t *in1 = u->inputs[1];
 	int32_t *out0 = u->outputs[0];
@@ -221,32 +227,32 @@ static inline void a2pm_process22(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2pm_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process22(u, offset, frames, 1, 1);
+		panmix_process22(u, offset, frames, 1, 1);
 	else
-		a2pm_process22(u, offset, frames, 1, 0);
+		panmix_process22(u, offset, frames, 1, 0);
 }
 
-static void a2pm_Process22(A2_unit *u, unsigned offset, unsigned frames)
+static void panmix_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_panmix *pm = (A2_panmix *)u;
+	A2_panmix *pm = panmix_cast(u);
 	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
 			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
-		a2pm_process22(u, offset, frames, 0, 1);
+		panmix_process22(u, offset, frames, 0, 1);
 	else
-		a2pm_process22(u, offset, frames, 0, 0);
+		panmix_process22(u, offset, frames, 0, 0);
 }
 
 
-static A2_errors a2pm_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
+	A2_panmix *pm = panmix_cast(u);
 	int *ur = u->registers;
-	A2_panmix *pm = (A2_panmix *)u;
 
 	/* Internal state initialization */
 	a2_SetRamp(&pm->vol, 65536, 0);
@@ -260,39 +266,37 @@ static A2_errors a2pm_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	if(flags & A2_PROCADD)
 		switch((u->ninputs << 1) + u->noutputs - 3)
 		{
-		  case 0: u->Process = a2pm_Process11Add; break;
-		  case 1: u->Process = a2pm_Process12Add; break;
-		  case 2: u->Process = a2pm_Process21Add; break;
-		  case 3: u->Process = a2pm_Process22Add; break;
+		  case 0: u->Process = panmix_Process11Add; break;
+		  case 1: u->Process = panmix_Process12Add; break;
+		  case 2: u->Process = panmix_Process21Add; break;
+		  case 3: u->Process = panmix_Process22Add; break;
 		}
 	else
 		switch((u->ninputs << 1) + u->noutputs - 3)
 		{
-		  case 0: u->Process = a2pm_Process11; break;
-		  case 1: u->Process = a2pm_Process12; break;
-		  case 2: u->Process = a2pm_Process21; break;
-		  case 3: u->Process = a2pm_Process22; break;
+		  case 0: u->Process = panmix_Process11; break;
+		  case 1: u->Process = panmix_Process12; break;
+		  case 2: u->Process = panmix_Process21; break;
+		  case 3: u->Process = panmix_Process22; break;
 		}
 	return A2_OK;
 }
 
 
-static void a2pm_Vol(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void panmix_Vol(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_panmix *o = (A2_panmix *)u;
-	a2_SetRamp(&o->vol, value, frames);
+	a2_SetRamp(&panmix_cast(u)->vol, value, frames);
 }
 
-static void a2pm_Pan(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void panmix_Pan(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_panmix *o = (A2_panmix *)u;
-	a2_SetRamp(&o->pan, value, frames);
+	a2_SetRamp(&panmix_cast(u)->pan, value, frames);
 }
 
 static const A2_crdesc regs[] =
 {
-	{ "vol",	a2pm_Vol		},	/* CSPMR_VOL */
-	{ "pan",	a2pm_Pan		},	/* CSPMR_PAN */
+	{ "vol",	panmix_Vol		},	/* CSPMR_VOL */
+	{ "pan",	panmix_Pan		},	/* CSPMR_PAN */
 	{ NULL,	NULL				}
 };
 
@@ -307,6 +311,6 @@ const A2_unitdesc a2_panmix_unitdesc =
 	1, A2PM_MAXOUTPUTS,	/* [min,max]outputs */
 
 	sizeof(A2_panmix),	/* instancesize */
-	a2pm_Initialize,	/* Initialize */
+	panmix_Initialize,	/* Initialize */
 	NULL			/* Deinitialize */
 };

@@ -27,9 +27,9 @@
 #include "dsp.h"
 
 #ifdef A2_HIFI
-#	define	a2o_Inter	a2_Hermite
+#	define	wtosc_Inter	a2_Hermite
 #else
-#	define	a2o_Inter	a2_Lerp
+#	define	wtosc_Inter	a2_Lerp
 #endif
 
 /*
@@ -65,27 +65,33 @@ typedef struct A2_wtosc
 } A2_wtosc;
 
 
-static void a2o_OffAdd(A2_unit *u, unsigned offset, unsigned frames)
+static inline A2_wtosc *wtosc_cast(A2_unit *u)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
+	return (A2_wtosc *)u;
+}
+
+
+static void wtosc_OffAdd(A2_unit *u, unsigned offset, unsigned frames)
+{
+	A2_wtosc *o = wtosc_cast(u);
 	a2_PrepareRamp(&o->a, frames);
 	a2_RunRamp(&o->a, frames);
 }
 
-static void a2o_Off(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_Off(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
+	A2_wtosc *o = wtosc_cast(u);
 	a2_PrepareRamp(&o->a, frames);
 	a2_RunRamp(&o->a, frames);
 	memset(u->outputs[0] + offset, 0, frames * sizeof(int));
 }
 
 
-static inline void a2o_noise(A2_unit *u, unsigned offset, unsigned frames,
+static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 		int add)
 {
+	A2_wtosc *o = wtosc_cast(u);
 	unsigned s, end = offset + frames;
-	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
 	unsigned dph = o->dphase >> 8;
 	A2_wave_noise *wdata = &o->wave->d.noise;
@@ -104,23 +110,23 @@ static inline void a2o_noise(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2o_NoiseAdd(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_NoiseAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_noise(u, offset, frames, 1);
+	wtosc_noise(u, offset, frames, 1);
 }
 
-static void a2o_Noise(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_Noise(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_noise(u, offset, frames, 0);
+	wtosc_noise(u, offset, frames, 0);
 }
 
 
-static inline void a2o_wavetable(A2_unit *u, unsigned offset, unsigned frames,
+static inline void wtosc_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 		int add)
 {
+	A2_wtosc *o = wtosc_cast(u);
 	unsigned s, mm, ph, dph;
 	unsigned end = offset + frames;
-	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
 	int16_t *d;
@@ -153,7 +159,7 @@ static inline void a2o_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 	d = w->d.wave.data[mm] + A2_WAVEPRE;
 	for(s = offset; s < end; ++s)
 	{
-		int v = a2o_Inter(d, ph) + a2o_Inter(d, ph + (dph >> 1));
+		int v = wtosc_Inter(d, ph) + wtosc_Inter(d, ph + (dph >> 1));
 		if(add)
 			out[s] += (int64_t)v * o->a.value >> (16 + 1);
 		else
@@ -164,23 +170,23 @@ static inline void a2o_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 	o->phase = ph << mm;
 }
 
-static void a2o_WavetableAdd(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_WavetableAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_wavetable(u, offset, frames, 1);
+	wtosc_wavetable(u, offset, frames, 1);
 }
 
-static void a2o_Wavetable(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_Wavetable(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_wavetable(u, offset, frames, 0);
+	wtosc_wavetable(u, offset, frames, 0);
 }
 
 
-static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
+static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 		unsigned frames, int add)
 {
+	A2_wtosc *o = wtosc_cast(u);
 	unsigned s, ph, dph;
 	unsigned end = offset + frames;
-	A2_wtosc *o = (A2_wtosc *)u;
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
 	unsigned perfixp = w->d.wave.size[0] << 8;
@@ -210,8 +216,8 @@ static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
 		if(w->flags & A2_LOOPED)
 			for(s = offset; s < end; ++s)
 			{
-				int v = a2o_Inter(d, ph) +
-						a2o_Inter(d, ph + (dph >> 1));
+				int v = wtosc_Inter(d, ph) +
+						wtosc_Inter(d, ph + (dph >> 1));
 				if(add)
 					out[s] += (int64_t)v * o->a.value >>
 							(16 + 1);
@@ -225,8 +231,8 @@ static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
 		else
 			for(s = offset; (s < end) && (ph < perfixp); ++s)
 			{
-				int v = a2o_Inter(d, ph) +
-						a2o_Inter(d, ph + (dph >> 1));
+				int v = wtosc_Inter(d, ph) +
+						wtosc_Inter(d, ph + (dph >> 1));
 				if(add)
 					out[s] += (int64_t)v * o->a.value >>
 							(16 + 1);
@@ -240,8 +246,8 @@ static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
 	else
 		for(s = offset; s < end; ++s)
 		{
-			int v = a2o_Inter(d, ph) +
-					a2o_Inter(d, ph + (dph >> 1));
+			int v = wtosc_Inter(d, ph) +
+					wtosc_Inter(d, ph + (dph >> 1));
 			if(add)
 				out[s] += (int64_t)v * o->a.value >> (16 + 1);
 			else
@@ -252,21 +258,20 @@ static inline void a2o_wavetable_no_mip(A2_unit *u, unsigned offset,
 	o->phase = ph;
 }
 
-static void a2o_WavetableNoMipAdd(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_WavetableNoMipAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_wavetable_no_mip(u, offset, frames, 1);
+	wtosc_wavetable_no_mip(u, offset, frames, 1);
 }
 
-static void a2o_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
+static void wtosc_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2o_wavetable_no_mip(u, offset, frames, 0);
+	wtosc_wavetable_no_mip(u, offset, frames, 0);
 }
 
 
-static inline void a2_OscFrequency(A2_unit *u, int samplerate, float f)
+static inline void a2_OscFrequency(A2_wtosc *o, float f)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
-	o->dphase = f * 16777216.0f / samplerate + 0.5f;
+	o->dphase = f * 16777216.0f / o->samplerate + 0.5f;
 }
 
 
@@ -286,11 +291,11 @@ static inline void a2_OscPhase(A2_wtosc *o, int ph, unsigned sst)
 }
 
 
-static A2_errors a2o_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
+	A2_wtosc *o = wtosc_cast(u);
 	int *ur = u->registers;
-	A2_wtosc *o = (A2_wtosc *)u;
 
 	/* Internal state initialization */
 	o->state = cfg->state;
@@ -299,8 +304,8 @@ static A2_errors a2o_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	o->noise = 0;
 	o->wave = NULL;
 	a2_SetRamp(&o->a, 0, 0);
-	a2_OscFrequency(u, o->samplerate, powf(2.0f,
-			vms->r[R_TRANSPOSE] * (1.0f / 65536.0f)) * A2_MIDDLEC);
+	a2_OscFrequency(o, powf(2.0f, vms->r[R_TRANSPOSE] * (1.0f / 65536.0f)) *
+			A2_MIDDLEC);
 
 	/* Initialize VM registers */
 	ur[A2OR_WAVE] = 0;
@@ -311,16 +316,16 @@ static A2_errors a2o_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	/* Install Process callback (Can change at run-time as needed!) */
 	o->flags = flags;
 	if(flags & A2_PROCADD)
-		u->Process = a2o_OffAdd;
+		u->Process = wtosc_OffAdd;
 	else
-		u->Process = a2o_Off;
+		u->Process = wtosc_Off;
 
 	return A2_OK;
 }
 
-static void a2o_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
+	A2_wtosc *o = wtosc_cast(u);
 	A2_wavetypes wt = A2_WOFF;
 	value >>= 16;
 	if((o->wave = a2_GetWave(o->state, value)))
@@ -344,57 +349,54 @@ static void a2o_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
 /* FIXME: Error/warning message here! */
 	  case A2_WOFF:
 		if(o->flags & A2_PROCADD)
-			u->Process = a2o_OffAdd;
+			u->Process = wtosc_OffAdd;
 		else
-			u->Process = a2o_Off;
+			u->Process = wtosc_Off;
 		break;
 	  case A2_WNOISE:
 		if(o->flags & A2_PROCADD)
-			u->Process = a2o_NoiseAdd;
+			u->Process = wtosc_NoiseAdd;
 		else
-			u->Process = a2o_Noise;
+			u->Process = wtosc_Noise;
 		break;
 	  case A2_WWAVE:
 		if(o->flags & A2_PROCADD)
-			u->Process = a2o_WavetableNoMipAdd;
+			u->Process = wtosc_WavetableNoMipAdd;
 		else
-			u->Process = a2o_WavetableNoMip;
+			u->Process = wtosc_WavetableNoMip;
 		break;
 	  case A2_WMIPWAVE:
 		if(o->flags & A2_PROCADD)
-			u->Process = a2o_WavetableAdd;
+			u->Process = wtosc_WavetableAdd;
 		else
-			u->Process = a2o_Wavetable;
+			u->Process = wtosc_Wavetable;
 		break;
 	}
 }
 
-static void a2o_Pitch(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Pitch(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
-	a2_OscFrequency(u, o->samplerate,
+	a2_OscFrequency(wtosc_cast(u),
 			powf(2.0f, (value + vms->r[R_TRANSPOSE]) *
 			(1.0f / 65536.0f)) * A2_MIDDLEC);
 }
 
-static void a2o_Amplitude(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Amplitude(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
-	a2_SetRamp(&o->a, value, frames);
+	a2_SetRamp(&wtosc_cast(u)->a, value, frames);
 }
 
-static void a2o_Phase(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Phase(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_wtosc *o = (A2_wtosc *)u;
-	a2_OscPhase(o, value, 255 - (vms->timer & 0xff));
+	a2_OscPhase(wtosc_cast(u), value, 255 - (vms->timer & 0xff));
 }
 
 static const A2_crdesc regs[] =
 {
-	{ "w",		a2o_Wave		},	/* A2OR_WAVE */
-	{ "p",		a2o_Pitch		},	/* A2OR_PITCH */
-	{ "a",		a2o_Amplitude		},	/* A2OR_AMPLITUDE */
-	{ "phase",	a2o_Phase		},	/* A2OR_PHASE */
+	{ "w",		wtosc_Wave		},	/* A2OR_WAVE */
+	{ "p",		wtosc_Pitch		},	/* A2OR_PITCH */
+	{ "a",		wtosc_Amplitude		},	/* A2OR_AMPLITUDE */
+	{ "phase",	wtosc_Phase		},	/* A2OR_PHASE */
 	{ NULL,	NULL				}
 };
 
@@ -408,6 +410,6 @@ const A2_unitdesc a2_wtosc_unitdesc =
 	1,	1,		/* [min,max]outputs */
 
 	sizeof(A2_wtosc),	/* instancesize */
-	a2o_Initialize,		/* Initialize */
+	wtosc_Initialize,	/* Initialize */
 	NULL			/* Deinitialize */
 };

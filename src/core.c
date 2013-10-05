@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -1120,15 +1120,15 @@ static inline void a2_ProcessSubvoices(A2_state *st, A2_voice *v,
 
 
 /* Adding and replacing Process() implementations for the 'inline' unit */
-void a2i_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+void a2_inline_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_inline *il = (A2_inline *)u;
+	A2_inline *il = a2_inline_cast(u);
 	a2_ProcessSubvoices(il->state, il->voice, offset, frames);
 }
 
-void a2i_Process(A2_unit *u, unsigned offset, unsigned frames)
+void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	A2_inline *il = (A2_inline *)u;
+	A2_inline *il = a2_inline_cast(u);
 	int i;
 	for(i = 0; i < u->noutputs; ++i)
 		memset(u->outputs[i] + offset, 0, frames * sizeof(int));

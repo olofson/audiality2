@@ -1,7 +1,7 @@
 /*
  * xinsert.h - Audiality 2 External Insert units
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -32,6 +32,11 @@ typedef struct A2_xinsert
 	void		*userdata;
 	unsigned	flags;
 } A2_xinsert;
+
+static inline A2_xinsert *a2_xinsert_cast(A2_unit *u)
+{
+	return (A2_xinsert *)u;
+}
 
 extern const A2_unitdesc a2_xinsert_unitdesc;
 

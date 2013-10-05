@@ -57,12 +57,18 @@ typedef struct A2_fbdelay
 } A2_fbdelay;
 
 
-#define	WI(x)	((fbd->bufpos - (x)) & 0xffff)
-static inline void a2fbd_process22(A2_unit *u, unsigned offset, unsigned frames,
-		int add)
+static inline A2_fbdelay *fbdelay_cast(A2_unit *u)
 {
+	return (A2_fbdelay *)u;
+}
+
+
+#define	WI(x)	((fbd->bufpos - (x)) & 0xffff)
+static inline void fbdelay_process22(A2_unit *u, unsigned offset,
+		unsigned frames, int add)
+{
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	unsigned s, end = offset + frames;
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
 	int32_t	*b0 = fbd->lbuf;
 	int32_t	*b1 = fbd->rbuf;
 	int32_t *in0 = u->inputs[0];
@@ -106,22 +112,22 @@ static inline void a2fbd_process22(A2_unit *u, unsigned offset, unsigned frames,
 }
 #undef	WI
 
-static void a2fbd_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
+static void fbdelay_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2fbd_process22(u, offset, frames, 1);
+	fbdelay_process22(u, offset, frames, 1);
 }
 
-static void a2fbd_Process22(A2_unit *u, unsigned offset, unsigned frames)
+static void fbdelay_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2fbd_process22(u, offset, frames, 0);
+	fbdelay_process22(u, offset, frames, 0);
 }
 
 
-static A2_errors a2fbd_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	int *ur = u->registers;
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
 
 	fbd->samplerate = cfg->samplerate;
 
@@ -149,73 +155,73 @@ static A2_errors a2fbd_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	fbd->rgain = ur[A2FBDR_RGAIN] = 32768;
 
 	if(flags & A2_PROCADD)
-		u->Process = a2fbd_Process22Add;
+		u->Process = fbdelay_Process22Add;
 	else
-		u->Process = a2fbd_Process22;
+		u->Process = fbdelay_Process22;
 
 	return A2_OK;
 }
 
-static void a2fbd_Deinitialize(A2_unit *u, A2_state *st)
+static void fbdelay_Deinitialize(A2_unit *u, A2_state *st)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 /*FIXME: Use realtime safe memory manager! */
 	free(fbd->lbuf);
 	free(fbd->rbuf);
 }
 
 
-static void a2fbd_FBDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_FBDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->fbdelay = (int64_t)value * fbd->samplerate / 65536000;
 }
 
-static void a2fbd_LDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_LDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->ldelay = (int64_t)value * fbd->samplerate / 65536000;
 }
 
-static void a2fbd_RDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_RDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->rdelay = (int64_t)value * fbd->samplerate / 65536000;
 }
 
-static void a2fbd_DryGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_DryGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->drygain = value;
 }
 
-static void a2fbd_FBGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_FBGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->fbgain = value;
 }
 
-static void a2fbd_LGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_LGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->lgain = value;
 }
 
-static void a2fbd_RGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_RGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_fbdelay *fbd = (A2_fbdelay *)u;
+	A2_fbdelay *fbd = fbdelay_cast(u);
 	fbd->rgain = value;
 }
 
 static const A2_crdesc regs[] =
 {
-	{ "fbdelay",	a2fbd_FBDelay		},	/* A2FBDR_FBDELAY */
-	{ "ldelay",	a2fbd_LDelay		},	/* A2FBDR_LDELAY */
-	{ "rdelay",	a2fbd_RDelay		},	/* A2FBDR_RDELAY */
-	{ "drygain",	a2fbd_DryGain		},	/* A2FBDR_DRYGAIN */
-	{ "fbgain",	a2fbd_FBGain		},	/* A2FBDR_FBGAIN */
-	{ "lgain",	a2fbd_LGain		},	/* A2FBDR_LGAIN */
-	{ "rgain",	a2fbd_RGain		},	/* A2FBDR_RGAIN */
+	{ "fbdelay",	fbdelay_FBDelay		},	/* A2FBDR_FBDELAY */
+	{ "ldelay",	fbdelay_LDelay		},	/* A2FBDR_LDELAY */
+	{ "rdelay",	fbdelay_RDelay		},	/* A2FBDR_RDELAY */
+	{ "drygain",	fbdelay_DryGain		},	/* A2FBDR_DRYGAIN */
+	{ "fbgain",	fbdelay_FBGain		},	/* A2FBDR_FBGAIN */
+	{ "lgain",	fbdelay_LGain		},	/* A2FBDR_LGAIN */
+	{ "rgain",	fbdelay_RGain		},	/* A2FBDR_RGAIN */
 	{ NULL,	NULL				}
 };
 
@@ -230,6 +236,6 @@ const A2_unitdesc a2_fbdelay_unitdesc =
 	2, 2,			/* [min,max]outputs */
 
 	sizeof(A2_fbdelay),	/* instancesize */
-	a2fbd_Initialize,	/* Initialize */
-	a2fbd_Deinitialize	/* Deinitialize */
+	fbdelay_Initialize,	/* Initialize */
+	fbdelay_Deinitialize	/* Deinitialize */
 };

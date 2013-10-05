@@ -1,7 +1,7 @@
 /*
  * inline.c - Audiality 2 inline subvoice processing unit
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -26,15 +26,15 @@
 static A2_errors a2i_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
-	A2_inline *il = (A2_inline *)u;
+	A2_inline *il = a2_inline_cast(u);
 	il->state = cfg->state;
 	il->voice = a2_voice_from_vms(vms);
 	il->voice->noutputs = u->noutputs;
 	il->voice->outputs = u->outputs;
 	if(flags & A2_PROCADD)
-		u->Process = a2i_ProcessAdd;
+		u->Process = a2_inline_ProcessAdd;
 	else
-		u->Process = a2i_Process;
+		u->Process = a2_inline_Process;
 	return A2_OK;
 }
 

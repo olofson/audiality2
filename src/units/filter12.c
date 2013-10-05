@@ -53,7 +53,13 @@ typedef struct A2_filter12
 } A2_filter12;
 
 
-static inline int a2f12_pitch2coeff(A2_filter12 *f12)
+static inline A2_filter12 *f12_cast(A2_unit *u)
+{
+	return (A2_filter12 *)u;
+}
+
+
+static inline int f12_pitch2coeff(A2_filter12 *f12)
 {
 /*FIXME: Fast fixed point approximation for this... */
 	float f = powf(2.0f, f12->cutoff.value * (1.0f / 65536.0f / 256.0f)) *
@@ -64,11 +70,11 @@ static inline int a2f12_pitch2coeff(A2_filter12 *f12)
 	return (int)(512.0f * 65536.0f * sin(M_PI * f / f12->samplerate));
 }
 
-static inline void a2f12_process(A2_unit *u, unsigned offset, unsigned frames,
+static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 		int add)
 {
+	A2_filter12 *f12 = f12_cast(u);
 	unsigned s, end = offset + frames;
-	A2_filter12 *f12 = (A2_filter12 *)u;
 	int32_t *in = u->inputs[0];
 	int32_t *out = u->outputs[0];
 	int df;
@@ -78,7 +84,7 @@ static inline void a2f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	if(f12->cutoff.delta)
 	{
 		a2_RunRamp(&f12->cutoff, frames);
-		f12->f1 = a2f12_pitch2coeff(f12);
+		f12->f1 = f12_pitch2coeff(f12);
 		df = (f12->f1 - f0 + ((int)frames >> 1)) / (int)frames;
 	}
 	else
@@ -103,68 +109,65 @@ static inline void a2f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	}
 }
 
-static void a2f12_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+static void f12_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2f12_process(u, offset, frames, 1);
+	f12_process(u, offset, frames, 1);
 }
 
-static void a2f12_Process(A2_unit *u, unsigned offset, unsigned frames)
+static void f12_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	a2f12_process(u, offset, frames, 0);
+	f12_process(u, offset, frames, 0);
 }
 
 
-static void a2f12_CutOff(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_CutOff(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_filter12 *f12 = (A2_filter12 *)u;
+	A2_filter12 *f12 = f12_cast(u);
 	a2_SetRamp(&f12->cutoff, value + vms->r[R_TRANSPOSE], frames);
 	if(!frames)
-		f12->f1 = a2f12_pitch2coeff(f12);
+		f12->f1 = f12_pitch2coeff(f12);
 }
 
-static void a2f12_Q(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_Q(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_filter12 *f12 = (A2_filter12 *)u;
+	A2_filter12 *f12 = f12_cast(u);
 	if(value < 256)
 		a2_SetRamp(&f12->q, 65536, frames);
 	else
 		a2_SetRamp(&f12->q, (65536 << 8) / value, frames);
 }
 
-static void a2f12_LP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_LP(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_filter12 *f12 = (A2_filter12 *)u;
-	f12->lp = value >> 8;
+	f12_cast(u)->lp = value >> 8;
 }
 
-static void a2f12_BP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_BP(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_filter12 *f12 = (A2_filter12 *)u;
-	f12->bp = value >> 8;
+	f12_cast(u)->bp = value >> 8;
 }
 
-static void a2f12_HP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_HP(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
-	A2_filter12 *f12 = (A2_filter12 *)u;
-	f12->hp = value >> 8;
+	f12_cast(u)->hp = value >> 8;
 }
 
 static const A2_crdesc regs[] =
 {
-	{ "cutoff",	a2f12_CutOff	},	/* A2F12_CutOff */
-	{ "q",		a2f12_Q		},	/* A2F12_Q */
-	{ "lp",		a2f12_LP	},	/* A2F12_LP */
-	{ "bp",		a2f12_BP	},	/* A2F12_BP */
-	{ "hp",		a2f12_HP	},	/* A2F12_HP */
+	{ "cutoff",	f12_CutOff	},	/* A2F12_CutOff */
+	{ "q",		f12_Q		},	/* A2F12_Q */
+	{ "lp",		f12_LP	},	/* A2F12_LP */
+	{ "bp",		f12_BP	},	/* A2F12_BP */
+	{ "hp",		f12_HP	},	/* A2F12_HP */
 	{ NULL,	NULL			}
 };
 
 
-static A2_errors a2f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
+	A2_filter12 *f12 = f12_cast(u);
 	int *ur = u->registers;
-	A2_filter12 *f12 = (A2_filter12 *)u;
 
 	f12->samplerate = cfg->samplerate;
 
@@ -174,8 +177,8 @@ static A2_errors a2f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	ur[A2F12R_BP] = 0;
 	ur[A2F12R_HP] = 0;
 
-	a2f12_CutOff(u, vms, ur[A2F12R_CUTOFF], 0);
-	a2f12_Q(u, vms, ur[A2F12R_Q], 0);
+	f12_CutOff(u, vms, ur[A2F12R_CUTOFF], 0);
+	f12_Q(u, vms, ur[A2F12R_Q], 0);
 	f12->lp = ur[A2F12R_LP] >> 8;
 	f12->bp = ur[A2F12R_BP] >> 8;
 	f12->hp = ur[A2F12R_HP] >> 8;
@@ -183,9 +186,9 @@ static A2_errors a2f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	f12->d1 = f12->d2 = 0;
 
 	if(flags & A2_PROCADD)
-		u->Process = a2f12_ProcessAdd;
+		u->Process = f12_ProcessAdd;
 	else
-		u->Process = a2f12_Process;
+		u->Process = f12_Process;
 
 	return A2_OK;
 }
@@ -201,6 +204,6 @@ const A2_unitdesc a2_filter12_unitdesc =
 	1, 1,			/* [min,max]outputs */
 
 	sizeof(A2_filter12),	/* instancesize */
-	a2f12_Initialize,	/* Initialize */
+	f12_Initialize,	/* Initialize */
 	NULL			/* Deinitialize */
 };

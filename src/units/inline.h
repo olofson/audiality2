@@ -1,7 +1,7 @@
 /*
  * inline.h - Audiality 2 inline subvoice processing unit
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -31,6 +31,11 @@ typedef struct A2_inline
 	A2_voice	*voice;		/* Voice we're running in */
 	A2_state	*state;		/* Needed for certain register writes */
 } A2_inline;
+
+static inline A2_inline *a2_inline_cast(A2_unit *u)
+{
+	return (A2_inline *)u;
+}
 
 extern const A2_unitdesc a2_inline_unitdesc;
 
