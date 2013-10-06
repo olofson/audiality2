@@ -1,7 +1,7 @@
 /*
  * compiler.c - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -1831,6 +1831,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 			else
 			{
 				A2_symbol *s;
+				if(!c->coder)
+					a2c_Throw(c, A2_NEXPLABEL);
 				a2c_Unlex(c);
 				s = a2c_Grab(c, c->l.sym);
 				s->token = TK_LABEL;

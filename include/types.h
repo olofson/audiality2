@@ -154,6 +154,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NEXPHANDLE,	"Handle not expected here")\
   A2_DEFERR(A2_NEXPTOKEN,	"Unexpected token")\
   A2_DEFERR(A2_NEXPELSE,	"'else' not applicable here")\
+  A2_DEFERR(A2_NEXPLABEL,	"Label not expected here")\
   \
   A2_DEFERR(A2_BADFORMAT,	"Bad file or device I/O format")\
   A2_DEFERR(A2_BADTYPE,		"Invalid type ID")\
