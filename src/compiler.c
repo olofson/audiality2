@@ -1650,6 +1650,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	a2c_SkipLF(c);
 	a2c_StructDef(c);
 	c->inhandler = c->nocode = 0;
+	a2c_Code(c, OP_INITV, 0, 0);
 	a2c_Body(c, '}');
 	if(!c->nocode)
 		a2c_Code(c, OP_END, 0, 0);
@@ -2262,6 +2263,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_RETURN:
 	  case OP_SLEEP:
 	  case OP_KILLA:
+	  case OP_INITV:
 	  case A2_OPCODES:	/* (Warning eliminator) */
 		break;
 	  /* integer */

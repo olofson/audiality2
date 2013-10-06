@@ -215,11 +215,6 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 	unsigned noutputs = v->noutputs;
 	int32_t **outputs = v->outputs;
 
-	/* Unit control registers start after the main program arguments! */
-	v->cregisters = p->funcs->argv + p->funcs->argc;
-
-	v->flags |= p->vflags;
-
 	if(!p->structure)
 		return A2_OK;	/* No units - all done! */
 
@@ -411,23 +406,36 @@ void a2_VoiceKill(A2_state *st, A2_voice *v)
 
 
 /*
- * Start program 'p' on voice 'v', populating the voice with units as specified
- * by the program.
+ * Start program 'p' on voice 'v'.
+ *
+ * NOTE:
+ *	As of 1.9.1, voices are NOT populated at this point! This is instead
+ *	performed by the INITV VM instruction, in order to have the voice units
+ *	initialized and started at the exact start time of the program.
  */
 A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 		A2_program *p, int argc, int *argv)
 {
 	int i;
 	v->program = p;
+	v->flags |= p->vflags;	/* A2_SUBINLINE etc */
 	v->s.func = 0;
 	v->s.pc = 0;
 	v->s.state = A2_RUNNING;
+
+	/* Grab the arguments! */
 	if(argc > p->funcs[0].argc)
 		argc = p->funcs[0].argc;
 	memcpy(v->s.r + p->funcs[0].argv, argv, argc * sizeof(int));
+
+	/* Get the defaults for any unspecified arguments */
 	for(i = argc; i < p->funcs[0].argc; ++i)
 		v->s.r[i + p->funcs[0].argv] = p->funcs[0].argdefs[i];
-	return a2_PopulateVoice(st, p, v);
+
+	/* Unit control registers start after the main program arguments! */
+	v->cregisters = p->funcs->argv + p->funcs->argc;
+
+	return A2_OK;
 }
 
 
@@ -952,17 +960,25 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 		  case OP_SPAWNR:
 			arg = r[arg] >> 16;
 		  case OP_SPAWN:
-			a2_VoiceSpawn(st, v, (frame << 8) + v->s.timer,
-					reg, arg, cargc, cargv);
+		  {
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			a2_VoiceSpawn(st, v, when, reg, arg, cargc, cargv);
 			cargc = 0;
 			break;
+		  }
 		  case OP_SPAWNDR:
 			arg = r[arg] >> 16;
 		  case OP_SPAWND:
-			a2_VoiceSpawn(st, v, (frame << 8) + v->s.timer,
-					-1, arg, cargc, cargv);
+		  {
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			a2_VoiceSpawn(st, v, when, -1, arg, cargc, cargv);
 			cargc = 0;
 			break;
+		  }
 #if 0
 		  case OP_SENDR:
 			reg = r[reg] >> 16;
@@ -1082,6 +1098,15 @@ TODO:
 		  case OP_DEBUG:
 			printf(":: Audiality 2 DEBUG: %f\t(%p)\n",
 					a2_f2i(arg) * (1.0f / 65536.0f), v);
+			break;
+
+		/* Special instructions */
+		  case OP_INITV:
+			if((res = a2_PopulateVoice(st, v->program, v)))
+			{
+				st->instructions += (A2_INSLIMIT - inscount);
+				return res;
+			}
 			break;
 
 		  case A2_OPCODES:

@@ -52,8 +52,8 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
 #	define	DUMPCODE(x)		/* Enable compiler VM code output */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
-#	define	DUMPSTRUCT(x)	x	/* Compiler voice structure dumping */
-#	define	DUMPSTRUCTRT(x)	x	/* Realtime voice structure dumping */
+#	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
+#	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	undef	CERRDIE			/* Die in assert(0) on compile errors */
 #else
@@ -308,7 +308,10 @@ void a2_DumpConfig(A2_config *c);
 	A2_DI(SENDS)	A2_DI(WAIT)	A2_DI(KILL)	A2_DI(KILLA)	\
 									\
 	/* Debugging */							\
-	A2_DI(DEBUG)	A2_DI(DEBUGR)
+	A2_DI(DEBUG)	A2_DI(DEBUGR)					\
+									\
+	/* Special instructions */					\
+	A2_DI(INITV)
 
 #define	A2_DI(x)	OP_##x,
 typedef enum A2_opcodes
