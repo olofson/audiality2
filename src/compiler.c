@@ -64,10 +64,9 @@ static void a2_FreeSymbol(A2_symbol *s)
 
 static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 {
-#ifdef DEBUG
-	printf("a2_PushSymbol(\"%s\" tk:%d v:%d(%f) i:%d)\n",
-			s->name, s->token, s->value, s->value / 65536.0f, s->index);
-#endif
+	SYMBOLDBG(printf("a2_PushSymbol(\"%s\" tk:%d v:%d(%f) i:%d)\n",
+			s->name, s->token, s->value, s->value / 65536.0f,
+			s->index);)
 	s->next = *stack;
 	*stack = s;
 }
@@ -761,10 +760,6 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			if(h >= 0)
 				a2nt_AddItem(x, s->name, h);
 		}
-#if 0
-		else if(h >= 0)
-			a2ht_AddItem(d, h);
-#endif
 		a2_FreeSymbol(s);
 	}
 	DBG(fprintf(stderr, "=================\n");)

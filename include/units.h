@@ -23,8 +23,8 @@
 /*
  * General note on "real time safeness" and performance optimization:
  *
- *	Since most of the code of a Audiality 2 unit will normally run within the
- *	realtime audio processing context of the engine, it is of utmost
+ *	Since most of the code of a Audiality 2 unit will normally run within
+ *	the realtime audio processing context of the engine, it is of utmost
  *	importance that the code is designed and optimized appropriately. In
  *	short, this means:
  *
@@ -85,9 +85,9 @@ typedef enum A2_unitflags
  *	sizes!
  *
  * NOTE:
- *	This will run in the real time context of Audiality 2, and will be called
- *	whenever a VM program changes the contents of the respective control
- *	register!
+ *	This will run in the real time context of Audiality 2, and will be
+ *	called whenever a VM program changes the contents of the respective
+ *	control register!
  */
 typedef void (*A2_write_cb)(A2_unit *u, A2_vmstate *vms, int value, int frames);
 
@@ -95,8 +95,8 @@ typedef void (*A2_write_cb)(A2_unit *u, A2_vmstate *vms, int value, int frames);
  * Initialization callback
  *
  *	This MANDATORY callback is used for initializing unit instances. The
- *	instance memory block 'u' is allocated by Audiality 2 (size guaranteed to
- *	be at least 'instancesize' as specified in the A2_unitdesc), and the
+ *	instance memory block 'u' is allocated by Audiality 2 (size guaranteed
+ *	to be at least 'instancesize' as specified in the A2_unitdesc), and the
  *	A2_unit header portion will be filled in before the initializer is
  *	called.
  *

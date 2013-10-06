@@ -396,6 +396,19 @@ A2_state *a2_Open(A2_config *config)
 	A2_errors res;
 	A2_state *st;
 	a2_last_error = A2_OK;
+	DUMPSIZES(
+		printf("A2_wave:\t%d\n", sizeof(A2_wave));
+		printf("A2_bank:\t%d\n", sizeof(A2_bank));
+		printf("A2_program:\t%d\n", sizeof(A2_program));
+		printf("A2_string:\t%d\n", sizeof(A2_string));
+		printf("A2_stackentry:\t%d\n", sizeof(A2_stackentry));
+		printf("A2_event:\t%d\n", sizeof(A2_event));
+		printf("A2_voice:\t%d\n", sizeof(A2_voice));
+		printf("A2_block:\t%d\n", sizeof(A2_block));
+		printf("A2_unit:\t%d\n", sizeof(A2_unit));
+		printf("A2_unitdesc:\t%d\n", sizeof(A2_unitdesc));
+		printf("A2_stream:\t%d\n", sizeof(A2_stream));
+	)
 #ifdef DEBUG
 	if(config)
 	{
@@ -421,6 +434,7 @@ A2_state *a2_Open(A2_config *config)
 	a2_DumpConfig(st->config);
 	printf("------\n");
 #endif
+	a2_Now(st);
 	return st;
 }
 
@@ -591,14 +605,4 @@ void a2_Close(A2_state *st)
 	}
 
 	free(st);
-#ifdef DEBUG
-printf("A2_wave:\t%d\n", sizeof(A2_wave));
-printf("A2_bank:\t%d\n", sizeof(A2_bank));
-printf("A2_program:\t%d\n", sizeof(A2_program));
-printf("A2_string:\t%d\n", sizeof(A2_string));
-printf("A2_stackentry:\t%d\n", sizeof(A2_stackentry));
-printf("A2_event:\t%d\n", sizeof(A2_event));
-printf("A2_voice:\t%d\n", sizeof(A2_voice));
-printf("A2_block:\t%d\n", sizeof(A2_block));
-#endif
 }

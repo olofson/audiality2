@@ -51,10 +51,12 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	MSGTRACK(x)		/* Track origin of messages */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
 #	define	DUMPCODE(x)		/* Enable compiler VM code output */
+#	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
+#	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
 #	undef	CERRDIE			/* Die in assert(0) on compile errors */
 #else
 #	define	DBG(x)
@@ -62,10 +64,12 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	MSGTRACK(x)
 #	define	DUMPMSGS(x)
 #	define	DUMPCODE(x)
+#	define	SYMBOLDBG(x)
 #	define	DUMPLSTRINGS(x)
 #	define	DUMPSTRUCT(x)
 #	define	DUMPSTRUCTRT(x)
 #	define	DUMPCODERT(x)
+#	define	DUMPSIZES(x)
 #	undef	CERRDIE
 #endif
 
