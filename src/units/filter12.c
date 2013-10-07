@@ -59,12 +59,13 @@ static inline A2_filter12 *f12_cast(A2_unit *u)
 }
 
 
+#include <stdio.h>
 static inline int f12_pitch2coeff(A2_filter12 *f12)
 {
 /*FIXME: Fast fixed point approximation for this... */
 	float f = powf(2.0f, f12->cutoff.value * (1.0f / 65536.0f / 256.0f)) *
 			A2_MIDDLEC;
-	/* This filter explodes above Nyqvist / 4! (Needs oversampling...) */
+	/* This filter explodes above Nyqvist / 2! (Needs oversampling...) */
 	if(f > f12->samplerate >> 2)
 		return 362 << 16;
 	return (int)(512.0f * 65536.0f * sin(M_PI * f / f12->samplerate));
@@ -131,8 +132,14 @@ static void f12_CutOff(A2_unit *u, A2_vmstate *vms, int value, int frames)
 static void f12_Q(A2_unit *u, A2_vmstate *vms, int value, int frames)
 {
 	A2_filter12 *f12 = f12_cast(u);
+#if 1
+	/* FIXME: The filter explodes at high cutoffs with the 256 limit! */
+	if(value < 512)
+		a2_SetRamp(&f12->q, 32768, frames);
+#else
 	if(value < 256)
 		a2_SetRamp(&f12->q, 65536, frames);
+#endif
 	else
 		a2_SetRamp(&f12->q, (65536 << 8) / value, frames);
 }
@@ -156,9 +163,9 @@ static const A2_crdesc regs[] =
 {
 	{ "cutoff",	f12_CutOff	},	/* A2F12_CutOff */
 	{ "q",		f12_Q		},	/* A2F12_Q */
-	{ "lp",		f12_LP	},	/* A2F12_LP */
-	{ "bp",		f12_BP	},	/* A2F12_BP */
-	{ "hp",		f12_HP	},	/* A2F12_HP */
+	{ "lp",		f12_LP		},	/* A2F12_LP */
+	{ "bp",		f12_BP		},	/* A2F12_BP */
+	{ "hp",		f12_HP		},	/* A2F12_HP */
 	{ NULL,	NULL			}
 };
 
@@ -204,6 +211,6 @@ const A2_unitdesc a2_filter12_unitdesc =
 	1, 1,			/* [min,max]outputs */
 
 	sizeof(A2_filter12),	/* instancesize */
-	f12_Initialize,	/* Initialize */
+	f12_Initialize,		/* Initialize */
 	NULL			/* Deinitialize */
 };
