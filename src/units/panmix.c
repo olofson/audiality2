@@ -55,14 +55,14 @@ static inline void panmix_process11(A2_unit *u, unsigned offset,
 	unsigned s, end = offset + frames;
 	int32_t *in = u->inputs[0];
 	int32_t *out = u->outputs[0];
-	a2_PrepareRamp(&pm->vol, frames);
+	a2_RamperPrepare(&pm->vol, frames);
 	for(s = offset; s < end; ++s)
 	{
 		if(add)
 			out[s] += (int64_t)in[s] * pm->vol.value >> 24;
 		else
 			out[s] = (int64_t)in[s] * pm->vol.value >> 24;
-		a2_RunRamp(&pm->vol, 1);
+		a2_RamperRun(&pm->vol, 1);
 	}
 }
 
@@ -86,8 +86,8 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 	int32_t *out0 = u->outputs[0];
 	int32_t *out1 = u->outputs[1];
 /* TODO: Proper constant power panning! */
-	a2_PrepareRamp(&pm->vol, frames);
-	a2_PrepareRamp(&pm->pan, frames);
+	a2_RamperPrepare(&pm->vol, frames);
+	a2_RamperPrepare(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
 		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
@@ -110,8 +110,8 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 			out0[s] = (int64_t)in[s] * v0 >> 24;
 			out1[s] = (int64_t)in[s] * v1 >> 24;
 		}
-		a2_RunRamp(&pm->vol, 1);
-		a2_RunRamp(&pm->pan, 1);
+		a2_RamperRun(&pm->vol, 1);
+		a2_RamperRun(&pm->pan, 1);
 	}
 }
 
@@ -143,8 +143,8 @@ static inline void panmix_process21(A2_unit *u, unsigned offset,
 	int32_t *in0 = u->inputs[0];
 	int32_t *in1 = u->inputs[1];
 	int32_t *out = u->outputs[0];
-	a2_PrepareRamp(&pm->vol, frames);
-	a2_PrepareRamp(&pm->pan, frames);
+	a2_RamperPrepare(&pm->vol, frames);
+	a2_RamperPrepare(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
 		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
@@ -163,8 +163,8 @@ static inline void panmix_process21(A2_unit *u, unsigned offset,
 		else
 			out[s] = ((int64_t)in0[s] * v0 +
 					(int64_t)in1[s] * v1) >> 25;
-		a2_RunRamp(&pm->vol, 1);
-		a2_RunRamp(&pm->pan, 1);
+		a2_RamperRun(&pm->vol, 1);
+		a2_RamperRun(&pm->pan, 1);
 	}
 }
 
@@ -198,8 +198,8 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 	int32_t *in1 = u->inputs[1];
 	int32_t *out0 = u->outputs[0];
 	int32_t *out1 = u->outputs[1];
-	a2_PrepareRamp(&pm->vol, frames);
-	a2_PrepareRamp(&pm->pan, frames);
+	a2_RamperPrepare(&pm->vol, frames);
+	a2_RamperPrepare(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
 		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
@@ -222,8 +222,8 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 			out0[s] = (int64_t)in0[s] * v0 >> 24;
 			out1[s] = (int64_t)in1[s] * v1 >> 24;
 		}
-		a2_RunRamp(&pm->vol, 1);
-		a2_RunRamp(&pm->pan, 1);
+		a2_RamperRun(&pm->vol, 1);
+		a2_RamperRun(&pm->pan, 1);
 	}
 }
 
@@ -255,8 +255,8 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	int *ur = u->registers;
 
 	/* Internal state initialization */
-	a2_SetRamp(&pm->vol, 65536, 0);
-	a2_SetRamp(&pm->pan, 0, 0);
+	a2_RamperInit(&pm->vol, 65536);
+	a2_RamperInit(&pm->pan, 0);
 
 	/* Initialize VM registers */
 	ur[A2PMR_VOL] = 65536;
@@ -283,14 +283,14 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
-static void panmix_Vol(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void panmix_Vol(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_SetRamp(&panmix_cast(u)->vol, value, frames);
+	a2_RamperSet(&panmix_cast(u)->vol, v, start, dur);
 }
 
-static void panmix_Pan(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void panmix_Pan(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_SetRamp(&panmix_cast(u)->pan, value, frames);
+	a2_RamperSet(&panmix_cast(u)->pan, v, start, dur);
 }
 
 static const A2_crdesc regs[] =

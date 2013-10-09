@@ -1,7 +1,7 @@
 /*
  * dsp.h - Handy DSP tools for Audiality 2 internals and units
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -104,24 +104,38 @@ static inline int a2_Hermite2(int32_t *cf, unsigned ph)
 
 typedef struct A2_ramper
 {
-	int	value;		/* Current value */
-	int	target;		/* Target value */
-	int	delta;		/* Per-sample delta */
-	int	frames;		/* Sample frames to end of ramp */
+	int	value;		/* Current value (8:24) */
+	int	target;		/* Target value (8:24) */
+	int	delta;		/* Per-sample delta (8:24) */
+	int	timer;		/* Frames to end of ramp (24:8) */
 } A2_ramper;
 
-/* Prepare ramper for some processing */
-static inline void a2_PrepareRamp(A2_ramper *rr, int frames)
+/*
+ * NOTE:
+ *	Internal calculations are 8:24 fixed point, so this won't work if
+ *	registers are operated outside the [-128.0, 127.0] range! This could be
+ *	fixed quite easily, but it would be rather expensive on 32 bit CPUs.
+ */
+
+/* Initialize an A2_ramper to a constant value of 'v' */
+static inline void a2_RamperInit(A2_ramper *rr, int v)
 {
-	if(!rr->frames)
+	rr->value = rr->target = v << 8;
+	rr->delta = rr->timer = 0;
+}
+
+/* Prepare ramper for some processing */
+static inline void a2_RamperPrepare(A2_ramper *rr, int frames)
+{
+	if(!rr->timer)
 	{
 		rr->value = rr->target;
 		rr->delta = 0;
 	}
-	else if(frames <= rr->frames)
+	else if(frames <= (rr->timer >> 8))
 	{
-		rr->delta = (rr->target - rr->value) / rr->frames;
-		rr->frames -= frames;
+		rr->delta = ((int64_t)(rr->target - rr->value) << 8) / rr->timer;
+		rr->timer -= frames << 8;
 	}
 	else
 	{
@@ -130,22 +144,28 @@ static inline void a2_PrepareRamp(A2_ramper *rr, int frames)
 		 * and it only ever happens with asynchronous ramps anyway!
 		 */
 		rr->delta = (rr->target - rr->value) / frames;
-		rr->frames = 0;
+		rr->timer = 0;
 	}
 }
 
 /* Advance ramper by 'frames' */
-static inline void a2_RunRamp(A2_ramper *rr, int frames)
+static inline void a2_RamperRun(A2_ramper *rr, int frames)
 {
 	rr->value += rr->delta * frames;
 }
 
-/* Set up ramp from current value to 'target' (16:16!) over 'frames' */
-static inline void a2_SetRamp(A2_ramper *rr, int target, int frames)
+/*
+ * Set up subsample accurate ramp starting at 'start' (24:8), ramping to
+ * 'target' (16:16) over 'duration' (24:8) sample frames.
+ */
+static inline void a2_RamperSet(A2_ramper *rr, int target, int start,
+		int duration)
 {
 	rr->target = target << 8;
-	if(!(rr->frames = frames))
+	if((rr->timer = duration) < 256)
 		rr->value = rr->target;
+	else
+		rr->value += rr->delta * start >> 8;
 }
 
 #ifdef __cplusplus

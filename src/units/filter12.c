@@ -37,7 +37,10 @@ typedef enum A2F12_cregisters
 typedef struct A2_filter12
 {
 	A2_unit		header;
+
+	/* Needed for pitch calculations */
 	int		samplerate;
+	int		*transpose;
 
 	/* Parameters */
 	A2_ramper	cutoff;	/* Filter f0 (linear pitch) */
@@ -80,11 +83,11 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	int32_t *out = u->outputs[0];
 	int df;
 	int f0 = f12->f1;
-	a2_PrepareRamp(&f12->q, frames);
-	a2_PrepareRamp(&f12->cutoff, frames);
+	a2_RamperPrepare(&f12->q, frames);
+	a2_RamperPrepare(&f12->cutoff, frames);
 	if(f12->cutoff.delta)
 	{
-		a2_RunRamp(&f12->cutoff, frames);
+		a2_RamperRun(&f12->cutoff, frames);
 		f12->f1 = f12_pitch2coeff(f12);
 		df = (f12->f1 - f0 + ((int)frames >> 1)) / (int)frames;
 	}
@@ -106,7 +109,7 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 		f12->d1 = b;
 		f12->d2 = l;
 		f0 += df;
-		a2_RunRamp(&f12->q, 1);
+		a2_RamperRun(&f12->q, 1);
 	}
 }
 
@@ -121,42 +124,42 @@ static void f12_Process(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static void f12_CutOff(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_filter12 *f12 = f12_cast(u);
-	a2_SetRamp(&f12->cutoff, value + vms->r[R_TRANSPOSE], frames);
-	if(!frames)
+	a2_RamperSet(&f12->cutoff, v + *f12->transpose, start, dur);
+	if(dur < 256)
 		f12->f1 = f12_pitch2coeff(f12);
 }
 
-static void f12_Q(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_Q(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_filter12 *f12 = f12_cast(u);
 #if 1
 	/* FIXME: The filter explodes at high cutoffs with the 256 limit! */
-	if(value < 512)
-		a2_SetRamp(&f12->q, 32768, frames);
+	if(v < 512)
+		a2_RamperSet(&f12->q, 32768, start, dur);
 #else
-	if(value < 256)
-		a2_SetRamp(&f12->q, 65536, frames);
+	if(v < 256)
+		a2_RamperSet(&f12->q, 65536, start, dur);
 #endif
 	else
-		a2_SetRamp(&f12->q, (65536 << 8) / value, frames);
+		a2_RamperSet(&f12->q, (65536 << 8) / v, start, dur);
 }
 
-static void f12_LP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_LP(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->lp = value >> 8;
+	f12_cast(u)->lp = v >> 8;
 }
 
-static void f12_BP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_BP(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->bp = value >> 8;
+	f12_cast(u)->bp = v >> 8;
 }
 
-static void f12_HP(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void f12_HP(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->hp = value >> 8;
+	f12_cast(u)->hp = v >> 8;
 }
 
 static const A2_crdesc regs[] =
@@ -177,6 +180,7 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	int *ur = u->registers;
 
 	f12->samplerate = cfg->samplerate;
+	f12->transpose = vms->r + R_TRANSPOSE;
 
 	ur[A2F12R_CUTOFF] = 0;
 	ur[A2F12R_Q] = 0;
@@ -184,8 +188,10 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	ur[A2F12R_BP] = 0;
 	ur[A2F12R_HP] = 0;
 
-	f12_CutOff(u, vms, ur[A2F12R_CUTOFF], 0);
-	f12_Q(u, vms, ur[A2F12R_Q], 0);
+	a2_RamperInit(&f12->cutoff, 0);
+	a2_RamperInit(&f12->q, 0);
+	f12_CutOff(u, ur[A2F12R_CUTOFF], 0, 0);
+	f12_Q(u, ur[A2F12R_Q], 0, 0);
 	f12->lp = ur[A2F12R_LP] >> 8;
 	f12->bp = ur[A2F12R_BP] >> 8;
 	f12->hp = ur[A2F12R_HP] >> 8;

@@ -72,11 +72,11 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 
 
 static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
-		int frames)
+		unsigned start, unsigned duration)
 {
 	A2_write_cb cb = v->cwrite[reg];
 	if(cb)
-		cb(v->cunit[reg], &v->s, v->s.r[reg], frames);
+		cb(v->cunit[reg], v->s.r[reg], start, duration);
 }
 
 
@@ -336,7 +336,7 @@ A2_errors a2_init_root_voice(A2_state *st)
 	v->noutputs = st->master->channels;
 	v->outputs = st->master->buffers;
 	for(i = A2_FIRSTCONTROLREG; i < v->cregisters; ++i)
-		a2_VoiceControl(st, v, i, 0);
+		a2_VoiceControl(st, v, i, 0, 0);
 	if((res = a2_VoiceStart(st, v, rootdriver, 0, NULL)))
 	{
 		a2_VoiceFree(st, &v);
@@ -663,11 +663,11 @@ static inline void a2_RTUnmark(A2_regtracker *rt, unsigned r)
 }
 
 static inline void a2_RTApply(A2_regtracker *rt, A2_state *st, A2_voice *v,
-		unsigned frames)
+		unsigned start, unsigned duration)
 {
 	int i;
 	for(i = 0; i < rt->position; ++i)
-		a2_VoiceControl(st, v, rt->regs[i], frames);
+		a2_VoiceControl(st, v, rt->regs[i], start, duration);
 }
 
 
@@ -714,7 +714,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Program flow control */
 		  case OP_END:
-			a2_RTApply(&rt, st, v, 0);
+			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = 0xffffffff;
 			if(v->s.state == A2_FINALIZING)
 			{
@@ -913,7 +913,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Unit control */
 		  case OP_SET:
-			a2_VoiceControl(st, v, reg, 0);
+			a2_VoiceControl(st, v, reg, 255 - v->s.timer, 0);
 			a2_RTUnmark(&rt, reg);
 			break;
 #if 0
@@ -1023,7 +1023,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			/* NOTE: This only waits with buffer granularity! */
 			if(v->sv[reg]->s.state >= A2_ENDING)
 				break;	/* Done! */
-			a2_RTApply(&rt, st, v, 0);
+			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = (A2_MAXFRAG - frame) << 8;
 			v->s.state = A2_WAITING;
 			st->instructions += (A2_INSLIMIT - inscount);
@@ -1045,7 +1045,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Message handling */
 		  case OP_SLEEP:
-			a2_RTApply(&rt, st, v, 0);
+			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = 0xffffffff;
 			v->s.state = A2_ENDING;
 			st->instructions += (A2_INSLIMIT - inscount);
@@ -1120,7 +1120,7 @@ TODO:
 	  timing_interrupt:
 		if(v->s.timer + dt >= 256)
 		{
-			a2_RTApply(&rt, st, v, dt >> 8);
+			a2_RTApply(&rt, st, v, 255 - v->s.timer, dt);
 			v->s.timer += dt;
 			v->s.state = A2_WAITING;
 			st->instructions += (A2_INSLIMIT - inscount);

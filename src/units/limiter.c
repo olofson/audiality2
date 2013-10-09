@@ -188,16 +188,16 @@ static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
-static void limiter_Release(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void limiter_Release(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_limiter *lim = limiter_cast(u);
-	lim->release = (value << 8) / lim->samplerate;
+	lim->release = (v << 8) / lim->samplerate;
 }
 
-static void limiter_Threshold(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void limiter_Threshold(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_limiter *lim = limiter_cast(u);
-	lim->threshold = (unsigned)(value << 8);
+	lim->threshold = (unsigned)(v << 8);
 	if(lim->threshold < 256)
 		lim->threshold = 256;
 }

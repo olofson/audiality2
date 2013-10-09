@@ -1,7 +1,7 @@
 /*
  * units.h - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -69,27 +69,40 @@ typedef enum A2_unitflags
 /*
  * Control register write callback for A2_cregdesc
  *
- *	If 'frames' is non-zero, controls that support ramping should set up a
- *	linear ramp from the current value to 'value' over 'frames' sample
- *	frames.
- *	   Ramping is normally performed with sample accurate timing (by means
- *	of "buffer splitting"), but asynchronous (typically long) ramps may not
+ *	Instructs the unit to change the value of a control register at the
+ *	specified fractional sample frame, or, if 'duration' is non-zero, ramp
+ *	the control register from its current value, starting at the specified
+ *	time, running for the specified duration.
+ *
+ *	Ramping is expected to be linear, and the result of long ramps should
+ *	not deviate significantly from the results of multiple short ramps
+ *	describing the same function. (That is, be careful when ramping filter
+ *	coefficients internally!)
+ *
+ *	The 'start' and 'duration' values are expressed in frames in 24:8 fixed
+ *	point format. 'start' is in the range [0.0, 1.0] ([0, 255]) and is
+ *	related to the start of the first sample frame to be processed by the
+ *	next Process() call.
+ *
+ *	Ramping is normally performed with sample accurate timing (by means of
+ *	"buffer splitting"), but asynchronous (typically long) ramps may not
  *	always terminate exactly on a buffer boundary! It is acceptable for
  *	units to handle this by stretching the last segment of the ramp to the
  *	full length of the processing fragment the ramp should end in. This is
  *	still fairly accurate, as processing fragment size is restricted to
- *	A2_MAXFRAGMENT (normally 32 sample frames) for cache footprint reasons.
+ *	A2_MAXFRAGMENT sample frames for cache footprint reasons.
  *
- *	'frames' is just an target point for ramping, so it may be greater than
- *	A2_MAXFRAGMENT. Do not rely on it being directly related to buffer
- *	sizes!
+ *	'duration' is just a target point for ramping, so it may be land way
+ *	beyond the end of the next fragment to be processed. Do not rely on it
+ *	being directly related to processing fragment or buffer sizes!
  *
  * NOTE:
  *	This will run in the real time context of Audiality 2, and will be
  *	called whenever a VM program changes the contents of the respective
  *	control register!
  */
-typedef void (*A2_write_cb)(A2_unit *u, A2_vmstate *vms, int value, int frames);
+typedef void (*A2_write_cb)(A2_unit *u, int value, unsigned start,
+		unsigned duration);
 
 /*
  * Initialization callback

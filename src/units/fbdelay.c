@@ -171,46 +171,42 @@ static void fbdelay_Deinitialize(A2_unit *u, A2_state *st)
 }
 
 
-static void fbdelay_FBDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_FBDelay(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->fbdelay = (int64_t)value * fbd->samplerate / 65536000;
+	fbd->fbdelay = (int64_t)v * fbd->samplerate / 65536000;
 }
 
-static void fbdelay_LDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_LDelay(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->ldelay = (int64_t)value * fbd->samplerate / 65536000;
+	fbd->ldelay = (int64_t)v * fbd->samplerate / 65536000;
 }
 
-static void fbdelay_RDelay(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_RDelay(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->rdelay = (int64_t)value * fbd->samplerate / 65536000;
+	fbd->rdelay = (int64_t)v * fbd->samplerate / 65536000;
 }
 
-static void fbdelay_DryGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_DryGain(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->drygain = value;
+	fbdelay_cast(u)->drygain = v;
 }
 
-static void fbdelay_FBGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_FBGain(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->fbgain = value;
+	fbdelay_cast(u)->fbgain = v;
 }
 
-static void fbdelay_LGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_LGain(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->lgain = value;
+	fbdelay_cast(u)->lgain = v;
 }
 
-static void fbdelay_RGain(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void fbdelay_RGain(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->rgain = value;
+	fbdelay_cast(u)->rgain = v;
 }
 
 static const A2_crdesc regs[] =

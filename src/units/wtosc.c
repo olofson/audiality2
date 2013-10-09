@@ -26,10 +26,22 @@
 #include "waves.h"
 #include "dsp.h"
 
+/* NOTE: These all return doubled amplitude samples! */
 #ifdef A2_HIFI
-#	define	wtosc_Inter	a2_Hermite
+static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+{
+	return a2_Hermite(d, ph) + a2_Hermite(d, ph + (dph >> 1));
+}
+#elif (defined A2_LOFI)
+static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+{
+	return a2_Lerp(d, ph) << 1;
+}
 #else
-#	define	wtosc_Inter	a2_Lerp
+static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+{
+	return a2_Lerp(d, ph) + a2_Lerp(d, ph + (dph >> 1));
+}
 #endif
 
 /*
@@ -61,6 +73,7 @@ typedef struct A2_wtosc
 	A2_ramper	a;
 	A2_wave		*wave;		/* Current waveform */
 	A2_state	*state;		/* Needed when switching waveforms */
+	int		*transpose;	/* Needed for pitch calculations */
 	int		samplerate;	/* Needed for pitch calculations */
 } A2_wtosc;
 
@@ -74,15 +87,15 @@ static inline A2_wtosc *wtosc_cast(A2_unit *u)
 static void wtosc_OffAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_wtosc *o = wtosc_cast(u);
-	a2_PrepareRamp(&o->a, frames);
-	a2_RunRamp(&o->a, frames);
+	a2_RamperPrepare(&o->a, frames);
+	a2_RamperRun(&o->a, frames);
 }
 
 static void wtosc_Off(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_wtosc *o = wtosc_cast(u);
-	a2_PrepareRamp(&o->a, frames);
-	a2_RunRamp(&o->a, frames);
+	a2_RamperPrepare(&o->a, frames);
+	a2_RamperRun(&o->a, frames);
 	memset(u->outputs[0] + offset, 0, frames * sizeof(int));
 }
 
@@ -95,7 +108,7 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	int32_t *out = u->outputs[0];
 	unsigned dph = o->dphase >> 8;
 	A2_wave_noise *wdata = &o->wave->d.noise;
-	a2_PrepareRamp(&o->a, frames);
+	a2_RamperPrepare(&o->a, frames);
 	for(s = offset; s < end; ++s)
 	{
 		unsigned nph = o->phase + dph;
@@ -106,7 +119,7 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 			out[s] += o->noise * (o->a.value >> 10) >> 6;
 		else
 			out[s] = o->noise * (o->a.value >> 10) >> 6;
-		a2_RunRamp(&o->a, 1);
+		a2_RamperRun(&o->a, 1);
 	}
 }
 
@@ -134,7 +147,7 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 		dph = (o->dphase >> 8) * w->period >> 8;
 	else
 		dph = o->dphase * w->period >> 16;
-	a2_PrepareRamp(&o->a, frames);
+	a2_RamperPrepare(&o->a, frames);
 	/* FIXME: Cache, or do something smarter... */
 	for(mm = 0; (dph > A2_MAXPHINC) && (mm < A2_MIPLEVELS - 1); ++mm)
 		dph >>= 1;
@@ -153,19 +166,19 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 			memset(out + offset, 0, frames * sizeof(int));
 		ph += dph * frames;
 		o->phase = ph << mm;
-		a2_RunRamp(&o->a, frames);
+		a2_RamperRun(&o->a, frames);
 		return;
 	}
 	d = w->d.wave.data[mm] + A2_WAVEPRE;
 	for(s = offset; s < end; ++s)
 	{
-		int v = wtosc_Inter(d, ph) + wtosc_Inter(d, ph + (dph >> 1));
+		int v = wtosc_Inter(d, ph, dph);
 		if(add)
 			out[s] += (int64_t)v * o->a.value >> (16 + 1);
 		else
 			out[s] = (int64_t)v * o->a.value >> (16 + 1);
 		ph += dph;
-		a2_RunRamp(&o->a, 1);
+		a2_RamperRun(&o->a, 1);
 	}
 	o->phase = ph << mm;
 }
@@ -195,7 +208,7 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 		dph = (o->dphase >> 8) * w->period >> 8;
 	else
 		dph = o->dphase * w->period >> 16;
-	a2_PrepareRamp(&o->a, frames);
+	a2_RamperPrepare(&o->a, frames);
 	ph = o->phase;
 	if(w->flags & A2_LOOPED)
 		ph %= perfixp;
@@ -216,8 +229,7 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 		if(w->flags & A2_LOOPED)
 			for(s = offset; s < end; ++s)
 			{
-				int v = wtosc_Inter(d, ph) +
-						wtosc_Inter(d, ph + (dph >> 1));
+				int v = wtosc_Inter(d, ph, dph);
 				if(add)
 					out[s] += (int64_t)v * o->a.value >>
 							(16 + 1);
@@ -226,13 +238,12 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 							(16 + 1);
 				ph += dph;
 				ph %= perfixp;
-				a2_RunRamp(&o->a, 1);
+				a2_RamperRun(&o->a, 1);
 			}
 		else
 			for(s = offset; (s < end) && (ph < perfixp); ++s)
 			{
-				int v = wtosc_Inter(d, ph) +
-						wtosc_Inter(d, ph + (dph >> 1));
+				int v = wtosc_Inter(d, ph, dph);
 				if(add)
 					out[s] += (int64_t)v * o->a.value >>
 							(16 + 1);
@@ -240,20 +251,19 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 					out[s] = (int64_t)v * o->a.value >>
 							(16 + 1);
 				ph += dph;
-				a2_RunRamp(&o->a, 1);
+				a2_RamperRun(&o->a, 1);
 			}
 	}
 	else
 		for(s = offset; s < end; ++s)
 		{
-			int v = wtosc_Inter(d, ph) +
-					wtosc_Inter(d, ph + (dph >> 1));
+			int v = wtosc_Inter(d, ph, dph);
 			if(add)
 				out[s] += (int64_t)v * o->a.value >> (16 + 1);
 			else
 				out[s] = (int64_t)v * o->a.value >> (16 + 1);
 			ph += dph;
-			a2_RunRamp(&o->a, 1);
+			a2_RamperRun(&o->a, 1);
 		}
 	o->phase = ph;
 }
@@ -299,13 +309,14 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 
 	/* Internal state initialization */
 	o->state = cfg->state;
+	o->transpose = vms->r + R_TRANSPOSE;
 	o->samplerate = cfg->samplerate;
 	o->noise = 0;
 	o->wave = NULL;
-	a2_SetRamp(&o->a, 0, 0);
-	a2_OscFrequency(o, powf(2.0f, vms->r[R_TRANSPOSE] * (1.0f / 65536.0f)) *
+	a2_RamperInit(&o->a, 0);
+	a2_OscFrequency(o, powf(2.0f, (*o->transpose) * (1.0f / 65536.0f)) *
 			A2_MIDDLEC);
-	a2_OscPhase(o, 0, 255 - (vms->timer & 0xff));
+	a2_OscPhase(o, 0, 255 - vms->timer);
 
 	/* Initialize VM registers */
 	ur[A2OR_WAVE] = 0;
@@ -323,12 +334,12 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	return A2_OK;
 }
 
-static void wtosc_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
 	A2_wavetypes wt = A2_WOFF;
-	value >>= 16;
-	if((o->wave = a2_GetWave(o->state, value)))
+	v >>= 16;
+	if((o->wave = a2_GetWave(o->state, v)))
 		wt = o->wave->type;
 	switch(wt)
 	{
@@ -374,21 +385,21 @@ static void wtosc_Wave(A2_unit *u, A2_vmstate *vms, int value, int frames)
 	}
 }
 
-static void wtosc_Pitch(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_OscFrequency(wtosc_cast(u),
-			powf(2.0f, (value + vms->r[R_TRANSPOSE]) *
+	A2_wtosc *o = wtosc_cast(u);
+	a2_OscFrequency(o, powf(2.0f, (v + *o->transpose) *
 			(1.0f / 65536.0f)) * A2_MIDDLEC);
 }
 
-static void wtosc_Amplitude(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_SetRamp(&wtosc_cast(u)->a, value, frames);
+	a2_RamperSet(&wtosc_cast(u)->a, v, start, dur);
 }
 
-static void wtosc_Phase(A2_unit *u, A2_vmstate *vms, int value, int frames)
+static void wtosc_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_OscPhase(wtosc_cast(u), value, 255 - (vms->timer & 0xff));
+	a2_OscPhase(wtosc_cast(u), v, start);
 }
 
 static const A2_crdesc regs[] =
