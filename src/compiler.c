@@ -1645,7 +1645,8 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	a2c_SkipLF(c);
 	a2c_StructDef(c);
 	c->inhandler = c->nocode = 0;
-	a2c_Code(c, OP_INITV, 0, 0);
+	if(c->coder->program->structure)
+		a2c_Code(c, OP_INITV, 0, 0);
 	a2c_Body(c, '}');
 	if(!c->nocode)
 		a2c_Code(c, OP_END, 0, 0);
