@@ -156,6 +156,7 @@ struct A2_compiler
 	int		canexport;	/* Current context allows exports! */
 	int		inhandler;	/* Disallow timing, RUN, SLEEP ,... */
 	int		nocode;		/* Disallow code in current context  */
+	int		commawarned;	/* Deprecated comma warning issued */
 	A2_jumpbuf	jumpbuf;	/* Buffer for a2c_Try()/a2c_Throw() */
 	A2_errors	error;		/* Error from a2c_Throw() */
 };

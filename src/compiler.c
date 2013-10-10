@@ -511,6 +511,17 @@ static int a2c_Lex(A2_compiler *c)
 		  case -1:
 			return (c->l.token = TK_EOF);
 		  case ',':
+			if(!c->commawarned)
+			{
+				fprintf(stderr, "Audiality 2: WARNING: ',' as a "
+						"statement delimiter is "
+						"deprecated! Please use ';' or "
+						"newline.\n");
+				fprintf(stderr, "Audiality 2: (No further "
+						"warnings about this will be "
+						"issued.)\n");
+				c->commawarned = 1;
+			}
 		  case ';':
 		  case '\n':
 			c->l.val = ch;
@@ -2088,6 +2099,7 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	{
 		a2c_BeginScope(c, sc);
 		c->canexport = 1;
+		c->commawarned = 0;
 		a2c_Statements(c, TK_EOF);
 		a2c_EndScope(c, sc);
 		return;
