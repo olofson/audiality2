@@ -72,8 +72,7 @@ typedef enum A2_tokens
 	TK_IF,		/* "if*" conditional variants */
 	TK_ELSE,	/* 'else' keyword */
 	TK_WHILE,	/* "while|w*" loop variants */
-	TK_FOR,		/* "for" loop */
-	TK_RUN		/* 'run' statement (spawn + wait) */
+	TK_FOR		/* "for" loop */
 } A2_tokens;
 
 /*
