@@ -252,7 +252,7 @@ blit2(pitch vel)
 	p2d pitch pitch
 	!reso 1000f
 	!dreso 1n; *dreso pitch; *dreso .1
-.l	run imp2 reso pitch vel
+.l	imp2 reso pitch vel; d pith
 	-reso dreso
 	jump l
 }
@@ -433,7 +433,7 @@ magic()
 	!per 0
 .l	rand p .5; +p 5
 	rand a .05; +a .1
-	run drip2
+	drip2; td 2
 	rand per 10; +per .1; td per
 	jump l
 }
@@ -456,7 +456,7 @@ rain()
 	!per 0
 .l	rand p .5; +p 2
 	rand a .05; +a .05
-	run drip
+	drip; td 2
 	rand per 40; +per .1; td per
 	jump l
 }
