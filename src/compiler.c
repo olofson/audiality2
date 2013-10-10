@@ -1908,13 +1908,6 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Unlex(c);
 		a2c_Instruction(c, OP_SPAWND, 0);
 		break;
-	  case TK_RUN:
-		fprintf(stderr, "Audiality 2 WARNING: 'run' is a hack with "
-				"inaccurate timing! Please stop using it.\n");
-		r = A2_REGISTERS - 1;
-		a2c_Instruction(c, OP_SPAWN, r);
-		a2c_Code(c, OP_WAIT, r, 0);
-		break;
 	  case TK_FUNCTION:
 		a2c_Unlex(c);
 		a2c_Instruction(c, OP_CALL, 0);
@@ -2034,7 +2027,6 @@ static struct
 	{"wle",		TK_WHILE,	OP_JG},
 	{"wge",		TK_WHILE,	OP_JL},
 	{"for",		TK_FOR,		0},
-	{"run",		TK_RUN,		0},
 
 	{NULL, 0, 0}
 };
