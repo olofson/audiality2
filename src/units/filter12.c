@@ -24,6 +24,8 @@
 #include "filter12.h"
 #include "dsp.h"
 
+#define	A2F12_MAXCHANNELS	2
+
 typedef enum A2F12_cregisters
 {
 	A2F12R_CUTOFF = 0,
@@ -50,9 +52,9 @@ typedef struct A2_filter12
 	int		hp;
 
 	/* State */
-	int		d1;
-	int		d2;
-	int		f1;
+	int		f1;	/* Current pitch coefficient */
+	int		d1[A2F12_MAXCHANNELS];
+	int		d2[A2F12_MAXCHANNELS];
 } A2_filter12;
 
 
@@ -75,14 +77,18 @@ static inline int f12_pitch2coeff(A2_filter12 *f12)
 }
 
 static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
-		int add)
+		int add, int channels)
 {
 	A2_filter12 *f12 = f12_cast(u);
-	unsigned s, end = offset + frames;
-	int32_t *in = u->inputs[0];
-	int32_t *out = u->outputs[0];
+	unsigned s, c, end = offset + frames;
+	int32_t *in[A2F12_MAXCHANNELS], *out[A2F12_MAXCHANNELS];
 	int df;
 	int f0 = f12->f1;
+	for(c = 0; c < channels; ++c)
+	{
+		in[c] = u->inputs[c];
+		out[c] = u->outputs[c];
+	}
 	a2_RamperPrepare(&f12->q, frames);
 	a2_RamperPrepare(&f12->cutoff, frames);
 	if(f12->cutoff.delta)
@@ -96,33 +102,46 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	for(s = offset; s < end; ++s)
 	{
 		int f = f0 >> 12;
-		int d1 = f12->d1 >> 4;
 		int q = f12->q.value >> 12;
-		int l = f12->d2 + (f * d1 >> 8);
-		int h = (in[s] >> 5) - l - (q * d1 >> 8);
-		int b = (f * (h >> 4) >> 8) + f12->d1;
-		int fout = (l * f12->lp + b * f12->bp + h * f12->hp) >> 3;
-		if(add)
-			out[s] += fout;
-		else
-			out[s] = fout;
-		f12->d1 = b;
-		f12->d2 = l;
+		for(c = 0; c < channels; ++c)
+		{
+			int d1 = f12->d1[c] >> 4;
+			int l = f12->d2[c] + (f * d1 >> 8);
+			int h = (in[c][s] >> 5) - l - (q * d1 >> 8);
+			int b = (f * (h >> 4) >> 8) + f12->d1[c];
+			int fout = (l * f12->lp + b * f12->bp +
+					h * f12->hp) >> 3;
+			if(add)
+				out[c][s] += fout;
+			else
+				out[c][s] = fout;
+			f12->d1[c] = b;
+			f12->d2[c] = l;
+		}
 		f0 += df;
 		a2_RamperRun(&f12->q, 1);
 	}
 }
 
-static void f12_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+static void f12_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	f12_process(u, offset, frames, 1);
+	f12_process(u, offset, frames, 1, 1);
 }
 
-static void f12_Process(A2_unit *u, unsigned offset, unsigned frames)
+static void f12_Process11(A2_unit *u, unsigned offset, unsigned frames)
 {
-	f12_process(u, offset, frames, 0);
+	f12_process(u, offset, frames, 0, 1);
 }
 
+static void f12_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
+{
+	f12_process(u, offset, frames, 1, 2);
+}
+
+static void f12_Process22(A2_unit *u, unsigned offset, unsigned frames)
+{
+	f12_process(u, offset, frames, 0, 2);
+}
 
 static void f12_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
 {
@@ -178,6 +197,7 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 {
 	A2_filter12 *f12 = f12_cast(u);
 	int *ur = u->registers;
+	int c;
 
 	f12->samplerate = cfg->samplerate;
 	f12->transpose = vms->r + R_TRANSPOSE;
@@ -196,12 +216,22 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	f12->bp = ur[A2F12R_BP] >> 8;
 	f12->hp = ur[A2F12R_HP] >> 8;
 
-	f12->d1 = f12->d2 = 0;
-
+	if(u->ninputs != u->noutputs)
+		return A2_IODONTMATCH;
+	for(c = 0; c < u->ninputs; ++c)
+		f12->d1[c] = f12->d2[c] = 0;
 	if(flags & A2_PROCADD)
-		u->Process = f12_ProcessAdd;
+		switch(u->ninputs)
+		{
+		  case 1: u->Process = f12_Process11Add; break;
+		  case 2: u->Process = f12_Process22Add; break;
+		}
 	else
-		u->Process = f12_Process;
+		switch(u->ninputs)
+		{
+		  case 1: u->Process = f12_Process11; break;
+		  case 2: u->Process = f12_Process22; break;
+		}
 
 	return A2_OK;
 }
@@ -213,8 +243,8 @@ const A2_unitdesc a2_filter12_unitdesc =
 
 	regs,			/* registers */
 
-	1, 1,			/* [min,max]inputs */
-	1, 1,			/* [min,max]outputs */
+	1, 2,			/* [min,max]inputs */
+	1, 2,			/* [min,max]outputs */
 
 	sizeof(A2_filter12),	/* instancesize */
 	f12_Initialize,		/* Initialize */
