@@ -184,6 +184,7 @@ const A2_unitdesc a2_xinsert_unitdesc =
 static A2_errors a2_xinsert_locked(A2_state *st, A2_voice *v,
 		A2_xinsert_cb callback, void *userdata, int insert_callback)
 {
+	A2_errors res;
 	A2_unit *u;
 	A2_xinsert *xi;
 
@@ -197,7 +198,9 @@ static A2_errors a2_xinsert_locked(A2_state *st, A2_voice *v,
 	/* Install callback! */
 	xi = a2_xinsert_cast(u);
 	if(xi->callback)
-		xi->callback(NULL, 0, 0, xi->userdata);
+		if((res = xi->callback(NULL, 0, 0, xi->userdata)))
+			a2r_Error(xi->state, res, "xinsert user callback; "
+					"replace notification");
 	xi->callback = callback;
 	xi->userdata = userdata;
 
