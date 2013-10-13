@@ -30,6 +30,7 @@ typedef struct A2_xinsert
 	A2_unit		header;
 	A2_xinsert_cb	callback;
 	void		*userdata;
+	A2_state	*state;
 	unsigned	flags;
 } A2_xinsert;
 

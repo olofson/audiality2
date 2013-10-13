@@ -29,12 +29,14 @@
 static inline void xinsert_run_callback(A2_unit *u, unsigned offset,
 		unsigned frames, int32_t **bufs)
 {
+	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	int32_t *bufp[A2_MAXCHANNELS];
 	int i;
 	for(i = 0; i < u->ninputs; ++i)
 		bufp[i] = bufs[i] + offset;
-	xi->callback(bufp, u->ninputs, frames, xi->userdata);
+	if((res = xi->callback(bufp, u->ninputs, frames, xi->userdata)))
+		a2r_Error(xi->state, res, "xinsert user callback");
 }
 
 static void xinsert_ProcessTap(A2_unit *u, unsigned offset, unsigned frames)
@@ -129,6 +131,7 @@ static A2_errors xinsert_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		return A2_IODONTMATCH;
 
 	/* Initialize private fields */
+	xi->state = cfg->state;
 	xi->flags = flags;
 	xi->callback = NULL;
 
@@ -144,9 +147,12 @@ static A2_errors xinsert_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 
 static void xinsert_Deinitialize(A2_unit *u, A2_state *st)
 {
+	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	if(xi->callback)
-		xi->callback(NULL, 0, 0, xi->userdata);
+		if((res = xi->callback(NULL, 0, 0, xi->userdata)))
+			a2r_Error(xi->state, res, "xinsert user callback; "
+					"deinit notification");
 }
 
 
