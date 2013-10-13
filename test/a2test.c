@@ -513,6 +513,7 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "Couldn't allocate visualization buffers!\n");
 		exit(1);
 	}
+	SDL_Delay(100);	/* FIXME: Ugly hack until we've fixed issue #77. */
 	a2_SetTapCallback(state, rootvoice, grab_process, NULL);
 
 	gui_draw_screen();
