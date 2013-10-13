@@ -9,20 +9,6 @@ TODO: -------------------------------------------------------------------------
 
 * Parametric EQ!
 
-* Modulator objects that can:
-	* Directly modulate control registers on the local voice.
-	* Issue events to voices based on parameters.
-	* Implemented as units, so they can be controlled properly by scripts!
-
-* Interpolated delay line!
-	* Subsample accurate, ramped delay time controls!
-	* Feedback? (One output tap + one feedback tap, with separate delay and
-	  gain controls.)
-	* Multitap...?
-		* An additional argument would set the number of taps at
-		  compile time, and control registers would be allocated as
-		  needed.
-
 * Extra package with Win32 binaries + demos!
 
 * a2_KillSub() is actually a bitch to implement properly...! How do we find and
@@ -429,16 +415,6 @@ TODO: -------------------------------------------------------------------------
   ticks, eliminating rounding error buildup as long as "clean" delay values are
   used for 'td'.
 
-* Drop the f20 operands!!!
-	* Use a fixed size 64 bit instruction struct/union...?
-	* Variable instruction size? 8, 16 or 32 bit words?
-		* Variable size is nice and compact, which is handy if we want
-		  to store binaries on disk eventually. However, that can also
-		  be accomplished - and more efficiently so - by using a
-		  special instruction encoding for files. Sort of needed anyway
-		  to deal with waves, units, programs etc not having persistent
-		  handles!
-
 * WAKE should only have a SLEEPing voice continue execution! The current WAKE
   behavior should be a different instruction; "FORCE-if-sleeping" or similar.
   Or we should just plain remove that, and have FORCE work like the current
@@ -577,11 +553,6 @@ For K2 TP5:
 	  manual state trickery... Also, this can mostly eliminate FORCE,
 	  which is a bit evil anyway.
 
-	* Filters and other voice effects!
-		* Use CS_block for instance/state as far as possible!
-		* Special VM instructions for instantiation and config.
-		* Wire some or all controls to VM registers...?
-
 	* Proper mixer architecture:
 
 		* Stereo!
@@ -601,30 +572,11 @@ For K2 TP5:
 			  introduced when voices are processed in the wrong
 			  order.
 
-	* Click when using 'set' with 'vol' for fade-in from silence!
-		* This definitely has to do with switching between mixing
-		  directly and via work buffers! Hardwiring to always use
-		  work buffers + cs_PanmixProcess() eliminates the clicks.
-		* The problem is that cs_ProcessVoices() will not realize
-		  that it should be using a work buffer until the next
-		  cycle, since VM execution is done AFTER that check, as
-		  part of cs_VoiceProcess().
-==>		* Is this still happening after the timestamped messages
-		  refactoring?
-
 	* Some sort of native support for positional audio? (Mixer/routing
 	  department, probably.)
 
-	* Remote editing and monitoring...? How does it all fit together?
-	  Can we use a common interface for everything, so the editor/
-	  debugger/synth can connect to an engine running inside a game,
-	  or vice versa...?
-
 ---------------------------------------------------------------------------
 CRITICAL:
-	* Start hacking a speech synth!!! (Half-Life announcement system
-	  style.)
-
 	* cstest.c can somehow make ChipSound just stop responding. Reload
 	  does not help.
 		* Old...?
@@ -637,24 +589,7 @@ CRITICAL:
 	* Why does +amp (V - amp * .2) wobble around way above 0 when
 	  V is 0!?
 
-	* The detach/message logic is unfortunate when dealing with
-	  programs that just spawn and control subvoices. Detaching such
-	  a voice detaches the subvoices, which means messages no longer
-	  can be delivered to them - but the purpose of detaching them is
-	  ACTUALLY just to tell them that they should terminate when done!
-	  Can we fix this somehow? It seems a bit odd that instruments
-	  "randomly" won't work unless given explicit VIDs.
-
-	* cs_OscFrequency() should correct the phase based on subsample
-	  timing!
-
-	* The lock in the API (some remaining calls) is evil! If the sound
-	  engine hangs, so does the main app as soon as it runs into that
-	  lock...
-
 	* SPAWNR/SPAWNDR doesn't work!?
-
-	* There is no infinite recursion killer!
 
 	* Assignment statement bug!
 		alt (1 - alt)
