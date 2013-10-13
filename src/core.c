@@ -269,7 +269,10 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 {
 	A2_voice *v = (A2_voice *)st->sys->RTAlloc(st->sys, sizeof(A2_voice));
 	if(!v)
+	{
+		a2r_Error(st, A2_OOMEMORY, "a2_VoiceAlloc()");
 		return NULL;
+	}
 	v->sub = NULL;
 	v->stack = NULL;
 	v->program = NULL;
@@ -293,7 +296,11 @@ A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent)
 {
 	A2_voice *v = st->voicepool;
 	if(parent->nestlevel >= A2_NESTLIMIT - 1)
+	{
+		/* FIXME: Can we get the program name here instead? */
+		a2r_Error(st, A2_VOICENEST, "a2_VoiceNew()");
 		return NULL;
+	}
 	if(v)
 		st->voicepool = v->next;
 	else if(!(v = a2_VoiceAlloc(st)))
@@ -491,7 +498,9 @@ static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, unsigned when,
 		a2_VoiceDetach(v->sv[vid]);
 	if(!p)
 		return A2_BADPROGRAM;
-	nv = a2_VoiceNew(st, v);
+	if(!(nv = a2_VoiceNew(st, v)))
+		return v->nestlevel < A2_NESTLIMIT ?
+				A2_VOICEALLOC : A2_VOICENEST;
 	if(vid > 0)
 	{
 		v->sv[vid] = nv;

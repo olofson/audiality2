@@ -124,7 +124,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 /*
  * Maximum allowed child voice nesting depth. (Recursive explosion inhibitor.)
  */
-#define	A2_NESTLIMIT		32
+#define	A2_NESTLIMIT		256
 
 /* Default initial pool sizes for A2_REALTIME states */
 #define	A2_INITHANDLES		256
