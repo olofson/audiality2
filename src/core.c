@@ -911,6 +911,51 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			a2_RTMark(&rt, reg);
 			break;
 
+		/* Comparison operators */
+/*TODO: Versions with an immediate second operand! */
+		  case OP_GR:
+			r[reg] = (r[reg] > r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_LR:
+			r[reg] = (r[reg] < r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_GER:
+			r[reg] = (r[reg] >= r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_LER:
+			r[reg] = (r[reg] <= r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_EQR:
+			r[reg] = (r[reg] == r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_NER:
+			r[reg] = (r[reg] != r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+
+		/* Boolean operators */
+		  case OP_ANDR:
+			r[reg] = (r[reg] && r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_ORR:
+			r[reg] = (r[reg] || r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_XORR:
+			r[reg] = (!r[reg] != !r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+		  case OP_NOTR:
+			r[reg] = (!r[arg]) << 16;
+			a2_RTMark(&rt, reg);
+			break;
+
 		/* Unit control */
 		  case OP_SET:
 			a2_VoiceControl(st, v, reg, 255 - v->s.timer, 0);

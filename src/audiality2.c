@@ -408,6 +408,7 @@ A2_state *a2_Open(A2_config *config)
 		printf("A2_unit:\t%d\n", sizeof(A2_unit));
 		printf("A2_unitdesc:\t%d\n", sizeof(A2_unitdesc));
 		printf("A2_stream:\t%d\n", sizeof(A2_stream));
+		printf("A2_OPCODES:\t%d\n", A2_OPCODES);
 	)
 #ifdef DEBUG
 	if(config)

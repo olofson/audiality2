@@ -303,6 +303,13 @@ void a2_DumpConfig(A2_config *c);
 	A2_DI(MUL)	A2_DI(MULR)	A2_DI(MOD)	A2_DI(MODR)	\
 	A2_DI(QUANT)	A2_DI(QUANTR)	A2_DI(RAND)	A2_DI(RANDR)	\
 									\
+	/* Comparison operators */					\
+	A2_DI(GR)	A2_DI(LR)	A2_DI(GER)	A2_DI(LER)	\
+	A2_DI(EQR)	A2_DI(NER)					\
+									\
+	/* Boolean operators */						\
+	A2_DI(ANDR)	A2_DI(ORR)	A2_DI(XORR)	A2_DI(NOTR)	\
+									\
 	/* Unit control */						\
 	A2_DI(SET)							\
 									\

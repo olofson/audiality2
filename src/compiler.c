@@ -232,6 +232,16 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_RANDR:
 	  case OP_P2DR:
 	  case OP_NEGR:
+	  case OP_GR:
+	  case OP_LR:
+	  case OP_GER:
+	  case OP_LER:
+	  case OP_EQR:
+	  case OP_NER:
+	  case OP_ANDR:
+	  case OP_ORR:
+	  case OP_XORR:
+	  case OP_NOTR:
 	  case OP_QUANTR:
 	  case OP_SPAWNR:
 	  case OP_SPAWNDR:
@@ -309,6 +319,15 @@ static inline int a2_GetChar(A2_compiler *c)
 	return ch;
 }
 
+static inline void a2_UngetChar(A2_compiler *c)
+{
+#ifdef DEBUG
+	if(!c->l.pos)
+		a2c_Throw(c, A2_INTERNAL + 140);
+#endif
+	--c->l.pos;
+}
+
 static void a2_LexBufAdd(A2_compiler *c, int ch)
 {
 	if(c->lexbufpos == c->lexbufsize)
@@ -353,7 +372,7 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 		{
 			if(xp)
 			{
-				--c->l.pos;
+				a2_UngetChar(c);
 				*v = 0;
 				return A2_BADVALUE;
 			}
@@ -363,7 +382,7 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 		{
 			if(!valid)
 			{
-				--c->l.pos;
+				a2_UngetChar(c);
 				*v = 0;
 				return A2_BADVALUE;
 			}
@@ -375,7 +394,7 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 			else if(ch == 'f')
 				val = a2_F2P(val);
 			else
-				--c->l.pos;
+				a2_UngetChar(c);
 			if(val >= 32767.0f)
 				*v = 0x7fffffff;
 			else if(val <= -32768.0f)
@@ -484,6 +503,20 @@ static int a2c_LexString(A2_compiler *c)
 	return c->l.token;
 }
 
+static int a2c_GetOpOrChar(A2_compiler *c, int ch)
+{
+	if(a2_GetChar(c) == '=')
+		switch(ch)
+		{
+		  case '>':	return (c->l.token = TK_GE);
+		  case '<':	return (c->l.token = TK_LE);
+		  case '=':	return (c->l.token = TK_EQ);
+		  case '!':	return (c->l.token = TK_NE);
+		}
+	a2_UngetChar(c);
+	return (c->l.token = ch);
+}
+
 /* NOTE:
  *	This returns names as new symbols. Use a2_Grab() to keep one of those -
  *	or it will be deleted as parsing continues!
@@ -537,7 +570,7 @@ static int a2c_Lex(A2_compiler *c)
 				while((ch = a2_GetChar(c)) != '\n')
 					if(ch == -1)
 						return (c->l.token = TK_EOF);
-				--c->l.pos;
+				a2_UngetChar(c);
 				continue;
 			  case '*':
 				for(prevch = 0; (ch = a2_GetChar(c)) != -1;
@@ -546,7 +579,7 @@ static int a2c_Lex(A2_compiler *c)
 						break;
 				continue;
 			}
-			--c->l.pos;
+			a2_UngetChar(c);
 			break;
 		  case '"':
 			return a2c_LexString(c);
@@ -564,7 +597,7 @@ static int a2c_Lex(A2_compiler *c)
 			a2c_Throw(c, res);
 	}
 
-	/* Check for valid identefiers */
+	/* Check for valid identifiers */
 	nstart = c->l.pos - 1;
 	while(((ch >= 'a') && (ch <= 'z')) ||
 			((ch >= 'A') && (ch <= 'Z')) ||
@@ -572,8 +605,8 @@ static int a2c_Lex(A2_compiler *c)
 			(ch == '_'))
 		ch = a2_GetChar(c);
 	if(nstart == c->l.pos - 1)
-		return (c->l.token = ch);	/* Nope? Return as token! */
-	--c->l.pos;
+		return a2c_GetOpOrChar(c, ch);
+	a2_UngetChar(c);
 	name = a2c_ndup(c->source + nstart, c->l.pos - nstart);
 	DUMPLSTRINGS(fprintf(stderr, " [\"%s\":  ", name);)
 
@@ -896,6 +929,18 @@ static void a2c_CodeOpR(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 	  case OP_DIVR:
 	  case OP_P2DR:
 	  case OP_NEGR:
+/*TODO: These should go in the first group when we add the immediate versions! */
+	  case OP_GR:
+	  case OP_LR:
+	  case OP_GER:
+	  case OP_LER:
+	  case OP_EQR:
+	  case OP_NER:
+/*TODO: / */
+	  case OP_ANDR:
+	  case OP_ORR:
+	  case OP_XORR:
+	  case OP_NOTR:
 		a2c_Code(c, op, to, r);
 		break;
 	  default:
@@ -930,8 +975,18 @@ static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
 		a2c_Code(c, OP_MUL, to, 0x100000000LL / v);
 		break;
 	  default:
-		if((op != OP_RAND) && (op != OP_P2DR) && (op != OP_NEGR))
+		switch(op)
+		{
+		  /* In-place unary operators - no teporary register needed! */
+		  case OP_RAND:
+		  case OP_P2DR:
+		  case OP_NEGR:
+		  case OP_NOTR:
+			break;
+		  default:
 			tmpr = a2c_AllocReg(c);
+			break;
+		}
 		a2c_Code(c, OP_LOAD, tmpr, v);
 		a2c_CodeOpR(c, op, to, tmpr);
 		if(tmpr != to)
@@ -984,11 +1039,28 @@ static void a2c_Expression(A2_compiler *c, int to)
 		  case ')':
 			return;	/* Done !*/
 		  case TK_INSTRUCTION:	op = c->l.val;	break;
+
+		  /* Immediate/register operator instruction pairs */
 		  case '+':		op = OP_ADD;	break;
-		  case '-':		op = OP_SUBR;	break;
 		  case '*':		op = OP_MUL;	break;
-		  case '/':		op = OP_DIVR;	break;
 		  case '%':		op = OP_MOD;	break;
+
+		  /* Operator instructions with register versions only */
+		  case '-':		op = OP_SUBR;	break;
+		  case '/':		op = OP_DIVR;	break;
+		  case '>':		op = OP_GR;	break;
+		  case '<':		op = OP_LR;	break;
+/*TODO: Versions with an immediate second operand! */
+		  case TK_GE:		op = OP_GER;	break;
+		  case TK_LE:		op = OP_LER;	break;
+		  case TK_EQ:		op = OP_EQR;	break;
+		  case TK_NE:		op = OP_NER;	break;
+/*TODO: / */
+		  case TK_AND:		op = OP_ANDR;	break;
+		  case TK_OR:		op = OP_ORR;	break;
+		  case TK_XOR:		op = OP_XORR;	break;
+		  case TK_NOT:		op = OP_NOTR;	break;
+
 		  default:		a2c_Throw(c, A2_EXPOP);
 		}
 		a2c_SkipLF(c);
@@ -2039,6 +2111,12 @@ static struct
 	{"wge",		TK_WHILE,	OP_JL},
 	{"for",		TK_FOR,		0},
 
+	/* Operators */
+	{"and",		TK_AND,		0},
+	{"or",		TK_OR,		0},
+	{"xor",		TK_XOR,		0},
+	{"not",		TK_NOT,		0},
+
 	{NULL, 0, 0}
 };
 
@@ -2337,6 +2415,16 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SPAWNR:
 	  case OP_P2DR:
 	  case OP_NEGR:
+	  case OP_GR:
+	  case OP_LR:
+	  case OP_GER:
+	  case OP_LER:
+	  case OP_EQR:
+	  case OP_NER:
+	  case OP_ANDR:
+	  case OP_ORR:
+	  case OP_XORR:
+	  case OP_NOTR:
 		a2_PrintRegName(reg);
 		printf(" ");
 		a2_PrintRegName(arg);
