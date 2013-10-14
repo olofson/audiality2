@@ -1022,8 +1022,8 @@ static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
 
 static void a2c_SimplExp(A2_compiler *c, int r);
 
-/* Expression, terminated with ')' */
-static void a2c_Expression(A2_compiler *c, int to)
+/* Expression, terminated with the token specified by 'delim' */
+static void a2c_Expression(A2_compiler *c, int to, int delim)
 {
 	int op;
 	a2c_SkipLF(c);
@@ -1036,8 +1036,6 @@ static void a2c_Expression(A2_compiler *c, int to)
 		a2c_SkipLF(c);
 		switch(a2c_Lex(c))
 		{
-		  case ')':
-			return;	/* Done !*/
 		  case TK_INSTRUCTION:	op = c->l.val;	break;
 
 		  /* Immediate/register operator instruction pairs */
@@ -1061,7 +1059,11 @@ static void a2c_Expression(A2_compiler *c, int to)
 		  case TK_XOR:		op = OP_XORR;	break;
 		  case TK_NOT:		op = OP_NOTR;	break;
 
-		  default:		a2c_Throw(c, A2_EXPOP);
+		  default:
+			if(c->l.token == delim)
+				return;	/* Done !*/
+			else
+				a2c_Throw(c, A2_EXPOP);
 		}
 		a2c_SkipLF(c);
 		a2c_SimplExp(c, -1);
@@ -1135,7 +1137,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 	  case '(':
 		if(r < 0)
 			tmpr = a2c_AllocReg(c);
-		a2c_Expression(c, tmpr);
+		a2c_Expression(c, tmpr, ')');
 		break;
 	  case TK_INSTRUCTION:	/* Unary operator */
 		op = c->l.val;
@@ -1793,10 +1795,34 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 {
 	int fixpos, loopto = c->coder->pos;
-	a2c_SimplExp(c, -1);
-	a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
-	a2c_SkipLF(c);
-	a2c_Expect(c, '{', A2_EXPBODY);
+	if(a2c_Lex(c) == '(')
+	{
+		a2c_Unlex(c);
+		a2c_SimplExp(c, -1);
+		a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
+		a2c_SkipLF(c);
+		a2c_Expect(c, '{', A2_EXPBODY);
+	}
+	else
+	{
+		/*
+		 * FIXME:
+		 *	This code, unlike the original a2c_SimplExp(), has the
+		 *	unfortunate side effect of using a temporary register
+		 *	even if the expression would normally give a register
+		 *	that we could use as is.
+		 *	   Trivial peephole optimization? No! In the general
+		 *	case, this is not a safe substitution, as subsequent
+		 *	code might be using that temporary register that the
+		 *	new code doesn't initialize.
+		 *	   Can we fix a2c_Expression() so it can take -1 the
+		 *	same way a2c_SimplExp() does?
+		 */
+		int tr = a2c_AllocReg(c);
+		a2c_Unlex(c);
+		a2c_Expression(c, tr, '{');
+		a2c_Branch(c, op, TK_TEMPREG, tr, A2_UNDEFJUMP, &fixpos);
+	}
 	a2c_Body(c, '}');
 	if(a2c_Lex(c) == TK_ELSE)
 	{
