@@ -1022,15 +1022,56 @@ static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
 
 static void a2c_SimplExp(A2_compiler *c, int r);
 
-/* Expression, terminated with the token specified by 'delim' */
-static void a2c_Expression(A2_compiler *c, int to, int delim)
+/*
+ * Expression, terminated with the token specified by 'delim'
+ * 
+ * 'r' works the same way as with a2c_SimplExp().
+ */
+static void a2c_Expression(A2_compiler *c, int r, int delim)
 {
+	int res_tk, res_r;
 	int op;
 	a2c_SkipLF(c);
-	a2c_SimplExp(c, to);
+	a2c_SimplExp(c, r);
 	if((c->l.token == TK_PROGRAM) || (c->l.token == TK_WAVE))
 		a2c_Throw(c, A2_NEXPHANDLE); /* No arithmetics on these! */
-	a2c_CodeOpL(c, OP_LOAD, to);
+	res_tk = c->l.token;
+	res_r = c->l.val;
+	a2c_SkipLF(c);
+	if(a2c_Lex(c) == delim)
+	{
+		/* Actually just a SimplExp! Return as is. */
+		c->l.token = res_tk;
+		c->l.val = res_r;
+		return;
+	}
+	else
+		a2c_Unlex(c);
+
+	/*
+	 * At this point, we have the result of the SimplExp evaluation as the
+	 * current token, but it could be basically anything! Since we're about
+	 * to issue operators, we need to make sure we have that in a register
+	 * that we can use for intermediate values and final result.
+	 */
+	if(r < 0)
+	{
+		/* Only allocate a tempreg if we haven't already got one! */
+		if(res_tk == TK_TEMPREG)
+			r = res_r;
+		else
+		{
+			r = res_r = a2c_AllocReg(c);
+			res_tk = TK_TEMPREG;
+		}
+	}
+	else
+	{
+		res_r = r;
+		res_tk = TK_REGISTER;
+	}
+	a2c_CodeOpL(c, OP_LOAD, r);
+
 	while(1)
 	{
 		a2c_SkipLF(c);
@@ -1061,7 +1102,12 @@ static void a2c_Expression(A2_compiler *c, int to, int delim)
 
 		  default:
 			if(c->l.token == delim)
-				return;	/* Done !*/
+			{
+				/* Done !*/
+				c->l.token = res_tk;
+				c->l.val = res_r;
+				return;
+			}
 			else
 				a2c_Throw(c, A2_EXPOP);
 		}
@@ -1069,7 +1115,7 @@ static void a2c_Expression(A2_compiler *c, int to, int delim)
 		a2c_SimplExp(c, -1);
 		if((c->l.token == TK_PROGRAM) || (c->l.token == TK_WAVE))
 			a2c_Throw(c, A2_NEXPHANDLE);
-		a2c_CodeOpL(c, op, to);
+		a2c_CodeOpL(c, op, r);
 	}
 }
 
@@ -1114,10 +1160,13 @@ static int a2c_Variable(A2_compiler *c)
  * If 'r' is -1, a temporary register is allocated, and the token is set to
  * TK_TEMPREG. In this case, the caller is responsible for freeing the
  * temporary register!
+ *
+ * NOTE:
+ *	'r', whether -1 or a specific register index, is ONLY used if code has
+ *	been issued! Static objects, variables etc are just returned as is.
  */
 static void a2c_SimplExp(A2_compiler *c, int r)
 {
-	int op, tmpr = r;
 	switch(a2c_Lex(c))
 	{
 	  case TK_VALUE:
@@ -1135,26 +1184,36 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 		return;
 #endif
 	  case '(':
-		if(r < 0)
-			tmpr = a2c_AllocReg(c);
-		a2c_Expression(c, tmpr, ')');
-		break;
-	  case TK_INSTRUCTION:	/* Unary operator */
-		op = c->l.val;
-		if((op != OP_P2DR) && (op != OP_RAND) && (op != OP_NEGR))
+		a2c_Expression(c, r, ')');
+		return;
+	  case TK_INSTRUCTION:
+	  {
+		/* Unary operator */
+		int tmpr = r;
+		int op = c->l.val;
+		switch(op)
+		{
+		  case OP_P2DR:
+		  case OP_RAND:
+		  case OP_NEGR:
+		  case OP_NOTR:
+			break;
+		  default:
 			a2c_Throw(c, A2_NOTUNARY);
+		}
 		if(r < 0)
 			tmpr = a2c_AllocReg(c);
 		a2c_SimplExp(c, tmpr);
 		a2c_CodeOpL(c, op, tmpr);
-		break;
+		c->l.token = r < 0 ? TK_TEMPREG : TK_REGISTER;
+		c->l.val = tmpr;
+		return;
+	  }
 	  default:
 		a2c_Unlex(c);
 		a2c_Variable(c);
 		return;
 	}
-	c->l.token = r < 0 ? TK_TEMPREG : TK_REGISTER; /* Temp or allocated? */
-	c->l.val = tmpr;
 }
 
 
@@ -1805,23 +1864,9 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 	}
 	else
 	{
-		/*
-		 * FIXME:
-		 *	This code, unlike the original a2c_SimplExp(), has the
-		 *	unfortunate side effect of using a temporary register
-		 *	even if the expression would normally give a register
-		 *	that we could use as is.
-		 *	   Trivial peephole optimization? No! In the general
-		 *	case, this is not a safe substitution, as subsequent
-		 *	code might be using that temporary register that the
-		 *	new code doesn't initialize.
-		 *	   Can we fix a2c_Expression() so it can take -1 the
-		 *	same way a2c_SimplExp() does?
-		 */
-		int tr = a2c_AllocReg(c);
 		a2c_Unlex(c);
-		a2c_Expression(c, tr, '{');
-		a2c_Branch(c, op, TK_TEMPREG, tr, A2_UNDEFJUMP, &fixpos);
+		a2c_Expression(c, -1, '{');
+		a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
 	}
 	a2c_Body(c, '}');
 	if(a2c_Lex(c) == TK_ELSE)
