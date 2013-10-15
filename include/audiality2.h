@@ -440,7 +440,8 @@ typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
 
 /*
  * Set up 'callback' to receive audio from 'voice'. The callback will be called
- * by the Process() method of the first 'xinsert' unit found in the voice.
+ * by the Process() method of the first 'xinsert' unit found in the voice, and
+ * will never be called with a 'frames' argument greater than A2_MAXFRAG.
  *
  * The root voice and groups created with a2_NewGroup() have an 'xinsert' unit
  * last in their chains.

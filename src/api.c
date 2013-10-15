@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -155,7 +155,7 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 typedef struct A2_apimessage
 {
 	unsigned	size;	/* Actual size of message */
-	A2_handle	target;	/* Target object*/
+	A2_handle	target;	/* Target object */
 	A2_eventbody	b;	/* Event body, as carried by A2_event */
 } A2_apimessage;
 
@@ -273,12 +273,12 @@ static inline void a2r_em_start(A2_state *st, A2_apimessage *am)
 	A2_voice *tv = a2_GetVoice(st, am->target);
 	if(!(tv))
 	{
-		a2r_Error(st, A2_BADVOICE, "a2_em_start()[1]");
+		a2r_Error(st, A2_BADVOICE, "a2r_em_start()[1]");
 		return;
 	}
 	if(!(e = a2_AllocEvent(st)))
 	{
-		a2r_Error(st, A2_OOMEMORY, "a2_em_start()[2]");
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_start()[2]");
 		return;
 	}
 	e->b.action = am->b.action;
@@ -290,7 +290,7 @@ static inline void a2r_em_start(A2_state *st, A2_apimessage *am)
 				"%f frames late!\n", (st->now_frames -
 				am->b.timestamp) / 256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2_em_start()[3]");
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_start()[3]");
 		am->b.timestamp = st->now_frames;
 	}
 	e->b.timestamp = am->b.timestamp;
@@ -303,7 +303,7 @@ static inline void a2r_em_start(A2_state *st, A2_apimessage *am)
 	}
 	else
 		e->b.argc = 0;
-	MSGTRACK(e->source = "a2_em_start()";)
+	MSGTRACK(e->source = "a2r_em_start()";)
 	a2_SendEvent(tv, e);
 }
 
@@ -313,12 +313,12 @@ static inline void a2r_em_send(A2_state *st, A2_apimessage *am)
 	A2_voice *tv = a2_GetVoice(st, am->target);
 	if(!(tv))
 	{
-		a2r_Error(st, A2_BADVOICE, "a2_em_send()[1]");
+		a2r_Error(st, A2_BADVOICE, "a2r_em_send()[1]");
 		return;
 	}
 	if(!(e = a2_AllocEvent(st)))
 	{
-		a2r_Error(st, A2_OOMEMORY, "a2_em_send()[2]");
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_send()[2]");
 		return;
 	}
 	e->b.action = am->b.action;
@@ -329,7 +329,7 @@ static inline void a2r_em_send(A2_state *st, A2_apimessage *am)
 				"%f frames late!\n", (st->now_frames -
 				am->b.timestamp) / 256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2_em_send()[3]");
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_send()[3]");
 		am->b.timestamp = st->now_frames;
 	}
 	e->b.timestamp = am->b.timestamp;
@@ -341,7 +341,7 @@ static inline void a2r_em_send(A2_state *st, A2_apimessage *am)
 	}
 	else
 		e->b.argc = 0;
-	MSGTRACK(e->source = "a2_em_send()";)
+	MSGTRACK(e->source = "a2r_em_send()";)
 	a2_SendEvent(tv, e);
 }
 
@@ -350,7 +350,7 @@ static inline void a2r_em_sendsub(A2_state *st, A2_apimessage *am)
 	A2_voice *v = a2_GetVoice(st, am->target);
 	if(!v)
 	{
-		a2r_Error(st, A2_BADVOICE, "a2_em_sendsub()[1]");
+		a2r_Error(st, A2_BADVOICE, "a2r_em_sendsub()[1]");
 		return;
 	}
 	if(a2_TSDiff(am->b.timestamp, st->now_frames) < 0)
@@ -360,7 +360,7 @@ static inline void a2r_em_sendsub(A2_state *st, A2_apimessage *am)
 				"%f frames late!\n", (st->now_frames -
 				am->b.timestamp) / 256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2_em_sendsub()[2]");
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_sendsub()[2]");
 		am->b.timestamp = st->now_frames;
 	}
 	for(v = v->sub; v; v = v->next)
@@ -368,7 +368,7 @@ static inline void a2r_em_sendsub(A2_state *st, A2_apimessage *am)
 		A2_event *e = a2_AllocEvent(st);
 		if(!e)
 		{
-			a2r_Error(st, A2_OOMEMORY, "a2_em_sendsub()[3]");
+			a2r_Error(st, A2_OOMEMORY, "a2r_em_sendsub()[3]");
 			return;
 		}
 		e->b.action = am->b.action;
@@ -381,7 +381,7 @@ static inline void a2r_em_sendsub(A2_state *st, A2_apimessage *am)
 		}
 		else
 			e->b.argc = 0;
-		MSGTRACK(e->source = "a2_em_sendsub()";)
+		MSGTRACK(e->source = "a2r_em_sendsub()";)
 		a2_SendEvent(v, e);
 	}
 }
@@ -390,9 +390,15 @@ static inline void a2r_em_release(A2_state *st, A2_apimessage *am)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
 	if(!hi)
+	{
+		a2r_Error(st, A2_BADVOICE, "a2r_em_release()[1]");
 		return;
+	}
 	if(hi->typecode != A2_TVOICE)
+	{
+		a2r_Error(st, A2_WRONGTYPE, "a2r_em_release()[2]");
 		return;
+	}
 	/* Tell the voice (if any!?) that it's been detached */
 	if(hi->d.data)
 	{
@@ -415,11 +421,20 @@ static inline void a2r_em_kill(A2_state *st, A2_apimessage *am)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
 	if(!hi)
+	{
+		a2r_Error(st, A2_BADVOICE, "a2r_em_kill()[1]");
 		return;
+	}
 	if(hi->typecode != A2_TVOICE)
+	{
+		a2r_Error(st, A2_WRONGTYPE, "a2r_em_kill()[2]");
 		return;
+	}
 	if(!hi->d.data)
+	{
+		a2r_Error(st, A2_NOOBJECT, "a2r_em_kill()[3]");
 		return;
+	}
 	a2_VoiceKill(st, (A2_voice *)hi->d.data);
 	am->b.action = A2MT_DETACH;
 	a2_writemsg(st->toapi, am, A2_MSIZE(b.action));
@@ -430,15 +445,53 @@ static inline void a2r_em_killsub(A2_state *st, A2_apimessage *am)
 	A2_voice *v, *sv;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
 	if(!hi)
+	{
+		a2r_Error(st, A2_BADVOICE, "a2r_em_killsub()[1]");
 		return;
+	}
 	if(hi->typecode != A2_TVOICE)
+	{
+		a2r_Error(st, A2_WRONGTYPE, "a2r_em_killsub()[2]");
 		return;
+	}
 	if(!hi->d.data)
+	{
+		a2r_Error(st, A2_NOOBJECT, "a2r_em_killsub()[3]");
 		return;
+	}
 	v = (A2_voice *)hi->d.data;
 	for(sv = v->sub; sv; sv = sv->next)
 		a2_VoiceKill(st, sv);
 	memset(v->sv, 0, sizeof(v->sv));
+}
+
+static inline void a2r_em_callback(A2_state *st, A2_apimessage *am)
+{
+	A2_event *e;
+	A2_voice *tv = a2_GetVoice(st, am->target);
+	if(!tv)
+	{
+		a2r_Error(st, A2_BADVOICE, "a2r_em_callback()[1]");
+		return;
+	}
+	if(!(e = a2_AllocEvent(st)))
+	{
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_callback()[2]");
+		return;
+	}
+	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
+	if(a2_TSDiff(e->b.timestamp, st->now_frames) < 0)
+	{
+#ifdef DEBUG
+		fprintf(stderr, "Audiality 2: API message deliverad "
+				"%f frames late!\n", (st->now_frames -
+				e->b.timestamp) / 256.0f);
+#endif
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_callback()[3]");
+		e->b.timestamp = st->now_frames;
+	}
+	MSGTRACK(e->source = "a2r_em_callback()";)
+	a2_SendEvent(tv, e);
 }
 
 A2_errors a2r_PumpEngineMessages(A2_state *st)
@@ -481,6 +534,10 @@ A2_errors a2r_PumpEngineMessages(A2_state *st)
 			break;
 		  case A2MT_KILLSUB:
 			a2r_em_killsub(st, &am);
+			break;
+		  case A2MT_TAPCB:
+		  case A2MT_INSERTCB:
+			a2r_em_callback(st, &am);
 			break;
 #ifdef DEBUG
 		  default:
@@ -794,6 +851,41 @@ A2_errors a2_RegisterAPITypes(A2_state *st)
 		res = a2_RegisterType(st, A2_TDETACHED, "detached",
 			NULL, NULL);
 	return res;
+}
+
+
+/*---------------------------------------------------------
+	Simplified "plugin" interface
+---------------------------------------------------------*/
+
+static A2_errors a2_callback_msg(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata, int action)
+{
+	A2_apimessage am;
+	void **d = (void **)&am.b.a1;
+	if(!(st->config->flags & A2_TIMESTAMP))
+		a2_Now(st);
+	else
+		a2_poll_api(st);
+	am.target = voice;
+	am.b.action = action;
+	am.b.timestamp = st->timestamp;
+	d[0] = callback;
+	d[1] = userdata;
+	return a2_writemsg(st->fromapi, &am,
+			A2_MSIZE(b.a1) + 2 * sizeof(void *));
+}
+
+A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata)
+{
+	return a2_callback_msg(st, voice, callback, userdata, A2MT_TAPCB);
+}
+
+A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata)
+{
+	return a2_callback_msg(st, voice, callback, userdata, A2MT_INSERTCB);
 }
 
 

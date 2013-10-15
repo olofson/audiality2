@@ -125,6 +125,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_FEWCHANNELS,	"Voice has to few channels for unit")\
   A2_DEFERR(A2_UNITINIT,	"Could not initialize unit instance")\
   A2_DEFERR(A2_NOTFOUND,	"Object not found")\
+  A2_DEFERR(A2_NOOBJECT,	"Handle is not attached to an object")\
   A2_DEFERR(A2_NOXINSERT,	"No 'xinsert' unit found in voice structure")\
   A2_DEFERR(A2_NOREPLACE,	"Unit does not implement replacing output mode")\
   A2_DEFERR(A2_NOTOUTPUT,	"Tried to wire inputs to voice output bus")\

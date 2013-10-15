@@ -512,6 +512,8 @@ typedef enum A2_evactions
 	A2MT_RELEASE,	/* A2_TVOICE handle destructor */
 	A2MT_KILL,	/* a2_Kill() */
 	A2MT_KILLSUB,	/* a2_KillSub() */
+	A2MT_TAPCB,	/* a2_SetTapCallback() */
+	A2MT_INSERTCB,	/* a2_SetInsertCallback() */
 
 	/* Engine to API messages */
 	A2MT_DETACH,	/* Free handle if rc 0, otherwise make it A2_TDETACHED */
@@ -894,6 +896,9 @@ A2_errors a2_PumpAPIMessages(A2_state *st);
 void a2_CloseAPI(A2_state *st);
 
 void a2r_DetachHandle(A2_state *st, A2_handle h);
+
+A2_errors a2_set_xinsert_cb(A2_state *st, A2_voice *v,
+		A2_xinsert_cb callback, void *userdata, int insert_callback);
 
 
 /*---------------------------------------------------------

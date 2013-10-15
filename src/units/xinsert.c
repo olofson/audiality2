@@ -181,7 +181,7 @@ const A2_unitdesc a2_xinsert_unitdesc =
 	External insert API
 ---------------------------------------------------------*/
 
-static A2_errors a2_xinsert_locked(A2_state *st, A2_voice *v,
+A2_errors a2_set_xinsert_cb(A2_state *st, A2_voice *v,
 		A2_xinsert_cb callback, void *userdata, int insert_callback)
 {
 	A2_errors res;
@@ -221,31 +221,4 @@ static A2_errors a2_xinsert_locked(A2_state *st, A2_voice *v,
 			u->Process = xinsert_ProcessTap;
 	}
 	return A2_OK;
-}
-
-
-A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
-		A2_xinsert_cb callback, void *userdata)
-{
-	A2_errors res;
-	A2_voice *v = a2_GetVoice(st, voice);
-	if(!v)
-		return A2_BADVOICE;
-	st->audio->Lock(st->audio);
-	res = a2_xinsert_locked(st, v, callback, userdata, 0);
-	st->audio->Unlock(st->audio);
-	return res;
-}
-
-A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
-		A2_xinsert_cb callback, void *userdata)
-{
-	A2_errors res;
-	A2_voice *v = a2_GetVoice(st, voice);
-	if(!v)
-		return A2_BADVOICE;
-	st->audio->Lock(st->audio);
-	res = a2_xinsert_locked(st, v, callback, userdata, 1);
-	st->audio->Unlock(st->audio);
-	return res;
 }

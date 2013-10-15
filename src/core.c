@@ -610,18 +610,33 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 					printf(")\n");)
 			if((ep = v->program->eps[e->b.a1]) < 0)
 			{
-				a2r_Error(st, A2_BADENTRY, "a2_VoiceProcessEvents()");
+				a2r_Error(st, A2_BADENTRY,
+						"a2_VoiceProcessEvents()[1]");
 				break;
 			}
 			if((res = a2_VoiceCall(st, v, ep, e->b.argc, e->b.a, 1)))
 			{
-				a2r_Error(st, res, "a2_VoiceProcessEvents()");
+				a2r_Error(st, res, "a2_VoiceProcessEvents()[2]");
 				break;
 			}
 			v->s.timer = e->b.timestamp & 0xff;
 			v->events = e->next;
 			a2_FreeEvent(st, e);
 			return res;	/* Spin the VM to process the message! */
+		  }
+		  case A2MT_TAPCB:
+		  {
+			void **d = (void **)&e->b.a1;
+			if((res = a2_set_xinsert_cb(st, v, d[0], d[1], 0)))
+				a2r_Error(st, res, "a2_VoiceProcessEvents()[3]");
+			break;
+		  }
+		  case A2MT_INSERTCB:
+		  {
+			void **d = (void **)&e->b.a1;
+			if((res = a2_set_xinsert_cb(st, v, d[0], d[1], 1)))
+				a2r_Error(st, res, "a2_VoiceProcessEvents()[4]");
+			break;
 		  }
 		}
 		v->events = e->next;
