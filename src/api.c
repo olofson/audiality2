@@ -591,10 +591,9 @@ A2_errors a2_PumpAPIMessages(A2_state *st)
 		  }
 		  case A2MT_ERROR:
 		  {
-			const char *s;
-			memcpy(&s, &am.b.a2, sizeof(const char *));
+			const char **s = (const char **)&am.b.a2;
 			fprintf(stderr, "Audiality 2: [RT] %s (%s)\n",
-					a2_ErrorString(am.b.a1), s);
+					a2_ErrorString(am.b.a1), *s);
 			break;
 		  }
 #ifdef DEBUG
@@ -620,15 +619,15 @@ static inline void a2_poll_api(A2_state *st)
 A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 {
 	A2_apimessage am;
+	const char **d = (const char **)&am.b.a2;
 	if(!(st->config->flags & A2_RTERRORS))
 		return A2_OK;
 	am.b.action = A2MT_ERROR;
 	am.b.timestamp = st->now_ticks;
 	am.b.a1 = e;
 	/* NOTE: This invades a[0] on platforms with 64 bit pointers! */
-	memcpy(&am.b.a2, &info, sizeof(const char *));
-	return a2_writemsg(st->toapi, &am,
-			offsetof(A2_apimessage, b.a2) + sizeof(const char *));
+	*d = info;
+	return a2_writemsg(st->toapi, &am, A2_MSIZE(b.a2) + sizeof(void *));
 }
 
 
