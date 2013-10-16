@@ -850,7 +850,7 @@ static void a2c_FreeReg(A2_compiler *c, unsigned r)
 #ifdef DEBUG
 	if(r != c->regtop - 1)
 	{
-		fprintf(stderr, "Audiality 2 INTERNAL ERROR: Tried to free VM"
+		fprintf(stderr, "Audiality 2 INTERNAL ERROR: Tried to free VM "
 				"registers out of order!\n");
 		a2c_Throw(c, A2_INTERNAL + 100);
 	}
@@ -997,7 +997,7 @@ static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
 
 /*
  * Issue code '<op> <to> <from>', where <from> is derived from the parser state
- * after a a2c_SimplExp() call. Any temporary register will be freed.
+ * after a a2c_SimplExp() call.
  */
 static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
 {
@@ -1011,8 +1011,6 @@ static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
 	  case TK_TEMPREG:
 	  case TK_REGISTER:
 		a2c_CodeOpR(c, op, to, c->l.val);
-		if(c->l.token == TK_TEMPREG)
-			a2c_FreeReg(c, c->l.val);
 		break;
 	  default:
 		a2c_Throw(c, A2_INTERNAL + 102);	/* We should never get here! */
@@ -1116,6 +1114,8 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 		if((c->l.token == TK_PROGRAM) || (c->l.token == TK_WAVE))
 			a2c_Throw(c, A2_NEXPHANDLE);
 		a2c_CodeOpL(c, op, r);
+		if(c->l.token == TK_TEMPREG)
+			a2c_FreeReg(c, c->l.val);
 	}
 }
 
@@ -1344,6 +1344,8 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_DEBUG:
 		a2c_SimplExp(c, -1);
 		a2c_CodeOpL(c, op, 0);
+		if(c->l.token == TK_TEMPREG)
+			a2c_FreeReg(c, c->l.val);
 		break;
 	  case OP_ADD:
 	  case OP_SUBR:
@@ -1354,10 +1356,12 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_RAND:
 	  case OP_P2DR:
 	  case OP_NEGR:
+	  case OP_NOTR:
 		if(a2c_Lex(c) == '!')
 		{
 			A2_symbol *s;
-			if((op != OP_RAND) && (op != OP_P2DR) && (op != OP_NEGR))
+			if((op != OP_RAND) && (op != OP_P2DR) &&
+					(op != OP_NEGR) && (op != OP_NOTR))
 				a2c_Throw(c, A2_BADVARDECL);
 			a2c_Expect(c, TK_NAME, A2_EXPNAME);
 			s = a2c_Grab(c, c->l.sym);
@@ -1370,8 +1374,10 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			r = a2c_Variable(c);
 		}
 		a2c_SimplExp(c, (op == OP_RAND) || (op == OP_P2DR) ||
-				(op == OP_NEGR)? r : -1);
+				(op == OP_NEGR) || (op == OP_NOTR) ? r : -1);
 		a2c_CodeOpL(c, op, r);
+		if(c->l.token == TK_TEMPREG)
+			a2c_FreeReg(c, c->l.val);
 		break;
 	  default:
 		a2c_Throw(c, A2_BADOPCODE);
