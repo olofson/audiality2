@@ -1,7 +1,7 @@
 /*
  * drivers.h - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -169,6 +169,17 @@ typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type, const char *name);
 /* Add a driver to the driver registry. */
 A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 		A2_newdriver_cb create);
+
+/*
+ * Remove the specified driver from the registry. NULL unregisters all drivers,
+ * built-in ones included.
+ *
+ * Returns A2_NOTFOUND if no driver by the specified name exist in the registry.
+ */
+A2_errors a2_UnregisterDriver(const char *name);
+
+/* Unregisters all drivers and re-registers the built-in drivers, if any. */
+void a2_ResetDriverRegistry(void);
 
 /* Find a driver in the driver registry, and create an instance. */
 A2_driver *a2_NewDriver(A2_drivertypes type, const char *name);

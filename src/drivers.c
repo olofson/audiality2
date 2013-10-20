@@ -1,7 +1,7 @@
 /*
  * drivers.c - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -251,11 +251,15 @@ struct A2_regdriver
 	A2_newdriver_cb	create;
 };
 
-A2_regdriver *a2_driver_registry = NULL;
+static int a2_builtins_registered = 0;
+static A2_regdriver *a2_driver_registry = NULL;
 
 
 static void a2_register_builtin_drivers(void)
 {
+	if(a2_builtins_registered)
+		return;
+	a2_builtins_registered = 1;
 	a2_RegisterDriver(A2_SYSDRIVER, "default", a2_malloc_sysdriver);
 	a2_RegisterDriver(A2_SYSDRIVER, "malloc", a2_malloc_sysdriver);
 /*FIXME*/a2_RegisterDriver(A2_SYSDRIVER, "realtime", a2_malloc_sysdriver);
@@ -278,6 +282,14 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 	A2_regdriver *rd = (A2_regdriver *)calloc(1, sizeof(A2_regdriver));
 	if(!rd)
 		return A2_OOMEMORY;
+	/*
+	 * Make sure the built-ins are in place first! Otherwise, search order
+	 * will be undefined, and more seriously, registering a user driver
+	 * first thing would result in the built-in drivers never being
+	 * registered.
+	 */
+	a2_register_builtin_drivers();
+
 	rd->type = type;
 	rd->name = strdup(name);
 	if(!rd->name)
@@ -292,12 +304,69 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 }
 
 
+static void a2_unregister_all_drivers(void)
+{
+	while(a2_driver_registry)
+	{
+		A2_regdriver *rd = a2_driver_registry;
+		a2_driver_registry = rd->next;
+		free((void *)rd->name);
+		free(rd);
+	}
+}
+
+
+A2_errors a2_UnregisterDriver(const char *name)
+{
+	A2_regdriver *rd, *rdd;
+	if(!name)
+	{
+		a2_unregister_all_drivers();
+		return A2_OK;
+	}
+
+	/*
+	 * This might seem a bit weird, but without this, removing built-in
+	 * drivers would require a dummy operation to get a list of drivers to
+	 * remove anything from!
+	 */
+	a2_register_builtin_drivers();
+
+	/* First? */
+	rd = a2_driver_registry;
+	if(strcmp(name, rd->name) == 0)
+	{
+		a2_driver_registry = rd->next;
+		free((void *)rd->name);
+		free(rd);
+		return A2_OK;
+	}
+
+	/* Any other item? */
+	while(rd->next && (strcmp(name, rd->next->name) != 0))
+		rd = rd->next;
+	if(!rd->next)
+		return A2_NOTFOUND;
+	rdd = rd->next;
+	rd->next = rd->next->next;
+	free((void *)rdd->name);
+	free(rdd);
+	return A2_OK;
+}
+
+
+void a2_ResetDriverRegistry(void)
+{
+	a2_UnregisterDriver(NULL);
+	a2_builtins_registered = 0;
+}
+
+
 A2_driver *a2_NewDriver(A2_drivertypes type, const char *name)
 {
 	A2_regdriver *rd;
 	a2_last_error = A2_OK;
-	if(!a2_driver_registry)
-		a2_register_builtin_drivers();
+	a2_register_builtin_drivers();
 	if(!name)
 		name = "default";
 	for(rd = a2_driver_registry; rd; rd = rd->next)
