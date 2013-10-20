@@ -1,7 +1,11 @@
+# For stand-alone build, linking to the system A2 library
 #find_package(Audiality2 REQUIRED)
 #include_directories(${AUDIALITY2_INCLUDE_DIR})
+
+# For local build, not relying on an installed library
 include_directories(${AUDIALITY2_SOURCE_DIR}/include)
 link_directories(${AUDIALITY2_BINARY_DIR})
+
 set(AUDIALITY2_LIBRARY audiality2)
 
 find_package(SDL)

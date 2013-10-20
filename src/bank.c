@@ -1,7 +1,7 @@
 /*
  * bank.c - Audiality 2 banks and symbols
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -182,6 +182,12 @@ A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
 		return -h;
 	DBG(printf("registered unit \"%s\", handle %d\n", ud->name, h);)
 	return h;
+}
+
+
+const A2_unitdesc *a2_GetUnitDescriptor(A2_state *st, A2_handle handle)
+{
+	return a2_GetUnit(st, handle);
 }
 
 

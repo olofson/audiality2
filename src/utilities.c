@@ -43,7 +43,6 @@ int a2nt_AddItem(A2_nametab *nt, const char *name, A2_handle h)
 	if(!(nt->items[nt->nitems].name = strdup(name)))
 		return -A2_OOMEMORY;
 	nt->items[nt->nitems].handle = h;
-//fprintf(stderr, "=== a2nt_AddItem(\"%s\", %d)[%d]\n", name, h, nt->nitems);
 	return nt->nitems++;
 }
 
@@ -98,7 +97,6 @@ int a2ht_AddItem(A2_handletab *ht, A2_handle h)
 		ht->size = nsize;
 	}
 	ht->items[ht->nitems] = h;
-//fprintf(stderr, "=== a2ht_AddItem(%d)[%d]\n", h, ht->nitems);
 	return ht->nitems++;
 }
 

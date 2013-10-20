@@ -242,6 +242,10 @@ struct A2_unit
  */
 A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud);
 
+
+/* Get the A2_unitdesc from the handle of a A2_TUNIT object. */
+const A2_unitdesc *a2_GetUnitDescriptor(A2_state *st, A2_handle handle);
+
 #ifdef __cplusplus
 };
 #endif

@@ -96,7 +96,7 @@ typedef struct A2_wave
 {
 	A2_stream	*uploadstream;
 	A2_wavetypes	type;
-	unsigned	flags;		/* A2_LOOPED, A2_NOMIP etc */
+	unsigned	flags;		/* A2_LOOPED etc */
 	unsigned	period;		/* Fundamental period length */
 	union {
 		A2_wave_noise	noise;		/* A2WT_NOISE */
