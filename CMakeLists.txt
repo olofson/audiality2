@@ -9,6 +9,7 @@ set(VERSION_STRING "${VERSION_MAJOR}_${VERSION_MINOR}_${VERSION_PATCH}")
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(a2play)
 
 install(DIRECTORY include/ DESTINATION include/Audiality2
 	FILES_MATCHING PATTERN "*.h")
