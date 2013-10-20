@@ -24,21 +24,6 @@
 #include <string.h>
 #include "dummydrv.h"
 
-#if 0
-static A2_errors dummyd_Run(A2_audiodriver *driver, unsigned frames)
-{
-	A2_config *cfg = driver->driver.config;
-	if(driver->Process)
-		driver->Process(driver, frames);
-	else
-	{
-		int c;
-		for(c = 0; c < cfg->channels; ++c)
-			memset(driver->buffers[c], 0, sizeof(int32_t) * frames);
-	}
-	return A2_OK;
-}
-#endif
 
 static void dummyd_Lock(A2_audiodriver *driver)
 {

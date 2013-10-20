@@ -40,8 +40,61 @@ static int a2flags = A2_REALTIME | A2_EXPORTALL | A2_RTERRORS | A2_TIMESTAMP;
 /* State and control */
 static A2_state *state = NULL;	/* Engine state*/
 static A2_handle module = -1;	/* Handle of last loaded module */
+
+static double stoptime = 0.0f;	/* (Need final sample rate for stopframes!) */
+static int stopframes = 0;
+static int playedframes = 0;
+static int stoplevel = -1;
+
 static int do_exit = 0;
 
+
+/*-------------------------------------------------------------------
+	Audio processing
+-------------------------------------------------------------------*/
+
+/* Callback for automatic stop logic */
+static A2_errors tap_process(int **buffers, unsigned nbuffers, unsigned frames,
+		void *userdata)
+{
+	int i, j;
+	int smin = 0x7fffffff;
+	int smax = 0x80000000;
+
+	/* Count sample frames processed */
+	playedframes += frames;
+
+	/* Find absolute peak level */
+	for(j = 0; j < nbuffers; ++j)
+		for(i = 0; i < frames; ++i)
+		{
+			int s = buffers[j][i];
+			if(s < smin)
+				smin = s;
+			if(s > smax)
+				smax = s;
+		}
+	if(-smin > smax)
+		smax = -smin;
+
+	/* Stop conditions */
+	if(stopframes && (stoplevel >= 0))
+	{
+		if((playedframes >= stopframes) && (smax <= stoplevel))
+			do_exit = 1;
+	}
+	else if(stopframes && (playedframes >= stopframes))
+		do_exit = 1;
+	else if((stoplevel >= 0) && (smax <= stoplevel))
+		do_exit = 1;
+
+	return A2_OK;
+}
+
+
+/*-------------------------------------------------------------------
+	Object info printouts
+-------------------------------------------------------------------*/
 
 static void print_info(int indent, const char *xname, A2_handle h)
 {
@@ -160,6 +213,10 @@ static void print_info(int indent, const char *xname, A2_handle h)
 }
 
 
+/*-------------------------------------------------------------------
+	Loading
+-------------------------------------------------------------------*/
+
 /* Try to load each non-option argument as an .a2s file. */
 static void load_sounds(int argc, const char *argv[])
 {
@@ -185,79 +242,9 @@ static void load_sounds(int argc, const char *argv[])
 }
 
 
-static void usage(const char *exename)
-{
-	unsigned v = a2_LinkedVersion();
-	fprintf(stderr, "\nAudiality 2 v%d.%d.%d.%d\n",
-			A2_MAJOR(v),
-			A2_MINOR(v),
-			A2_MICRO(v),
-			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2010-2013 David Olofson\n\n"
-			"Usage: %s [switches] <file>\n\n", exename);
-	fprintf(stderr, "Switches:  -d<name>[,opt[,opt[,...]]]\n"
-			"                       Audio driver + options\n"
-			"           -b<n>       Audio buffer size (frames)\n"
-			"           -r<n>       Audio sample rate (Hz)\n"
-			"           -c<n>       Number of audio channels\n"
-			"           -p<name>[,arg[,arg[,...]]]\n"
-			"                       Run program <name> with the "
-			"specified arguments\n"
-			"           -x          Print module exports\n"
-			"           -xr         Print engine root exports\n"
-			"           -h          Help\n\n");
-}
-
-
-/* Parse driver selection and configuration switches */
-static void parse_args(int argc, const char *argv[])
-{
-	int i;
-	for(i = 1; i < argc; ++i)
-	{
-		if(argv[i][0] != '-')
-			continue;
-		if(strncmp(argv[i], "-d", 2) == 0)
-		{
-			free(audiodriver);
-			audiodriver = strdup(&argv[i][2]);
-			printf("[Audio driver: %s]\n", audiodriver);
-		}
-		else if(strncmp(argv[i], "-b", 2) == 0)
-		{
-			audiobuf = atoi(&argv[i][2]);
-			printf("[Audio buffer: %d]\n", audiobuf);
-		}
-		else if(strncmp(argv[i], "-r", 2) == 0)
-		{
-			samplerate = atoi(&argv[i][2]);
-			printf("[Audio sample rate: %d]\n", samplerate);
-		}
-		else if(strncmp(argv[i], "-c", 2) == 0)
-		{
-			samplerate = atoi(&argv[i][2]);
-			printf("[Audio channels: %d]\n", channels);
-		}
-		else if(strncmp(argv[i], "-p", 2) == 0)
-			continue;
-		else if(strncmp(argv[i], "-xr", 3) == 0)
-			continue;
-		else if(strncmp(argv[i], "-x", 2) == 0)
-			continue;
-		else if(strncmp(argv[i], "-h", 2) == 0)
-		{
-			usage(argv[0]);
-			exit(0);
-		}
-		else
-		{
-			fprintf(stderr, "Unknown switch '%s'!\n", argv[i]);
-			usage(argv[0]);
-			exit(1);
-		}
-	}
-}
-
+/*-------------------------------------------------------------------
+	Playing
+-------------------------------------------------------------------*/
 
 /* Parse the body of a -p switch; <name>[,pitch[,vel[,mod[,...]]]] */
 static int play_sound(const char *cmd)
@@ -327,6 +314,97 @@ static int play_sounds(int argc, const char *argv[])
 }
 
 
+/*-------------------------------------------------------------------
+	User interface
+-------------------------------------------------------------------*/
+
+static void usage(const char *exename)
+{
+	unsigned v = a2_LinkedVersion();
+	fprintf(stderr, "\nAudiality 2 v%d.%d.%d.%d\n",
+			A2_MAJOR(v),
+			A2_MINOR(v),
+			A2_MICRO(v),
+			A2_BUILD(v));
+	fprintf(stderr, "Copyright 2010-2013 David Olofson\n\n"
+			"Usage: %s [switches] <file>\n\n", exename);
+	fprintf(stderr, "Switches:  -d<name>[,opt[,opt[,...]]]\n"
+			"                       Audio driver + options\n"
+			"           -b<n>       Audio buffer size (frames)\n"
+			"           -r<n>       Audio sample rate (Hz)\n"
+			"           -c<n>       Number of audio channels\n"
+			"           -p<name>[,arg[,arg[,...]]]\n"
+			"                       Run program <name> with the "
+			"specified arguments\n"
+			"           -st<n>      Stop time (seconds)\n"
+			"           -sl<n>      Stop level (1.0 <==> clip)\n"
+			"           -x          Print module exports\n"
+			"           -xr         Print engine root exports\n"
+			"           -h          Help\n\n");
+}
+
+
+/* Parse driver selection and configuration switches */
+static void parse_args(int argc, const char *argv[])
+{
+	int i;
+	for(i = 1; i < argc; ++i)
+	{
+		if(argv[i][0] != '-')
+			continue;
+		if(strncmp(argv[i], "-d", 2) == 0)
+		{
+			free(audiodriver);
+			audiodriver = strdup(&argv[i][2]);
+			printf("[Audio driver: %s]\n", audiodriver);
+		}
+		else if(strncmp(argv[i], "-b", 2) == 0)
+		{
+			audiobuf = atoi(&argv[i][2]);
+			printf("[Audio buffer: %d]\n", audiobuf);
+		}
+		else if(strncmp(argv[i], "-r", 2) == 0)
+		{
+			samplerate = atoi(&argv[i][2]);
+			printf("[Audio sample rate: %d]\n", samplerate);
+		}
+		else if(strncmp(argv[i], "-c", 2) == 0)
+		{
+			samplerate = atoi(&argv[i][2]);
+			printf("[Audio channels: %d]\n", channels);
+		}
+		else if(strncmp(argv[i], "-p", 2) == 0)
+			continue;
+		else if(strncmp(argv[i], "-st", 3) == 0)
+		{
+			stoptime = atof(&argv[i][3]);
+			printf("[Stop after: %f s]\n", stoptime);
+		}
+		else if(strncmp(argv[i], "-sl", 3) == 0)
+		{
+			double sl = atof(&argv[i][3]);
+			stoplevel = sl * 65536.0f;
+			printf("[Stop below: %f]\n", sl);
+		}
+		else if(strncmp(argv[i], "-xr", 3) == 0)
+			continue;
+		else if(strncmp(argv[i], "-x", 2) == 0)
+			continue;
+		else if(strncmp(argv[i], "-h", 2) == 0)
+		{
+			usage(argv[0]);
+			exit(0);
+		}
+		else
+		{
+			fprintf(stderr, "Unknown switch '%s'!\n", argv[i]);
+			usage(argv[0]);
+			exit(1);
+		}
+	}
+}
+
+
 static void breakhandler(int a)
 {
 	fprintf(stderr, "a2play: Stopping...\n");
@@ -340,6 +418,10 @@ static void fail(A2_errors err)
 	exit(100);
 }
 
+
+/*-------------------------------------------------------------------
+	main()
+-------------------------------------------------------------------*/
 
 int main(int argc, const char *argv[])
 {
@@ -366,12 +448,17 @@ int main(int argc, const char *argv[])
 			fail(a2_LastError());
 	if(!(state = a2_Open(cfg)))
 		fail(a2_LastError());
+	if(samplerate != cfg->samplerate)
+		printf("a2play: Actual sample rate: %d (requested %d)\n",
+				cfg->samplerate, samplerate);
+	stopframes = stoptime * cfg->samplerate;
 
 	/* Load sounds */
 	load_sounds(argc, argv);
 
 	/* Start playing! */
 	a2_Now(state);
+	a2_SetTapCallback(state, a2_RootVoice(state), tap_process, NULL);
 	if(play_sounds(argc, argv) == 1)
 	{
 		/* Wait for completion or abort */
