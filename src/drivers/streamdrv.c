@@ -1,7 +1,7 @@
 /*
  * streamdrv.c - Audiality 2 streaming audio driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -91,12 +91,6 @@ static A2_errors streamd_Open(A2_driver *driver)
 }
 
 
-static void streamd_Destroy(A2_driver *driver)
-{
-	free(driver);
-}
-
-
 A2_driver *a2_stream_audiodriver(A2_drivertypes type, const char *name)
 {
 	A2_audiodriver *d = calloc(1, sizeof(A2_audiodriver));
@@ -106,6 +100,5 @@ A2_driver *a2_stream_audiodriver(A2_drivertypes type, const char *name)
 	d->driver.name = "stream";
 	d->driver.Open = streamd_Open;
 	d->driver.Close = streamd_Close;
-	d->driver.Destroy = streamd_Destroy;
 	return &d->driver;
 }

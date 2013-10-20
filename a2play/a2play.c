@@ -188,23 +188,24 @@ static void load_sounds(int argc, const char *argv[])
 static void usage(const char *exename)
 {
 	unsigned v = a2_LinkedVersion();
-	fprintf(stderr, "Audiality 2 v%d.%d.%d.%d\n",
+	fprintf(stderr, "\nAudiality 2 v%d.%d.%d.%d\n",
 			A2_MAJOR(v),
 			A2_MINOR(v),
 			A2_MICRO(v),
 			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2010-2013 David Olofson\n\n");
-	fprintf(stderr, "Usage: %s [switches] <file>\n\n", exename);
-	fprintf(stderr, "Switches:  -d<name>    Select audio driver\n");
-	fprintf(stderr, "           -b<n>       Audio buffer size (frames)\n");
-	fprintf(stderr, "           -r<n>       Audio sample rate (Hz)\n");
-	fprintf(stderr, "           -c<n>       Number of audio channels\n");
-	fprintf(stderr, "           -p<name>[,arg[,arg[,...]]]\n");
-	fprintf(stderr, "                       Run program <name> with the "
-			"specified arguments\n");
-	fprintf(stderr, "           -x          Print module exports\n");
-	fprintf(stderr, "           -xr         Print engine root exports\n");
-	fprintf(stderr, "           -h          Help\n\n");
+	fprintf(stderr, "Copyright 2010-2013 David Olofson\n\n"
+			"Usage: %s [switches] <file>\n\n", exename);
+	fprintf(stderr, "Switches:  -d<name>[,opt[,opt[,...]]]\n"
+			"                       Audio driver + options\n"
+			"           -b<n>       Audio buffer size (frames)\n"
+			"           -r<n>       Audio sample rate (Hz)\n"
+			"           -c<n>       Number of audio channels\n"
+			"           -p<name>[,arg[,arg[,...]]]\n"
+			"                       Run program <name> with the "
+			"specified arguments\n"
+			"           -x          Print module exports\n"
+			"           -xr         Print engine root exports\n"
+			"           -h          Help\n\n");
 }
 
 

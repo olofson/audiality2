@@ -1,7 +1,7 @@
 /*
  * dummydrv.c - Audiality 2 dummy audio driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -89,12 +89,6 @@ static A2_errors dummyd_Open(A2_driver *driver)
 }
 
 
-static void dummyd_Destroy(A2_driver *driver)
-{
-	free(driver);
-}
-
-
 A2_driver *a2_dummy_audiodriver(A2_drivertypes type, const char *name)
 {
 	A2_audiodriver *d = calloc(1, sizeof(A2_audiodriver));
@@ -104,6 +98,5 @@ A2_driver *a2_dummy_audiodriver(A2_drivertypes type, const char *name)
 	d->driver.name = "dummy";
 	d->driver.Open = dummyd_Open;
 	d->driver.Close = dummyd_Close;
-	d->driver.Destroy = dummyd_Destroy;
 	return &d->driver;
 }

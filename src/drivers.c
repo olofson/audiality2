@@ -159,7 +159,7 @@ A2_driver *a2_GetDriver(A2_config *config, A2_drivertypes type)
 	if((res = a2_AddDriver(config, d)))
 	{
 		a2_last_error = res;
-		d->Destroy(d);
+		a2_DestroyDriver(d);
 		return NULL;
 	}
 	return d;
@@ -197,7 +197,7 @@ static void a2_destroy_drivers(A2_config *config)
 	{
 		A2_driver *d = config->drivers;
 		config->drivers = d->next;
-		d->Destroy(d);
+		a2_DestroyDriver(d);
 	}
 }
 
@@ -362,16 +362,97 @@ void a2_ResetDriverRegistry(void)
 }
 
 
-A2_driver *a2_NewDriver(A2_drivertypes type, const char *name)
+static void a2_remove_options(A2_driver *driver)
 {
+	int i;
+	for(i = 0; i < driver->optc; ++i)
+		free((void *)driver->optv[i]);
+	free(driver->optv);
+}
+
+
+static void a2_parse_options(A2_driver *driver, const char *opts)
+{
+	int i;
+	const char *o = opts;
+	a2_remove_options(driver);
+	if(!strlen(opts))
+		return;
+
+	/* Count options and allocate array */
+	while(1)
+	{
+		++driver->optc;
+		if((o = strchr(o, ',')))
+			++o;
+		else
+			break;
+	}
+	driver->optv = (const char **)malloc(
+			driver->optc * sizeof (const char *));
+	if(!driver->optv)
+	{
+		/* FIXME: Error handling...? */
+		driver->optc = 0;
+		return;
+	}
+
+	/* Extract options */
+	for(i = 0; opts; ++i)
+	{
+		int len;
+		if((o = strchr(opts, ',')))
+			len = o - opts;
+		else
+			len = strlen(opts);
+		if(!(driver->optv[i] = strndup(opts, len)))
+		{
+			/* FIXME: Error handling...? */
+			a2_remove_options(driver);
+			return;
+		}
+		if(!o)
+			break;
+		opts = o + 1;
+	}
+}
+
+
+A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts)
+{
+	int namelen;
+	const char *optstart;
 	A2_regdriver *rd;
+	A2_driver *drv = NULL;
 	a2_last_error = A2_OK;
 	a2_register_builtin_drivers();
-	if(!name)
-		name = "default";
+	if(!nameopts)
+		nameopts = "default";
+	optstart = strchr(nameopts, ',');
+	if(optstart)
+		namelen = optstart - nameopts;
+	else
+		namelen = strlen(nameopts);
 	for(rd = a2_driver_registry; rd; rd = rd->next)
-		if((rd->type == type) && !strcmp(rd->name, name))
-			return rd->create(type, name);
-	a2_last_error = A2_DRIVERNOTFOUND;
-	return NULL;
+		if((rd->type == type) && !strncmp(rd->name, nameopts, namelen))
+		{
+			drv = rd->create(type, nameopts);
+			if(optstart)
+				a2_parse_options(drv, optstart + 1);
+			break;
+		}
+	if(!drv)
+		a2_last_error = A2_DRIVERNOTFOUND;
+	return drv;
+}
+
+
+void a2_DestroyDriver(A2_driver *driver)
+{
+	a2_CloseDriver(driver);
+	a2_remove_options(driver);
+	if(driver->Destroy)
+		driver->Destroy(driver);
+	else
+		free(driver);
 }

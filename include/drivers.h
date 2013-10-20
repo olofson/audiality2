@@ -138,6 +138,9 @@ struct A2_driver
 
 	int		flags;		/* Initialization and status flags */
 
+	int		optc;		/* Option count */
+	const char	**optv;		/* Options */
+
 	/* Open/Close */
 	A2_errors (*Open)(A2_driver *driver);
 	void (*Close)(A2_driver *driver);
@@ -164,7 +167,7 @@ void a2_CloseDriver(A2_driver *driver);
 	Driver registry
 ---------------------------------------------------------*/
 
-typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type, const char *name);
+typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type, const char *nameopts);
 
 /* Add a driver to the driver registry. */
 A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
@@ -181,8 +184,18 @@ A2_errors a2_UnregisterDriver(const char *name);
 /* Unregisters all drivers and re-registers the built-in drivers, if any. */
 void a2_ResetDriverRegistry(void);
 
-/* Find a driver in the driver registry, and create an instance. */
-A2_driver *a2_NewDriver(A2_drivertypes type, const char *name);
+/*
+ * Find a driver in the driver registry, and create an instance. A comma
+ * delimited list of options can be appended after the actual driver name, and
+ * will be parsed and added to optc/optv of the returned driver struct.
+ */
+A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts);
+
+/*
+ * Destroy a driver instance as returned from a2_NewDriver(). If the driver is
+ * open, it will be closed automatically.
+ */
+void a2_DestroyDriver(A2_driver *driver);
 
 
 /*---------------------------------------------------------

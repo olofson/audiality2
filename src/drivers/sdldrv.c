@@ -1,7 +1,7 @@
 /*
  * sdldrv.c - Audiality 2 SDL audio driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -88,12 +88,6 @@ static void sdld_Close(A2_driver *driver)
 }
 
 
-static void sdld_Destroy(A2_driver *driver)
-{
-	free(driver);
-}
-
-
 static A2_errors sdld_Open(A2_driver *driver)
 {
 	A2_audiodriver *ad = (A2_audiodriver *)driver;
@@ -151,7 +145,6 @@ A2_driver *a2_sdl_audiodriver(A2_drivertypes type, const char *name)
 	d->name = "sdl";
 	d->Open = sdld_Open;
 	d->Close = sdld_Close;
-	d->Destroy = sdld_Destroy;
 	return d;
 }
 

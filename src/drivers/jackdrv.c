@@ -1,7 +1,7 @@
 /*
  * jackdrv.c - Audiality 2 JACK audio driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -281,12 +281,6 @@ static void jackd_Close(A2_driver *driver)
 }
 
 
-static void jackd_Destroy(A2_driver *driver)
-{
-	free(driver);
-}
-
-
 static A2_errors jackd_autoconnect(A2_audiodriver *driver)
 {
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)driver;
@@ -316,6 +310,12 @@ static A2_errors jackd_Open(A2_driver *driver)
 	A2_config *cfg = jd->ad.driver.config;
 	int c;
 	A2_errors res;
+	const char *clientname = "Audiality 2";
+
+	/* Get custom client name, if any was specified */
+	for(c = 0; c < driver->optc; ++c)
+		if(driver->optv[c][0] != '-')
+			clientname = driver->optv[c];
 
 	/* Try to load the JACK API library */
 	if((res = jackd_load_jack(jd)))
@@ -326,7 +326,7 @@ static A2_errors jackd_Open(A2_driver *driver)
 	pthread_mutex_init(&jd->mutex, NULL);
 	jd->ad.Lock = jackd_lock;
 	jd->ad.Unlock = jackd_unlock;
-	if((jd->client = jd->jack.client_open("Audiality 2", 0, NULL)) == NULL)
+	if((jd->client = jd->jack.client_open(clientname, 0, NULL)) == NULL)
 	{
 		fprintf(stderr, "Audiality 2: JACK server not running?\n");
 		return A2_DEVICEOPEN;
@@ -371,7 +371,6 @@ A2_driver *a2_jack_audiodriver(A2_drivertypes type, const char *name)
 	jd->ad.driver.name = "jack";
 	jd->ad.driver.Open = jackd_Open;
 	jd->ad.driver.Close = jackd_Close;
-	jd->ad.driver.Destroy = jackd_Destroy;
 	return &jd->ad.driver;
 }
 

@@ -1,7 +1,7 @@
 /*
  * mallocdrv.c - Audiality 2 malloc system driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -68,11 +68,6 @@ static void mallocsd_Close(A2_driver *driver)
 	sd->RTFree = NULL;
 }
 
-static void mallocsd_Destroy(A2_driver *driver)
-{
-	free(driver);
-}
-
 A2_driver *a2_malloc_sysdriver(A2_drivertypes type, const char *name)
 {
 	A2_sysdriver *sd = calloc(1, sizeof(A2_sysdriver));
@@ -83,6 +78,5 @@ A2_driver *a2_malloc_sysdriver(A2_drivertypes type, const char *name)
 	d->name = "malloc";
 	d->Open = mallocsd_Open;
 	d->Close = mallocsd_Close;
-	d->Destroy = mallocsd_Destroy;
 	return d;
 }
