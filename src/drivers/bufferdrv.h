@@ -1,7 +1,7 @@
 /*
- * streamdrv.h - Audiality 2 streaming audio driver
+ * bufferdrv.h - Audiality 2 passive buffer audio driver
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -20,11 +20,11 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#ifndef A2_STREAMDRV_H
-#define A2_STREAMDRV_H
+#ifndef A2_BUFFERDRV_H
+#define A2_BUFFERDRV_H
 
 #include "audiality2.h"
 
-A2_driver *a2_stream_audiodriver(A2_drivertypes type, const char *name);
+A2_driver *a2_buffer_audiodriver(A2_drivertypes type, const char *name);
 
-#endif /* A2_STREAMDRV_H */
+#endif /* A2_BUFFERDRV_H */

@@ -50,7 +50,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	NUMMSGS(x)		/* Message order tracking */
 #	define	MSGTRACK(x)		/* Track origin of messages */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
-#	define	DUMPCODE(x)		/* Enable compiler VM code output */
+#	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
@@ -270,6 +270,24 @@ static inline int a2_i2f(int i)
 ---------------------------------------------------------*/
 
 void a2_DumpConfig(A2_config *c);
+
+extern int a2_user_drivers_registered;
+extern int a2_master_states;
+
+/*
+ * This function is used to automatically remove all driver descriptors after
+ * all engine master states have been closed, and all user drivers have been
+ * unregistered.
+ *    The main motivation behind this is to avoid Valgrind and similar whining
+ * about memory leaks - but even if it doesn't really matter normally, it's
+ * poor style to expect the application to clean up things that were allocated
+ * automatically!
+ */
+static inline void a2_driver_registry_cleanup(void)
+{
+	if(!a2_user_drivers_registered && !a2_master_states)
+		a2_ResetDriverRegistry();
+}
 
 
 /*---------------------------------------------------------

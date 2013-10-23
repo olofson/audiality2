@@ -1,5 +1,5 @@
 /*
- * streamdrv.c - Audiality 2 streaming audio driver
+ * bufferdrv.c - Audiality 2 passive buffer audio driver
  *
  * Copyright 2012-2013 David Olofson <david@olofson.net>
  *
@@ -22,10 +22,10 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include "streamdrv.h"
+#include "bufferdrv.h"
 
 
-static A2_errors streamd_Run(A2_audiodriver *driver, unsigned frames)
+static A2_errors bufferd_Run(A2_audiodriver *driver, unsigned frames)
 {
 	A2_config *cfg = driver->driver.config;
 	if(driver->Process)
@@ -40,19 +40,19 @@ static A2_errors streamd_Run(A2_audiodriver *driver, unsigned frames)
 }
 
 
-static void streamd_Lock(A2_audiodriver *driver)
+static void bufferd_Lock(A2_audiodriver *driver)
 {
 }
 
 
-static void streamd_Unlock(A2_audiodriver *driver)
+static void bufferd_Unlock(A2_audiodriver *driver)
 {
 }
 
 
-static void streamd_Close(A2_driver *driver)
+static void bufferd_Close(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)&driver;
+	A2_audiodriver *ad = (A2_audiodriver *)driver;
 	A2_config *cfg = driver->config;
 	if(ad->buffers)
 	{
@@ -60,7 +60,6 @@ static void streamd_Close(A2_driver *driver)
 		for(c = 0; c < cfg->channels; ++c)
 			free(ad->buffers[c]);
 		free(ad->buffers);
-		memset(ad->buffers, 0, sizeof(ad->buffers));
 	}
 	ad->Run = NULL;
 	ad->Lock = NULL;
@@ -68,37 +67,37 @@ static void streamd_Close(A2_driver *driver)
 }
 
 
-static A2_errors streamd_Open(A2_driver *driver)
+static A2_errors bufferd_Open(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)&driver;
+	A2_audiodriver *ad = (A2_audiodriver *)driver;
 	A2_config *cfg = driver->config;
 	int c;
-	ad->Run = streamd_Run;
-	ad->Lock = streamd_Lock;
-	ad->Unlock = streamd_Unlock;
+	ad->Run = bufferd_Run;
+	ad->Lock = bufferd_Lock;
+	ad->Unlock = bufferd_Unlock;
 	if(!(ad->buffers = calloc(cfg->channels, sizeof(int32_t *))))
 	{
-		streamd_Close(driver);
+		bufferd_Close(driver);
 		return A2_OOMEMORY;
 	}
 	for(c = 0; c < cfg->channels; ++c)
 		if(!(ad->buffers[c] = calloc(cfg->buffer, sizeof(int32_t))))
 			{
-				streamd_Close(driver);
+				bufferd_Close(driver);
 				return A2_OOMEMORY;
 			}
 	return A2_OK;
 }
 
 
-A2_driver *a2_stream_audiodriver(A2_drivertypes type, const char *name)
+A2_driver *a2_buffer_audiodriver(A2_drivertypes type, const char *name)
 {
 	A2_audiodriver *d = calloc(1, sizeof(A2_audiodriver));
 	if(!d)
 		return NULL;
 	d->driver.type = A2_AUDIODRIVER;
-	d->driver.name = "stream";
-	d->driver.Open = streamd_Open;
-	d->driver.Close = streamd_Close;
+	d->driver.name = "buffer";
+	d->driver.Open = bufferd_Open;
+	d->driver.Close = bufferd_Close;
 	return &d->driver;
 }

@@ -1387,3 +1387,11 @@ A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	st->now_guard = st->now_frames;
 	return 0;
 }
+
+
+int a2_Run(A2_state *st, unsigned frames)
+{
+	if(!st->audio->Run)
+		return -A2_NOTIMPLEMENTED;
+	return st->audio->Run(st->audio, frames);
+}

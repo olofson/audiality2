@@ -36,8 +36,6 @@
 
 A2_handle a2_RootVoice(A2_state *st)
 {
-	if(!st->audio && !st->audio->Process)
-		return -A2_NOTRUNNING;
 	return st->rootvoice;
 }
 
@@ -675,17 +673,23 @@ float a2_Rand(A2_state *st, float max)
 
 void a2_Now(A2_state *st)
 {
-	unsigned nt, nf;
-	int dt;
+	unsigned nt;
 	a2_poll_api(st);
-	do {
-		nf = st->now_frames;
-		nt = nf + (st->config->buffer << 8);
-		dt = a2_GetTicks() - st->now_ticks;
-	} while(nf != st->now_guard);
-	if(dt < 0)
-		dt = 0;	/* Audio has been off for a looooong time... */
-	nt += (int64_t)st->msdur * dt >> 8;
+	if(st->config->flags & A2_REALTIME)
+	{
+		unsigned nf;
+		int dt;
+		do {
+			nf = st->now_frames;
+			nt = nf + (st->config->buffer << 8);
+			dt = a2_GetTicks() - st->now_ticks;
+		} while(nf != st->now_guard);
+		if(dt < 0)
+			dt = 0;	/* Audio has been off for a looooong time... */
+		nt += (int64_t)st->msdur * dt >> 8;
+	}
+	else
+		nt = st->now_frames + (st->config->buffer << 8);
 	if(a2_TSDiff(nt, st->timestamp) >= 0)
 		st->timestamp = nt;
 }

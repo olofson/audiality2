@@ -37,7 +37,7 @@ set(sources ${sources}
 set(sources ${sources}
 	drivers/sdldrv.c
 	drivers/jackdrv.c
-	drivers/streamdrv.c
+	drivers/bufferdrv.c
 	drivers/dummydrv.c
 	drivers/mallocdrv.c
 )

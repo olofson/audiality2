@@ -268,18 +268,15 @@ int a2_UnloadAll(A2_state *st);
 ---------------------------------------------------------*/
 
 /*
-TODO:
- * Run a state (or substate), converting the output and writing it to memory.
+ * Run a state (or substate) that's using a driver without a thread or similar
+ * context of its own, that is, one that implements the Run() method. Typically
+ * the "buffer" driver is used for this, and this is the default driver for
+ * states created with a2_SubState().
  *
- * NOTE:
- *	The context needs to be using an audio driver that implements the Run()
- *	method. Typically the "dummy" driver is used for this, and this is the
- *	default driver for states created with a2_SubState().
- *
- * Returns the number of sample frames (not bytes!) actually rendered into the
- * buffer, or a negated A2_errors error code.
+ * Returns the number of sample frames (not bytes!) actually rendered, or a
+ * negated A2_errors error code.
  */
-int a2_Run(A2_state *st, A2_sampleformats fmt, void *buffer, unsigned size);
+int a2_Run(A2_state *st, unsigned frames);
 
 /*TODO: Render A2S program into wave. */
 A2_handle a2_RenderWave(A2_state *st, A2_handle bank, const char *name,

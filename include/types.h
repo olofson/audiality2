@@ -108,7 +108,6 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_INDEXRANGE,	"Index out of range")\
   A2_DEFERR(A2_OUTOFREGS,	"Out of VM registers")\
   \
-  A2_DEFERR(A2_NOTRUNNING,	"Audiality not initialized or running")\
   A2_DEFERR(A2_NOTIMPLEMENTED,	"Operation or feature not implemented")\
   A2_DEFERR(A2_OPEN,		"Error opening file")\
   A2_DEFERR(A2_NODRIVER,	"No driver of the required type available")\

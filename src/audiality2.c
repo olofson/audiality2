@@ -42,6 +42,8 @@ extern LARGE_INTEGER a2_perfc_frequency = 0;
 struct timeval a2_start_time;
 #endif
 
+int a2_master_states = 0;
+
 
 /*---------------------------------------------------------
 	Error handling
@@ -106,9 +108,12 @@ static void type_registry_cleanup(A2_state *st)
 
 int a2_UnloadAll(A2_state *st)
 {
-	int count = 0;
-	RCHM_manager *hm = &st->ss->hm;
+	RCHM_manager *hm;
 	RCHM_handle h;
+	int count = 0;
+	if(!st->ss)
+		return 0;
+	hm = &st->ss->hm;
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
 		RCHM_handleinfo *hi = rchm_Get(hm, h);
@@ -131,9 +136,12 @@ int a2_UnloadAll(A2_state *st)
 /* Removed all A2_LOCKED flags and release any objects with refcount 0 */
 static int a2_unlock_all(A2_state *st)
 {
-	int count = 0;
-	RCHM_manager *hm = &st->ss->hm;
+	RCHM_manager *hm;
 	RCHM_handle h;
+	int count = 0;
+	if(!st->ss)
+		return 0;
+	hm = &st->ss->hm;
 	DBG(fprintf(stderr, "=== a2_unlock_all() ===\n");)
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
@@ -258,8 +266,8 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 
 static void a2_CloseSharedState(A2_state *st)
 {
-/*	if(!st->ss)
-		return;*/
+	if(!st->ss)
+		return;
 	type_registry_cleanup(st);
 	rchm_Cleanup(&st->ss->hm);
 	if(st->ss->c)
@@ -436,6 +444,7 @@ A2_state *a2_Open(A2_config *config)
 	printf("------\n");
 #endif
 	a2_Now(st);
+	++a2_master_states;
 	return st;
 }
 
@@ -464,7 +473,7 @@ A2_state *a2_SubState(A2_state *parent, A2_config *config)
 		if(!config)
 			return NULL;	/* Most likely not going to work! --> */
 		if((res = a2_AddDriver(config,
-				a2_NewDriver(A2_AUDIODRIVER, "stream"))))
+				a2_NewDriver(A2_AUDIODRIVER, "buffer"))))
 		{
 			a2_CloseConfig(config);
 			a2_last_error = res;
@@ -556,11 +565,12 @@ void a2_Close(A2_state *st)
 	if(!st->parent)
 	{
 		/* Unload the root bank and any other A2_LOCKed objects! */
-		a2_unlock_all(st);
-		a2_Release(st, A2_ROOTBANK);
-
-		/* Close the bank and non realtime parts of the state */
-		a2_CloseSharedState(st);
+		if(st->ss)
+		{
+			a2_unlock_all(st);
+			a2_Release(st, A2_ROOTBANK);
+			a2_CloseSharedState(st);
+		}
 		--time_initialized;
 #ifdef _WIN32
 		if(!time_initialized)
@@ -603,6 +613,11 @@ void a2_Close(A2_state *st)
 			ps = s;
 			s = s->next;
 		}
+	}
+	else
+	{
+		--a2_master_states;
+		a2_driver_registry_cleanup();
 	}
 
 	free(st);
