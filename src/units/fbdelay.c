@@ -23,6 +23,9 @@
 #include <stdlib.h>
 #include "fbdelay.h"
 
+/*FIXME: Select buffer size based on sample rate and maximum delay allowed! */
+#define A2FBD_BUFSIZE	131072
+
 /* Control register frame enumeration */
 typedef enum A2FBD_cregisters
 {
@@ -63,7 +66,7 @@ static inline A2_fbdelay *fbdelay_cast(A2_unit *u)
 }
 
 
-#define	WI(x)	((fbd->bufpos - (x)) & 0xffff)
+#define	WI(x)	((fbd->bufpos - (x)) & (A2FBD_BUFSIZE - 1))
 static inline void fbdelay_process22(A2_unit *u, unsigned offset,
 		unsigned frames, int add)
 {
@@ -132,8 +135,8 @@ static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	fbd->samplerate = cfg->samplerate;
 
 /*FIXME: Select buffer size based on sample rate and maximum delay allowed! */
-	fbd->lbuf = calloc(65536, sizeof(int32_t));
-	fbd->rbuf = calloc(65536, sizeof(int32_t));
+	fbd->lbuf = calloc(A2FBD_BUFSIZE, sizeof(int32_t));
+	fbd->rbuf = calloc(A2FBD_BUFSIZE, sizeof(int32_t));
 	if(!fbd->lbuf || !fbd->rbuf)
 	{
 /*FIXME: Use realtime safe memory manager! */
