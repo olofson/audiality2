@@ -37,7 +37,7 @@ static void dummyd_Unlock(A2_audiodriver *driver)
 
 static void dummyd_Close(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)&driver;
+	A2_audiodriver *ad = (A2_audiodriver *)driver;
 	A2_config *cfg = driver->config;
 	if(ad->buffers)
 	{
@@ -45,7 +45,6 @@ static void dummyd_Close(A2_driver *driver)
 		for(c = 0; c < cfg->channels; ++c)
 			free(ad->buffers[c]);
 		free(ad->buffers);
-		memset(ad->buffers, 0, sizeof(ad->buffers));
 	}
 	ad->Lock = NULL;
 	ad->Unlock = NULL;
@@ -54,7 +53,7 @@ static void dummyd_Close(A2_driver *driver)
 
 static A2_errors dummyd_Open(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)&driver;
+	A2_audiodriver *ad = (A2_audiodriver *)driver;
 	A2_config *cfg = driver->config;
 	int c;
 	ad->Lock = dummyd_Lock;
