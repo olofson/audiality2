@@ -36,6 +36,8 @@
 #include "dummydrv.h"
 #include "bufferdrv.h"
 
+#define A2_DEFAULT_SYSDRIVER	a2_malloc_sysdriver
+
 #ifdef A2_HAVE_SDL
 # define A2_DEFAULT_AUDIODRIVER	a2_sdl_audiodriver
 #elif defined(A2_HAVE_JACK)
@@ -252,21 +254,82 @@ struct A2_regdriver
 	A2_newdriver_cb	create;
 };
 
-static int a2_builtins_registered = 0;	/* 1: builtins already registered */
-int a2_user_drivers_registered = 0;	/* Number of user drivers registered */
+/* Array of static registry entries for the built-in drivers */
+static A2_regdriver a2_builtin_drivers[] = {
+	{ NULL, A2_SYSDRIVER, 1, "default", A2_DEFAULT_SYSDRIVER },
+	{ NULL, A2_SYSDRIVER, 1, "malloc", a2_malloc_sysdriver },
+/*FIXME*/{ NULL, A2_SYSDRIVER, 1, "realtime", a2_malloc_sysdriver },
+	{ NULL, A2_AUDIODRIVER, 1, "default", A2_DEFAULT_AUDIODRIVER },
+#ifdef A2_HAVE_SDL
+	{ NULL, A2_AUDIODRIVER, 1, "sdl", a2_sdl_audiodriver },
+#endif
+#ifdef A2_HAVE_JACK
+	{ NULL, A2_AUDIODRIVER, 1, "jack", a2_jack_audiodriver },
+#endif
+	{ NULL, A2_AUDIODRIVER, 1, "dummy", a2_dummy_audiodriver },
+	{ NULL, A2_AUDIODRIVER, 1, "buffer", a2_buffer_audiodriver },
+	{ NULL, 0, 1, NULL, NULL }
+};
+
+
+/*
+ * 1: builtins already registered
+ *
+ * NOTE:
+ *	It's not enough to check a2_driver_registry for NULL, as it's
+ *	perfectly possible to have an empty registry! It could be that no
+ *	built-in drivers have been compiled in, or that the application has
+ *	removed them all with a2_UnregisterDriver(NULL).
+ */
+static int a2_builtins_registered = 0;
+
+/* Number of user drivers currently registered */
+int a2_user_drivers_registered = 0;
 
 static A2_regdriver *a2_driver_registry = NULL;
 
 
-static A2_errors a2_register_driver(A2_drivertypes type, const char *name,
-		A2_newdriver_cb create, int builtin)
+static void a2_register_builtin_drivers(void)
 {
-	A2_regdriver *rd = (A2_regdriver *)calloc(1, sizeof(A2_regdriver));
+	int i;
+	if(a2_builtins_registered)
+		return;
+
+	/*
+	 * We just grab them from the array, reinitializing and pushing them
+	 * onto the registry stack, so we avoid allocating memory blocks that
+	 * Valgrind and the like will whine about later. The registry is not
+	 * explicitly initialized by the application, so the application
+	 * shouldn't be expected to clean it up either!
+	 */
+	for(i = 0; a2_builtin_drivers[i].name; ++i)
+	{
+		A2_regdriver *rd = a2_builtin_drivers + i;
+		rd->next = a2_driver_registry;
+		a2_driver_registry = rd;
+	}
+	a2_builtins_registered = 1;
+}
+
+
+A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
+		A2_newdriver_cb create)
+{
+	A2_regdriver *rd;
+
+	/*
+	 * Make sure the built-ins are in place first! Otherwise, search order
+	 * will be undefined, and more seriously, registering a user driver
+	 * first thing would result in the built-in drivers never being
+	 * registered.
+	 */
+	a2_register_builtin_drivers();
+
+	rd = (A2_regdriver *)calloc(1, sizeof(A2_regdriver));
 	if(!rd)
 		return A2_OOMEMORY;
 
 	rd->type = type;
-	rd->builtin = builtin;
 	rd->name = strdup(name);
 	if(!rd->name)
 	{
@@ -276,44 +339,8 @@ static A2_errors a2_register_driver(A2_drivertypes type, const char *name,
 	rd->create = create;
 	rd->next = a2_driver_registry;
 	a2_driver_registry = rd;
-	if(!builtin)
-		++a2_user_drivers_registered;
+	++a2_user_drivers_registered;
 	return A2_OK;
-}
-
-
-static void a2_register_builtin_drivers(void)
-{
-	if(a2_builtins_registered)
-		return;
-	a2_builtins_registered = 1;
-	a2_register_driver(A2_SYSDRIVER, "default", a2_malloc_sysdriver, 1);
-	a2_register_driver(A2_SYSDRIVER, "malloc", a2_malloc_sysdriver, 1);
-/*FIXME*/a2_register_driver(A2_SYSDRIVER, "realtime", a2_malloc_sysdriver, 1);
-
-	a2_register_driver(A2_AUDIODRIVER, "default", A2_DEFAULT_AUDIODRIVER, 1);
-#ifdef A2_HAVE_SDL
-	a2_register_driver(A2_AUDIODRIVER, "sdl", a2_sdl_audiodriver, 1);
-#endif
-#ifdef A2_HAVE_JACK
-	a2_register_driver(A2_AUDIODRIVER, "jack", a2_jack_audiodriver, 1);
-#endif
-	a2_register_driver(A2_AUDIODRIVER, "dummy", a2_dummy_audiodriver, 1);
-	a2_register_driver(A2_AUDIODRIVER, "buffer", a2_buffer_audiodriver, 1);
-}
-
-
-A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
-		A2_newdriver_cb create)
-{
-	/*
-	 * Make sure the built-ins are in place first! Otherwise, search order
-	 * will be undefined, and more seriously, registering a user driver
-	 * first thing would result in the built-in drivers never being
-	 * registered.
-	 */
-	a2_register_builtin_drivers();
-	return a2_register_driver(type, name, create, 0);
 }
 
 
@@ -323,8 +350,11 @@ static void a2_unregister_all_drivers(void)
 	{
 		A2_regdriver *rd = a2_driver_registry;
 		a2_driver_registry = rd->next;
-		free((void *)rd->name);
-		free(rd);
+		if(!rd->builtin)
+		{
+			free((void *)rd->name);
+			free(rd);
+		}
 	}
 	a2_user_drivers_registered = 0;
 }
@@ -362,8 +392,12 @@ A2_errors a2_UnregisterDriver(const char *name)
 	if(strcmp(name, rd->name) == 0)
 	{
 		a2_driver_registry = rd->next;
-		free((void *)rd->name);
-		free(rd);
+		if(!rd->builtin)
+		{
+			free((void *)rd->name);
+			free(rd);
+			--a2_user_drivers_registered;
+		}
 		return A2_OK;
 	}
 
@@ -375,10 +409,11 @@ A2_errors a2_UnregisterDriver(const char *name)
 	rdd = rd->next;
 	rd->next = rd->next->next;
 	if(!rd->builtin)
+	{
+		free((void *)rdd->name);
+		free(rdd);
 		--a2_user_drivers_registered;
-	free((void *)rdd->name);
-	free(rdd);
-	a2_driver_registry_cleanup();
+	}
 	return A2_OK;
 }
 
