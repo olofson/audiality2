@@ -49,8 +49,9 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	DBG(x)			/* General debug output */
 #	define	NUMMSGS(x)		/* Message order tracking */
 #	define	MSGTRACK(x)		/* Track origin of messages */
+#	define	EVLEAKTRACK(x)	x	/* Check for event leaks */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
-#	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
+#	define	DUMPCODE(x)		/* Enable compiler VM code output */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
@@ -62,6 +63,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	DBG(x)
 #	define	NUMMSGS(x)
 #	define	MSGTRACK(x)
+#	define	EVLEAKTRACK(x)
 #	define	DUMPMSGS(x)
 #	define	DUMPCODE(x)
 #	define	SYMBOLDBG(x)
@@ -580,7 +582,7 @@ struct A2_voice
 
 	/* Units and control registers */
 	uint8_t		cregisters;	/* Number of potentially wired regs */
-/*FIXME: Remove the reserved registers from here? */
+
 	A2_write_cb	cwrite[A2_REGISTERS];	/* Write callbacks for cregs */
 	A2_unit		*cunit[A2_REGISTERS];	/* Unit instance for cregs */
 	A2_unit		*units;			/* Chain of voice units */
@@ -649,6 +651,7 @@ struct A2_state
 	A2_event	*eventpool;	/* LIFO stack of event structs */
 	unsigned	now_fragstart;	/* For internal message timing */
 	NUMMSGS(unsigned msgnum;)
+	EVLEAKTRACK(unsigned numevents;)
 
 	unsigned	msdur;		/* One millisecond in samples (16:16) */
 	uint32_t	noisestate;	/* Noise generator state */
@@ -808,6 +811,7 @@ static inline A2_event *a2_NewEvent(A2_state *st)
 	fprintf(stderr, "Audiality 2: Event pool exhausted!"
 			"Allocated new event %p.\n", e);
 #endif
+	EVLEAKTRACK(++st->numevents;)
 	return e;
 }
 

@@ -535,7 +535,6 @@ void a2_Close(A2_state *st)
 	}
 
 	/* Close the realtime context of the engine */
-	a2_CloseAPI(st);
 	if(st->rootvoice >= 0)
 	{
 		RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, st->rootvoice);
@@ -543,6 +542,7 @@ void a2_Close(A2_state *st)
 			a2_VoiceFree(st, (A2_voice **)&hi->d.data);
 		rchm_Free(&st->ss->hm, st->rootvoice);
 	}
+	a2_CloseAPI(st);
 	for(i = 0; i < A2_NESTLIMIT; ++i)
 		if(st->scratch[i])
 			a2_FreeBus(st, st->scratch[i]);

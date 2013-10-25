@@ -226,7 +226,7 @@ A2_errors a2_OpenAPI(A2_state *st)
 		nmessages = A2_MINEVENTS + buffer * A2_TIMEEVENTS;
 	for(i = 0; i < nmessages; ++i)
 	{
-		A2_event *e = st->sys->RTAlloc(st->sys, sizeof(A2_event));
+		A2_event *e = a2_NewEvent(st);
 		if(!e)
 		{
 			fprintf(stderr, "Audiality 2: Could not initialize "
@@ -236,6 +236,8 @@ A2_errors a2_OpenAPI(A2_state *st)
 		e->next = st->eventpool;
 		st->eventpool = e;
 	}
+	EVLEAKTRACK(fprintf(stderr, "Audiality 2: Allocated %d events.\n",
+			st->numevents);)
 	return A2_OK;
 }
 
@@ -257,7 +259,11 @@ void a2_CloseAPI(A2_state *st)
 		A2_event *e = st->eventpool;
 		st->eventpool = e->next;
 		st->sys->RTFree(st->sys, e);
+		EVLEAKTRACK(--st->numevents;)
 	}
+	EVLEAKTRACK(if(st->numevents)
+		fprintf(stderr, "Audiality 2: %d events leaked!\n",
+				st->numevents);)
 }
 
 
