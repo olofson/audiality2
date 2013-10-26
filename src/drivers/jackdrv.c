@@ -365,13 +365,15 @@ static A2_errors jackd_Open(A2_driver *driver)
 A2_driver *a2_jack_audiodriver(A2_drivertypes type, const char *name)
 {
 	JACKD_audiodriver *jd = calloc(1, sizeof(JACKD_audiodriver));
+	A2_driver *d = &jd->ad.driver;
 	if(!jd)
 		return NULL;
-	jd->ad.driver.type = A2_AUDIODRIVER;
-	jd->ad.driver.name = "jack";
-	jd->ad.driver.Open = jackd_Open;
-	jd->ad.driver.Close = jackd_Close;
-	return &jd->ad.driver;
+	d->type = A2_AUDIODRIVER;
+	d->name = "jack";
+	d->Open = jackd_Open;
+	d->Close = jackd_Close;
+	d->flags = A2_REALTIME;
+	return d;
 }
 
 #endif /* A2_HAVE_JACK */

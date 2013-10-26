@@ -145,6 +145,7 @@ A2_driver *a2_sdl_audiodriver(A2_drivertypes type, const char *name)
 	d->name = "sdl";
 	d->Open = sdld_Open;
 	d->Close = sdld_Close;
+	d->flags = A2_REALTIME;
 	return d;
 }
 

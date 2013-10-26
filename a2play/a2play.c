@@ -31,11 +31,11 @@
 
 
 /* Configuration */
-static char *audiodriver = NULL;
+static const char *audiodriver = "default";
 static int samplerate = 44100;
 static int channels = 2;
 static int audiobuf = 4096;
-static int a2flags = A2_REALTIME | A2_EXPORTALL | A2_RTERRORS | A2_TIMESTAMP;
+static int a2flags = A2_EXPORTALL | A2_RTERRORS | A2_TIMESTAMP;
 
 /* State and control */
 static A2_state *state = NULL;	/* Engine state*/
@@ -354,8 +354,7 @@ static void parse_args(int argc, const char *argv[])
 			continue;
 		if(strncmp(argv[i], "-d", 2) == 0)
 		{
-			free(audiodriver);
-			audiodriver = strdup(&argv[i][2]);
+			audiodriver = &argv[i][2];
 			printf("[Audio driver: %s]\n", audiodriver);
 		}
 		else if(strncmp(argv[i], "-b", 2) == 0)
@@ -425,6 +424,7 @@ static void fail(A2_errors err)
 
 int main(int argc, const char *argv[])
 {
+	A2_driver *drv = NULL;
 	A2_config *cfg;
 	float a;
 	signal(SIGTERM, breakhandler);
@@ -440,12 +440,14 @@ int main(int argc, const char *argv[])
 	parse_args(argc, argv);
 
 	/* Configure and open engine */
+	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
+		fail(a2_LastError());
+	a2flags |= drv->flags & A2_REALTIME;
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, 2,
 			a2flags | A2_STATECLOSE)))
 		fail(a2_LastError());
-	if(audiodriver)
-		if(a2_AddDriver(cfg, a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
-			fail(a2_LastError());
+	if(drv && a2_AddDriver(cfg, drv))
+		fail(a2_LastError());
 	if(!(state = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(samplerate != cfg->samplerate)
@@ -459,8 +461,16 @@ int main(int argc, const char *argv[])
 	/* Start playing! */
 	a2_Now(state);
 	a2_SetTapCallback(state, a2_RootVoice(state), tap_process, NULL);
-	if(play_sounds(argc, argv) == 1)
+	if(play_sounds(argc, argv) != 1)
 	{
+		a2_Close(state);
+		return 1;
+	}
+
+	if(a2flags & A2_REALTIME)
+	{
+		printf("a2play: Realtime mode.\n");
+
 		/* Wait for completion or abort */
 		while(!do_exit)
 		{
@@ -480,9 +490,18 @@ int main(int argc, const char *argv[])
 		a2_Send(state, a2_RootVoice(state), 2, 0.0f);
 		sleep(1);
 	}
+	else
+	{
+		printf("a2play: Offline mode.\n");
+
+		while(!do_exit)
+		{
+			a2_Run(state, cfg->buffer);
+			a2_Now(state);
+		}
+	}
 
 	/* Close and clean up */
 	a2_Close(state);
-	free(audiodriver);
 	return 0;
 }

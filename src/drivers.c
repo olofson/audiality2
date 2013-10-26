@@ -75,14 +75,18 @@ void a2_DumpConfig(A2_config *c)
 	printf("       drivers:\n");
 	while(d)
 	{
-		const char *dt;
+		const char *dt, *rt;
 		switch(d->type)
 		{
 		  case A2_SYSDRIVER:	dt = "SYS"; break;
 		  case A2_AUDIODRIVER:	dt = "AUDIO"; break;
 		  default:		dt = "<unknown>"; break;
 		}
-		printf("           \"%s\" (%s)\n", d->name, dt);
+		if(d->flags & A2_REALTIME)
+			rt = ", REALTIME";
+		else
+			rt = "";
+		printf("           \"%s\" (%s%s)\n", d->name, dt, rt);
 		d = d->next;
 	}
 #endif
