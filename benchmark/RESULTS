@@ -1,0 +1,20 @@
+
+=====================================================================
+20131026
+
+Version:
+	Audiality 2 1.9.0 + various commits
+	https://github.com/olofson/audiality2.git
+	c7d59898611301dc427a105dbc55111ddb6da3c5
+
+Test system:
+	Linux 3.8.1-gentoo SMP PREEMPT x86_64
+	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
+
+k2epilogue.a2s		8.307s
+k2intro.a2s		7.178s
+k2loader.a2s		8.519s
+k2trance.a2s		7.127s
+pulsetronic.a2s		7.013s
+
+=====================================================================

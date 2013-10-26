@@ -318,16 +318,30 @@ static int play_sounds(int argc, const char *argv[])
 	User interface
 -------------------------------------------------------------------*/
 
-static void usage(const char *exename)
+static void print_version(const char *exename)
 {
 	unsigned v = a2_LinkedVersion();
-	fprintf(stderr, "\nAudiality 2 v%d.%d.%d.%d\n",
+	fprintf(stderr, "Audiality 2 a2play\n"
+			"Linked against v%d.%d.%d.%d\n",
 			A2_MAJOR(v),
 			A2_MINOR(v),
 			A2_MICRO(v),
 			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2010-2013 David Olofson\n\n"
-			"Usage: %s [switches] <file>\n\n", exename);
+	v = a2_HeaderVersion();
+	fprintf(stderr, "Compiled against v%d.%d.%d.%d\n",
+			A2_MAJOR(v),
+			A2_MINOR(v),
+			A2_MICRO(v),
+			A2_BUILD(v));
+	fprintf(stderr, "Copyright 2010-2013 David Olofson\n");
+}
+
+
+static void usage(const char *exename)
+{
+	fprintf(stderr,	"\n");
+	print_version(exename);
+	fprintf(stderr,	"\nUsage: %s [switches] <file>\n\n", exename);
 	fprintf(stderr, "Switches:  -d<name>[,opt[,opt[,...]]]\n"
 			"                       Audio driver + options\n"
 			"           -b<n>       Audio buffer size (frames)\n"
@@ -392,6 +406,11 @@ static void parse_args(int argc, const char *argv[])
 		else if(strncmp(argv[i], "-h", 2) == 0)
 		{
 			usage(argv[0]);
+			exit(0);
+		}
+		else if(strncmp(argv[i], "-v", 2) == 0)
+		{
+			print_version(argv[0]);
 			exit(0);
 		}
 		else

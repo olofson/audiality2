@@ -1,0 +1,934 @@
+def title	"Kobo II Trance"
+def version	"1.0"
+def description	"Uptempo ingame track for Kobo II"
+def author	"David Olofson"
+def copyright	"Copyright 2012-2013 David Olofson"
+def license	"CC BY-NC-ND 3.0"
+def a2sversion	"1.9"
+
+// Instruments //
+
+.c0(pitch amp wave rmax dl)
+{
+	struct { wtosc; panmix }
+	pan (rand 1 - .5)
+	w wave; a amp; set a; +tr pitch
+	!rmh (rmax * .25)
+	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
+	wg (a - .0001) {
+		100 {	p (rand rmax - rmh); d dl }
+		*a .9; *rmax .99; *rmh .99
+	}
+}
+.Cymbal(P V=1)
+{
+	c0 (P + 5.3) V saw 2 .3
+	c0 (P + 4) (V * .5) saw 2 .4
+	c0 (P + 3) (V * .3) square 2 .5
+	c0 (P + 2.3) (V * .2) sine 4 .6
+}
+
+.Str0(P V Attack Decay Detune)
+{
+	struct { wtosc; panmix }
+	pan (Detune * 50)
+	w saw; a 0; !Ta (V * .1); phase (rand 1)
+	+P Detune
+	p P; !er (Attack * .1)
+.rt	wg (V + a - .001) {
+		+p (P - p * .4 + rand .02 - .01)
+		+a (Ta - a * er); Ta (V * rand .2)
+		d (rand 5 + 2.5)
+	}
+	a 0; d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV; er (Attack * .1); wake rt
+		} else {
+			V NV; er (Decay * .1)
+		}
+	}
+	2(NP) { P (NP + Detune) }
+}
+.Strings(P V=1 Attack=.3 Decay=.2)
+{
+	!Voices (7 - P quant 1)
+	ifl (Voices - 2) {
+		Voices 2
+	}
+	def Spread .03
+	!detune (0 - (Spread / 2))
+	Voices {
+		0:Str0 P V Attack Decay detune
+		+detune (Spread / Voices)
+	}
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.HHClosed(V=1)
+{
+	struct { wtosc }
+	w square; a (V * .4); set a; p 5
+	3 {	d 1; -p .5 }
+	200 {	p (rand 1 + 4.5); *a .95; d .5 }
+}
+
+.HHOpen(V=1)
+{
+	struct { wtosc }
+	w square; a (V * .4); set a; p 5
+	3 {	d 1; -p .5 }
+	200 {	p (rand 1 + 4.5); *a .995; d .5 }
+	300 {	p (rand 1 + 4.5); *a .992; d .5 }
+}
+
+.BD(V=1)
+{
+	struct { wtosc }
+	w sine; p 2; a V; set a
+	5 {	-p .45; d 1 }
+	*a 1.5
+	7 {	-p .1; d 2 }
+	20 {	-p .1; d 5 }
+	a 0; d 30
+}
+
+.clp(P V=1 D)
+{
+	struct { wtosc }
+	w square; a (V * .3); set a; p (P + 2)
+	5 {	d 2; -p .3 }
+	wg (a - .001) {
+		p (P + rand 1.5 + 1.6); *a D; d .5
+	}
+}
+.Clap(P V=1 D=.003)
+{
+	struct { wtosc }
+	clp P V (1 - D)
+	!d2 (1 - D - .002)
+	w square; a (V * .4); set a; p (P + 3)
+	5 {	d 2; -p .5 }
+	wg (a - .001) {
+		p (P + rand 2.5 + 2.8); *a d2; d .5
+	}
+}
+
+.sdn(V)
+{
+	struct { wtosc }
+	w noise; p 5.5; a V; set a; d 2
+	p 5; *a .4; d 20
+	*a .4; d 100
+	wg (a - .01) {
+		!D (rand 15 + 5)
+		p 4.5; *a .87; d D
+		p 6; d D
+	}
+}
+.SD(P V=1)
+{
+	struct { wtosc }
+	sdn V
+	w square; p (P + 2); a V; set a
+	10 {	-p .2; d 1 }
+	d 5
+	-p .2; d 5
+	5 {
+		!D (rand 2 + 3)
+		w saw; -p .51; d D
+		w square; +p .5; *a .7; d D
+	}
+	!p0 (p + .1)
+	wg (a - .001) {
+		p (rand 2.5 + p0); *a .995; d 1
+	}
+}
+
+.Saw0(P V Detune)
+{
+	struct { wtosc; panmix }
+	pan (Detune * 30)
+	w saw; a 0; !Ta (V * .1); phase (rand 1)
+	+P Detune
+	p P; !er .5
+.rt	wg (V + a - .001) {
+		p (P + rand .02 - .01)
+		+a (Ta - a * er); Ta (V * (.2 + rand .1))
+		d (rand 5 + 2.5)
+	}
+	a 0; d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV; er 1; wake rt
+		} else {
+			V NV; er .1
+		}
+	}
+	2(NP) { P (NP + Detune) }
+}
+.SawSynth(P V=1)
+{
+	def Voices 3
+	def Spread .06
+	!detune (0 - (Spread / 2))
+//	Voices {
+//		0:Saw0 P V detune
+//		+detune (Spread / Voices)
+//	}
+	1:Saw0 P V detune
+	+detune (Spread / Voices)
+	2:Saw0 P V detune
+	+detune (Spread / Voices)
+	3:Saw0 P V detune
+.dummy
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.Cute(P V=1)
+{
+	struct { wtosc }
+	def ATK .1; def REL .03
+	!P0 tr; +P tr; w saw; p P; a 0; !er ATK; !vib 0; !tvib .01
+.rt	wg (V + a - .001) {
+		tr (vib * 5)
+		10 {	-tr vib; +p (P - p * .8); +a (V - a * er); d 7 }
+		10 {	+tr vib; +p (P - p * .8); +a (V - a * er); d 7 }
+		+vib (tvib - vib * .05)
+	}
+	a 0; d 5
+	1(NV) {
+		V NV
+		if NV {
+			vib 0; tvib .003; er ATK; wake rt
+		} else {
+			tvib .005; er REL
+		}
+	}
+	2(NP) { P (P0 + NP); p P }
+}
+
+.NoiseSweep(P=5 V=.5)
+{
+	struct { wtosc; panmix }
+	w noise; a V; p P
+	30 {
+		-p .07; *a .96; d 30
+	}
+	50 {
+		-p .03; *a .993; d 70
+	}
+	wg (a - .001) {
+		-p .01; *a .98; d 70
+	}
+}
+
+.ResoBass(P V=1 Reso Wave=sine)
+{
+	struct { wtosc }
+	a V; set a; w Wave
+	!per p2d (P + tr)
+	wg (V - .001) {
+		phase 0; p (P + Reso); a (V * 2.5); set a
+		a 0; d per
+		*Reso .97
+		*V .75
+	}
+}
+
+
+// Patterns //
+
+.ms(P V=1 PM)
+{
+	+tr P
+	1:SawSynth 9n V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 (5n + PM); 1<1 V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 2n; 1<1 V;		td 2
+	1<1;			td 1
+	1<2 4n; 1<1 V;		td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<1 V;			td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+}
+
+.mc(P V=1 PM)
+{
+	+tr P
+	1:SawSynth 9n V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 (5n + PM); 1<1 V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 2n; 1<1 V;		td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 4n; 1<1 V;		td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+}
+
+.mc1b(P V=1 PM)
+{
+	+tr P
+	1:SawSynth 9n V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<2 2n; 1<1 V;		td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<2 4n; 1<1 V;		td 1
+	1<1;			td 1
+
+	1<2 (5n + PM); 1<1 V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<1 V;			td 1
+	1<1;			td 1
+	1<2 (7n + PM); 1<1 V;	td 2
+	1<1;			td 1
+}
+
+.mc23(P V=1)
+{
+	1:SawSynth 9n V;	td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 1
+
+	1<1 V;			td 2
+	1<1;			td 1
+	1<1 V;			td 1
+	1<1;			td 2
+	1<1 V;			td 1
+	1<1;			td 1
+}
+.mc2(P V=1)
+{
+	+tr P
+	mc23 P V;		td 24
+				td 1
+	1:SawSynth 9n V;	td 1
+	1<1;			td 2
+	1<2 7n; 1<1 V;		td 1
+	1<1;			td 1
+	1<2 10n; 1<1 V;		td 1
+	1<1
+}
+
+.mc3(P V=1 PM)
+{
+	+tr P
+	mc23 P V;		td 24
+	1:SawSynth 10n V;	td 1
+	1<1;			td 2
+	1<2 10n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 10n; 1<1 V;		td 1
+	1<1
+}
+
+.mc45(P V=1 PM)
+{
+	1:SawSynth (9n + PM) V;	td 1
+	1<1;			td 2
+	1<2 10n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 11n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 12n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 13n; 1<1 V;		td 1
+	1<1;			td 1
+}
+.mc4(P V=1 PM)
+{
+	+tr P
+	mc45 P V PM;		td 14
+	1:SawSynth (9n + PM) V;	td 1
+	1<1;			td 1
+	1<2 10n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 11n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 12n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 13n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 11n; 1<1 V;		td 1
+	1<1;			td 1
+	1<2 10n; 1<1 V;		td 1
+	1<1
+}
+.mc5(P V=1 PM)
+{
+	+tr P
+	mc45 P V PM;		td 14
+	1:SawSynth (9n + PM) V;	td 1
+	1<1;			td 1
+	1<2 10n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 11n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 12n; 1<1 V;		td 1
+	1<1;			td 1
+	1<2 13n; 1<1 V;		td 1
+	1<1
+}
+.mc6(P V=1 PM)
+{
+	+tr P
+	mc45 P V PM;		td 14
+	1:SawSynth 10n V;	td 1
+	1<1;			td 1
+	1<2 (9n + PM); 1<1 V;	td 1
+	1<1;			td 2
+	1<2 10n; 1<1 V;		td 1
+	1<1;			td 2
+	1<2 (9n + PM); 1<1 V;	td 1
+	1<1
+}
+
+.MegaStabs(P V=1)
+{
+	*V 1.2
+	!V2 (V * .7)
+	ms -3 V; ms -2 V;	ms 0 V2;	td 3.5
+	*V .3; *V2 .3
+	ms -3 V; ms -2 V;	ms 0 V2
+}
+
+.MegaChords1(V=1)
+{
+	*V 1.2
+	!V2 (V * .7)
+	mc -3 V; mc -2 V;	mc 0 V2; mc 3n V2 1n; mc 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc -3 V; mc -2 V;	mc 0 V2; mc 3n V2 1n; mc 7n V2
+}
+.MegaChords1B(V=1)
+{
+	*V 1.2
+	!V2 (V * .7)
+	mc1b -3 V; mc1b -2 V;	mc1b 0 V2; mc1b 3n V2 1n; mc1b 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc1b -3 V; mc1b -2 V;	mc1b 0 V2; mc1b 3n V2 1n; mc1b 7n V2
+}
+
+.MegaChords2(V=1)
+{
+	*V 1.2
+	!V2 (V * .7)
+	mc2 -3 V; mc2 -2 V;	mc2 0 V2; mc2 3n V2; mc2 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc2 -3 V; mc2 -2 V;	mc2 0 V2; mc2 3n V2; mc2 7n V2
+}
+.MegaChords3(V=1)
+{
+	*V 1.2
+	!V2 (V * .7)
+	mc3 -3 V; mc3 -2 V;	mc3 0 V2; mc3 3n V2; mc3 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc3 -3 V; mc3 -2 V;	mc3 0 V2; mc3 3n V2; mc3 7n V2
+}
+
+.MegaChords2L(V=1)
+{
+	!V2 (V * .5)
+	mc2 -1 V2; mc2 -5n V2;	td 4.5
+	*V2 .3
+	mc2 -1 V2; mc2 -5n V2;
+}
+.MegaChords3L(V=1)
+{
+	!V2 (V * .5)
+	mc3 -1 V2; mc3 -5n V2;	td 4.5
+	*V2 .3
+	mc3 -1 V2; mc3 -5n V2;
+}
+
+.MegaChords4(V=1)
+{
+	-tr 4n
+	*V 1.2
+	!V2 (V * .7)
+	mc4 -3 V; mc4 -2 V;	mc4 0 V2; mc4 4n V2 0n; mc4 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc4 -3 V; mc4 -2 V;	mc4 0 V2; mc4 4n V2 0n; mc4 7n V2
+}
+.MegaChords5(V=1)
+{
+	-tr 4n
+	*V 1.2
+	!V2 (V * .7)
+	mc5 -3 V; mc5 -2 V;	mc5 0 V2; mc5 4n V2 0n; mc5 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc5 -3 V; mc5 -2 V;	mc5 0 V2; mc5 4n V2 0n; mc5 7n V2
+}
+.MegaChords6(V=1)
+{
+	-tr 4n
+	*V 1.2
+	!V2 (V * .7)
+	mc6 -3 V; mc6 -2 V;	mc6 0 V2; mc6 4n V2 0n; mc6 7n V2;	td 3.5
+	*V .3; *V2 .3
+	mc6 -3 V; mc6 -2 V;	mc6 0 V2; mc6 4n V2 0n; mc6 7n V2
+}
+
+.PCStrings(V=1)
+{
+	1:Strings 9n V; 2:Strings 12n V; 3:Strings 16n V;	td 32
+	1<2 7n;		2<2 11n;	3<2 14n;		td 32
+	1<2 5n;		2<2 9n;		3<2 12n;		td 32
+	1<2 4n;		2<2 8n;		3<2 11n;		td 32
+	1<1;		2<1;		3<1
+}
+
+.IntroPerc()
+{
+	struct { inline; panmix }
+	HHClosed .05;	td 1
+	HHClosed .07;	td 1
+	HHClosed .1;	td 1
+	HHClosed .15;	td 1
+	HHClosed .2;	td 1
+	HHClosed .25;	td 1
+	HHClosed .3;	td 1
+	HHClosed .4;	td 1
+	BD .5;	Cymbal
+}
+
+.ChorusStall()
+{
+	struct { inline; panmix }
+	BD; Cymbal;	HHClosed .1;	td 1
+	BD .05;		HHClosed .2;	td 1
+	BD .07;		HHOpen .2;	td 1
+	BD .1;		HHClosed .3;	td 1
+	BD .2;		HHClosed .4;	td 1
+	BD .3;		HHClosed .5;	td 1
+	BD .5;		HHOpen .4;	td 1
+	BD .7;		HHClosed .6;	td 1
+}
+
+.B2Stall()
+{
+	struct { inline; panmix }
+	BD; Clap;	HHClosed .1;	td 1
+	BD .1;		HHClosed .2;	td 1
+	BD .2;		HHClosed .3;	td 1
+	BD .5;		HHClosed .4;	td 1
+}
+
+.Hihats()
+{
+	4 {
+		HHClosed .2;	td 1
+		HHClosed .3;	td 1
+		HHOpen .5;	td 1
+		HHClosed .4;	td 1
+		HHClosed .5;	td 1
+		HHClosed .4;	td 1
+		HHOpen .5;	td 1
+		HHClosed .3;	td 1
+	}
+}
+.Beat0()
+{
+	struct { inline; panmix }
+	BD;	Hihats;		td 32
+	BD;	Hihats;		td 28
+	BD .3;			td 2
+	BD .5;			td 2
+
+	Hihats
+	8 {	BD;	td 4	}
+	Hihats
+	7 {	BD;	td 4	}
+}
+
+.Beat1()
+{
+	struct { inline; panmix }
+	8 {
+		BD;	td 2
+		HHOpen;	td 2
+	}
+}
+
+.Beat1C()
+{
+	struct { inline; panmix }
+	6 {
+		BD;	td 2
+		HHOpen;	td 2
+	}
+	BD;	Clap
+}
+
+.Beat2()
+{
+	struct { inline; panmix }
+	4 {
+		BD;		td 2
+		HHOpen;		td 2
+		BD;	Clap;	td 2
+		HHOpen;		td 2
+	}
+}
+
+.b3()
+{
+	BD;			HHClosed;	td 1
+				HHClosed .3;	td 1
+				HHOpen;		td 1
+				HHClosed .3;	td 1
+	BD; 	Clap;		HHClosed;	td 1
+				HHClosed .3;	td 1
+				HHOpen;		td 1
+		Clap 0 .7 .01;	HHClosed .3;	td 1
+}
+.Beat3()
+{
+	struct { inline; panmix }
+	3 {
+		b3;	td 8
+	}
+	BD;			HHClosed;	td 1
+				HHClosed .3;	td 1
+		Clap 0 .7 .01;	HHOpen;		td 1
+		Clap;		HHClosed .3;	td 1
+	BD; 			HHClosed;	td 1
+				HHClosed .3;	td 1
+		Clap;		HHOpen;		td 1
+		Clap 0 .7 .01;	HHClosed .3;	td 1
+}
+.Beat3b()
+{
+	struct { inline; panmix }
+	2 {
+		b3;	td 8
+	}
+
+	BD;	Clap;	Cymbal;	HHClosed;	td 1
+				HHClosed .3;	td 1
+				HHOpen;		td 1
+				HHClosed .3;	td 1
+	BD; 	Clap;		HHClosed;	td 1
+				HHClosed .3;	td 1
+				HHOpen;		td 1
+		Clap 0 .7 .01;	HHClosed .3;	td 1
+
+	BD;	Clap;		HHClosed;	td 1
+				HHClosed .3;	td 1
+	BD; 	Clap;		HHOpen;		td 1
+				HHClosed .3;	td 1
+		Clap -3n .5 .01;HHClosed;	td 1
+		Clap -2n .6 .01;HHClosed .3;	td 1
+	BD; 	Clap;		HHOpen;		td 1
+		Clap -1n .7 .01;HHClosed .3;	td 1
+}
+.Beat3C()
+{
+	struct { inline; panmix }
+	2 {
+		b3;	td 8
+	}
+	BD;			td 1
+		Clap -3n .4 .01;td 1
+	HHOpen;			td 1
+	BD;	Clap;		td 1.5
+		Clap -3n .4 .01;td .5
+		Clap -2n .5 .01;td .5
+		Clap -1n .6 .01;td .5
+	BD;	Clap
+}
+
+
+.cht(P V)
+{
+	struct { inline; panmix }
+	+tr P
+	1:Cute 21n V;	td 4
+	1<2 23n;	td 4
+
+	1<2 24n;	td 14
+	1<2 23n;	td 2
+	1<2 24n;	td 6
+	1<1;		td 6
+
+	1<1 V; 1<2 21n;	td 2
+	1<2 23n;	td 2
+	1<2 24n;	td 3
+	1<2 23n;	td 3
+	1<2 24n;	td 2
+	1<2 26n;	td 8
+	1<2 21n;	td 2
+	1<1;		td 2
+	1<1 V; 1<2 21n;	td 2
+	1<2 19n;	td 2
+	1<2 21n;	td 2
+	1<2 23n;	td 2
+	1<1
+}
+.chtback(P V)
+{
+	struct { inline; panmix }
+	pan -.8
+	+tr P
+	1:Cute 12n V;	td 4
+	1<2 14n;	td 4
+
+	1<2 16n;	td 14
+	1<2 14n;	td 2
+	1<2 17n;	td 6
+	1<1;		td 6
+
+	1<1 V; 1<2 12n;	td 2
+	1<2 14n;	td 2
+	1<2 16n;	td 3
+	1<2 14n;	td 3
+	1<2 16n;	td 2
+	1<2 17n;	td 8
+	1<2 12n;	td 2
+	1<1;		td 2
+	1<1 V; 1<2 12n;	td 2
+	1<2 11n;	td 2
+	1<2 12n;	td 2
+	1<2 14n;	td 2
+	1<1
+}
+.chtback2(P V)
+{
+	struct { inline; panmix }
+	pan .8
+	+tr P
+	1:Cute 17n V;	td 4
+	1<2 19n;	td 4
+
+	1<2 21n;	td 14
+	1<2 19n;	td 2
+	1<2 21n;	td 6
+	1<1;		td 6
+
+	1<1 V; 1<2 17n;	td 2
+	1<2 19n;	td 2
+	1<2 21n;	td 3
+	1<2 19n;	td 3
+	1<2 21n;	td 2
+	1<2 21n;	td 8
+	1<2 17n;	td 2
+	1<1;		td 2
+	1<1 V; 1<2 17n;	td 2
+	1<2 16n;	td 2
+	1<2 17n;	td 2
+	1<2 19n;	td 2
+	1<1
+}
+.ChTheme(P V=.5)
+{
+	cht P (V * .9); chtback P (V * .3); chtback2 P (V * .3)
+	td 3.5
+	cht P (V * .5)
+}
+
+.chi1(P V)
+{
+	1:Cute 21n V;	td 4
+	1<2 16n;	td 2
+	1<2 12n;	td 2
+	1<2 17n;	td 12
+	1<1;		td 2
+	1<1 V; 1<2 21n;	td 2
+	1<2 16n;	td 4
+	1<2 20n;	td 2
+	1<2 21n;	td 14
+	1<2 14n;	td 2
+	1<2 16n;	td 6
+	1<1
+}
+.ChInter1(P V=.5)
+{
+	struct { inline; panmix }
+	pan .15
+	chi1 P (V * .7)
+	td 3.5
+	chi1 P (V * .4)
+}
+
+.chi2(P V)
+{
+	1:Cute 21n V;	td 4
+	1<2 16n;	td 2
+	1<2 12n;	td 2
+	1<2 17n;	td 12
+	1<1;		td 2
+	1<1 V; 1<2 21n;	td 2
+	1<2 16n;	td 4
+	1<2 12n;	td 2
+	1<2 9n;		td 24
+	1<1
+}
+.ChInter2(P V=.5)
+{
+	struct { inline; panmix }
+	pan .15
+	chi2 P (V * .7)
+	td 3.5
+	chi2 P (V * .4)
+}
+
+
+// Song //
+
+.Intro()
+{
+	IntroPerc;		td 8
+	NoiseSweep
+		MegaStabs;	td 32
+		MegaStabs;	td 32
+	Beat1;	MegaStabs;	td 32
+	Beat1;	MegaStabs;	td 32
+}
+
+.Chorus()
+{
+	ChTheme;	ChorusStall;	td 8
+	Cymbal
+	Beat3;	MegaChords1;		td 32
+	Beat3b;	MegaChords1B;		td 32
+
+	ChInter1
+	Beat2;	MegaStabs;		td 32
+	Beat2;	MegaStabs;		td 24
+
+	ChTheme;			td 8
+	Cymbal
+	Beat3;	MegaChords1;		td 32
+	Beat3b;	MegaChords1B;		td 32
+
+	ChInter2
+	Beat2;	MegaStabs;		td 32
+	Beat2;	MegaStabs;		td 32
+}
+
+.Break()
+{
+	PCStrings .5;
+	NoiseSweep; Cymbal
+	Beat0;	MegaChords2L;	td 32
+		MegaChords3L;	td 32
+		MegaChords2L;	td 32
+		MegaChords3L;	td 32
+}
+
+.PostChorus()
+{
+	NoiseSweep; Cymbal
+	Beat3;	MegaChords2;	td 32
+	Beat3;	MegaChords3;	td 32
+	Beat3;	MegaChords2;	td 32
+	Beat3;	MegaChords3;	td 32
+}
+
+.Break2()
+{
+		B2Stall;	td 4
+	NoiseSweep; Cymbal
+	Beat1;	MegaChords4;	td 32
+	Beat1C;	MegaChords5;	td 32
+
+	NoiseSweep; Cymbal
+	Beat3;	MegaChords4;	td 32
+	Beat3;	MegaChords4;	td 32
+	Beat3;	MegaChords4;	td 32
+	Beat3C;	MegaChords6;	td 32
+}
+
+.Main()
+{
+	tempo 150 4
+	Intro;	td (8 + 128)
+	for {
+		Chorus;		td (8 + 256)
+		PostChorus;	td 128
+		Break;		td 128
+		Chorus;		td (8 + 256)
+		PostChorus;	td 128
+		Break2;		td (4 + 64 + 128)
+	}
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 240; fbgain .1
+	ldelay 70; lgain .1
+	rdelay 90; rgain .1
+	+tr P; vol (V * .5); set vol; Main; d 1000
+	end
+.stop	10 { *vol .7; d 100 }
+	vol 0; d 100
+	kill *
+	1() { force stop }
+}

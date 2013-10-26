@@ -1,0 +1,541 @@
+def title	"Kobo II Loader"
+def version	"1.1"
+def description	"Level loader track for Kobo II"
+def author	"David Olofson"
+def copyright	"Copyright 2011-2013 David Olofson"
+def license	"CC BY-NC-ND 3.0"
+def a2sversion	"1.9"
+
+.Explo0(P V=1 Wave Attack)
+{
+	struct { wtosc; panmix }
+	pan (rand 1 - .5); set pan
+	+P tr; w Wave; !x 1.5; a V; -P 3; tr Attack; !D 1
+	200 {	*tr .98; p (P + rand x); +x .01; d D; +D .005 }
+	800 {	*tr .98; p (P + rand x); -x .0025; *a .999; d D; +D .005 }
+	tr P
+	800 {	rand p x; *a .995; d 2.5 }
+}
+.Explosion(P V=1)
+{
+	+tr P
+	Explo0 0 V sine 2
+	Explo0 -1 V sine 4
+	Explo0 .5 (V * .5) triangle 5
+	Explo0 1.5 (V * .25) sine 3
+}
+
+.nb(P V=1 Pan)
+{
+	struct { wtosc; wtosc o2; filter12; panmix }
+	pan Pan; set pan
+	lp 1; bp 1; hp 0
+	cutoff (P + 5); set cutoff
+	w noise; p (P - 2); a V; set a
+	o2.w noise; o2.p (P + 3); o2.a (V * .2); set o2.a
+	20 {
+		-cutoff .3; +q .0003; d 15
+	}
+	30 {
+		*a .98; *o2.a .95; -cutoff .1; +q .0017; d 100
+	}
+	wg (vol - .001) {
+		*a .95; *o2.a .95; -cutoff .05; d 100
+	}
+	a 0; o2.a 0; d 5
+}
+.NBurst3(P V=1)
+{
+	nb P (V * .25) -1.25
+	nb P (V * .25) 1.25
+}
+
+.Str0(P V Attack Decay detune)
+{
+	struct { wtosc; panmix }
+	pan (detune * 200)
+	w saw; a 0; !Ta (V * .1); phase (rand 1)
+	+P detune
+	p P; !er (Attack * .1)
+.rt	wg (V + a - .001) {
+		+p (P - p * .4 + rand .02 - .01)
+		+a (Ta - a * er); Ta (V * rand .2)
+		d (rand 5 + 2.5)
+	}
+	a 0; d 5
+	1(NV) {
+		ifg (NV - V) {
+			V NV; er (Attack * .1); wake rt
+		} else {
+			V NV; er (Decay * .1)
+		}
+	}
+	2(NP) { P (NP + detune) }
+}
+.Strings(P V=1 Attack=.3 Decay=.2)
+{
+	!Voices (9 - P quant 1)
+	ifl (Voices - 2) {
+		Voices 2
+	}
+	def Spread .02
+	!detune (0 - (Spread / 2))
+	Voices {
+		0:Str0 P V Attack Decay detune
+		+detune (Spread / Voices)
+	}
+	1(NV) { *<1 NV }
+	2(NP) { *<2 NP }
+}
+
+.ResoBass(P V=1 Reso)
+{
+	struct { wtosc }
+	a (V * .2); set a; +Reso P; w sine
+	P p2d (P + tr)
+	wg (V - .001) {
+		phase 0; p Reso; a V; set a
+		a 0; d P
+		-Reso 1n
+		*V .7
+	}
+	!i (500 / P); !mv (1 - (1 / (.1 * i)))
+	i {
+		phase 0; p Reso; a V; set a; a 0; d P
+		-Reso .1n; *V mv
+	}
+}
+.Reso(P V=1)
+{
+	!r 2
+.rt	while V {
+		4 {	ResoBass P V r; +r .4; td 1 }
+		4 {	ResoBass P V r; -r .4; td 1 }
+	}
+	1(NV) { V NV; wake rt }
+	2(NP) { P NP }
+}
+
+.Sonar(P V=1)
+{
+	struct {
+		wtosc o1; panmix pm1 1 >
+		wtosc o2; panmix pm2 1 >
+	}
+	pm1.pan -.75
+	pm2.pan .75
+	!max (V * .75)
+	o1.w square; o1.a max; o1.p P
+	o2.w square; o2.a max; o2.p P
+	d 30
+	o1.a 0
+	o2.a 0
+	d 15
+	o1.w triangle
+	o2.w triangle
+	300 {
+		o1.p (P + rand .2 - .1)
+		o2.p (P + rand .2 - .1)
+		rand o1.a max
+		rand o2.a max
+		*max .98
+		d 15
+	}
+}
+
+.BD(V=1)
+{
+	struct { wtosc }
+	w sine; p 3.5; a (V * .8); set a
+	5 {	-p .9; d 1 }
+	d 10
+	5 {	-p .2; d 2 }
+	d 20
+	20 {	-p .1; d 10 }
+	d 30
+	a 0; d 100
+	d 1000
+}
+
+.sdn(Vel Color)
+{
+	struct { wtosc }
+	w noise; p (5.5 + Color); a (Vel * .15); set a
+	*a .5;	d 30
+	*a .5;	d 40
+	wg (a - .001) {
+		*a .8;	d 50
+	}
+	a 0; d 200
+}
+.SD(Vel=1 Color)
+{
+	struct { wtosc }
+	sdn Vel Color
+	w square; p (1.25 + Color); a (Vel * .5); set a
+	5 {
+		-p .2; d 1
+	}
+	w square; *a .5
+	15 {
+		-p .1; d 2
+	}
+	a 0; d 10
+	w noise; a (Vel * .1); set a
+	wg (a - .01) {
+		p 5; d 20
+		p 3; d 20
+		*a .8
+	}
+	a 0; d 200
+}
+
+.HHClosed(P V=1)
+{
+	struct { wtosc }
+	w square; a (V * .2); set a; p 6
+	3 {	d 1; -p .5 }
+	200 {	p (rand 1.5 + 4.5); *a .95; d .5 }
+	a 0; d 1
+}
+
+.HHOpen(P V=1)
+{
+	struct { wtosc }
+	w square; a (V * .2); set a; p 6
+	3 {	d 1; -p .5 }
+	600 {	p (rand 1.5 + 4.5); *a .993; d .5 }
+	a 0; d 1
+}
+
+.HH()
+{
+	def c HHClosed; def o HHOpen
+	2 {
+		c;	td 1
+		c;	td 1
+		c;	td 1
+		c;	td 1
+
+		o;	td 1
+		c;	td .5
+		c;	td .5
+		c;	td 1
+		o;	td 1
+
+		c;	td 1
+		c;	td 1
+		c;	td 1
+		c;	td .5
+		c;	td .5
+
+		o;	td 1
+		c;	td 1
+		c;	td 1
+		c;	td .5
+		c;	td .5
+	}
+}
+
+.ResoLoop()
+{
+	struct { inline; panmix }
+	pan .25
+	1:Reso -7n .4
+	for {
+				td 1.5	// Message/code timing hack
+		1<2 -5n;	td 10
+		1<2 -2n;	td 2
+		1<2 -5n;	td 2
+		1<2 -7n;	td 2
+		1<2 -5n;	td 14
+		1<2 -7n;	td .5	// Message/code timing hack
+	}
+.stop	1<1
+	1() { force stop }
+}
+
+.PulseBass(P V=1)
+{
+	struct { wtosc; wtosc o2; wtosc o3; filter12; panmix }
+	!detune (.005 * (1 - P))
+	ifl (detune - .002) { detune .002 }
+	w saw; a (V * .5); set a; p (P - detune)
+	o2.w saw; o2.a (V * .2); set o2.a; o2.p (P + detune + 1)
+	o3.w sine; o3.a (V * .8); set o3.a; o3.p (P)
+	lp 1; bp 1; hp .3
+	q .2; set q; cutoff (P + 5); set cutoff
+	cutoff (P + 3); q .01;	d 30
+	*a .5; *o2.a .5; *o3.a .5; cutoff (P + 1); q .002;	d 100
+	cutoff (P + .5);	d 100
+	a 0; o2.a 0; o3.a 0;	d 200
+	end
+.rel	a 0; o2.a 0; o3.a 0; cutoff (P - 1); q 0; d 50
+	d 500
+	1() { force rel }
+}
+.PBass(P)
+{
+	def V .5
+	def i PulseBass
+	+tr P
+	16 {
+		1:i -29n V; td 2; 1<1
+	}
+	16 {
+		1:i -30n V; td 2; 1<1
+	}
+	16 {
+		1:i -31n V; td 2; 1<1
+	}
+	16 {
+		1:i -33n V; td 2; 1<1
+	}
+}
+
+.SoftArp(P V=1 Maj=0)
+{
+	struct { wtosc; panmix }
+	pan -.5
+	sa0(PP VV)
+	{
+		p PP; a VV;	td .01
+		a 0;		td .49
+	}
+	w triangle
+	a V; +tr P; !aa a
+	7 {
+		sa0 12n aa
+		sa0 0 aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		*aa .75; +pan .2
+		sa0 (15n + Maj) aa
+		sa0 (3n + Maj) aa
+		sa0 7n aa
+		sa0 12n aa
+		*aa .75; +pan .2
+		sa0 19n aa
+		sa0 7n aa
+		sa0 12n aa
+		sa0 (15n + Maj) aa
+		+tr 1; *aa .75; +pan .2
+	}
+}
+
+.CuteSine(P V=1 Pan)
+{
+	struct { wtosc; panmix }
+	pan Pan; set pan
+	!P0 tr; +P tr; w asine; p P; a 0; !er .5; !vib 0; !tvib .005
+.rt	wg (V + a - .001) {
+		tr (vib * 6)
+		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		+vib (tvib - vib * .1)
+	}
+	a 0; d 5
+	1(NV) {
+		V NV
+		if NV {
+			vib .005; tvib .005; er .05; wake rt
+		} else {
+			tvib .02; er .02
+		}
+	}
+	2(NP) { P (P0 + NP) }
+}
+.Appre(P1 P2 P3 P4 Vel Pan Tr)
+{
+	+tr Tr
+	1:CuteSine P1 Vel Pan;	td 1
+	1<2 P2;			td 1
+	1<2 P3;			td 1
+	1<2 P1;			td 1
+	1<2 P2;			td 1
+	1<2 P3;			td 1
+	1<2 P1;			td 1
+	1<2 P2;			td 1
+
+	1<2 P3;			td 1
+	1<2 P1;			td 1
+	1<2 P2;			td 1
+	1<2 P3;			td 1
+	1<2 P1;			td 1
+	1<2 P2;			td 1
+	1<2 P3;			td 1
+	1<2 P4;			td 1
+
+	1<1
+}
+.Appre1(P1 P2 P3 P4 Vel)
+{
+	Appre P1 P2 P3 P4 Vel -.5 1
+	td 1
+	Appre P1 P2 P3 P4 (Vel * .3) .2
+	td 1
+	Appre P1 P2 P3 P4 (Vel * .25) 1.2 1
+}
+
+.PreAppre(Vel Pan Tr)
+{
+	+tr (Tr - 0)
+	1:CuteSine -26n Vel Pan;td 1
+	1<2 -21n;		td 1
+	1<2 -17n;		td 1
+	1<2 -12n;		td 1
+	1<2 -9n;		td 1
+	1<2 -5n;		td 1
+	1<2 0n;			td 1
+	1<2 3n;			td 1
+	1<1
+}
+PreAppre1()
+{
+	def VEL .2
+	PreAppre VEL -.5 1
+	td 1
+	PreAppre (VEL * .3) .2
+	td 1
+	PreAppre (VEL * .25) 1.2 1
+}
+
+.VAppre()
+{
+	Appre1 -5n 0n 3n 7n .2;	td 16
+				td 16
+	Appre1 -6n 0n 3n 6n .2;	td 16
+				td 16
+	Appre1 -7n 0n 3n 5n .2;	td 16
+				td 16
+	Appre1 -9n 0n 3n 7n .2;	td 16
+				td 16
+}
+
+.sbeat()
+{
+	struct { inline; panmix }
+	BD;		td 2
+	BD;		td 30
+	BD;	HH;	td 2
+	BD;		td 30
+	BD;		td 2
+	BD;		td 30
+	BD;	HH;	td 2
+	BD;		td 30
+}
+.sbeat2()
+{
+	struct { inline; panmix }
+	2 {
+		BD;	HH;	td 2
+		BD;		td 4
+		BD .5;		td 2
+		SD;		td 8
+		BD;		td 8
+		SD;		td 7
+
+		SD .7;		td 1
+		BD;	HH;	td 2
+		BD;		td 4
+		BD .5;		td 2
+		SD;		td 8
+		BD;		td 8
+		SD;		td 8
+	}
+}
+.pausebeat()
+{
+	struct { inline; panmix }
+	BD;	HH;	td 16
+	BD;		td 8
+	SD;		td 5
+	SD .4;		td 1
+	SD .5;		td 1
+	SD .6;		td 1
+}
+
+.MainPerc()
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 500; fbgain .3
+	ldelay 40; lgain .2
+	rdelay 50; rgain .2
+	1:ResoLoop
+	td	32
+	for {
+		1<1;	1:ResoLoop;	sbeat;		td 128
+		1<1
+
+		pausebeat;	NBurst3;		td 32
+
+			PBass 2n;	sbeat2;		td 128
+
+		pausebeat;	Explosion -1 .4;	td 32
+	}
+}
+.MainInstr()
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 750; fbgain .5
+	ldelay 240; lgain .3
+	rdelay 570; rgain .2
+	1:Strings -29n .35;	2:Strings -17n .15
+	td	32
+	for {
+		1<1; 2<1; 1:Strings -29n .35; 2:Strings -5n .15
+		Sonar 7n .2;		td 32
+		SoftArp -5n .5 2n;	td 32
+		Sonar 17n .2;		td 32
+		SoftArp -7n .5 -1n;	td 32
+
+		1<1; 2<1
+		1:Strings -29n .3
+					td 24
+
+		tr 2n
+		PreAppre1;		td 8
+		VAppre
+		1<1; 2<1; 1:Strings -17n .15; 2:Strings 7n .15
+		Sonar 7n .2;		td 32
+		1<1; 2<1; 1:Strings -18n .15; 2:Strings 6n .15
+		SoftArp -5n .5 2n;	td 32
+		1<1; 2<1; 1:Strings -19n .15; 2:Strings 5n .15
+		Sonar 17n .2;		td 32
+		1<1; 2<1; 1:Strings -21n .15; 2:Strings 3n .15
+		SoftArp -7n .5 -1n;	td 32
+		tr 0
+
+		1<1; 2<1; 1:Strings -22n .15; 2:Strings -10n .15
+					td 16
+		1<1; 2<1; 1:Strings -28n .15; 2:Strings -16n .15
+					td 16
+	}
+}
+.Main()
+{
+	tempo 120 4
+	MainPerc;	MainInstr
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		panmix * >
+	}
+	vol .3; set vol; vol .5; Main; d 1000
+	end
+.stop	10 { *vol .7; d 100 }
+	vol 0; d 100
+	kill *
+	1() { force stop }
+}
