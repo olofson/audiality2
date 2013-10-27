@@ -149,15 +149,17 @@ static void a2c_PopCoder(A2_compiler *c)
  */
 static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 {
+	A2_instruction *ins;
 	A2_coder *cdr = c->coder;
+	int longins = 0;
 	if(c->nocode)
 		a2c_Throw(c, A2_NOCODE);
-	if(cdr->pos + 2 >= cdr->size)
+	if(cdr->pos + 3 >= cdr->size)
 	{
 		int i, ns = cdr->size;
 		unsigned *nc;
 		if(ns)
-			while(cdr->pos + 2 >= ns)
+			while(cdr->pos + 3 >= ns)
 				ns = ns * 3 / 2;
 		else
 			ns = 64;
@@ -167,8 +169,12 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		cdr->code = nc;
 		cdr->size = ns;
 		for(i = cdr->pos; i < cdr->size; ++i)
-			cdr->code[i] = OP_END << 26;
+		{
+			cdr->code[i] = 0;
+			((A2_instruction *)(cdr->code + i))->opcode = OP_END;
+		}
 	}
+	ins = (A2_instruction *)(cdr->code + cdr->pos);
 	if(op >= A2_OPCODES)
 		a2c_Throw(c, A2_BADOPCODE);
 	if(reg >= A2_REGISTERS)
@@ -249,37 +255,70 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_RAMPR:
 	  case OP_DETACHR:
 #endif
-		if(arg > A2_REGISTERS)
+		if((arg < 0) || (arg > A2_REGISTERS))
 			a2c_Throw(c, A2_BADREG2);
 		break;
 	  case OP_WAIT:
 /*FIXME: Should probably add all instructions that don't use 'arg' here... */
 		break;
+	  case OP_DELAY:
+	  case OP_TDELAY:
+	  case OP_LOAD:
+	  case OP_ADD:
+	  case OP_MUL:
+	  case OP_MOD:
+	  case OP_QUANT:
+	  case OP_RAND:
+#if 0
+	  case OP_RAMP:
+#endif
+	  case OP_PUSH:
+	  case OP_DEBUG:
+		longins = 1;
+		break;
 	  default:
-		arg = a2_i2f(arg);
 		break;
 	}
-	if(arg > 0x1fffff)
-		a2c_Throw(c, A2_BADIMMARG);
-	cdr->code[cdr->pos++] = (op << 26) | (reg << 21) | arg;
-	DUMPCODE(a2_DumpIns(cdr->code, cdr->pos - 1);)
+	ins->opcode = op;
+	ins->a1 = reg;
+	if(longins)
+	{
+		ins->a2 = 0;
+		ins->a3 = arg;
+	}
+	else
+	{
+		if((arg < 0) || (arg > 0xffff))
+			a2c_Throw(c, A2_BADIMMARG);
+		ins->a2 = arg;
+	}
+	DUMPCODE(a2_DumpIns(cdr->code, cdr->pos);)
+	cdr->pos += longins ? 2 : 1;
 }
 
 
-static A2_errors a2c_DoFixups(A2_compiler *c, A2_symbol *s)
+static inline void a2c_SetA2(A2_compiler *c, int pos, int val)
 {
-	A2_coder *cdr = c->coder;
-	if(s->value > 0x1fffff)
-		return A2_BADIMMARG;
+	if((val < 0) || (val > 0xffff))
+		a2c_Throw(c, A2_BADIMMARG);
+#ifdef DEBUG
+	if((pos < 0) || (pos >= c->coder->size))
+		a2c_Throw(c, A2_INTERNAL + 104);	/* Bad code position! */
+#endif
+	((A2_instruction *)(c->coder->code + pos))->a2 = val;
+}
+
+
+static void a2c_DoFixups(A2_compiler *c, A2_symbol *s)
+{
 	while(s->fixups)
 	{
 		A2_fixup *fx = s->fixups;
 		s->fixups = fx->next;
-		cdr->code[cdr->pos] |= s->value;
-		DUMPCODE(printf("FIXUP: "); a2_DumpIns(cdr->code, cdr->pos);)
+		a2c_SetA2(c, fx->pos, s->value);
+		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fx->pos);)
 		free(fx);
 	}
-	return A2_OK;
 }
 
 
@@ -1883,13 +1922,13 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_Code(c, OP_JUMP, 0, A2_UNDEFJUMP);	/* To skip over 'else' body */
 		if(fixpos >= 0)		/* False condition lands here! */
 		{
-			c->coder->code[fixpos] |= c->coder->pos;
+			a2c_SetA2(c, fixpos, c->coder->pos);
 			DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixpos);)
 		}
 		a2c_SkipLF(c);
 		a2c_Expect(c, '{', A2_EXPBODY);
 		a2c_Body(c, '}');
-		c->coder->code[fixelse] |= c->coder->pos;
+		a2c_SetA2(c, fixelse, c->coder->pos);
 		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixelse);)
 		return;
 	}
@@ -1899,7 +1938,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_Code(c, OP_JUMP, 0, loopto);
 	if(fixpos >= 0)
 	{
-		c->coder->code[fixpos] |= c->coder->pos;
+		a2c_SetA2(c, fixpos, c->coder->pos);
 		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixpos);)
 	}
 }
@@ -2408,12 +2447,9 @@ static void a2_PrintRegName(unsigned r)
 
 void a2_DumpIns(unsigned *code, unsigned pc)
 {
-	unsigned ins = code[pc];
-	A2_opcodes op = ins >> 26;
-	int reg = (ins >> 21) & 0x1f;
-	int arg = ins & 0x1fffff;
-	printf("%d:\t%-8.8s", pc, a2_insnames[op]);
-	switch(op)
+	A2_instruction *ins = (A2_instruction *)(code + pc);
+	printf("%d:\t%-8.8s", pc, a2_insnames[ins->opcode]);
+	switch(ins->opcode)
 	{
 	  /* No arguments */
 	  case OP_END:
@@ -2423,42 +2459,43 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_INITV:
 	  case A2_OPCODES:	/* (Warning eliminator) */
 		break;
-	  /* integer */
+	  /* <integer(a2)> */
 	  case OP_JUMP:
 	  case OP_WAKE:
 	  case OP_FORCE:
 	  case OP_SENDA:
 	  case OP_SENDS:
 	  case OP_CALL:
-		printf("%d", arg);
+	  case OP_SPAWND:
+		printf("%d", ins->a2);
 		break;
-	  /* f20 */
+	  /* <16:16(a3)> */
 	  case OP_DELAY:
 	  case OP_TDELAY:
 	  case OP_PUSH:
 	  case OP_DEBUG:
-		printf("%f", a2_f2i(arg) / 65536.0f);
+		printf("%f", ins->a3 / 65536.0f);
 		break;
-	  /* register */
+	  /* <register(a1)> */
 	  case OP_DELAYR:
 	  case OP_TDELAYR:
 	  case OP_PUSHR:
 	  case OP_SET:
 	  case OP_SPAWNDR:
 	  case OP_DEBUGR:
-		a2_PrintRegName(reg);
+		a2_PrintRegName(ins->a1);
 		break;
-	  /* register f20 */
+	  /* <register(a1), 16:16(a3)> */
 	  case OP_LOAD:
 	  case OP_ADD:
 	  case OP_MUL:
 	  case OP_MOD:
 	  case OP_QUANT:
 	  case OP_RAND:
-		a2_PrintRegName(reg);
-		printf(" %f", a2_f2i(arg) / 65536.0f);
+		a2_PrintRegName(ins->a1);
+		printf(" %f", ins->a3 / 65536.0f);
 		break;
-	  /* register integer */
+	  /* <register(a1), integer(a2)> */
 	  case OP_LOOP:
 	  case OP_JZ:
 	  case OP_JNZ:
@@ -2466,21 +2503,20 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_JL:
 	  case OP_JGE:
 	  case OP_JLE:
-		a2_PrintRegName(reg);
-		printf(" %d", arg);
+		a2_PrintRegName(ins->a1);
+		printf(" %d", ins->a2);
 		break;
-	  /* index */
+	  /* <index(a1)> */
 	  case OP_KILL:
 	  case OP_WAIT:
-		printf("%d", reg);
+		printf("%d", ins->a1);
 		break;
-	  /* index integer */
+	  /* <index(a1), integer(a2)> */
 	  case OP_SPAWN:
-	  case OP_SPAWND:
 	  case OP_SEND:
-		printf("%d %d", reg, arg);
+		printf("%d %d", ins->a1, ins->a2);
 		break;
-	  /* register register */
+	  /* <register(a1), register(a2)> */
 	  case OP_LOADR:
 	  case OP_ADDR:
 	  case OP_SUBR:
@@ -2502,9 +2538,9 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_ORR:
 	  case OP_XORR:
 	  case OP_NOTR:
-		a2_PrintRegName(reg);
+		a2_PrintRegName(ins->a1);
 		printf(" ");
-		a2_PrintRegName(arg);
+		a2_PrintRegName(ins->a2);
 		break;
 	}
 	printf("\n");

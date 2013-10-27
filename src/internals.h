@@ -46,15 +46,15 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #ifdef DEBUG
 #	include	<stdio.h>
 #	include	<assert.h>
-#	define	DBG(x)			/* General debug output */
+#	define	DBG(x)		x	/* General debug output */
 #	define	NUMMSGS(x)		/* Message order tracking */
 #	define	MSGTRACK(x)		/* Track origin of messages */
-#	define	EVLEAKTRACK(x)	x	/* Check for event leaks */
+#	define	EVLEAKTRACK(x)		/* Check for event leaks */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
-#	define	DUMPCODE(x)		/* Enable compiler VM code output */
+#	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
-#	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
+#	define	DUMPSTRUCT(x)	x	/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
@@ -236,38 +236,6 @@ static inline int a2_TSDiff(unsigned a, unsigned b)
 
 
 /*---------------------------------------------------------
-	f20 numbers
-FIXME: Drop these! It was a "fun hack" for 32 bit fixed size VM instructions.
----------------------------------------------------------*/
-
-/* Convert f20 to int32 */
-static inline int a2_f2i(int f)
-{
-	return f << 16 >> (f >> 16);
-}
-
-/* Convert int32 to f20 */
-static inline int a2_i2f(int i)
-{
-	int x = 0;
-	int n = 0;
-	if(i < 0)
-		n = 1,	i = -i;
-	if(!(i & 0x7f800000))
-		x = 8,	i <<= 8;
-	if(!(i & 0x78000000))
-		x += 4,	i <<= 4;
-	if(!(i & 0x60000000))
-		x += 2,	i <<= 2;
-	if(!(i & 0x40000000))
-		x += 1,	i <<= 1;
-	if(n)
-		i = -i;
-	return ((unsigned) i >> 16) | (x << 16);
-}
-
-
-/*---------------------------------------------------------
 	Configuration and drivers
 ---------------------------------------------------------*/
 
@@ -355,6 +323,14 @@ typedef enum A2_opcodes
 
 /* First VM register that may have a write callback */
 #define	A2_FIRSTCONTROLREG	A2_FIXEDREGS
+
+typedef struct A2_instruction
+{
+	uint8_t		opcode;
+	uint8_t		a1;
+	uint16_t	a2;
+	int32_t		a3;
+} A2_instruction;
 
 void a2_DumpIns(unsigned *code, unsigned pc);
 

@@ -139,6 +139,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			return NULL;
 		}
 		else if(u->noutputs > ud->maxoutputs)
+/*FIXME: Doesn't work for units that require noutputs == ninputs! */
 			u->noutputs = ud->maxoutputs;
 		break;
 	  default:
@@ -170,7 +171,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed to "
 				"initialize! (%s)\n",
 				ud->name, v, a2_ErrorString(res));)
-		a2r_Error(st, A2_UNITINIT, "a2_AddUnit()");
+		a2r_Error(st, res, "a2_AddUnit()");
 		return NULL;
 	}
 	DUMPSTRUCTRT(printf("\n");)
@@ -722,10 +723,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 	while(1)
 	{
 		unsigned dt;
-		unsigned ins = code[v->s.pc];
-		A2_opcodes op = ins >> 26;
-		unsigned reg = (ins >> 21) & 0x1f;
-		int arg = ins & 0x1fffff;
+		A2_instruction *ins = (A2_instruction *)(code + v->s.pc);
 		DUMPCODERT(printf("%p: ", v); a2_DumpIns(code, v->s.pc);)
 		if(!--inscount)
 		{
@@ -733,7 +731,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			st->instructions += A2_INSLIMIT;
 			return A2_OVERLOAD;
 		}
-		switch(op)
+		switch(ins->opcode)
 		{
 
 		/* Program flow control */
@@ -787,11 +785,11 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			}
 		  }
 		  case OP_CALL:
-			DBG(if(!arg)
+			DBG(if(!ins->a2)
 				printf("Tried to CALL function 0!\n");)
-			DBG(if(arg >= v->program->nfuncs)
-				printf("Function index %d out of range!\n", arg);)
-			if((res = a2_VoiceCall(st, v, arg, cargc, cargv, 0)))
+			DBG(if(ins->a2 >= v->program->nfuncs)
+				printf("Function index %d out of range!\n", ins->a2);)
+			if((res = a2_VoiceCall(st, v, ins->a2, cargc, cargv, 0)))
 			{
 				st->instructions += (A2_INSLIMIT - inscount);
 				return res;
@@ -802,210 +800,229 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 
 		/* Local flow control */
 		  case OP_JUMP:
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_LOOP:
-			r[reg] -= 65536;
-			if(r[reg] <= 0)
+			r[ins->a1] -= 65536;
+			if(r[ins->a1] <= 0)
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JZ:
-			if(r[reg])
+			if(r[ins->a1])
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JNZ:
-			if(!r[reg])
+			if(!r[ins->a1])
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JG:
-			if(r[reg] <= 0)
+			if(r[ins->a1] <= 0)
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JL:
-			if(r[reg] >= 0)
+			if(r[ins->a1] >= 0)
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JGE:
-			if(r[reg] < 0)
+			if(r[ins->a1] < 0)
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 		  case OP_JLE:
-			if(r[reg] > 0)
+			if(r[ins->a1] > 0)
 				break;
-			v->s.pc = arg;
+			v->s.pc = ins->a2;
 			continue;
 
 		/* Timing */
 		  case OP_DELAY:
-			dt = ((int64_t)a2_f2i(arg) * st->msdur + 0x7fffff) >> 24;
+			dt = ((int64_t)ins->a3 * st->msdur + 0x7fffff) >> 24;
+			++v->s.pc;
 			goto timing;
 		  case OP_DELAYR:
-			dt = ((int64_t)r[reg] * st->msdur + 0x7fffff) >> 24;
+			dt = ((int64_t)r[ins->a1] * st->msdur + 0x7fffff) >> 24;
 			goto timing;
 		  case OP_TDELAY:
-			dt = a2_VoiceTicks2t(st, v, a2_f2i(arg));
+			dt = a2_VoiceTicks2t(st, v, ins->a3);
+			++v->s.pc;
 			goto timing;
 		  case OP_TDELAYR:
-			dt = a2_VoiceTicks2t(st, v, r[reg]);
+			dt = a2_VoiceTicks2t(st, v, r[ins->a1]);
 			goto timing;
 
 		/* Arithmetics */
 		  case OP_SUBR:
-			r[reg] -= r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] -= r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_DIVR:
-			if(!r[arg])
+			if(!r[ins->a2])
 			{
 				st->instructions += (A2_INSLIMIT - inscount);
 				return A2_DIVBYZERO;
 			}
-			r[reg] = ((int64_t)r[reg] << 16) / r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = ((int64_t)r[ins->a1] << 16) / r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_P2DR:
-			r[reg] = 65536000.0f / (powf(2.0f, r[arg] *
+			r[ins->a1] = 65536000.0f / (powf(2.0f, r[ins->a2] *
 					(1.0f / 65536.0f)) * A2_MIDDLEC) + 0.5f;
-			a2_RTMark(&rt, reg);
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NEGR:
-			r[reg] = -r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = -r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_LOAD:
-			r[reg] = a2_f2i(arg);
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = ins->a3;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_LOADR:
-			r[reg] = r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_ADD:
-			r[reg] += a2_f2i(arg);
-			a2_RTMark(&rt, reg);
+			r[ins->a1] += ins->a3;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_ADDR:
-			r[reg] += r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] += r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_MUL:
-			r[reg] = (int64_t)r[reg] * a2_f2i(arg) >> 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (int64_t)r[ins->a1] * ins->a3 >> 16;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_MULR:
-			r[reg] = (int64_t)r[reg] * r[arg] >> 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (int64_t)r[ins->a1] * r[ins->a2] >> 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_MOD:
-			r[reg] %= a2_f2i(arg);
-			a2_RTMark(&rt, reg);
+			r[ins->a1] %= ins->a3;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_MODR:
-			if(!r[arg])
+			if(!r[ins->a2])
 			{
 				st->instructions += (A2_INSLIMIT - inscount);
 				return A2_DIVBYZERO;
 			}
-			r[reg] %= r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] %= r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_QUANT:
-			arg = a2_f2i(arg);
-			r[reg] = r[reg] / arg * arg;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = r[ins->a1] / ins->a3 * ins->a3;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_QUANTR:
-			r[reg] = r[reg] / r[arg] * r[arg];
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = r[ins->a1] / r[ins->a2] * r[ins->a2];
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_RAND:
-			r[reg] = (int64_t)a2_Noise(&st->noisestate) *
-					a2_f2i(arg) >> 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (int64_t)a2_Noise(&st->noisestate) *
+					ins->a3 >> 16;
+			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_RANDR:
-			r[reg] = (int64_t)a2_Noise(&st->noisestate) *
-					r[arg] >> 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (int64_t)a2_Noise(&st->noisestate) *
+					r[ins->a2] >> 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 
 		/* Comparison operators */
 /*TODO: Versions with an immediate second operand! */
 		  case OP_GR:
-			r[reg] = (r[reg] > r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] > r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_LR:
-			r[reg] = (r[reg] < r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] < r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_GER:
-			r[reg] = (r[reg] >= r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] >= r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_LER:
-			r[reg] = (r[reg] <= r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] <= r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_EQR:
-			r[reg] = (r[reg] == r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] == r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NER:
-			r[reg] = (r[reg] != r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] != r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 
 		/* Boolean operators */
 		  case OP_ANDR:
-			r[reg] = (r[reg] && r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] && r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_ORR:
-			r[reg] = (r[reg] || r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (r[ins->a1] || r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_XORR:
-			r[reg] = (!r[reg] != !r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (!r[ins->a1] != !r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NOTR:
-			r[reg] = (!r[arg]) << 16;
-			a2_RTMark(&rt, reg);
+			r[ins->a1] = (!r[ins->a2]) << 16;
+			a2_RTMark(&rt, ins->a1);
 			break;
 
 		/* Unit control */
 		  case OP_SET:
-			a2_VoiceControl(st, v, reg, 255 - v->s.timer, 0);
-			a2_RTUnmark(&rt, reg);
+			a2_VoiceControl(st, v, ins->a1, 255 - v->s.timer, 0);
+			a2_RTUnmark(&rt, ins->a1);
 			break;
 #if 0
 		  case OP_RAMP:
-			if(reg >= v->cregisters)
+			++v->s.pc;
+			if(ins->a1 >= v->cregisters)
 				break;
-			arg = (int64_t)a2_f2i(arg) * st->msdur >> 32;
-			a2_VoiceControl(v, reg, arg);
-			cregmask &= ~(1 << reg);
+			a2_VoiceControl(v, ins->a1,
+					(int64_t)ins->a3 * st->msdur >> 32);
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_RAMPR:
-			if(reg >= v->cregisters)
+			if(ins->a1 >= v->cregisters)
 				break;
-			arg = (int64_t)r[arg] * st->msdur >> 32;
-			a2_VoiceControl(v, reg, arg);
-			cregmask &= ~(1 << reg);
+			a2_VoiceControl(v, ins->a1,
+					(int64_t)r[ins->a2] * st->msdur >> 32);
+			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_DETACHR:
-			arg = r[arg] >> 16;
+		  {
+			unsigned vid = r[ins->a1] >> 16;
+			if(vid > A2_REGISTERS)
+			{
+				st->instructions += (A2_INSLIMIT - inscount);
+				return A2_BADVOICE;
+			}
+			if(v->sv[vid])
+				a2_VoiceDetach(v->sv[vid]);
+			v->sv[vid] = NULL;
+			break;
+		  }
 		  case OP_DETACH:
-			if(v->sv[arg])
-				a2_VoiceDetach(v->sv[arg]);
-			v->sv[arg] = NULL;
+			if(v->sv[ins->a1])
+				a2_VoiceDetach(v->sv[ins->a1]);
+			v->sv[ins->a1] = NULL;
 			break;
 #endif
 
@@ -1016,7 +1033,8 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 				st->instructions += (A2_INSLIMIT - inscount);
 				return A2_MANYARGS;
 			}
-			cargv[cargc++] = a2_f2i(arg);
+			cargv[cargc++] = ins->a3;
+			++v->s.pc;
 			break;
 		  case OP_PUSHR:
 			if(cargc >= A2_MAXARGS)
@@ -1024,43 +1042,70 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 				st->instructions += (A2_INSLIMIT - inscount);
 				return A2_MANYARGS;
 			}
-			cargv[cargc++] = r[reg];
+			cargv[cargc++] = r[ins->a1];
 			break;
 		  case OP_SPAWNR:
-			arg = r[arg] >> 16;
+		  {
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			a2_VoiceSpawn(st, v, when, ins->a1, r[ins->a2],
+					cargc, cargv);
+			cargc = 0;
+			break;
+		  }
 		  case OP_SPAWN:
 		  {
 			unsigned when = v->s.timer;
 			if(!(v->flags & A2_SUBINLINE))
 				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, reg, arg, cargc, cargv);
+			a2_VoiceSpawn(st, v, when, ins->a1, ins->a2,
+					cargc, cargv);
 			cargc = 0;
 			break;
 		  }
 		  case OP_SPAWNDR:
-			arg = r[arg] >> 16;
+		  {
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			a2_VoiceSpawn(st, v, when, -1, r[ins->a1], cargc, cargv);
+			cargc = 0;
+			break;
+		  }
 		  case OP_SPAWND:
 		  {
 			unsigned when = v->s.timer;
 			if(!(v->flags & A2_SUBINLINE))
 				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, -1, arg, cargc, cargv);
+			a2_VoiceSpawn(st, v, when, -1, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  }
 #if 0
 		  case OP_SENDR:
-			reg = r[reg] >> 16;
+		  {
+			unsigned vid = r[ins->a1] >> 16;
 			if(reg > A2_REGISTERS)
+			{
+				st->instructions += (A2_INSLIMIT - inscount);
 				return A2_BADVOICE;
+			}
+			if(v->sv[vid])
+				a2_VoiceSend(st, v->sv[vid],
+						(frame << 8) + v->s.timer,
+						ins->a2, cargc, cargv);
+			cargc = 0;
+			break;
+		  }
 #endif
 		  case OP_SEND:
-			DBG(if(!arg)
-				printf("Weird...! OP_SEND to EP0...\n");)
-			if(v->sv[reg])
-				a2_VoiceSend(st, v->sv[reg],
+			DBG(if(!ins->a2)
+				printf("Weird...! SEND to EP0...\n");)
+			if(v->sv[ins->a1])
+				a2_VoiceSend(st, v->sv[ins->a1],
 						(frame << 8) + v->s.timer,
-						arg, cargc, cargv);
+						ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  case OP_SENDA:
@@ -1068,13 +1113,13 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			A2_voice *sv;
 			unsigned when = (frame << 8) + v->s.timer;
 			for(sv = v->sub; sv; sv = sv->next)
-				a2_VoiceSend(st, sv, when, arg, cargc, cargv);
+				a2_VoiceSend(st, sv, when, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  }
 		  case OP_SENDS:
 		  {
-			int ep = v->program->eps[arg];
+			int ep = v->program->eps[ins->a2];
 			if(ep < 0)
 				return A2_BADENTRY;
 			if((res = a2_VoiceCall(st, v, ep, cargc, cargv, 1)))
@@ -1087,10 +1132,10 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			break;
 		  }
 		  case OP_WAIT:
-			if(!v->sv[reg])
+			if(!v->sv[ins->a1])
 				break;	/* No voice to wait for! */
 			/* NOTE: This only waits with buffer granularity! */
-			if(v->sv[reg]->s.state >= A2_ENDING)
+			if(v->sv[ins->a1]->s.state >= A2_ENDING)
 				break;	/* Done! */
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = (A2_MAXFRAG - frame) << 8;
@@ -1098,10 +1143,10 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			st->instructions += (A2_INSLIMIT - inscount);
 			return A2_OK;
 		  case OP_KILL:
-			if(!v->sv[reg])
+			if(!v->sv[ins->a1])
 				break;
-			a2_VoiceKill(st, v->sv[reg]);
-			v->sv[reg] = NULL;
+			a2_VoiceKill(st, v->sv[ins->a1]);
+			v->sv[ins->a1] = NULL;
 			break;
 		  case OP_KILLA:
 		  {
@@ -1153,7 +1198,7 @@ TODO:
 			A2_stackentry *se = v->stack;
 			while(se->prev && (se->state == A2_INTERRUPT))
 				se = se->prev;
-			se->pc = arg;
+			se->pc = ins->a2;
 			se->timer = 0;
 			se->state = A2_RUNNING;
 			break;
@@ -1161,12 +1206,12 @@ TODO:
 
 		/* Debugging */
 		  case OP_DEBUGR:
-			printf(":: Audiality 2 DEBUG: R%d=%f\t(%p)\n", reg,
-					r[reg] * (1.0f / 65536.0f), v);
+			printf(":: Audiality 2 DEBUG: R%d=%f\t(%p)\n", ins->a1,
+					r[ins->a1] * (1.0f / 65536.0f), v);
 			break;
 		  case OP_DEBUG:
 			printf(":: Audiality 2 DEBUG: %f\t(%p)\n",
-					a2_f2i(arg) * (1.0f / 65536.0f), v);
+					ins->a3 * (1.0f / 65536.0f), v);
 			break;
 
 		/* Special instructions */
