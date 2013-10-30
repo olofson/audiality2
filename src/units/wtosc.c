@@ -334,6 +334,7 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	return A2_OK;
 }
 
+
 static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
@@ -402,6 +403,7 @@ static void wtosc_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
 	a2_OscPhase(wtosc_cast(u), v, start);
 }
 
+
 static const A2_crdesc regs[] =
 {
 	{ "w",		wtosc_Wave		},	/* A2OR_WAVE */
@@ -414,6 +416,8 @@ static const A2_crdesc regs[] =
 const A2_unitdesc a2_wtosc_unitdesc =
 {
 	"wtosc",		/* name */
+
+	0,			/* flags */
 
 	regs,			/* registers */
 

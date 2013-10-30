@@ -181,16 +181,6 @@ static void f12_HP(A2_unit *u, int v, unsigned start, unsigned dur)
 	f12_cast(u)->hp = v >> 8;
 }
 
-static const A2_crdesc regs[] =
-{
-	{ "cutoff",	f12_CutOff	},	/* A2F12_CutOff */
-	{ "q",		f12_Q		},	/* A2F12_Q */
-	{ "lp",		f12_LP		},	/* A2F12_LP */
-	{ "bp",		f12_BP		},	/* A2F12_BP */
-	{ "hp",		f12_HP		},	/* A2F12_HP */
-	{ NULL,	NULL			}
-};
-
 
 static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
@@ -216,8 +206,6 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	f12->bp = ur[A2F12R_BP] >> 8;
 	f12->hp = ur[A2F12R_HP] >> 8;
 
-	if(u->ninputs != u->noutputs)
-		return A2_IODONTMATCH;
 	for(c = 0; c < u->ninputs; ++c)
 		f12->d1[c] = f12->d2[c] = 0;
 	if(flags & A2_PROCADD)
@@ -237,9 +225,21 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
+static const A2_crdesc regs[] =
+{
+	{ "cutoff",	f12_CutOff	},	/* A2F12_CutOff */
+	{ "q",		f12_Q		},	/* A2F12_Q */
+	{ "lp",		f12_LP		},	/* A2F12_LP */
+	{ "bp",		f12_BP		},	/* A2F12_BP */
+	{ "hp",		f12_HP		},	/* A2F12_HP */
+	{ NULL,	NULL			}
+};
+
 const A2_unitdesc a2_filter12_unitdesc =
 {
 	"filter12",		/* name */
+
+	A2_MATCHIO,
 
 	regs,			/* registers */
 

@@ -96,14 +96,15 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 {
 	unsigned i;
 	A2_errors res;
-	int ninputs;
+	int minoutputs, maxoutputs, ninputs;
 	const A2_unitdesc *ud = si->unitdesc;
 	A2_unit *u = &a2_AllocBlock(st)->unit;
 	if(!u)
 		return NULL;
 
 	DUMPSTRUCTRT(printf("Wiring %s... ", ud->name);)
-	/* Handle special wiring cases */
+
+	/* Input wiring */
 	switch(si->ninputs)
 	{
 	  case A2_IO_MATCHOUT:
@@ -124,12 +125,23 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		ninputs = si->ninputs;
 		break;
 	}
+
+	/* Some units require ninputs == noutputs... */
+	if(ud->flags & A2_MATCHIO)
+		minoutputs = maxoutputs = ninputs;
+	else
+	{
+		minoutputs = ud->minoutputs;
+		maxoutputs = ud->maxoutputs;
+	}
+
+	/* Output wiring */
 	switch(si->noutputs)
 	{
 	  case A2_IO_WIREOUT:
 	  case A2_IO_MATCHOUT:
 		u->noutputs = noutputs;
-		if(u->noutputs < ud->minoutputs)
+		if(u->noutputs < minoutputs)
 		{
 			a2_FreeBlock(st, u);
 			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few "
@@ -138,9 +150,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()");
 			return NULL;
 		}
-		else if(u->noutputs > ud->maxoutputs)
-/*FIXME: Doesn't work for units that require noutputs == ninputs! */
-			u->noutputs = ud->maxoutputs;
+		else if(u->noutputs > maxoutputs)
+			u->noutputs = maxoutputs;
 		break;
 	  default:
 		u->noutputs = si->noutputs;
@@ -163,6 +174,15 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	u->ninputs = ninputs;
 	u->inputs = scratch;
 	DUMPSTRUCTRT(printf("in: %d\tout:%d", u->ninputs, u->noutputs);)
+
+	if((ud->flags & A2_MATCHIO) && (u->ninputs != u->noutputs))
+	{
+		a2_FreeBlock(st, u);
+		DBG(fprintf(stderr, "Audiality 2: Unit '%s' needs to have "
+				"matching input/output counts!\n", ud->name);)
+		a2r_Error(st, A2_IODONTMATCH, "a2_AddUnit()");
+		return NULL;
+	}
 
 	/* Initialize the unit instance itself! */
 	if((res = ud->Initialize(u, &v->s, st->config, si->flags)))

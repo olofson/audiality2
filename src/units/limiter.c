@@ -169,8 +169,6 @@ static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	lim->threshold = (unsigned)(ur[A2LR_THRESHOLD] << 8);
 	lim->peak = 32768 << 8;
 
-	if(u->ninputs != u->noutputs)
-		return A2_IODONTMATCH;
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
 		{
@@ -213,6 +211,8 @@ static const A2_crdesc regs[] =
 const A2_unitdesc a2_limiter_unitdesc =
 {
 	"limiter",		/* name */
+
+	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
 

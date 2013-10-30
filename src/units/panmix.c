@@ -293,6 +293,7 @@ static void panmix_Pan(A2_unit *u, int v, unsigned start, unsigned dur)
 	a2_RamperSet(&panmix_cast(u)->pan, v, start, dur);
 }
 
+
 static const A2_crdesc regs[] =
 {
 	{ "vol",	panmix_Vol		},	/* CSPMR_VOL */
@@ -300,10 +301,11 @@ static const A2_crdesc regs[] =
 	{ NULL,	NULL				}
 };
 
-
 const A2_unitdesc a2_panmix_unitdesc =
 {
 	"panmix",		/* name */
+
+	0,			/* flags */
 
 	regs,			/* registers */
 

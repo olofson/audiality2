@@ -63,7 +63,11 @@ typedef struct A2_crdesc A2_crdesc;
 
 typedef enum A2_unitflags
 {
+	/* Initialization callback flags */
 	A2_PROCADD =		0x00000001,	/* Adding Process() */
+
+	/* A2_unitdesc flags */
+	A2_MATCHIO =		0x00010000	/* ninputs == noutputs */
 } A2_unitflags;
 
 /*
@@ -174,6 +178,8 @@ struct A2_crdesc
 struct A2_unitdesc
 {
 	const char	*name;		/* Unit name for struct definitions */
+	
+	unsigned	flags;		/* A2_unitflags */
 
 	/* Control */
 	const A2_crdesc	*registers;	/* Array of register descriptors */
@@ -196,13 +202,12 @@ struct A2_unitdesc
  *
  *	Initialized by the host:
  *		next
+ *		descriptor
  *		ninputs, inputs
  *		noutputs, outputs
  *		registers
- *		Deinitialize
  *
  *	To be initialized by the A2_unitdesc Initialize() callback:
- *		flags
  *		Process
  */
 struct A2_unit

@@ -48,6 +48,8 @@ const A2_unitdesc a2_inline_unitdesc =
 {
 	"inline",		/* name */
 
+	0,			/* flags */
+
 	regs,			/* registers */
 
 	0, 0,			/* [min,max]inputs */

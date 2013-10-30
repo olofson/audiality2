@@ -212,6 +212,7 @@ static void fbdelay_RGain(A2_unit *u, int v, unsigned start, unsigned dur)
 	fbdelay_cast(u)->rgain = v;
 }
 
+
 static const A2_crdesc regs[] =
 {
 	{ "fbdelay",	fbdelay_FBDelay		},	/* A2FBDR_FBDELAY */
@@ -224,10 +225,11 @@ static const A2_crdesc regs[] =
 	{ NULL,	NULL				}
 };
 
-
 const A2_unitdesc a2_fbdelay_unitdesc =
 {
 	"fbdelay",		/* name */
+
+	0,			/* flags */
 
 	regs,			/* registers */
 

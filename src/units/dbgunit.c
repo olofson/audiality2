@@ -149,6 +149,16 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 {
 	"dbgunit",		/* name */
 
+	/*
+	 * FIXME: Can't use A2_MATCHIO, because this unit also works with no
+	 * inputs at all.
+	 */
+#if 0
+	A2_MATCHIO,		/* flags */
+#else
+	0,			/* flags */
+#endif
+
 	regs,			/* registers */
 
 	0, A2_MAXCHANNELS,	/* [min,max]inputs */

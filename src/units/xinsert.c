@@ -127,9 +127,6 @@ static A2_errors xinsert_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 {
 	A2_xinsert *xi = a2_xinsert_cast(u);
 
-	if(u->ninputs != u->noutputs)
-		return A2_IODONTMATCH;
-
 	/* Initialize private fields */
 	xi->state = cfg->state;
 	xi->flags = flags;
@@ -161,10 +158,11 @@ static const A2_crdesc regs[] =
 	{ NULL, NULL }
 };
 
-
 const A2_unitdesc a2_xinsert_unitdesc =
 {
 	"xinsert",		/* name */
+
+	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
 

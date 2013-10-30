@@ -177,9 +177,25 @@ A2_handle a2_Load(A2_state *st, const char *fn)
 A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
 {
 	A2_handle h;
+
+	/* Some sanity checks, to detect broken units early */
+	if(ud->flags & A2_MATCHIO)
+	{
+		if((ud->mininputs != ud->minoutputs) ||
+				(ud->maxinputs != ud->maxoutputs))
+		{
+			fprintf(stderr, "Audiality 2: Unit '%s' has the "
+					"A2_MATCHIO flag set, but mismatched "
+					"mininputs/minoutputs fields!\n",
+					ud->name);
+			return -A2_IODONTMATCH;
+		}
+	}
+
 	/* Constant data - just register it as is! */
 	if((h = rchm_NewEx(&st->ss->hm, (void *)ud, A2_TUNIT, A2_LOCKED, 1)) < 0)
 		return -h;
+
 	DBG(printf("registered unit \"%s\", handle %d\n", ud->name, h);)
 	return h;
 }
