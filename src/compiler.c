@@ -2481,9 +2481,12 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_TDELAYR:
 	  case OP_PUSHR:
 	  case OP_SET:
-	  case OP_SPAWNDR:
 	  case OP_DEBUGR:
 		a2_PrintRegName(ins->a1);
+		break;
+	  /* <register(a2)> */
+	  case OP_SPAWNDR:
+		a2_PrintRegName(ins->a2);
 		break;
 	  /* <register(a1), 16:16(a3)> */
 	  case OP_LOAD:

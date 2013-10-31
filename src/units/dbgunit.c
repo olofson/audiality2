@@ -150,14 +150,11 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 	"dbgunit",		/* name */
 
 	/*
-	 * FIXME: Can't use A2_MATCHIO, because this unit also works with no
-	 * inputs at all.
+	 * Can't use A2_MATCHIO, because this unit also works with no inputs at
+	 * all. But, does it ever make sense for this unit to have ninputs !=
+	 * noutputs when there are inputs...?
 	 */
-#if 0
-	A2_MATCHIO,		/* flags */
-#else
 	0,			/* flags */
-#endif
 
 	regs,			/* registers */
 
