@@ -9,11 +9,11 @@ def a2sversion	"1.9"
 .Flute0(P V=1 Wave)
 {
 	struct { wtosc }
-	!P0 tr; +P tr; w Wave; p P; a 0; !er .05; !vib 0; !tvib .005
+	!P0 tr; +P tr; w Wave; p P; a 0; !er .05; !vib 0; !tvib .005; !pf .3
 .rt	wg (V + a - .001) {
 		tr (vib * 6 + rand .01)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * pf); +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * pf); +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5
@@ -25,16 +25,104 @@ def a2sversion	"1.9"
 			tvib .02; er .02
 		}
 	}
-	2(NP) { P (P0 + NP) }
+	2(NP NPF=.3) { P (P0 + NP); pf NPF }
 }
 
-.Flute(P V=1)
+Flute(P V=1)
 {
 	struct { inline; panmix }
-	1:Flute0 (P + 1.01) V triangle
-	2:Flute0 (P - 1) (V * .2) saw
-	1(NV) { 1<1 NV; 2<1 (NV * .2) }
-	2(NP) { 1<2 (NP + 1.01); 2<2 (NP - 1) }
+	def A1 1; def A2 .3
+	def P1 1.001; def P2 -.001
+	1:Flute0 (P + P1) (V * A1) triangle
+	2:Flute0 (P + P2) (V * A2) pulse10
+	1(NV) { 1<1 (NV * A1); 2<1 (NV * A2) }
+	2(NP NPF=.3) { 1<2 (NP + P1) NPF; 2<2 (NP + P2) NPF }
+}
+
+Feep(P V=1 C=2)
+{
+	struct { wtosc; filter12; panmix }
+	lp .5; bp .5; hp .1; q .05
+	cutoff (P - 1); !tp (P + C)
+	!pp (rand 3 - 1.5)
+	!P0 tr; +P tr; w pulse1; p P; a 0; !er .05; !vib 0; !tvib .005
+.rt	while ((V + a) > .001) {
+		tr (vib * 6 + rand .01)
+		12 {
+			-tr vib; +p (P - p * .1); +a (V - a * er)
+			+cutoff (tp - cutoff * .05)
+			+pan (pp - pan * .05)
+			d 3
+		}
+		12 {
+			+tr vib; +p (P - p * .1); +a (V - a * er)
+			+cutoff (tp - cutoff * .05)
+			+pan (pp - pan * .05)
+			d 3
+		}
+		+vib (tvib - vib * .3)
+	}
+	a 0; d 5
+	1(NV NC=2) {
+		V NV
+		if NV {
+			vib .005; tvib .005; er .03; wake rt
+		} else {
+			tvib .02; er .01; tp P
+		}
+		tp (P + NC)
+		pp (rand 2 - 1)
+	}
+	2(NP NC=2) {
+		P (P0 + NP)
+		tp (P + NC)
+		pp (rand 2 - 1)
+	}
+}
+
+SpaceFeep(P V=1)
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay (tick * 6 + 10); fbgain .5
+	ldelay (tick * 5 + 13); lgain .5
+	rdelay (tick * 4 + 17); rgain .5
+
+	def I Feep
+	+tr P
+	*V .25
+				td 8
+	1:I 7n V 1;		td 2
+	1<2 8n 3;		td 2
+	1<2 7n 2;		td 2
+	1<2 5n 1;		td 2
+	1<2 7n 2;		td 8
+	1<2 3n 1;		td 8
+	1<2 0n 3;		td 12
+	1<1 (V * .8) 2.5;	td 2
+	1<1 (V * .6) 2;		td 2
+	1<1 (V * .4) 1.5;	td 2
+	1<1 (V * .3) 1;		td 2
+	1<1 0 -1;		td 12
+
+				td 8
+	1:I 7n V 1;		td 2
+	1<2 8n 3;		td 2
+	1<2 7n 2;		td 2
+	1<2 5n 1;		td 2
+	1<2 7n 2;		td 8
+	1<2 3n 1;		td 8
+	1<2 -5n 3;		td 12
+	1<1 (V * .8) 2.5;	td 2
+	1<1 (V * .6) 2;		td 2
+	1<1 (V * .4) 1.5;	td 2
+	1<1 (V * .3) 1;		td 2
+	1<1 0 -1;		td 12
+
+				td 40
 }
 
 .Str0(P V Attack Decay Detune)
@@ -59,7 +147,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.Strings(P V=1 Attack=.3 Decay=.2)
+Strings(P V=1 Attack=.3 Decay=.2)
 {
 	!Voices (7 - P quant 1)
 	ifl (Voices - 2) {
@@ -75,7 +163,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.OctStrings(P V=1)
+OctStrings(P V=1)
 {
 	1:Strings (P + 1) V .5 .2
 	2:Strings (P - 1) V .2 .4
@@ -91,13 +179,13 @@ def a2sversion	"1.9"
 	50 {	*a .99; *p .96; d 2 }
 	40 {	*a .92; -p .01; d 50 }
 }
-.NBurst(P V=1)
+NBurst(P V=1)
 {
 	nb P (V * .5) -1.25
 	nb P (V * .5) 1.25
 }
 
-.NBurst2(P V=1)
+NBurst2(P V=1)
 {
 	struct { wtosc }
 	w noise; p (P + 3.5); a V; set a; *a .5; d 10
@@ -117,7 +205,7 @@ def a2sversion	"1.9"
 		p 6; d D
 	}
 }
-.SDrum(P V=1)
+SDrum(P V=1)
 {
 	struct { wtosc }
 	sdn V
@@ -134,7 +222,7 @@ def a2sversion	"1.9"
 	1000 {	p (rand 1.5 + p0); *a .99; d 1 }
 }
 
-.HHClosed(P V=1)
+HHClosed(P V=1)
 {
 	struct { wtosc }
 	w square; a (V * .2); set a; p 6
@@ -142,7 +230,7 @@ def a2sversion	"1.9"
 	200 {	p (rand 1.5 + 4.5); *a .95; d .5 }
 }
 
-.HHOpen(P V=1)
+HHOpen(P V=1)
 {
 	struct { wtosc }
 	w square; a (V * .2); set a; p 6
@@ -150,13 +238,13 @@ def a2sversion	"1.9"
 	600 {	p (rand 1.5 + 4.5); *a .993; d .5 }
 }
 
-.HH0()
+HH0()
 {
 	!aa 1
 	32 {	HHClosed 0 aa; *aa .8;	td 1 }
 }
 
-.HH1()
+HH1()
 {
 	def c HHClosed; def o HHOpen
 	8 {
@@ -168,7 +256,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.HH2()
+HH2()
 {
 	def c HHClosed; def o HHOpen
 	8 {
@@ -204,7 +292,7 @@ def a2sversion	"1.9"
 	20 {	*a .95; -p .1; d 3 }
 	a 0; d 1000
 }
-.BDrum(P V=1)
+BDrum(P V=1)
 {
 	struct { wtosc }
 	bdnoise P V
@@ -226,7 +314,7 @@ def a2sversion	"1.9"
 	-p 2
 	100 {	-p .07; *a .8; d 10 }
 }
-.Tom(P V=1)
+Tom(P V=1)
 {
 	struct { wtosc }
 	tn P V
@@ -245,7 +333,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SoftArp(P V=1 Maj=0)
+SoftArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix }
 	sa0(PP VV)
@@ -274,7 +362,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SoftArp2(P V=1 Maj=0)
+SoftArp2(P V=1 Maj=0)
 {
 	struct { wtosc; panmix }
 	sa0(PP VV)
@@ -303,7 +391,7 @@ def a2sversion	"1.9"
 	tr P
 	800 {	rand p x; *a .995; d 2.5 }
 }
-.Explosion(P V=1)
+Explosion(P V=1)
 {
 	+tr P
 	Explo0 0 V sine 2
@@ -312,7 +400,7 @@ def a2sversion	"1.9"
 	Explo0 1.5 (V * .25) sine 3
 }
 
-.PulseOct(P V=1)
+PulseOct(P V=1)
 {
 	struct { wtosc }
 	w saw; p P
@@ -325,7 +413,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.subs(P V W)
+.subs(P V=1 W)
 {
 	struct { wtosc }
 	w W
@@ -337,7 +425,7 @@ def a2sversion	"1.9"
 	1(NV) { V NV; wake rt }
 	2(NP) { P NP }
 }
-.Sub(P V=1)
+Sub(P V=1)
 {
 	struct { inline; filter12 }
 	lp .5; bp .3; hp .3; cutoff P; q .03
@@ -368,7 +456,7 @@ SubPulse(P V=1 Dur=2)
 	2(NP) { np NP }
 }
 
-.ResoBass(P V=1 Reso)
+ResoBass(P V=1 Reso)
 {
 	struct { wtosc }
 	p (P + 2); w square; a (V * .2); set a
@@ -414,13 +502,13 @@ SubPulse(P V=1 Dur=2)
 	!dr ((r1 - r) / cnt)
 	cnt {	ResoBass p1 v r; +v dv; +r dr; td 1 }
 }
-.ResoIn(P V=1)
+ResoIn(P V=1)
 {
 	struct { inline; panmix }
 	rl P	.1 (V * .5)	0 .16;	td 32
 	rl P	(V * .5) V	.16 0;	td 32
 }
-.Reso1(P V=1 P2=0 Ins=rl)
+Reso1(P V=1 P2=0 Ins=rl)
 {
 	struct { inline; panmix }
 	+P2 P
@@ -428,7 +516,7 @@ SubPulse(P V=1 Dur=2)
 	:Ins P2	V V	.4 .8	8;	td 16
 	:Ins P	V V	.8 1.6	16;	td 32
 }
-.Reso2(P V=1 P2=0 Ins=rl)
+Reso2(P V=1 P2=0 Ins=rl)
 {
 	struct { inline; panmix }
 	+P2 P
@@ -436,18 +524,19 @@ SubPulse(P V=1 Dur=2)
 	:Ins P2	V V	1.2 .8	8;	td 16
 	:Ins P	V V	.8 0	16;	td 32
 }
-.ResoOut(P V=1)
+
+ResoOut(P V=1)
 {
 	struct { inline; panmix }
 	rl P	V (V * .5)	0 .16	8;	td 16
 	rl P	(V * .5) 0	.16 0	8;	td 16
 }
 
-.EvilSyncBass(P V=1 Drive)
+EvilSyncBass(P V=1 Drive)
 {
 	struct { wtosc }
 	+P tr; tr 0; p P
-	*V .5
+	*V .6
 	!per (p2d P * .5)
 	a V; set a
 	p 5; w noise; phase 0; d 2
@@ -474,7 +563,7 @@ SubPulse(P V=1 Dur=2)
 		*a .85; *rmax .99; *rmh .99
 	}
 }
-.Cymbal(P V=1)
+Cymbal(P V=1)
 {
 	tr P
 	c0 5.3 V saw 1 .5
@@ -483,7 +572,7 @@ SubPulse(P V=1 Dur=2)
 	c0 2.7 (V * .3) sine 1.5 1
 	c0 2 V sine 2.5 1.2
 }
-.LowCymbal(P V=1)
+LowCymbal(P V=1)
 {
 	tr P
 	c0 5 V saw 1 .8
@@ -493,7 +582,7 @@ SubPulse(P V=1 Dur=2)
 	c0 1.5 V sine 2.5 1.5
 }
 
-.Drone(P V=1)
+Drone(P V=1)
 {
 	def i EvilSyncBass; +tr (P - 36n)
 	1:i 0 V 2.5;	td .5;	1<1
@@ -504,7 +593,7 @@ SubPulse(P V=1 Dur=2)
 	1:i 0 V 0;	td 30;	1<1
 }
 
-.Heavy(P V=1 P2=0)
+Heavy(P V=1 P2=0)
 {
 	def i EvilSyncBass; +tr (P - 36n)
 	1:i 0 V 1;	td .5;	1<1
@@ -529,7 +618,7 @@ SubPulse(P V=1 Dur=2)
 			td 4
 }
 
-.PreTheme(Tr)
+PreTheme(Tr)
 {
 	def i Flute; +tr (Tr + 1)
 	1:i -12n .4;	td 1
@@ -538,49 +627,126 @@ SubPulse(P V=1 Dur=2)
 	1<2 -2n;	td 1;	1<1
 }
 
-.MeloTheme(Tr)
+MeloTheme(Tr)
 {
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay (tick * 5 + 10); fbgain .3
+	ldelay (tick * 3 + 13); lgain .3
+	rdelay (tick * 2 + 17); rgain .3
+
 	def i Flute; +tr (Tr + 1)
-	1:i 0 .5;	td 8
+	1:i 0n .5;	td 8
 	1<2 7n;		td 7
 	1<2 3n;		td 1
-	1<2 10n;	td 8;	1<1
-			td 3
+	1<2 10n .15;	td 8
+	1<1;		td 3
 	1:i 3n .5;	td 1
 	1<2 5n;		td 2
 	1<2 10n;	td 2
-	1<2 7n;		td 8
-	1<1 .3;		td 8;	1<1
-	td 12
+	1<2 6n .6;	td .5
+	1<2 7n;		td 7.5
+	1<1 .3;		td 6
+	1<2 6n .003;	td 4
+	1<1;		td 10
+
 	1:i -5n .5;	td 2
 	1<2 -2n;	td 2
-	1<2 0;		td 8
-	1<2 7n;		td 4
+	1<2 0n;		td 8
+	1<2 7n .15;	td 3.5
+	1<2 6n .2;	td .5
 	1<2 10n;	td 4
-	1<2 3n;		td 6
-	1<2 2n;		td 6
+	1<2 1n .7;	td .5
+	1<2 3n;		td 5
+	1<2 4n .8;	td .5
+	1<2 2n .8;	td 6
 	1<2 7n;		td 2
 	1<2 -2n;	td 2
-	1<2 0;		td 8
-	1<1 .3;		td 8;	1<1
-	td 16
+	1<2 0n;		td 8
+	1<1 .3;		td 7.5
+	1<2 3n .2;	td .5
+	1<2 0n .5;	td 3
+	1<2 -1n .003;	td 6
+	1<1;		td 10
+
+	td 40
 }
 
-.Fx1(Tr)
+PT2Melo()
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay (tick * 5 + 10); fbgain .4
+	ldelay (tick * 3 + 13); lgain .5
+	rdelay (tick * 2 + 17); rgain .5
+
+	def i Flute
+	-tr 1
+				td 4
+	1:i 12n .5;		td 3.75
+	1<2 11n;		td .25
+	1<2 15n .2;		td 4
+	1<2 12n .8;		td 4
+	1<2 13n .2;		td 1
+	1<2 14n .1;		td 5
+	1<1 .4;	1<2 10n;	td 6
+	1<2 12n;		td 2
+	1<2 5n .03;		td 2
+	1<2 5n;			td .5
+	1<2 7n .03;		td 11
+	1<2 5n .5;		td .5
+	1<2 7n .5; 1<1 .3;	td 4
+	1<1;			td 10
+
+	1:i 3n .4;		td 1
+	1<2 5n .8;		td 1
+	1<2 7n .8;		td .75
+	1<1 .2; 1<2 0n .8;	td 1.25
+	1<1 .5; 1<2 3n;		td 1
+	1<2 5n .8;		td 1
+	1<2 7n .8;		td 2
+	1<2 5n .01;		td 2
+
+	1<1 .5; 1<2 12n;	td 3.75
+	1<2 11n;		td .25
+	1<2 15n .1;		td 4
+	1<2 12n .8;		td 4
+	1<2 13n .2;		td 1
+	1<2 14n .1;		td 5
+	1<1 .4;	1<2 17n;	td 6
+	1<2 19n;		td 2
+	1<2 14n .03;		td 2
+	1<2 14n;		td .5
+	1<2 15n .03;		td 10.75
+	1<2 14n .8;		td .75
+	1<2 12n .5; 1<1 .3;	td 4
+	1<1;			td 10
+
+	td 40
+}
+
+
+Fx1(Tr)
 {
 	td 8
 	+tr Tr; PulseOct -1 .5
 	td 8; *<1
 }
 
-.Fx2(Tr)
+Fx2(Tr)
 {
 	td 8
 	+tr Tr; PulseOct 1 .3
 	td 8; *<1
 }
 
-.Perc2()
+Perc2()
 {
 	struct { inline; panmix }
 	tr 0
@@ -640,7 +806,7 @@ SubPulse(P V=1 Dur=2)
 	SDrum 0 .4;	td .5
 	SDrum; NBurst2
 }
-.Perc3()
+Perc3()
 {
 	struct { inline; panmix }
 	tr 0
@@ -661,7 +827,7 @@ SubPulse(P V=1 Dur=2)
 	Tom;		td 1
 }
 
-.Drop(P V=1)
+Drop(P V=1 short)
 {
 	struct { wtosc; panmix }
 	-P 3; !D 3
@@ -669,16 +835,22 @@ SubPulse(P V=1 Dur=2)
 	100 {
 		+p (P - p * .023); d D; +D .2
 	}
-	50 {
-		-p .01; d 70
-	}
-	50 {
-		+p .01; *a .95; d 100
+	if short {
+		50 {
+			-p .01; *a .95; d 50
+		}
+	} else {
+		50 {
+			-p .01; d 70
+		}
+		50 {
+			+p .01; *a .95; d 100
+		}
 	}
 	a 0; d 1000
 }
 
-.Bass1(Tr)
+Bass1(Tr)
 {
 	struct { inline; panmix }
 	+tr Tr
@@ -686,7 +858,7 @@ SubPulse(P V=1 Dur=2)
 	Drop;	Reso2;	Drone 0 .4;	td 64
 }
 
-.SubLoop(Tr)
+SubLoop(Tr)
 {
 	struct { inline; panmix }
 	+tr (Tr - 2)
@@ -722,7 +894,7 @@ SubPulse(P V=1 Dur=2)
 	}
 }
 
-.BassSP(Tr P2)
+BassSP(Tr P2)
 {
 	struct { inline; panmix }
 	+tr (Tr - 3)
@@ -732,7 +904,7 @@ SubPulse(P V=1 Dur=2)
 	1<1;			2<1
 }
 
-.BassT(Tr)
+BassT(Tr)
 {
 	struct { inline; panmix }
 	+tr Tr
@@ -742,7 +914,7 @@ SubPulse(P V=1 Dur=2)
 					Heavy 0 .7;	td 32
 }
 
-.Bass3(Tr)
+Bass3(Tr)
 {
 	struct { inline; panmix }
 	+tr Tr
@@ -752,7 +924,7 @@ SubPulse(P V=1 Dur=2)
 	*<1
 }
 
-.St(Tr)
+St(Tr)
 {
 	def i Strings; def v .3; +tr (Tr + 1)
 	1:i 0 v;	2:i 3n v;	3:i 7n v;	td 16
@@ -762,9 +934,9 @@ SubPulse(P V=1 Dur=2)
 	*<1
 }
 
-.St2(Tr)
+St2(Tr)
 {
-	def i OctStrings; def v .7; +tr (Tr + 1)
+	def i OctStrings; def v .6; +tr (Tr + 1)
 	1:i 0 v;	td 6;	1<1
 	1:i 7n v;	td 6;	1<1
 	1:i 3n v;	td 4;	1<1
@@ -787,7 +959,7 @@ SubPulse(P V=1 Dur=2)
 			td 8
 }
 
-.ArpM(Tr TrS)
+ArpM(Tr TrS)
 {
 	+tr Tr
 	SoftArp 0 .6;		St TrS;	td 16
@@ -795,7 +967,7 @@ SubPulse(P V=1 Dur=2)
 	SoftArp -5n .7 2n;		td 32
 }
 
-.Perc1Fill()
+Perc1Fill()
 {
 	struct { inline; panmix }
 	tr 0
@@ -807,7 +979,8 @@ SubPulse(P V=1 Dur=2)
 	Tom 3n .5;			td 1
 	Tom;				td 1
 }
-.Perc1()
+
+Perc1()
 {
 	struct { inline; panmix }
 	tr 0
@@ -817,7 +990,8 @@ SubPulse(P V=1 Dur=2)
 	BDrum 0 .5;		td 8
 	NBurst -4n .5
 }
-.BassI()
+
+BassI()
 {
 	struct { inline 0 *; panmix * > }
 	vol .1; set vol; vol .3
@@ -826,25 +1000,37 @@ SubPulse(P V=1 Dur=2)
 	vol 1;						td 24
 	vol 0; *<1;					td 8
 }
-.LongIntro()
+
+BassR()
+{
+	struct { inline 0 *; panmix * > }
+	def i Strings; def v .25; !n 0
+	vol 0; set vol; vol 1
+	1:i 4n v;	2:i 7n v;	3:i 11n v;	4:i -32n v;	td 14
+	vol 0;								td 1
+	kill *
+}
+
+LongIntro()
 {
 	BassI;				td 6
 	Perc1;	SoftArp -2 1;		td 32
 		SoftArp -1 .8 -1n;	td 32
 }
-.ShortIntro()
+
+ShortIntro()
 {
 	Perc1Fill;	td 1
 	PreTheme;	td 4
 }
 
-.Theme()
+Theme()
 {
 	Perc3;	BassT; LowCymbal 0 .5;	ArpM;	MeloTheme;	td 64
 			Cymbal 0 .2;	ArpM;			td 64
 }
 
-.PostTheme()
+PostTheme()
 {
 	SubLoop; Perc2;	Bass3;	LowCymbal -1 .3; ArpM 0 -1;	St2;	td 32
 									td 32
@@ -852,17 +1038,34 @@ SubPulse(P V=1 Dur=2)
 									td 32
 }
 
-.Inter()
+PostTheme2()
 {
+	PT2Melo
+	SubLoop; Perc2;	Bass3;	LowCymbal -1 .3; ArpM 0 -1;		td 32
+									td 32
+			Cymbal 0 .1;		ArpM 0 -1;		td 32
+									td 32
+}
+
+Inter()
+{
+	SpaceFeep
 	Perc2;	Bass1;	Explosion 0 .3;	LowCymbal -1 .3;	Fx1;	td 32
 					SoftArp -2;			td 32
 					Cymbal 0 .1;		Fx2;	td 32
-					SoftArp -1 .8 -1n;		td 28
+					SoftArp -1 .8 -1n;		td 32
+}
+
+Rise()
+{
+	BassR;		Drop 0 .5 1;	LowCymbal 0 .25;		td 12
 	PreTheme 4n;							td 4
 }
 
-.Inter2()
+
+Inter2()
 {
+	SpaceFeep
 	SubLoop; Perc2;	Bass3;	Explosion 0 .3;	LowCymbal -1 .3;	td 32
 					SoftArp -2;			td 32
 					Cymbal 0 .1;			td 32
@@ -870,12 +1073,12 @@ SubPulse(P V=1 Dur=2)
 	PreTheme;							td 4
 }
 
-.Outro()
+Outro()
 {
 	ResoOut; Explosion 0 .5; LowCymbal -1 .2; SoftArp2 -1 1 2n; td 32
 }
 
-.Main(L I)
+Main(L I)
 {
 	tempo 94 4
 	!Tr0 tr; !Tr 2n
@@ -893,7 +1096,13 @@ SubPulse(P V=1 Dur=2)
 	Theme;				td 128
 	PostTheme;			td 128
 	Inter;				td 128
-	+tr 4n; Theme; -tr 4n;		td 128
+
+	Rise;				td 16
+	+tr 4n
+	Theme;				td 128
+	PostTheme2;			td 128
+	-tr 4n
+
 	Inter2;				td 128
 	Theme;				td 128
 	PostTheme;			td 128
