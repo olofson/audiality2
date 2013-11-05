@@ -8,6 +8,9 @@ link_directories(${AUDIALITY2_BINARY_DIR})
 
 set(AUDIALITY2_LIBRARY audiality2)
 
+add_executable(rtsubtest WIN32 MACOSX_BUNDLE rtsubtest.c)
+target_link_libraries(rtsubtest ${AUDIALITY2_LIBRARY})
+
 find_package(SDL)
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
