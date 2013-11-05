@@ -38,7 +38,7 @@ static int audiobuf = 4096;
 static int a2flags = A2_EXPORTALL | A2_RTERRORS | A2_TIMESTAMP;
 
 /* State and control */
-static A2_state *state = NULL;	/* Engine state*/
+static A2_state *state = NULL;	/* Engine state */
 static A2_handle module = -1;	/* Handle of last loaded module */
 
 static double stoptime = 0.0f;	/* (Need final sample rate for stopframes!) */
@@ -354,6 +354,7 @@ static void usage(const char *exename)
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
 			"           -x          Print module exports\n"
 			"           -xr         Print engine root exports\n"
+			"           -v          Print engine and header versions\n"
 			"           -h          Help\n\n");
 }
 
@@ -462,7 +463,7 @@ int main(int argc, const char *argv[])
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(a2_LastError());
 	a2flags |= drv->flags & A2_REALTIME;
-	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, 2,
+	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			a2flags | A2_STATECLOSE)))
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
