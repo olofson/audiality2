@@ -305,7 +305,7 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 	memset(v->cwrite, 0, sizeof(v->cwrite));
 	++st->totalvoices;
 #ifdef DEBUG
-	if(st->audio && st->audio->Process)
+	if(st->audio && st->audio->Process && (st->config->flags & A2_REALTIME))
 		fprintf(stderr, "Audiality 2: Voice pool exhausted! "
 				"Allocated new voice %p.\n", v);
 #endif

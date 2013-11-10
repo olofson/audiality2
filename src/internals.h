@@ -701,8 +701,9 @@ static inline A2_block *a2_NewBlock(A2_state *st)
 	if(!b)
 		return NULL;
 #ifdef DEBUG
-	fprintf(stderr, "Audiality 2: Block pool exhausted!"
-			"Allocated new block %p.\n", b);
+	if(st->config->flags & A2_REALTIME)
+		fprintf(stderr, "Audiality 2: Block pool exhausted! "
+				"Allocated new block %p.\n", b);
 #endif
 	return b;
 }
@@ -784,8 +785,9 @@ static inline A2_event *a2_NewEvent(A2_state *st)
 	if(!e)
 		return NULL;
 #ifdef DEBUG
-	fprintf(stderr, "Audiality 2: Event pool exhausted!"
-			"Allocated new event %p.\n", e);
+	if(st->config->flags & A2_REALTIME)
+		fprintf(stderr, "Audiality 2: Event pool exhausted! "
+				"Allocated new event %p.\n", e);
 #endif
 	EVLEAKTRACK(++st->numevents;)
 	return e;
