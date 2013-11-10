@@ -384,7 +384,7 @@ static void parse_args(int argc, const char *argv[])
 		}
 		else if(strncmp(argv[i], "-c", 2) == 0)
 		{
-			samplerate = atoi(&argv[i][2]);
+			channels = atoi(&argv[i][2]);
 			printf("[Audio channels: %d]\n", channels);
 		}
 		else if(strncmp(argv[i], "-p", 2) == 0)

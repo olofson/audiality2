@@ -344,8 +344,15 @@ A2_errors a2_init_root_voice(A2_state *st)
 {
 	int i, res;
 	A2_voice *v;
-	A2_program *rootdriver = a2_GetProgram(st,
-			a2_Get(st, A2_ROOTBANK, "a2_rootdriver"));
+	A2_program *rootdriver;
+	/*
+	 * FIXME: We can't handle arbitrary channel counts very well at this
+	 * FIXME: point, so we actually mix stereo internally at all times.
+	 */
+	const char *rd = "a2_rootdriver";
+	if(st->config->channels < 2)
+		rd = "a2_rootdriver_mono";
+	rootdriver = a2_GetProgram(st, a2_Get(st, A2_ROOTBANK, rd));
 	if(!rootdriver)
 		return A2_INTERNAL + 400;
 	if(!(v = a2_VoiceAlloc(st)))
