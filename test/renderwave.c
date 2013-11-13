@@ -1,12 +1,9 @@
 /*
- * rtsubtest.c - Audiality 2 realtime substate test
+ * renderwave.c - Audiality 2 render-to-wave via low level API
  *
- *	This test runs a master realtime state with a substate that also runs
- *	a realtime driver. That is, two asynchronous realtime states sharing
- *	banks, programs, waves etc.
- *
- *	NOTE:	This test needs a driver/API that supports multiple opens
- *		or multiple soundcards, or the substate will fail to open!
+ *	This test sets up a realtime state with an off-line substate, uses the
+ *	latter to render sound into a wave, and then plays that on the realtime
+ *	context.
  *
  * Copyright 2013 David Olofson <david@olofson.net>
  *
@@ -34,7 +31,6 @@
 #include <unistd.h>
 #include "audiality2.h"
 #include "waves.h"
-#include "units.h"
 
 
 /* Configuration */
@@ -50,41 +46,16 @@ static TEST_settings settings[2] = {
 		"default", 44100, 2, 4096
 	},
 	{
-		"default", 16000, 2, 1024
+		"buffer", 44100, 1, 1024
 	}
 };
-
-/* State and control */
-static A2_state *state = NULL;		/* Engine state */
-static A2_state *substate = NULL;	/* Substate of 'state' */
 
 static int do_exit = 0;
 
 
-static void print_version(const char *exename)
-{
-	unsigned v = a2_LinkedVersion();
-	fprintf(stderr, "Audiality 2 rtsubtest\n"
-			"Linked against v%d.%d.%d.%d\n",
-			A2_MAJOR(v),
-			A2_MINOR(v),
-			A2_MICRO(v),
-			A2_BUILD(v));
-	v = a2_HeaderVersion();
-	fprintf(stderr, "Compiled against v%d.%d.%d.%d\n",
-			A2_MAJOR(v),
-			A2_MINOR(v),
-			A2_MICRO(v),
-			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2010-2013 David Olofson\n");
-}
-
-
 static void usage(const char *exename)
 {
-	fprintf(stderr,	"\n");
-	print_version(exename);
-	fprintf(stderr,	"\nUsage: %s [switches] <file>\n\n", exename);
+	fprintf(stderr,	"\n\nUsage: %s [switches] <file>\n\n", exename);
 	fprintf(stderr, "Switches:  -d[s]<name>[,opt[,opt[,...]]]\n"
 			"                       Audio driver + options\n"
 			"           -b[s]<n>    Audio buffer size (frames)\n"
@@ -132,17 +103,12 @@ static void parse_args(int argc, const char *argv[])
 		}
 		else if(strncmp(argv[i], "-c", 2) == 0)
 		{
-			s->samplerate = atoi(&argv[i][2 + skip]);
+			s->channels = atoi(&argv[i][2 + skip]);
 			printf("[Channels %d: %d]\n", si + 1, s->channels);
 		}
 		else if(strncmp(argv[i], "-h", 2) == 0)
 		{
 			usage(argv[0]);
-			exit(0);
-		}
-		else if(strncmp(argv[i], "-v", 2) == 0)
-		{
-			print_version(argv[0]);
 			exit(0);
 		}
 		else
@@ -157,24 +123,110 @@ static void parse_args(int argc, const char *argv[])
 
 static void breakhandler(int a)
 {
-	fprintf(stderr, "rtsubtest: Stopping...\n");
+	fprintf(stderr, "Stopping...\n");
 	do_exit = 1;
 }
 
 
-static void fail(A2_errors err)
+static void fail(unsigned where, A2_errors err)
 {
-	fprintf(stderr, "ERROR: %s\n", a2_ErrorString(err));
+	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
 	exit(100);
+}
+
+
+static A2_handle render_wave(A2_state *st, A2_handle h)
+{
+	A2_errors res;
+	A2_handle wh;
+	A2_driver *drv;
+	A2_config *cfg;
+	A2_state *ss;
+	int frames = 0;
+
+	/* Configure and open substate */
+	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, settings[1].audiodriver)))
+		return -a2_LastError();
+	if(!(cfg = a2_OpenConfig(settings[1].samplerate, settings[1].audiobuf,
+			settings[1].channels, A2_STATECLOSE)))
+		return -a2_LastError();
+	if(drv && a2_AddDriver(cfg, drv))
+		return -a2_LastError();
+	if(!(ss = a2_SubState(st, cfg)))
+		return -a2_LastError();
+	if(settings[1].samplerate != cfg->samplerate)
+		printf("Actual substate sample rate: %d (requested %d)\n",
+				cfg->samplerate, settings[1].samplerate);
+
+	/* Create target wave */
+	/*
+	 * FIXME: Waves probably need a finetune property, or fractional period,
+	 * FIXME: so we can specify more accurately what pitch 0.0 means...
+	 */
+	if((wh = a2_WaveNew(st, A2_WWAVE, cfg->samplerate / A2_MIDDLEC, 0)) < 0)
+	{
+		fprintf(stderr, "a2_WaveNew() failed!\n");
+		a2_Close(ss);
+		return wh;
+	}
+
+	/* Start sound! */
+	a2_Play(ss, a2_RootVoice(ss), h);
+
+	/* Render... */
+	while(1)
+	{
+		int i;
+		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
+		int32_t max = 0x80000000;
+		if((res = a2_Run(ss, cfg->buffer)) < 0)
+		{
+			fprintf(stderr, "a2_Run() failed!\n");
+			a2_Close(ss);
+			a2_Release(st, wh);
+			return res;
+		}
+		for(i = 0; i < cfg->buffer; ++i)
+			if(buf[i] > max)
+				max = buf[i];
+			else if(-buf[i] > max)
+				max = -buf[i];
+		if((frames > 1000) && (max < 256))
+			break;
+		frames += cfg->buffer;
+		if((res = a2_Write(st, wh, A2_I24, buf,
+				cfg->buffer * sizeof(int32_t))))
+		{
+			fprintf(stderr, "a2_Write() failed!\n");
+			a2_Close(ss);
+			a2_Release(st, wh);
+			return -res;
+		}
+	}
+
+	/* Close substate */
+#if 0
+/*FIXME: a2_Close() is broken and unloads everything! */
+	a2_Close(ss);
+#endif
+
+	/* Prepare and return wave */
+	if((res = a2_Flush(st, wh)))
+	{
+		fprintf(stderr, "a2_Flush() failed!\n");
+		a2_Release(st, wh);
+		return -res;
+	}	
+	return wh;
 }
 
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h, songh;
-	A2_driver *drv = NULL;
+	A2_handle h, songh, ph, vh;
+	A2_driver *drv;
 	A2_config *cfg;
-	unsigned flags = A2_RTERRORS | A2_TIMESTAMP | A2_REALTIME;
+	A2_state *state;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -183,42 +235,44 @@ int main(int argc, const char *argv[])
 
 	/* Configure and open master state */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, settings[0].audiodriver)))
-		fail(a2_LastError());
+		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(settings[0].samplerate, settings[0].audiobuf,
-			settings[0].channels, flags | A2_STATECLOSE)))
-		fail(a2_LastError());
+			settings[0].channels, A2_RTERRORS | A2_TIMESTAMP |
+			A2_REALTIME | A2_STATECLOSE)))
+		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
-		fail(a2_LastError());
+		fail(3, a2_LastError());
 	if(!(state = a2_Open(cfg)))
-		fail(a2_LastError());
+		fail(4, a2_LastError());
 	if(settings[0].samplerate != cfg->samplerate)
-		printf("rtsubtest: Actual master state sample rate: %d "
-				"(requested %d)\n",
+		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[0].samplerate);
 
-	/* Configure and open substate */
-	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, settings[1].audiodriver)))
-		fail(a2_LastError());
-	if(!(cfg = a2_OpenConfig(settings[1].samplerate, settings[1].audiobuf,
-			settings[1].channels, flags | A2_STATECLOSE)))
-		fail(a2_LastError());
-	if(drv && a2_AddDriver(cfg, drv))
-		fail(a2_LastError());
-	if(!(substate = a2_SubState(state, cfg)))
-		fail(a2_LastError());
-	if(settings[1].samplerate != cfg->samplerate)
-		printf("rtsubtest: Actual substate sample rate: %d "
-				"(requested %d)\n",
-				cfg->samplerate, settings[1].samplerate);
+	fprintf(stderr, "Loading...\n");
+	
+	/* Load jingle */
+	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
+		fail(5, -h);
+	if((songh = a2_Get(state, h, "Song")) < 0)
+		fail(6, -songh);
 
-	/* Load sounds */
-	h = a2_Load(state, "data/k2intro.a2s");
-	songh = a2_Get(state, h, "Song");
+	/* Load wave player program */
+	if((h = a2_Load(state, "data/playtestwave.a2s")) < 0)
+		fail(7, -h);
+	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
+		fail(8, -ph);
+
+	/* Render */
+	fprintf(stderr, "Rendering...\n");
+	if((h = render_wave(state, songh)) < 0)
+		fail(9, -h);
 
 	/* Start playing! */
+	fprintf(stderr, "Playing...\n");
 	a2_Now(state);
-	a2_Play(state, a2_RootVoice(state), songh);
-	a2_Play(substate, a2_RootVoice(substate), songh);
+	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
+	if(vh < 0)
+		fail(10, -vh);
 
 	/* Wait for completion or abort */
 	while(!do_exit)
@@ -226,6 +280,10 @@ int main(int argc, const char *argv[])
 		a2_Now(state);
 		sleep(1);
 	}
+
+	a2_Now(state);
+	a2_Send(state, vh, 1);
+	sleep(1);
 
 	/*
 	 * Not very nice at all - just butcher everything! But this is supposed

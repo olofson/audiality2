@@ -172,7 +172,7 @@ static A2_errors do_write(A2_wave *w, unsigned offset,
 		break;
 	  case A2_I24:
 		for(s = 0; s < length; ++s)
-			d[s] = ((int32_t *)data)[s] >> 16;
+			d[s] = ((int32_t *)data)[s] >> 8;
 		break;
 	  case A2_I32:
 		for(s = 0; s < length; ++s)
@@ -442,43 +442,6 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 }
 
 
-#if 0
-static A2_handle test_render(A2_state *st, A2_handle bank, const char *name,
-		unsigned frames)
-{
-	A2_errors res;
-	A2_handle h;
-	int i;
-	int s = 0;
-	int16_t buf[SC_WPER];
-	if((h = a2_WaveNew(st, A2_WMIPWAVE, SC_WPER, 0)) < 0)
-		return h;
-	while(s < frames)
-	{
-		for(i = 0; (i < SC_WPER) && (s < frames); ++i, ++s)
-			buf[i] = sin(s * 2.0f * M_PI / 1000 +
-					sin(s * .0001) * 10) * 32767.0f;
-		if((res = a2_Write(st, h, A2_I16, buf, i * sizeof(int16_t))))
-		{
-			a2_Release(st, h);
-			return -res;
-		}
-	}
-	if((res = a2_Flush(st, h)))
-	{
-		a2_Release(st, h);
-		return -res;
-	}
-	if((res = a2_Export(st, bank, h, name)))
-	{
-		a2_Release(st, h);
-		return -res;
-	}
-	return h;
-}
-#endif
-
-
 A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 {
 	int i, s, h;
@@ -566,9 +529,6 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		buf[s] = sin(s * (1 + s * .1) * .0005) * 32767;
 	h = upload_export(st, bank, "chirp", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
-	if(h < 0)
-		return -h;
-	h = test_render(st, bank, "longsweep", 1000000);
 	if(h < 0)
 		return -h;
 #endif

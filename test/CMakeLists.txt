@@ -8,8 +8,14 @@ link_directories(${AUDIALITY2_BINARY_DIR})
 
 set(AUDIALITY2_LIBRARY audiality2)
 
-add_executable(rtsubtest WIN32 MACOSX_BUNDLE rtsubtest.c)
-target_link_libraries(rtsubtest ${AUDIALITY2_LIBRARY})
+add_executable(rtsubstate WIN32 MACOSX_BUNDLE rtsubstate.c)
+target_link_libraries(rtsubstate ${AUDIALITY2_LIBRARY})
+
+add_executable(renderwave WIN32 MACOSX_BUNDLE renderwave.c)
+target_link_libraries(renderwave ${AUDIALITY2_LIBRARY})
+
+add_executable(streamwave WIN32 MACOSX_BUNDLE streamwave.c)
+target_link_libraries(streamwave ${AUDIALITY2_LIBRARY})
 
 find_package(SDL)
 if(SDL_FOUND)
