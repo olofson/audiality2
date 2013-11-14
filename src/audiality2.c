@@ -527,12 +527,16 @@ void a2_Close(A2_state *st)
 {
 	int i;
 
-	/* Unload any "forgotten" API created objects... */
-	a2_UnloadAll(st);
+	/* Master state? */
+	if(!st->parent)
+	{
+		/* Unload any "forgotten" API created objects... */
+		a2_UnloadAll(st);
 
-	/* First, close all substates! */
-	if(st->next)
-		a2_Close(st->next);
+		/* Close all substates! */
+		while(st->next)
+			a2_Close(st->next);
+	}
 
 	/* Detach the audio callack */
 	if(st->audio)

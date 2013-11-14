@@ -205,10 +205,7 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 	}
 
 	/* Close substate */
-#if 0
-/*FIXME: a2_Close() is broken and unloads everything! */
 	a2_Close(ss);
-#endif
 
 	/* Prepare and return wave */
 	if((res = a2_Flush(st, wh)))
