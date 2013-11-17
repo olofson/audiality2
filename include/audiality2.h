@@ -278,15 +278,19 @@ int a2_UnloadAll(A2_state *st);
  */
 int a2_Run(A2_state *st, unsigned frames);
 
-/*TODO: Render A2S program into wave. */
-A2_handle a2_RenderWave(A2_state *st, A2_handle bank, const char *name,
-		unsigned period, int flags, unsigned samplerate, unsigned length,
+/*
+ * Run 'program' off-line with the specified arguments, rendering at
+ * 'samplerate', writing the output to 'stream'.
+ * 
+ * Rendering will stop after 'length' sample frames have been rendered, or if
+ * 'length' is 0, when the output is silent.
+ *
+ * Returns number of sample frames rendered, or a negated A2_errors error code.
+ */
+int a2_Render(A2_state *st,
+		A2_handle handle,
+		unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv);
-
-/*TODO: Render A2S program, provided as source code string, into wave. */
-A2_handle a2_RenderString(A2_state *st, A2_handle bank, const char *name,
-		unsigned period, int flags, unsigned samplerate, unsigned length,
-		const char *source);
 
 
 /*---------------------------------------------------------
@@ -486,30 +490,61 @@ float a2_Rand(A2_state *st, float max);
 
 typedef enum A2_properties
 {
-	/* Global settings and profiling information */
-	A2_PSAMPLERATE=	0x00010000,	/* Audio I/O sample rate */
-	A2_PBUFFER,			/* Audio I/O buffer size */
-	A2_PACTIVEVOICES,		/* Number of active voices */
-	A2_PFREEVOICES,			/* Number of voices in pool */
-	A2_PTOTALVOICES,		/* Number of voices in total */
-	A2_PCPULOADAVG,			/* Average DSP CPU load (%) */
-	A2_PCPULOADMAX,			/* Peak DSP CPU load (%) */
-	A2_PCPUTIMEAVG,			/* Average buffer processing time (ms) */
-	A2_PCPUTIMEMAX,			/* Peak buffer processing time (ms) */
-	A2_PINSTRUCTIONS,		/* VM instructions executed */
-	A2_PEXPORTALL,			/* Export all programs! (Debug) */
+	/*
+	 * General properties (most objects)
+	 */
+	A2_PGENERAL =		0x00010000,
 
-	/* General properties */
-	A2_PCHANNELS =	0x00020000,	/* Number of channels */
-	A2_PFLAGS,			/* Flags */
-	A2_PREFCOUNT,			/* Reference count of the handle */
+	A2_PCHANNELS,		/* Number of channels */
+	A2_PFLAGS,		/* Flags */
+	A2_PREFCOUNT,		/* Reference count of the handle */
 
-	/* Wave properties */
-	A2_PLOOPED =	0x00030000	/* Waveform is looped */
+	/*
+	 * Global settings (state)
+FIXME: These don't really fit here, as states don't have handles.
+	 */
+	A2_PSTATE =		0x00020000,
+
+	A2_PSAMPLERATE,		/* Audio I/O sample rate */
+	A2_PBUFFER,		/* Audio I/O buffer size */
+	A2_PEXPORTALL,		/* Export all programs! (Debug) */
+	A2_POFFLINEBUFFER,	/* Buffer size for offline rendering */
+	A2_PSILENCELEVEL,	/* Max peak level considered as silence */
+	A2_PSILENCEWINDOW,	/* Rolling window size for silence detection */
+	A2_PSILENCEGRACE,	/* Grace period before considering silence */
+
+	/*
+	 * Statistics (state)
+	 */
+	A2_PSTATISTICS =	0x00030000,
+
+	A2_PACTIVEVOICES,	/* Number of active voices */
+	A2_PFREEVOICES,		/* Number of voices in pool */
+	A2_PTOTALVOICES,	/* Number of voices in total */
+	A2_PCPULOADAVG,		/* Average DSP CPU load (%) */
+	A2_PCPULOADMAX,		/* Peak DSP CPU load (%) */
+	A2_PCPUTIMEAVG,		/* Average buffer processing time (ms) */
+	A2_PCPUTIMEMAX,		/* Peak buffer processing time (ms) */
+	A2_PINSTRUCTIONS,	/* VM instructions executed */
+
+	/*
+	 * Wave properties
+	 */
+	A2_PWAVE =		0x00040000,
+
+	A2_PLOOPED,		/* Waveform is looped */
+	A2_PLENGTH,		/* Length of wave (sample frames) */
+
 } A2_properties;
 
 int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p);
 A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v);
+
+#if 0
+/* TODO: */
+int a2_GetStateProperty(A2_state *st, A2_properties p);
+A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v);
+#endif
 
 #ifdef __cplusplus
 };

@@ -596,6 +596,12 @@ struct A2_sharedstate
 	A2_program	*terminator;	/* Dummy program for killed voices */
 	A2_compiler	*c;		/* A2S compiler */
 	char		strbuf[A2_TMPSTRINGSIZE]; /* For API return strings */
+
+	unsigned	offlinebuffer;	/* A2_POFFLINEBUFFER */
+
+	unsigned	silencelevel;	/* A2_PSILENCELEVEL */
+	unsigned	silencewindow;	/* A2_PSILENCEWINDOW */
+	unsigned	silencegrace;	/* A2_PSILENCEGRACE */
 };
 
 /* Audiality 2 state */

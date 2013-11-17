@@ -1,5 +1,8 @@
 /*
- * streamwave.c - Audiality 2 wave upload via the stream API
+ * renderwave2.c - Audiality 2 render-to-wave via a2_RenderWave()
+ *
+ *	This does essentially the same thing as renderwave.c, except using the
+ *	higher level conveniency API call a2_RenderWave().
  *
  * Copyright 2013 David Olofson <david@olofson.net>
  *
@@ -25,13 +28,8 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
-#include <math.h>
 #include "audiality2.h"
 #include "waves.h"
-
-
-/* Fragment size for wave rendering/uploading */
-#define	FRAGSIZE	2048
 
 
 /* Configuration */
@@ -39,38 +37,9 @@ const char *audiodriver = "default";
 int samplerate = 44100;
 int channels = 2;
 int audiobuf = 4096;
+int waverate = 0;
 
 static int do_exit = 0;
-
-
-static A2_handle upload_wave(A2_state *st, unsigned len)
-{
-	A2_errors res;
-	A2_handle h;
-	int i;
-	int s = 0;
-	int16_t buf[FRAGSIZE];
-	if((h = a2_WaveNew(st, A2_WMIPWAVE, 128, 0)) < 0)
-		return h;
-	while(s < len)
-	{
-		for(i = 0; (i < FRAGSIZE) && (s < len); ++i, ++s)
-			buf[i] = sin(s * 2.0f * M_PI / 100 +
-					sin(s * .0013) * sin(s * .002) * 10) *
-					32767.0f;
-		if((res = a2_Write(st, h, A2_I16, buf, i * sizeof(int16_t))))
-		{
-			a2_Release(st, h);
-			return -res;
-		}
-	}
-	if((res = a2_Flush(st, h)))
-	{
-		a2_Release(st, h);
-		return -res;
-	}
-	return h;
-}
 
 
 static void usage(const char *exename)
@@ -81,10 +50,12 @@ static void usage(const char *exename)
 			"           -b<n>       Audio buffer size (frames)\n"
 			"           -r<n>       Audio sample rate (Hz)\n"
 			"           -c<n>       Number of audio channels\n\n"
+			"           -wr<n>      Wave sample rate (Hz)\n"
 			"           -h          Help\n\n");
 }
 
 
+/* Parse driver selection and configuration switches */
 static void parse_args(int argc, const char *argv[])
 {
 	int i;
@@ -112,6 +83,11 @@ static void parse_args(int argc, const char *argv[])
 			channels = atoi(&argv[i][2]);
 			printf("[Channels %d]\n", channels);
 		}
+		else if(strncmp(argv[i], "-wr", 3) == 0)
+		{
+			waverate = atoi(&argv[i][3]);
+			printf("[Wave sample rate: %d]\n", waverate);
+		}
 		else if(strncmp(argv[i], "-h", 2) == 0)
 		{
 			usage(argv[0]);
@@ -133,16 +109,16 @@ static void breakhandler(int a)
 }
 
 
-static void fail(A2_errors err)
+static void fail(unsigned where, A2_errors err)
 {
-	fprintf(stderr, "ERROR, Audiality 2 result: %s\n", a2_ErrorString(err));
+	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
 	exit(100);
 }
 
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h, ph, vh;
+	A2_handle h, songh, ph, vh;
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
@@ -154,35 +130,48 @@ int main(int argc, const char *argv[])
 
 	/* Configure and open master state */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
-		fail(a2_LastError());
+		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels, A2_RTERRORS |
 			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
-		fail(a2_LastError());
+		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
-		fail(a2_LastError());
+		fail(3, a2_LastError());
 	if(!(state = a2_Open(cfg)))
-		fail(a2_LastError());
+		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
+	fprintf(stderr, "Loading...\n");
+	
+	/* Load jingle */
+	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
+		fail(5, -h);
+	if((songh = a2_Get(state, h, "Song")) < 0)
+		fail(6, -songh);
+
 	/* Load wave player program */
 	if((h = a2_Load(state, "data/playtestwave.a2s")) < 0)
-		fail(-h);
+		fail(7, -h);
 	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
-		fail(-ph);
+		fail(8, -ph);
 
-	/* Generate wave */
-	fprintf(stderr, "Generating wave...\n");
-	if((h = upload_wave(state, 100000)) < 0)
-		fail(-h);
+	/* Render! */
+	fprintf(stderr, "Rendering...\n");
+	if(!waverate)
+		waverate = samplerate;
+	if((h = a2_RenderWave(state,
+			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags */
+			waverate, 0,	/* sample rate, stop when silent */
+			songh, 0, NULL)) < 0)	/* program, no args */
+		fail(9, -h);
 
 	/* Start playing! */
 	fprintf(stderr, "Playing...\n");
 	a2_Now(state);
 	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
-		fail(-vh);
+		fail(10, -vh);
 
 	/* Wait for completion or abort */
 	while(!do_exit)
@@ -195,10 +184,6 @@ int main(int argc, const char *argv[])
 	a2_Send(state, vh, 1);
 	sleep(1);
 
-	/*
-	 * Not very nice at all - just butcher everything! But this is supposed
-	 * to work without memory leaks or anything, so we may as well test it.
-	 */
 	a2_Close(state);
 	return 0;
 }

@@ -905,6 +905,16 @@ A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
 int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
 {
 	int res;
+#if 0
+/*TODO:*/
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
+	if(hi)
+	{
+		A2_typeinfo *ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm,
+				hi->typecode);
+		
+	}
+#endif
 	switch(p)
 	{
 	  case A2_PSAMPLERATE:
@@ -935,6 +945,14 @@ int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
 		return st->instructions;
 	  case A2_PEXPORTALL:
 		return st->ss->c->exportall;
+	  case A2_POFFLINEBUFFER:
+		return st->ss->offlinebuffer;
+	  case A2_PSILENCELEVEL:
+		return st->ss->silencelevel;
+	  case A2_PSILENCEWINDOW:
+		return st->ss->silencewindow;
+	  case A2_PSILENCEGRACE:
+		return st->ss->silencegrace;
 	  default:
 		return 0;
 	}
@@ -959,6 +977,18 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 		return A2_OK;
 	  case A2_PEXPORTALL:
 		st->ss->c->exportall = v;
+		return A2_OK;
+	  case A2_POFFLINEBUFFER:
+		st->ss->offlinebuffer = v;
+		return A2_OK;
+	  case A2_PSILENCELEVEL:
+		st->ss->silencelevel = v;
+		return A2_OK;
+	  case A2_PSILENCEWINDOW:
+		st->ss->silencewindow = v;
+		return A2_OK;
+	  case A2_PSILENCEGRACE:
+		st->ss->silencegrace = v;
 		return A2_OK;
 	  default:
 		return A2_NOTFOUND;

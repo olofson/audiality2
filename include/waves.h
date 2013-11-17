@@ -184,6 +184,30 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags);
  */
 A2_wave *a2_GetWave(A2_state *st, A2_handle handle);
 
+
+/*---------------------------------------------------------
+	Offline rendering
+---------------------------------------------------------*/
+
+/*
+ * Create a wave as specified by 'wt', 'period' and 'flags', then run 'program'
+ * off-line with the specified arguments, writing the output into the wave.
+ *
+ * If 'period' is 0, wave tuning will be configured so that a pitch of 0.0
+ * plays the wave back at 'samplerate'.
+ *
+ * Rendering will stop after 'length' sample frames have been rendered, or if
+ * 'length' is 0, when the output is silent.
+ * 
+ * The wave will be returned prepared and ready for use.
+ *
+ * Returns the handle of the rendered wave, or a negated A2_errors error code.
+ */
+A2_handle a2_RenderWave(A2_state *st,
+		A2_wavetypes wt, unsigned period, int flags,
+		unsigned samplerate, unsigned length,
+		A2_handle program, unsigned argc, int *argv);
+
 #ifdef __cplusplus
 };
 #endif

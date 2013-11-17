@@ -17,6 +17,7 @@ set(sources
 	compiler.c
 	drivers.c
 	utilities.c
+	render.c
 	rchm.c
 	sfifo.c
 )

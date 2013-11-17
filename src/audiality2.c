@@ -274,6 +274,13 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			a2_Get(st, A2_ROOTBANK, "a2_terminator"))))
 		return A2_INTERNAL + 5;
 
+	/* Set up state property defaults */
+	st->ss->offlinebuffer = 256;
+
+	st->ss->silencelevel = 256;
+	st->ss->silencewindow = 256;
+	st->ss->silencegrace = 1024;
+
 	return A2_OK;
 }
 
@@ -477,11 +484,12 @@ A2_state *a2_SubState(A2_state *parent, A2_config *config)
 
 	/*
 	 * If no config is provided, create a typical offline streaming setup
-	 * based on the master state configuration!
+	 * based on the master state configuration and properties!
 	 */
 	if(!config)
 	{
-		config = a2_OpenConfig(parent->config->samplerate, 256,
+		config = a2_OpenConfig(parent->config->samplerate,
+				parent->ss->offlinebuffer,
 				parent->config->channels, 0);
 		if(!config)
 			return NULL;	/* Most likely not going to work! --> */
