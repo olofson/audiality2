@@ -65,22 +65,30 @@ typedef enum A2_tokens
 	TK_LABEL,	/* lval = value from symbol (code position) */
 	TK_REGISTER,	/* lval = value from symbol (register index) */
 	TK_INSTRUCTION,	/* lval = value from symbol (pseudo opcode) */
-	TK_DEF,		/* 'def' directive */
-	TK_STRUCT,	/* 'struct' keyword */
-	TK_WIRE,	/* 'wire' keyword */
-	TK_TEMPO,	/* 'tempo' macro "instruction" */
+	KW_DEF,		/* 'def' directive */
+	KW_STRUCT,	/* 'struct' keyword */
+	KW_WIRE,	/* 'wire' keyword */
+	KW_TEMPO,	/* 'tempo' macro "instruction" */
+	KW_WAVE,	/* 'wave' keyword */
 	TK_IF,		/* "if*" conditional variants */
-	TK_ELSE,	/* 'else' keyword */
+	KW_ELSE,	/* 'else' keyword */
 	TK_WHILE,	/* "while|w*" loop variants */
-	TK_FOR,		/* "for" loop */
+	KW_FOR,		/* "for" loop */
 	TK_GE,		/* ">=" */
 	TK_LE,		/* "<=" */
 	TK_EQ,		/* "==" */
 	TK_NE,		/* "!=" */
-	TK_AND,		/* 'and' operator keyword */
-	TK_OR,		/* 'or' operator keyword */
-	TK_XOR,		/* 'xor' operator keyword */
-	TK_NOT		/* 'not' operator keyword */
+	KW_AND,		/* 'and' operator keyword */
+	KW_OR,		/* 'or' operator keyword */
+	KW_XOR,		/* 'xor' operator keyword */
+	KW_NOT,		/* 'not' operator keyword */
+
+	/* Attributes for 'wave' definitions etc */
+	AT_WAVETYPE,	/* A2_wavetypes */
+	AT_PERIOD,
+	AT_SAMPLERATE,
+	AT_LENGTH,	/* (milliseconds) */
+	AT_FLAG		/* A2_LOOPED, A2_NORMALIZE etc */
 } A2_tokens;
 
 /*

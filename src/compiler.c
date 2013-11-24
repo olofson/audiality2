@@ -64,6 +64,15 @@ static void a2_FreeSymbol(A2_symbol *s)
 
 static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 {
+#ifdef DEBUG	
+	if(s->next)
+	{
+		fprintf(stderr, "INTERNAL ERROR: Tried to push symbol '%s', "
+				"which has a non-NULL 'next' field!\n",
+				s->name);
+		*(char *)NULL = 0;
+	}
+#endif
 	SYMBOLDBG(printf("a2_PushSymbol(\"%s\" tk:%d v:%d(%f) i:%d)\n",
 			s->name, s->token, s->value, s->value / 65536.0f,
 			s->index);)
@@ -73,9 +82,14 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 
 static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 {
+	SYMBOLDBG(printf("a2_FindSymbol('%s'): ", name);)
 	for( ; s; s = s->next)
 		if(!strcmp(name, s->name))
+		{
+			SYMBOLDBG(printf("FOUND!\n");)
 			return s;
+		}
+	SYMBOLDBG(printf("NOT FOUND!\n");)
 	return NULL;
 }
 
@@ -215,10 +229,12 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		break;
 	  case OP_SPAWN:
 	  case OP_SPAWND:
+	  case OP_SPAWNV:
 		if(!a2_GetProgram(c->state, arg))
 			a2c_Throw(c, A2_BADPROGRAM);
 		break;
 	  case OP_SEND:
+	  case OP_SENDR:
 	  case OP_SENDA:
 	  case OP_SENDS:
 	  case OP_CALL:
@@ -251,6 +267,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_QUANTR:
 	  case OP_SPAWNR:
 	  case OP_SPAWNDR:
+	  case OP_SPAWNVR:
 #if 0
 	  case OP_RAMPR:
 	  case OP_DETACHR:
@@ -1132,10 +1149,10 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 		  case TK_EQ:		op = OP_EQR;	break;
 		  case TK_NE:		op = OP_NER;	break;
 /*TODO: / */
-		  case TK_AND:		op = OP_ANDR;	break;
-		  case TK_OR:		op = OP_ORR;	break;
-		  case TK_XOR:		op = OP_XORR;	break;
-		  case TK_NOT:		op = OP_NOTR;	break;
+		  case KW_AND:		op = OP_ANDR;	break;
+		  case KW_OR:		op = OP_ORR;	break;
+		  case KW_XOR:		op = OP_XORR;	break;
+		  case KW_NOT:		op = OP_NOTR;	break;
 
 		  default:
 			if(c->l.token == delim)
@@ -1318,6 +1335,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Branch(c, op, c->pl.token, c->pl.val, c->l.val, NULL);
 		break;
 	  case OP_SPAWN:
+	  case OP_SPAWNV:
 	  case OP_SPAWND:
 		switch(a2c_Lex(c))
 		{
@@ -1352,6 +1370,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Code(c, op, c->l.val >> 16, 0);
 		break;
 	  case OP_SEND:
+	  case OP_SENDR:
 	  case OP_SENDS:
 	  case OP_SENDA:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
@@ -1362,14 +1381,22 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Code(c, op, r, p);
 		break;
 	  case OP_KILL:
-/*TODO: Expression!!! */
 		if(a2c_Lex(c) == '*')
 			a2c_Code(c, OP_KILLA, 0, 0);
 		else
 		{
-			if(c->l.token != TK_VALUE)
-				a2c_Throw(c, A2_EXPVALUE);
-			a2c_Code(c, OP_KILL, c->l.val >> 16, 0);
+			a2c_Unlex(c);
+			a2c_SimplExp(c, -1);
+			if(a2_IsValue(c->l.token))
+				a2c_Code(c, OP_KILL, 0, c->l.token);
+			else if(a2_IsRegister(c->l.token))
+			{
+				a2c_Code(c, OP_KILLR, c->l.val, 0);
+				if(c->l.token == TK_TEMPREG)
+					a2c_FreeReg(c, c->l.val);
+			}
+			else
+				a2c_Throw(c, A2_INTERNAL + 113);
 		}
 		break;
 	  case OP_SET:
@@ -1427,14 +1454,23 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 static void a2c_Def(A2_compiler *c, int export)
 {
 	A2_symbol *s;
+
+	/* Local? */
+	if(a2c_Lex(c) == '.')
+		export = 0;
+	else
+		a2c_Unlex(c);
+
 	a2c_Expect(c, TK_NAME, A2_EXPNAME);
 	s = a2c_Grab(c, c->l.sym);
+
 	/*
 	 * A bit ugly; we just ignore the 'export' argument if we're in a
 	 * scope from where symbols cannot be exported...
 	 */
 	if(c->canexport)
 		s->exported = export || c->exportall;
+
 	switch(a2c_Lex(c))
 	{
 	  case TK_VALUE:
@@ -1614,7 +1650,7 @@ static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 	  case TK_UNIT:
 		a2c_UnitSpec(c);
 		break;
-	  case TK_WIRE:
+	  case KW_WIRE:
 		a2c_WireSpec(c);
 		break;
 	  case TK_EOS:
@@ -1655,7 +1691,7 @@ static void a2c_StructDef(A2_compiler *c)
 	int matchout = 0;
 	int chainchannels = 0;	/* Number of channels in current chain */
 	A2_structitem *si;
-	if(a2c_Lex(c) != TK_STRUCT)
+	if(a2c_Lex(c) != KW_STRUCT)
 	{
 		a2c_Unlex(c);
 		return;
@@ -1914,7 +1950,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
 	}
 	a2c_Body(c, '}');
-	if(a2c_Lex(c) == TK_ELSE)
+	if(a2c_Lex(c) == KW_ELSE)
 	{
 		int fixelse = c->coder->pos;
 		if(loop)
@@ -1976,7 +2012,6 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 	switch(a2c_Lex(c))
 	{
 	  case TK_VALUE:
-/*TODO: Do this for expressions as well, for '<', ':' and '{' */
 		r = c->l.val >> 16;
 		switch(a2c_Lex(c))
 		{
@@ -2001,24 +2036,82 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 	  case TK_NAMESPACE:
 		a2c_Unlex(c);
 		r = a2c_Variable(c);
-		if(a2c_Lex(c) == '{')
+		switch(a2c_Lex(c))
 		{
+		  case '{':
 			a2c_Unlex(c);
 			a2c_TimesL(c);
-		}
-		else
-		{
+			return 1;
+		  case '<':
+			a2c_Instruction(c, OP_SENDR, r);
+			break;
+		  case ':':
+			a2c_Instruction(c, OP_SPAWNV, r);
+			break;
+		  default:
 			a2c_Unlex(c);
 			a2c_SimplExp(c, r);
 			a2c_CodeOpL(c, OP_LOAD, r);
+			break;
 		}
 		break;
+	  case '(':
+	  {
+		A2_tokens xtk;
+		a2c_Unlex(c);
+		a2c_SimplExp(c, -1);
+		xtk = c->l.token;
+		switch(xtk)
+		{
+		  case TK_VALUE:
+			r = c->l.val >> 16;
+			switch(a2c_Lex(c))
+			{
+			  case '{':
+				a2c_Unlex(c);
+				a2c_TimesL(c);
+				return 1;
+			  case '<':
+				a2c_Instruction(c, OP_SEND, r);
+				break;
+			  case ':':
+				a2c_Instruction(c, OP_SPAWN, r);
+				break;
+			  default:
+				a2c_Throw(c, A2_NEXPVALUE);
+			}
+			break;
+		  case TK_REGISTER:
+		  case TK_TEMPREG:
+			r = c->l.val;
+			switch(a2c_Lex(c))
+			{
+			  case '{':
+				a2c_Unlex(c);
+				a2c_TimesL(c);
+				if(xtk == TK_TEMPREG)
+					a2c_FreeReg(c, r);
+				return 1;
+			  case '<':
+				a2c_Instruction(c, OP_SENDR, r);
+				break;
+			  case ':':
+				a2c_Instruction(c, OP_SPAWNV, r);
+				break;
+			  default:
+				a2c_Throw(c, A2_NEXPTOKEN);
+			}
+			if(xtk == TK_TEMPREG)
+				a2c_FreeReg(c, r);
+			break;
+		  default:
+			a2c_Throw(c, A2_NEXPTOKEN);
+		}
+		break;
+	  }
 	  case '.':		/* Label, def or local program */
 		switch(a2c_Lex(c))
 		{
-		  case TK_DEF:
-			a2c_Def(c, 0);
-			return 1;
 		  case TK_NAME:
 		  case TK_FWDECL:
 			if(a2c_Lex(c) == '(')
@@ -2111,7 +2204,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Unlex(c);
 		a2c_Instruction(c, OP_CALL, 0);
 		break;
-	  case TK_TEMPO:
+	  case KW_TEMPO:
 		/* Calculate (1000 / (<tempo> / 60 * <tbp>)) */
 		r = a2c_AllocReg(c);
 		a2c_SimplExp(c, r);
@@ -2123,7 +2216,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Code(c, OP_DIVR, R_TICK, r);
 		a2c_FreeReg(c, r);
 		break;
-	  case TK_DEF:
+	  case KW_DEF:
 		a2c_Def(c, c->canexport);
 		return 1;
 	  case TK_IF:
@@ -2132,7 +2225,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 	  case TK_WHILE:
 		a2c_IfWhile(c, c->l.val, 1);
 		return 1;
-	  case TK_FOR:
+	  case KW_FOR:
 		a2c_For(c);
 		return 1;
 	  case '{':
@@ -2175,65 +2268,66 @@ static struct
 	const char	*n;
 	A2_tokens	tk;
 	int		v;
-} initsyms [] = {
+} a2c_rootsyms [] = {
 	/* Hardwired "root" bank 0 */
-	{"root",	TK_BANK,	0},
+	{ "root",	TK_BANK,	0		},
 
 	/* Hardwired control registers */
-	{"tick",	TK_REGISTER,	R_TICK},
-	{"tr",		TK_REGISTER,	R_TRANSPOSE},
+	{ "tick",	TK_REGISTER,	R_TICK		},
+	{ "tr",		TK_REGISTER,	R_TRANSPOSE	},
 
 	/* Instructions */
-	{"end",		TK_INSTRUCTION,	OP_END},
-	{"return",	TK_INSTRUCTION,	OP_RETURN},
-	{"jump",	TK_INSTRUCTION,	OP_JUMP},
-	{"jz",		TK_INSTRUCTION,	OP_JZ},
-	{"jnz",		TK_INSTRUCTION,	OP_JNZ},
-	{"jg",		TK_INSTRUCTION,	OP_JG},
-	{"jl",		TK_INSTRUCTION,	OP_JL},
-	{"jge",		TK_INSTRUCTION,	OP_JGE},
-	{"jle",		TK_INSTRUCTION,	OP_JLE},
-	{"wake",	TK_INSTRUCTION,	OP_WAKE},
-	{"force",	TK_INSTRUCTION,	OP_FORCE},
-	{"wait",	TK_INSTRUCTION,	OP_WAIT},
-	{"loop",	TK_INSTRUCTION,	OP_LOOP},
-	{"kill",	TK_INSTRUCTION,	OP_KILL},
-	{"d",		TK_INSTRUCTION,	OP_DELAY},
-	{"td",		TK_INSTRUCTION,	OP_TDELAY},
-	{"quant",	TK_INSTRUCTION,	OP_QUANT},
-	{"rand",	TK_INSTRUCTION,	OP_RAND},
-	{"p2d",		TK_INSTRUCTION,	OP_P2DR},
-	{"neg",		TK_INSTRUCTION,	OP_NEGR},
-	{"set",		TK_INSTRUCTION,	OP_SET},
-	{"debug",	TK_INSTRUCTION,	OP_DEBUG},
+	{ "end",	TK_INSTRUCTION,	OP_END		},
+	{ "return",	TK_INSTRUCTION,	OP_RETURN	},
+	{ "jump",	TK_INSTRUCTION,	OP_JUMP		},
+	{ "jz",		TK_INSTRUCTION,	OP_JZ		},
+	{ "jnz",	TK_INSTRUCTION,	OP_JNZ		},
+	{ "jg",		TK_INSTRUCTION,	OP_JG		},
+	{ "jl",		TK_INSTRUCTION,	OP_JL		},
+	{ "jge",	TK_INSTRUCTION,	OP_JGE		},
+	{ "jle",	TK_INSTRUCTION,	OP_JLE		},
+	{ "wake",	TK_INSTRUCTION,	OP_WAKE		},
+	{ "force",	TK_INSTRUCTION,	OP_FORCE	},
+	{ "wait",	TK_INSTRUCTION,	OP_WAIT		},
+	{ "loop",	TK_INSTRUCTION,	OP_LOOP		},
+	{ "kill",	TK_INSTRUCTION,	OP_KILL		},
+	{ "d",		TK_INSTRUCTION,	OP_DELAY	},
+	{ "td",		TK_INSTRUCTION,	OP_TDELAY	},
+	{ "quant",	TK_INSTRUCTION,	OP_QUANT	},
+	{ "rand",	TK_INSTRUCTION,	OP_RAND		},
+	{ "p2d",	TK_INSTRUCTION,	OP_P2DR		},
+	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
+	{ "set",	TK_INSTRUCTION,	OP_SET		},
+	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 
 	/* Directives, macros, keywords... */
-	{"def",		TK_DEF,		0},
-	{"struct",	TK_STRUCT,	0},
-	{"wire",	TK_WIRE,	0},
-	{"tempo",	TK_TEMPO,	0},
-	{"if",		TK_IF,		OP_JZ},
-	{"ifz",		TK_IF,		OP_JNZ},
-	{"ifl",		TK_IF,		OP_JG},
-	{"ifg",		TK_IF,		OP_JL},
-	{"ifle",	TK_IF,		OP_JGE},
-	{"ifge",	TK_IF,		OP_JLE},
-	{"else",	TK_ELSE,	0},
-	{"while",	TK_WHILE,	OP_JZ},
-	{"wz",		TK_WHILE,	OP_JNZ},
-	{"wl",		TK_WHILE,	OP_JGE},
-	{"wg",		TK_WHILE,	OP_JLE},
-	{"wle",		TK_WHILE,	OP_JG},
-	{"wge",		TK_WHILE,	OP_JL},
-	{"for",		TK_FOR,		0},
+	{ "def",	KW_DEF,		0		},
+	{ "struct",	KW_STRUCT,	0		},
+	{ "wire",	KW_WIRE,	0		},
+	{ "tempo",	KW_TEMPO,	0		},
+	{ "wave",	KW_WAVE,	0		},
+	{ "if",		TK_IF,		OP_JZ		},
+	{ "ifz",	TK_IF,		OP_JNZ		},
+	{ "ifl",	TK_IF,		OP_JG		},
+	{ "ifg",	TK_IF,		OP_JL		},
+	{ "ifle",	TK_IF,		OP_JGE		},
+	{ "ifge",	TK_IF,		OP_JLE		},
+	{ "else",	KW_ELSE,	0		},
+	{ "while",	TK_WHILE,	OP_JZ		},
+	{ "wz",		TK_WHILE,	OP_JNZ		},
+	{ "wl",		TK_WHILE,	OP_JGE		},
+	{ "wg",		TK_WHILE,	OP_JLE		},
+	{ "wle",	TK_WHILE,	OP_JG		},
+	{ "wge",	TK_WHILE,	OP_JL		},
+	{ "for",	KW_FOR,		0		},
 
 	/* Operators */
-	{"and",		TK_AND,		0},
-	{"or",		TK_OR,		0},
-	{"xor",		TK_XOR,		0},
-	{"not",		TK_NOT,		0},
+	{ "and",	KW_AND,		0		},
+	{ "or",		KW_OR,		0		},
+	{ "xor",	KW_XOR,		0		},
+	{ "not",	KW_NOT,		0		},
 
-	{NULL, 0, 0}
+	{ NULL, 0, 0 }
 };
 
 
@@ -2251,10 +2345,10 @@ A2_errors a2_OpenCompiler(A2_state *st, int flags)
 	st->ss->c = c;
 	c->regtop = A2_CREGISTERS;
 	c->exportall = (flags & A2_EXPORTALL) == A2_EXPORTALL;
-	for(i = 0; initsyms[i].n; ++i)
+	for(i = 0; a2c_rootsyms[i].n; ++i)
 	{
-		A2_symbol *s = a2_NewSymbol(initsyms[i].n, initsyms[i].tk,
-				initsyms[i].v);
+		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[i].n,
+				a2c_rootsyms[i].tk, a2c_rootsyms[i].v);
 		if(!s)
 			return A2_OOMEMORY;
 		a2_PushSymbol(&c->symbols, s);
@@ -2506,6 +2600,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_JL:
 	  case OP_JGE:
 	  case OP_JLE:
+	  case OP_SPAWNV:
 		a2_PrintRegName(ins->a1);
 		printf(" %d", ins->a2);
 		break;
@@ -2529,6 +2624,8 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_QUANTR:
 	  case OP_RANDR:
 	  case OP_SPAWNR:
+	  case OP_SPAWNVR:
+	  case OP_SENDR:
 	  case OP_P2DR:
 	  case OP_NEGR:
 	  case OP_GR:

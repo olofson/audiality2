@@ -303,8 +303,9 @@ static inline void a2_driver_registry_cleanup(void)
 									\
 	/* Subvoice control */						\
 	A2_DI(PUSH)	A2_DI(PUSHR)	A2_DI(SPAWN)	A2_DI(SPAWNR)	\
-	A2_DI(SPAWND)	A2_DI(SPAWNDR)	A2_DI(SEND)	A2_DI(SENDA)	\
-	A2_DI(SENDS)	A2_DI(WAIT)	A2_DI(KILL)	A2_DI(KILLA)	\
+	A2_DI(SPAWND)	A2_DI(SPAWNDR)	A2_DI(SPAWNV)	A2_DI(SPAWNVR)	\
+	A2_DI(SEND)	A2_DI(SENDR)	A2_DI(SENDA)	A2_DI(SENDS)	\
+	A2_DI(WAIT)	A2_DI(KILL)	A2_DI(KILLR)	A2_DI(KILLA)	\
 									\
 	/* Debugging */							\
 	A2_DI(DEBUG)	A2_DI(DEBUGR)					\

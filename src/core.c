@@ -730,10 +730,17 @@ static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
 			st->msdur + 0x7fffffff) >> 32;
 }
 
+
 /*
  * Execute VM instructions until a timing instruction is executed, or the
  * program ends. Returns A2_OK as long as the VM program wants to keep running.
  */
+#define	A2_VMABORT(e, m)				\
+	{						\
+		st->instructions += A2_INSLIMIT;	\
+		a2r_Error(st, e, m);			\
+		return e;				\
+	}
 static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned frame)
 {
 	int res;
@@ -755,8 +762,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 		if(!--inscount)
 		{
 			a2_VoiceKill(st, v);
-			st->instructions += A2_INSLIMIT;
-			return A2_OVERLOAD;
+			A2_VMABORT(A2_OVERLOAD, "VM");
 		}
 		switch(ins->opcode)
 		{
@@ -817,10 +823,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			DBG(if(ins->a2 >= v->program->nfuncs)
 				printf("Function index %d out of range!\n", ins->a2);)
 			if((res = a2_VoiceCall(st, v, ins->a2, cargc, cargv, 0)))
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return res;
-			}
+				A2_VMABORT(res, "VM:CALL");
 			code = v->program->funcs[v->s.func].code;
 			cargc = 0;
 			continue;
@@ -889,10 +892,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			break;
 		  case OP_DIVR:
 			if(!r[ins->a2])
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_DIVBYZERO;
-			}
+				A2_VMABORT(A2_DIVBYZERO, "VM:DIVR");
 			r[ins->a1] = ((int64_t)r[ins->a1] << 16) / r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
@@ -939,10 +939,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			break;
 		  case OP_MODR:
 			if(!r[ins->a2])
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_DIVBYZERO;
-			}
+				A2_VMABORT(A2_DIVBYZERO, "VM:MODR");
 			r[ins->a1] %= r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
@@ -1056,21 +1053,41 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 		/* Subvoice control */
 		  case OP_PUSH:
 			if(cargc >= A2_MAXARGS)
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_MANYARGS;
-			}
+				A2_VMABORT(A2_MANYARGS, "VM:PUSH");
 			cargv[cargc++] = ins->a3;
 			++v->s.pc;
 			break;
 		  case OP_PUSHR:
 			if(cargc >= A2_MAXARGS)
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_MANYARGS;
-			}
+				A2_VMABORT(A2_MANYARGS, "VM:PUSHR");
 			cargv[cargc++] = r[ins->a1];
 			break;
+		  case OP_SPAWNVR:
+		  {
+			unsigned vid = r[ins->a1] >> 16;
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			if(vid >= A2_REGISTERS)
+				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
+			a2_VoiceSpawn(st, v, when, vid, r[ins->a2] >> 16,
+					cargc, cargv);
+			cargc = 0;
+			break;
+		  }
+		  case OP_SPAWNV:
+		  {
+			unsigned vid = r[ins->a1] >> 16;
+			unsigned when = v->s.timer;
+			if(!(v->flags & A2_SUBINLINE))
+				when += frame << 8;
+			if(vid >= A2_REGISTERS)
+				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
+			a2_VoiceSpawn(st, v, when, vid, ins->a2,
+					cargc, cargv);
+			cargc = 0;
+			break;
+		  }
 		  case OP_SPAWNR:
 		  {
 			unsigned when = v->s.timer;
@@ -1110,15 +1127,11 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			cargc = 0;
 			break;
 		  }
-#if 0
 		  case OP_SENDR:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
-			if(reg > A2_REGISTERS)
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_BADVOICE;
-			}
+			if(vid >= A2_REGISTERS)
+				A2_VMABORT(A2_BADVOICE, "VM:SENDR");
 			if(v->sv[vid])
 				a2_VoiceSend(st, v->sv[vid],
 						(frame << 8) + v->s.timer,
@@ -1126,7 +1139,6 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			cargc = 0;
 			break;
 		  }
-#endif
 		  case OP_SEND:
 			DBG(if(!ins->a2)
 				printf("Weird...! SEND to EP0...\n");)
@@ -1149,12 +1161,9 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 		  {
 			int ep = v->program->eps[ins->a2];
 			if(ep < 0)
-				return A2_BADENTRY;
+				A2_VMABORT(A2_BADENTRY, "VM:SENDS");
 			if((res = a2_VoiceCall(st, v, ep, cargc, cargv, 1)))
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return res;
-			}
+				A2_VMABORT(res, "VM:SENDS");
 			code = v->program->funcs[v->s.func].code;
 			cargc = 0;
 			break;
@@ -1170,6 +1179,17 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			v->s.state = A2_WAITING;
 			st->instructions += (A2_INSLIMIT - inscount);
 			return A2_OK;
+		  case OP_KILLR:
+		  {
+			unsigned vid = r[ins->a1] >> 16;
+			if(vid >= A2_REGISTERS)
+				A2_VMABORT(A2_BADVOICE, "VM:KILLR");
+			if(!v->sv[vid])
+				break;
+			a2_VoiceKill(st, v->sv[vid]);
+			v->sv[vid] = NULL;
+			break;
+		  }
 		  case OP_KILL:
 			if(!v->sv[ins->a1])
 				break;
@@ -1253,7 +1273,7 @@ TODO:
 
 		  case A2_OPCODES:
 		  default:
-			return A2_ILLEGALOP;
+			A2_VMABORT(A2_ILLEGALOP, "VM:ILLEGALOP");
 		}
 		++v->s.pc;
 		continue;
@@ -1271,6 +1291,7 @@ TODO:
 		v->s.timer += dt;
 	}
 }
+#undef	A2_VMABORT
 
 
 /* Wrapper for recursive calls to a2_ProcessVoices() */
@@ -1372,12 +1393,7 @@ void a2_ProcessVoices(A2_state *st, A2_voice **head, unsigned offset,
 		A2_voice *v = *head;
 		A2_errors res;
 		if((res = a2_VoiceProcess(st, v, offset, frames)))
-		{
-			if(res != A2_END)
-				fprintf(stderr, "Audiality 2: VM error %s!\n",
-						a2_ErrorString(res));
 			a2_VoiceFree(st, head);
-		}
 		else
 		{
 			/*
