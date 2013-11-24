@@ -234,8 +234,8 @@ int main(int argc, const char *argv[])
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, settings[0].audiodriver)))
 		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(settings[0].samplerate, settings[0].audiobuf,
-			settings[0].channels, A2_RTERRORS | A2_TIMESTAMP |
-			A2_REALTIME | A2_STATECLOSE)))
+			settings[0].channels,
+			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
@@ -280,6 +280,7 @@ int main(int argc, const char *argv[])
 
 	a2_Now(state);
 	a2_Send(state, vh, 1);
+	a2_Release(state, vh);
 	sleep(1);
 
 	/*

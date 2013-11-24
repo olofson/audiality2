@@ -214,7 +214,8 @@ typedef enum A2_initflags
 	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Now()/a2_Wait() API */
 	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect of audio ports */
 	A2_REALTIME =	0x00000800,	/* Configure(d) for realtime operation */
-	A2_RTERRORS =	0x00001000,	/* Report errors from realtime context */
+	A2_SILENT =	0x00001000,	/* No API context stderr errors */
+	A2_RTSILENT =	0x00002000,	/* No engine context stderr errors */
 
 	A2_INITFLAGS =	0x0000ff00,	/* Mask for the flags above */
 

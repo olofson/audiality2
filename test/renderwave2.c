@@ -131,7 +131,7 @@ int main(int argc, const char *argv[])
 	/* Configure and open master state */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(1, a2_LastError());
-	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels, A2_RTERRORS |
+	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
@@ -143,7 +143,7 @@ int main(int argc, const char *argv[])
 				cfg->samplerate, samplerate);
 
 	fprintf(stderr, "Loading...\n");
-	
+
 	/* Load jingle */
 	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
 		fail(5, -h);

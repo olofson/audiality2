@@ -155,7 +155,7 @@ int main(int argc, const char *argv[])
 	/* Configure and open master state */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(a2_LastError());
-	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels, A2_RTERRORS |
+	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))

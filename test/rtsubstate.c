@@ -148,7 +148,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, songh;
 	A2_driver *drv = NULL;
 	A2_config *cfg;
-	unsigned flags = A2_RTERRORS | A2_TIMESTAMP | A2_REALTIME;
+	unsigned flags = A2_TIMESTAMP | A2_REALTIME;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 

@@ -35,7 +35,7 @@ static const char *audiodriver = "default";
 static int samplerate = 44100;
 static int channels = 2;
 static int audiobuf = 4096;
-static int a2flags = A2_EXPORTALL | A2_RTERRORS | A2_TIMESTAMP;
+static int a2flags = A2_EXPORTALL | A2_TIMESTAMP;
 
 /* State and control */
 static A2_state *state = NULL;	/* Engine state */
