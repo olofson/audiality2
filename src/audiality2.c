@@ -560,8 +560,10 @@ void a2_Close(A2_state *st)
 	}
 
 	/* Handle engine/RT error messages, handle release notifications etc */
-	a2r_PumpEngineMessages(st);
-	a2_PumpAPIMessages(st);
+	if(st->fromapi)
+		a2r_PumpEngineMessages(st);
+	if(st->toapi)
+		a2_PumpAPIMessages(st);
 
 	/* Close the realtime context of the engine */
 	if(st->rootvoice >= 0)
