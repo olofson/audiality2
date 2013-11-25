@@ -182,6 +182,7 @@ int main(int argc, const char *argv[])
 
 	a2_Now(state);
 	a2_Send(state, vh, 1);
+	a2_Release(state, vh);
 	sleep(1);
 
 	a2_Close(state);

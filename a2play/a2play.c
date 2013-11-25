@@ -249,8 +249,7 @@ static void load_sounds(int argc, const char *argv[])
 /* Parse the body of a -p switch; <name>[,pitch[,vel[,mod[,...]]]] */
 static int play_sound(const char *cmd)
 {
-	A2_handle h;
-	A2_errors res;
+	A2_handle h, vh;
 	int i;
 	char program[256];
 	float a[A2_MAXARGS];
@@ -272,10 +271,10 @@ static int play_sound(const char *cmd)
 	}
 	for(i = 0; i < cnt - 1; ++i)
 		ia[i] = a[i] * 65536.0f;
-	if((res = a2_Playa(state, a2_RootVoice(state), h, cnt - 1, ia)))
+	if((vh = a2_Starta(state, a2_RootVoice(state), h, cnt - 1, ia)) < 0)
 	{
 		fprintf(stderr, "a2play: a2_Starta(): %s\n",
-				a2_ErrorString(res));
+				a2_ErrorString(-vh));
 		return -3;
 	}
 	return 1;
@@ -500,6 +499,7 @@ int main(int argc, const char *argv[])
 
 		/* Fade out */
 		a2_Now(state);
+		/* FIXME: Send stop messages and detach all voices here! */
 		a = 1.0f;
 		while(a > 0.01f)
 		{

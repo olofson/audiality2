@@ -36,6 +36,7 @@ int a2_Render(A2_state *st,
 		unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv)
 {
+	A2_handle h;
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *ss;
@@ -57,7 +58,8 @@ int a2_Render(A2_state *st,
 		return -a2_LastError();
 
 	/* Start program! */
-	a2_Play(ss, a2_RootVoice(ss), program);
+	if((h = a2_Starta(ss, a2_RootVoice(ss), program, argc, argv)) < 0)
+		return h;
 
 	/* Render... */
 	while(1)
@@ -83,7 +85,12 @@ int a2_Render(A2_state *st,
 		}
 		if((frames >= silencegrace) && (lastpeak >= silencewindow))
 			break;
+if(length && (frames >= length)) break;
 	}
+
+	a2_Now(ss);
+	a2_Send(ss, h, 1);
+	a2_Release(ss, h);
 
 	/* Close substate */
 	a2_Close(ss);
@@ -112,8 +119,10 @@ A2_handle a2_RenderWave(A2_state *st,
 		A2_handle program, unsigned argc, int *argv)
 {
 	A2_errors res;
-	A2_handle wh = a2_WaveNew(st, wt, samplerate / A2_MIDDLEC, flags);
-	if(wh < 0)
+	A2_handle wh;
+	if(!period)
+		period = samplerate / A2_MIDDLEC;
+	if((wh = a2_WaveNew(st, wt, period, flags)) < 0)
 		return wh;
 
 	res = a2_Render(st, wh, samplerate, length, program, argc, argv);
