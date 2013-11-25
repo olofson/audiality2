@@ -705,7 +705,7 @@ void a2_Now(A2_state *st)
 		nt += (int64_t)st->msdur * dt >> 8;
 	}
 	else
-		nt = st->now_frames + (st->config->buffer << 8);
+		nt = st->now_frames;
 	if(a2_TSDiff(nt, st->timestamp) >= 0)
 		st->timestamp = nt;
 }
