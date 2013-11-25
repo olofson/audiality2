@@ -8,29 +8,29 @@ def a2sversion	"1.9"
 
 SineScale(P V=1)
 {
-	struct { wtosc, panmix }
-	w sine, p (P - 3.5)
-	a (V * .5), d 10
+	struct { wtosc; panmix }
+	w sine; p (P - 3.5)
+	a (V * .5); d 10
 	for {
 		+p 3
 		36 {
 			debug (1000 / (p2d p))
-			-p 1n, d 200
+			-p 1n; d 200
 		}
 	}
 	end
-.rel	a 0, d 10
+.rel	a 0; d 10
 	1() { force rel }
 }
 
 // Plain .5 amplitude sine wave with 10 ms de-click attack and release.
 Sine(P V=1)
 {
-	struct { wtosc, panmix }
-	w sine, p P
-	a (V * .5), d 10
+	struct { wtosc; panmix }
+	w sine; p P
+	a (V * .5); d 10
 	end
-.rel	a 0, d 10
+.rel	a 0; d 10
 	1() { force rel }
 }
 
@@ -38,12 +38,12 @@ Sine(P V=1)
 // Noise excited oscillator, based on a resonant filter
 FilterPitch(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w noise, p (P + 1), lp 0, bp 0, hp 1
-	q 2, set q, cutoff P, set cutoff
-	a (V * .01), set a
+	struct { wtosc; filter12; panmix }
+	w noise; p (P + 1); lp 0; bp 0; hp 1
+	q 2; set q; cutoff P; set cutoff
+	a (V * .01); set a
 	end
-.rel	a 0, d 100
+.rel	a 0; d 100
 	d 2000		// Needed because of long tails with high resonance!
 	1() { force rel }
 }
@@ -51,12 +51,12 @@ FilterPitch(P V=1)
 
 MusicBox(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w pulse1, p -2, lp 0, bp 1, hp .5
-	q (2 + P), ifl (q - 1) { q 1 }, set q
-	cutoff P, set cutoff
-	a (V * .1), set a, d 1
-	*a .5, set a, w noise, p 4, a 0, d 5
+	struct { wtosc; filter12; panmix }
+	w pulse1; p -2; lp 0; bp 1; hp .5
+	q (2 + P); ifl (q - 1) { q 1 }; set q
+	cutoff P; set cutoff
+	a (V * .1); set a; d 1
+	*a .5; set a; w noise; p 4; a 0; d 5
 	d 4000
 }
 
@@ -64,14 +64,14 @@ MusicBox(P V=1)
 // Music box with "stop" feature
 MusicBox2(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w pulse1, p -2, lp 0, bp 1, hp .5
-	q 3, set q, cutoff P, set cutoff
-	a (V * .1), set a, d 1
-	*a .5, set a, w noise, p 4, a 0, d 5
+	struct { wtosc; filter12; panmix }
+	w pulse1; p -2; lp 0; bp 1; hp .5
+	q 3; set q; cutoff P; set cutoff
+	a (V * .1); set a; d 1
+	*a .5; set a; w noise; p 4; a 0; d 5
 	end
-.rel	a (V * .01), set a, a 0, d 5
-	q 0, d 10
+.rel	a (V * .01); set a; a 0; d 5
+	q 0; d 10
 	d 500
 	1() { force rel }
 }
@@ -80,39 +80,39 @@ MusicBox2(P V=1)
 // Test of filter "free ramping" cutoff response
 FSweep(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w saw, a (V * .1), set a, p P, lp 0, bp 1, hp 0
-	q .1, set q
-	cutoff (P + 8), set cutoff
-	cutoff P,	d 5000
-	a 0,	d 500
+	struct { wtosc; filter12; panmix }
+	w saw; a (V * .1); set a; p P; lp 0; bp 1; hp 0
+	q .1; set q
+	cutoff (P + 8); set cutoff
+	cutoff P;	d 5000
+	a 0;	d 500
 }
 
 
 // "Forced" cutoff ramping - supposed to sound identical to FSweep
 FSweepRef(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w saw, a (V * .1), set a, p P, lp 0, bp 1, hp 0
-	q .1, set q
-	cutoff (P + 8), set cutoff
+	struct { wtosc; filter12; panmix }
+	w saw; a (V * .1); set a; p P; lp 0; bp 1; hp 0
+	q .1; set q
+	cutoff (P + 8); set cutoff
 	80 {
-		-cutoff .1,	d 62.5
+		-cutoff .1;	d 62.5
 	}
-	a 0,	d 500
+	a 0;	d 500
 }
 
 
 Pig(P V=1)
 {
-	struct { wtosc, filter12, panmix }
-	w saw, a (V * .2), set a, p P
-	lp 1, bp 1, hp 0, q 100, set q, cutoff (P + 6), set cutoff
-	cutoff (P + 1), q .01,	d 100
-	cutoff (P + .5),	d 500
-	a 0,			d 500
+	struct { wtosc; filter12; panmix }
+	w saw; a (V * .2); set a; p P
+	lp 1; bp 1; hp 0; q 100; set q; cutoff (P + 6); set cutoff
+	cutoff (P + 1); q .01;	d 100
+	cutoff (P + .5);	d 500
+	a 0;			d 500
 	end
-.rel	a 0, cutoff P, q 0, d 100
+.rel	a 0; cutoff P; q 0; d 100
 	d 500
 	1() { force rel }
 }
@@ -120,19 +120,19 @@ Pig(P V=1)
 
 PhattPig(P V=1)
 {
-	struct { wtosc 0 1, wtosc o2 0 1, filter12, panmix }
+	struct { wtosc 0 1; wtosc o2 0 1; filter12; panmix }
 	!detune (.005 * (1 - P))
 	ifl (detune - .001) { detune .001 }
-	w pulse30, a (V * .1), set a, p (P - detune)
-	o2.w pulse20, o2.a (V * .1), set o2.a, o2.p (P + detune)
-	lp 1, bp 1, hp 0
-	q 3, set q, cutoff (P + 6), set cutoff
-	cutoff (P + 3), q .03, d 100
-	cutoff (P + 2), q .01, d 100
-	cutoff (P + .5), d 500
-	a 0, o2.a 0,	d 500
+	w pulse30; a (V * .1); set a; p (P - detune)
+	o2.w pulse20; o2.a (V * .1); set o2.a; o2.p (P + detune)
+	lp 1; bp 1; hp 0
+	q 3; set q; cutoff (P + 6); set cutoff
+	cutoff (P + 3); q .03; d 100
+	cutoff (P + 2); q .01; d 100
+	cutoff (P + .5); d 500
+	a 0; o2.a 0;	d 500
 	end
-.rel	a 0, o2.a 0, cutoff (P - 1), q 0, d 100
+.rel	a 0; o2.a 0; cutoff (P - 1); q 0; d 100
 	d 500
 	1() { force rel }
 }
@@ -140,45 +140,45 @@ PhattPig(P V=1)
 
 Unity()
 {
-	struct { wtosc, panmix }
-	vol 1, set vol
+	struct { wtosc; panmix }
+	vol 1; set vol
 	w sine
-	a 1,	d 100
+	a 1;	d 100
 		d 3000
-	a 0,	d 100
+	a 0;	d 100
 }
 
 
 PanTest()
 {
-	struct { wtosc, panmix }
-	w noise, p 1
-	vol .2, set vol
-	a 1,	d 100
+	struct { wtosc; panmix }
+	w noise; p 1
+	vol .2; set vol
+	a 1;	d 100
 		d 1000
-	pan 2,	d 1000
-	pan -2,	d 2000
-	pan 0,	d 1000
+	pan 2;	d 1000
+	pan -2;	d 2000
+	pan 0;	d 1000
 		d 1000
-	a 0,	d 100
+	a 0;	d 100
 }
 
 
 WaveXFade()
 {
-	struct { wtosc 0 1, wtosc o2, panmix }
-	vol .5, set vol
+	struct { wtosc 0 1; wtosc o2; panmix }
+	vol .5; set vol
 	// NOTE:
 	//	This referring to waves by numbers doesn't really work!
 	//	They're not getting handles in any particular order, so this
 	//	will just be trying to play all sorts of objects - not
 	//	just waves.
-	w 0, a 1, set a, p -1
-	o2.w 1, o2.p -1
+	w 0; a 1; set a; p -1
+	o2.w 1; o2.p -1
 	for {
-		o2.a 1, a 0, d 1000
+		o2.a 1; a 0; d 1000
 		+w 2
-		o2.a 0, a 1, d 1000
+		o2.a 0; a 1; d 1000
 		+o2.w 2
 	}
 }
@@ -480,12 +480,12 @@ sonar()
 FM1(P V=1)
 {
 	struct { wtosc }
-	a V, set a, w sine
+	a V; set a; w sine
 	!per (p2d (P + tr) * .5)
 	!depth 1
 	wg (a - .001) {
-		p (P + depth), d per
-		p (P - depth), d per
+		p (P + depth); d per
+		p (P - depth); d per
 		*depth .98
 		*a .99
 	}
@@ -493,12 +493,12 @@ FM1(P V=1)
 FM2(P V=1)
 {
 	struct { wtosc }
-	a V, set a, w sine
+	a V; set a; w sine
 	!per (p2d (P + tr) / 3)
 	!depth 1
 	wg (a - .001) {
-		p (P + depth), d per
-		p (P - depth), d (per * 2)
+		p (P + depth); d per
+		p (P - depth); d (per * 2)
 		*depth .98
 		*a .99
 	}
@@ -506,13 +506,13 @@ FM2(P V=1)
 FM3(P V=1)
 {
 	struct { wtosc }
-	a V, set a, w sine
+	a V; set a; w sine
 	!per (p2d (P + tr) * .5)
 	!depth 2
 	wg (a - .001) {
 		phase 0
-		p (P + (depth * .47)), d per
-		p (P - depth), d per
+		p (P + (depth * .47)); d per
+		p (P - depth); d per
 		*depth .99
 		*a .99
 	}
@@ -520,23 +520,23 @@ FM3(P V=1)
 FM4(P V=1)
 {
 	struct { wtosc }
-	a V, set a, w sine
+	a V; set a; w sine
 	!per (p2d (P + tr) * .5)
 	wg (a - .001) {
-		p (P + 1), d per
-		p (P + 2), d per
+		p (P + 1); d per
+		p (P + 2); d per
 		*a .99
 	}
 }
 FM5(P V=1)
 {
 	struct { wtosc }
-	a V, set a, w sine
+	a V; set a; w sine
 	!per (p2d (P + tr) * .5)
 	!depth 2
 	wg (a - .001) {
-		p (P + (depth * .5)), d per
-		p (P - (depth * .75)), d per
+		p (P + (depth * .5)); d per
+		p (P - (depth * .75)); d per
 		*a .99
 	}
 }
@@ -550,11 +550,11 @@ FMAM(P V=1 Reso=2)
 	!dR (per / 300 + .05)
 	!dV (.998 - (per / 500))
 	wg (V - .001) {
-		p (P + Reso), phase 0
-		a V, d per
+		p (P + Reso); phase 0
+		a V; d per
 		d per
-		a 0, d per
-		*Reso (1 - dR), *dR .95
+		a 0; d per
+		*Reso (1 - dR); *dR .95
 		*V dV
 	}
 }

@@ -67,25 +67,42 @@ int a2_Render(A2_state *st,
 		int i;
 		A2_errors res;
 		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
-		if((res = a2_Run(ss, cfg->buffer)) < 0)
+		unsigned frag = cfg->buffer;
+		if(length && (frag > length - frames))
+			frag = length - frames;
+		if(!frag)
+			break;
+		if((res = a2_Run(ss, frag)) < 0)
 		{
 			a2_Close(ss);
 			return res;
 		}
-		lastpeak += cfg->buffer;
-		for(i = 0; i < cfg->buffer; ++i)
-			if((buf[i] > silencelevel) || (-buf[i] > silencelevel))
-				lastpeak = cfg->buffer - i;
-		frames += cfg->buffer;
+		if(!length)
+		{
+			lastpeak += frag;
+			for(i = 0; i < frag; ++i)
+				if((buf[i] > silencelevel) ||
+						(-buf[i] > silencelevel))
+					lastpeak = frag - i;
+		}
 		if((res = a2_Write(st, handle, A2_I24, buf,
-				cfg->buffer * sizeof(int32_t))))
+				frag * sizeof(int32_t))))
 		{
 			a2_Close(ss);
 			return -res;
 		}
-		if((frames >= silencegrace) && (lastpeak >= silencewindow))
-			break;
-if(length && (frames >= length)) break;
+		frames += frag;
+		if(length)
+		{
+			if(frames >= length)
+				break;
+		}
+		else
+		{
+			if((frames >= silencegrace) &&
+					(lastpeak >= silencewindow))
+				break;
+		}
 	}
 
 	a2_Now(ss);

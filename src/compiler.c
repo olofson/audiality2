@@ -1301,6 +1301,30 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 }
 
 
+static int a2c_ConstArguments(A2_compiler *c, int maxargc, int *argv)
+{
+	int argc;
+	for(argc = 0; argc <= maxargc; ++argc)
+	{
+		if((a2c_Lex(c) == '}') || (c->l.token == TK_EOS))
+		{
+			a2c_Unlex(c);
+			return argc;	/* Done! */
+		}
+		a2c_Unlex(c);
+/*
+TODO: Readable attributes in wavedefs, so we can pass them as arguments to
+TODO: the rendered program!
+*/
+		a2c_SimplExp(c, -1);
+		if(!a2_IsValue(c->l.token))
+			a2c_Throw(c, A2_EXPVALUE);
+		argv[argc] = a2_GetVMValue(&c->l);
+	}
+	a2c_Throw(c, A2_MANYARGS);
+}
+
+
 static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 {
 	int i, p;
@@ -1932,6 +1956,168 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 }
 
 
+/* Wave and rendering options for 'wave' definitions */
+typedef struct A2_wavedef {
+	A2_symbol	*symbol;
+	A2_wavetypes	type;
+	unsigned	period;
+	int		flags;
+	unsigned	samplerate;
+	unsigned	length;
+	A2_handle	program;
+	unsigned	argc;
+	int		argv[A2_MAXARGS];
+} A2_wavedef;
+
+static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
+{
+	int set = 1;
+	if(a2c_Lex(c) == TK_VALUE)
+		set = c->l.val;
+	else
+		a2c_Unlex(c);
+	if(set)
+		wd->flags |= flag;
+	else
+		wd->flags &= ~flag;
+}
+
+static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
+		A2_tokens terminator)
+{
+	switch(a2c_Lex(c))
+	{
+	  case AT_WAVETYPE:
+		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
+		wd->type = c->l.val >> 16;
+		break;
+	  case AT_PERIOD:
+		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
+		wd->period = c->l.val >> 16;
+		break;
+	  case AT_SAMPLERATE:
+		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
+		wd->samplerate = 1000.0f * c->l.val / 65536.0f;
+		break;
+	  case AT_LENGTH:
+		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
+		wd->length = c->l.val >> 16;
+		break;
+	  case AT_FLAG:
+		a2c_wd_flagattr(c, wd, c->l.val);
+		break;
+	  case TK_PROGRAM:
+	  {
+		int maxargc;
+		wd->program = c->l.val;
+		maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
+		wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
+		DBG(printf("/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\\n");)
+		DBG(printf("Rendering wave %s...\n", wd->symbol->name);
+		printf("        type: %d\n", wd->type);
+		printf("       flags: %x\n", wd->flags);
+		printf("      period: %d\n", wd->period);
+		printf("  samplerate: %d\n", wd->samplerate);
+		printf("      length: %d\n", wd->length);)
+		if((wd->symbol->value = a2_RenderWave(c->state,
+				wd->type, wd->period, wd->flags,
+				wd->samplerate, wd->length,
+				wd->program, wd->argc, wd->argv)) < 0)
+			a2c_Throw(c, -wd->symbol->value);
+		DBG(printf("  DONE!\n");)
+
+		/* We expect this to be the last statement in the wavedef! */
+		while(a2c_Lex(c) != terminator)
+			if(c->l.token != TK_EOS)
+				a2c_Throw(c, A2_EXPEOS);
+		DBG(printf("/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\\n");)
+		return 0;
+	  }
+	  case TK_EOS:
+		return 1;
+	  default:
+		if(c->l.token != terminator)
+			a2c_Throw(c, A2_NEXPTOKEN);
+		return 0;
+	}
+	if(a2c_Lex(c) == TK_EOS)
+		return 1;
+	if(c->l.token != terminator)
+		a2c_Throw(c, A2_EXPEOS);
+	return 0;
+}
+
+static struct
+{
+	const char	*n;
+	A2_tokens	tk;
+	int		v;
+} a2c_wdsyms [] = {
+	{ "wavetype",	AT_WAVETYPE,	0		},
+	{ "period",	AT_PERIOD,	0		},
+	{ "samplerate",	AT_SAMPLERATE,	0		},
+	{ "length",	AT_LENGTH,	0		},
+	{ "looped",	AT_FLAG,	A2_LOOPED	},
+	{ "normalize",	AT_FLAG,	A2_NORMALIZE	},
+	{ "xfade",	AT_FLAG,	A2_XFADE	},
+	{ "revmix",	AT_FLAG,	A2_REVMIX	},
+
+	{ "OFF",	TK_VALUE,	A2_WOFF << 16		},
+	{ "NOISE",	TK_VALUE,	A2_WNOISE << 16		},
+	{ "WAVE",	TK_VALUE,	A2_WWAVE << 16		},
+	{ "MIPWAVE",	TK_VALUE,	A2_WMIPWAVE << 16	},
+
+	{ NULL, 0, 0 }
+};
+
+static void a2c_WaveDef(A2_compiler *c)
+{
+	A2_scope sc;
+	A2_wavedef wd;
+	int i;
+	int export = 1;
+	memset(&wd, 0, sizeof(wd));
+	wd.type = A2_WMIPWAVE;
+	wd.samplerate = 44100;	/* FIXME: Parent state fs... or what...? */
+	
+	/* Local? */
+	if(a2c_Lex(c) == '.')
+	{
+		export = 0;
+		a2c_Lex(c);
+	}
+
+	/* Name of wave */
+	if(c->l.token != TK_NAME)
+		a2c_Throw(c, A2_EXPNAME);
+	wd.symbol = a2c_Grab(c, c->l.sym);
+	wd.symbol->token = TK_WAVE;
+	wd.symbol->exported = export || (c->exportall && c->canexport);
+	a2_PushSymbol(&c->symbols, wd.symbol);
+
+	a2c_SkipLF(c);
+	a2c_Expect(c, '{', A2_EXPBODY);
+	a2c_BeginScope(c, &sc);
+
+	/* Set up wave attribute symbols */
+	for(i = 0; a2c_wdsyms[i].n; ++i)
+	{
+		A2_symbol *s;
+		if(a2_FindSymbol(c->state, c->symbols, a2c_wdsyms[i].n))
+			a2c_Throw(c, A2_SYMBOLDEF);
+		if(!(s = a2_NewSymbol(a2c_wdsyms[i].n, a2c_wdsyms[i].tk,
+				a2c_wdsyms[i].v)))
+			a2c_Throw(c, A2_OOMEMORY);
+		a2_PushSymbol(&c->symbols, s);
+	}
+
+	while(a2c_WaveDefStatement(c, &wd, '}'))
+		;
+
+	a2c_EndScope(c, &sc);
+}
+
+
 static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 {
 	int fixpos, loopto = c->coder->pos;
@@ -2218,6 +2404,9 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		break;
 	  case KW_DEF:
 		a2c_Def(c, c->canexport);
+		return 1;
+	  case KW_WAVE:
+		a2c_WaveDef(c);
 		return 1;
 	  case TK_IF:
 		a2c_IfWhile(c, c->l.val, 0);

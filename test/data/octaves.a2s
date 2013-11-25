@@ -6,6 +6,8 @@
 // Octaves
 Octaves(Pitch Gate=1)
 {
+	struct { wtosc; panmix }
+
 	a Gate
 
 	// Attack

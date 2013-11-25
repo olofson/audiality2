@@ -551,11 +551,11 @@ EvilSyncBass(P V=1 Drive)
 	1() { *a .5; *ma .85; +p 1; /per 4; *<1 }
 }
 
-.c0(P amp wave rmax D)
+.c0(P V W rmax D)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
-	w wave; a amp; set a; +tr P
+	w W; a V; set a; +tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d D }
 	40 {
@@ -736,14 +736,14 @@ Fx1(Tr)
 {
 	td 8
 	+tr Tr; PulseOct -1 .5
-	td 8; *<1
+	td 8
 }
 
 Fx2(Tr)
 {
 	td 8
 	+tr Tr; PulseOct 1 .3
-	td 8; *<1
+	td 8
 }
 
 Perc2()
@@ -918,10 +918,10 @@ Bass3(Tr)
 {
 	struct { inline; panmix }
 	+tr Tr
-	Reso1 -1 .5 0 rl; Reso1 2 .5 7n rl2; Strings -2 .6; Strings 7n .3
-							td 64
+	Reso1 -1 .5 0 rl; Reso1 2 .5 7n rl2
+	1:Strings -2 .6; 2:Strings 7n .3;		td 64
 	Reso2 -1 .5 0 rl; Reso2 2 .5 7n rl2;		td 64
-	*<1
+	1<1; 2<1
 }
 
 St(Tr)
@@ -998,7 +998,7 @@ BassI()
 	1:Strings -2 .6;	2:OctStrings 0 .2;	td 6
 	ResoIn; Drone 0 .2;	vol .5;			td 32
 	vol 1;						td 24
-	vol 0; *<1;					td 8
+	vol 0; 1<1; 2<1;				td 8
 }
 
 BassR()

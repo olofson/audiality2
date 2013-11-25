@@ -337,20 +337,20 @@ def a2sversion	"1.9"
 	}
 }
 
-.c0(pitch amp wave rmax dl)
+.c0(P V W Rmax D)
 {
 	struct { wtosc }
-	w wave, a amp, set a, +tr pitch
-	!rmh (rmax * .25)
+	w W, a V, set a, +tr P
+	!rmh (Rmax * .25)
 	200 {
-		p (rand rmax - rmh), *rmax .997, *rmh .997, *a .995
-		td dl
+		p (rand Rmax - rmh), *Rmax .997, *rmh .997, *a .995
+		td D
 	}
 	40 {
 		100 {
-			p (rand rmax - rmh), td dl
+			p (rand Rmax - rmh), td D
 		}
-		*a .85, *rmax .99, *rmh .99
+		*a .85, *Rmax .99, *rmh .99
 	}
 }
 .cymbal()
@@ -362,12 +362,12 @@ def a2sversion	"1.9"
 	c0 2 .15 sine 2.5 .07
 }
 
-.rd(pitch amp wave rpitch mrpitch per)
+.rd(P V W rpitch mrpitch per)
 {
 	struct { wtosc }
-	w wave, a amp, set a
+	w W, a V, set a
 	20 {
-		100 {	p (rand rpitch + pitch), d per }
+		100 {	p (rand rpitch + P), d per }
 		*rpitch mrpitch, *a .7
 	}
 }
