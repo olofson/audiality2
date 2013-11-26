@@ -10,53 +10,54 @@ def a2sversion	"1.9"
   //
  // Pre-rendered wave for the Strings instrument
 /////////////////////////////////////////////////////////////////////
-.StrW0(P G W)
+.StrW0(P W)
 {
 	struct { wtosc }
 	w W; phase (rand 100)
-	a (G * .5); set a
+	a .5; set a
 	p P; set p
 	for {
-		+p (P - p * .4 + rand .02 - .01)
-		+a (rand G - a * .03)
+		+p (P - p * .4 + rand .03 - .015)
+		+a (rand 1 - a * .03)
 		d (rand 5 + 2.5)
 	}
 }
 
-RenderStringsWave(Voices Spread Gain W)
+RenderStringsWave(Voices Spread W)
 {
 	!detune (0 - (Spread / 2))
 	(Voices * 4 / 9) {
-		0:StrW0 detune Gain W
+		0:StrW0 detune W
 		+detune (Spread / Voices)
 	}
 	+detune 1
 	(Voices * 3 / 9) {
-		0:StrW0 detune Gain W
+		0:StrW0 detune W
 		+detune (Spread / Voices)
 	}
 	+detune 1
 	(Voices * 2 / 9) {
-		0:StrW0 detune Gain W
+		0:StrW0 detune W
 		+detune (Spread / Voices)
 	}
 }
 
+//wave StringWave
 wave StringWave
 {
 	// Render basic strings loop using 100 saw oscillators
 	wavetype MIPWAVE; samplerate 96
-	length 20000; looped; revmix; normalize
-	RenderStringsWave 100 .02 .15 saw
+	length 16384; looped; normalize; xfade
+	RenderStringsWave 100 .02 saw
 }
 
 wave StringsWave
 {
 	// Render megaphatt strings using 100 oscillators playing StringWave
 	wavetype MIPWAVE
-	samplerate 192
-	length 32000; looped; revmix; normalize
-	RenderStringsWave 100 .02 .4 StringWave
+	samplerate 96
+	length 16384; looped; normalize; xfade
+	RenderStringsWave 100 .02 StringWave
 }
 
 
@@ -65,43 +66,84 @@ wave StringsWave
 /////////////////////////////////////////////////////////////////////
 Strings(P V=1)
 {
-	struct { wtosc; panmix }
-	if P > -1 {
-		pan (P * 2 - .5); set pan
+	struct {
+		wtosc o1; panmix pm1 1 >
+		wtosc o2; panmix pm2 1 >
 	}
-	w StringsWave; p P
-	a V; d 300
-	end
-.rel	a 0; d 600
+	o1.w StringsWave; o1.p (P + .01); pm1.pan -.5; set pm1.pan
+	o2.w StringsWave; o2.p (P - .01); pm2.pan .5; set pm2.pan
+	o2.phase (rand 100)
+	for {
+		o1.a V; o2.a V;		td .125
+		*o1.a .25; *o2.a .25;	td .875
+	}
+.rel	o1.a 0; o2.a 0; td .75
 	1() { force rel }
 }
 
 
   //
- // Some chords...
+ // Orchestra hit
 /////////////////////////////////////////////////////////////////////
-Bass()
+Hit(P V=1)
 {
-	def V 1
-	def i Strings
-	1:i -27n V;	td 16; 1<1
-	1:i -30n V;	td 16; 1<1
-	1:i -34n V;	td 16; 1<1
-	1:i -29n V;	td 16; 1<1
+	struct {
+		wtosc o1; panmix pm1 1 >
+		wtosc o2; panmix pm2 1 >
+	}
+	o1.w StringsWave; o1.p (P + .01); pm1.pan -1; set pm1.pan
+	o2.w StringsWave; o2.p (P - .01); pm2.pan 1; set pm2.pan
+	o1.a V; o2.a V;			d 1
+	*o1.a .9; *o2.a .9;		d 10
+	*o1.a .8; *o2.a .8;		d 10
+	while o1.a > .001 {
+		*o1.a .8; *o2.a .8;	d 60
+	}
 }
 
-Chords()
+
+  //
+ // Some noise...
+/////////////////////////////////////////////////////////////////////
+Music1(P V=1)
 {
-	def V .3
 	def i Strings
-	1:i -3n V;	2:i -1n V;	3:i 1n V;	4:i 4n V;	td 16
-							4<1
-							4:i 6n V;	td 16
-					3<1
-					3:i 2n V;			td 16
-							4<1
-							4:i 7n V;	td 16
-	1<1;		2<1;		3<1;		4<1
+	+tr P
+	1:i -31n V;	td 16; 1<1
+	1:i -30n V;	td 16; 1<1
+	1:i -33n V;	td 16; 1<1
+	1:i -31n V;	td 16; 1<1
+}
+
+Hits(P V=1)
+{
+	def i Hit
+	+tr P
+	2 {
+		i 0n V;		td 2
+		i 3n V;		td 2
+		i 5n V;		td 2
+		i 0n V;		td 1
+		i 3n V;		td 2
+		i 5n V;		td 1
+		i -7n V;	td 3
+		i -7n V;	td 3
+
+		i 0n V;		td 2
+		i 3n V;		td 2
+		i 5n V;		td 2
+		i 0n V;		td 1
+		i 3n V;		td 2
+		i 5n V;		td 2
+		i 0n V;		td 1
+		i 6n V;		td 2
+		i 5n V;		td 2
+	}
+}
+Music2()
+{
+	Music1 3 .2
+	Hits -3 1.3; Hits -1 .4; Hits -5n .4; Hits 0 .4
 }
 
 
@@ -110,11 +152,19 @@ Chords()
 /////////////////////////////////////////////////////////////////////
 Main(L)
 {
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
 	tempo 90 4
+	fbdelay (tick * 6 + 1); fbgain .25
+	ldelay (tick * 5 + 2); lgain .25
+	rdelay (tick * 7 + 3); rgain .25
 .rep
-	Bass;			td 64
-	Bass;	Chords;		td 64
-		Chords;		td 64
+	tr (rand 4n quant 1n - 2n)
+	Music1 0 .9;		td 64
+	Music2;			td 64
 	if L {	// Loop?
 		jump rep
 	}
@@ -126,7 +176,7 @@ Song(P V=1 L=1)
 		inline 0 *
 		panmix * >
 	}
-	vol 1; set vol
+	vol .5; set vol
 	Main L
 	end
 .stop	10 { *vol .7; d 100 }

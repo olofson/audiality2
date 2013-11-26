@@ -37,7 +37,7 @@ struct A2_uploadbuffer
 };
 
 
-static int sample_size(A2_sampleformats fmt)
+static int a2_sample_size(A2_sampleformats fmt)
 {
 	switch(fmt)
 	{
@@ -56,7 +56,7 @@ static int sample_size(A2_sampleformats fmt)
 
 
 /* Allocate buffers for 'length' samples at mip level 0 */
-static A2_errors wave_alloc(A2_wave *w, unsigned length)
+static A2_errors a2_wave_alloc(A2_wave *w, unsigned length)
 {
 	int i, miplevels;
 	switch(w->type)
@@ -87,7 +87,7 @@ static A2_errors wave_alloc(A2_wave *w, unsigned length)
 }
 
 
-static void fix_pad(A2_wave *w, unsigned miplevel)
+static void a2_fix_pad(A2_wave *w, unsigned miplevel)
 {
 	int16_t *d = w->d.wave.data[miplevel];
 	unsigned size = w->d.wave.size[miplevel];
@@ -105,14 +105,14 @@ static void fix_pad(A2_wave *w, unsigned miplevel)
 	}
 }
 
-static void render_mipmaps(A2_wave *w)
+static void a2_render_mipmaps(A2_wave *w)
 {
 	int i;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
-		fix_pad(w, 0);
+		a2_fix_pad(w, 0);
 		if(w->type == A2_WMIPWAVE)
 			break;
 	  default:
@@ -126,7 +126,7 @@ static void render_mipmaps(A2_wave *w)
 		for(s = 0; s < w->d.wave.size[i]; ++s)
 			d[s] = (((int)sd[s * 2] << 1) + sd[s * 2 - 1] +
 					sd[s * 2 + 1]) >> 2;
-		fix_pad(w, i);
+		a2_fix_pad(w, i);
 	}
 #if 0
 	printf("-------------\n");
@@ -151,8 +151,8 @@ static void render_mipmaps(A2_wave *w)
 }
 
 
-/* Convert and write samples directly into mip level 0 of waveform. */
-static A2_errors do_write(A2_wave *w, unsigned offset,
+/* Convert and write with no normalization or other processing. */
+static A2_errors a2_do_write(A2_wave *w, unsigned offset, float gain,
 		A2_sampleformats fmt, const void *data, unsigned length)
 {
 	int s;
@@ -160,42 +160,197 @@ static A2_errors do_write(A2_wave *w, unsigned offset,
 	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE + offset;
 	if(offset + length > size)
 		return A2_INDEXRANGE;
-	switch(fmt)
+	if(gain == 1.0f)
+		switch(fmt)
+		{
+		  case A2_I8:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int8_t *)data)[s] << 8;
+			break;
+		  case A2_I16:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int16_t *)data)[s];
+			break;
+		  case A2_I24:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int32_t *)data)[s] >> 8;
+			break;
+		  case A2_I32:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int32_t *)data)[s] >> 16;
+			break;
+		  case A2_F32:
+			for(s = 0; s < length; ++s)
+				d[s] = ((float *)data)[s] * 32767.0f;
+			break;
+		  default:
+			return A2_BADFORMAT;
+		}
+	else
 	{
-	  case A2_I8:
-		for(s = 0; s < length; ++s)
-			d[s] = ((int8_t *)data)[s] << 8;
-		break;
-	  case A2_I16:
-		for(s = 0; s < length; ++s)
-			d[s] = ((int16_t *)data)[s];
-		break;
-	  case A2_I24:
-		for(s = 0; s < length; ++s)
-			d[s] = ((int32_t *)data)[s] >> 8;
-		break;
-	  case A2_I32:
-		for(s = 0; s < length; ++s)
-			d[s] = ((int32_t *)data)[s] >> 16;
-		break;
-	  case A2_F32:
-		for(s = 0; s < length; ++s)
-			d[s] = ((float *)data)[s] * 32767.0f;
-		break;
-	  default:
-		return A2_BADFORMAT;
+		switch(fmt)
+		{
+		  case A2_I8:
+			gain *= 256.0f;
+			break;
+		  case A2_I16:
+			break;
+		  case A2_I24:
+			gain /= 256.0f;
+			break;
+		  case A2_I32:
+			gain /= 65536.0f;
+			break;
+		  case A2_F32:
+			gain *= 32767.0f;
+			break;
+		  default:
+			return A2_BADFORMAT;
+		}
+		switch(fmt)
+		{
+		  case A2_I8:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int8_t *)data)[s] * gain;
+			break;
+		  case A2_I16:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int16_t *)data)[s] * gain;
+			break;
+		  case A2_I24:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int32_t *)data)[s] * gain;
+			break;
+		  case A2_I32:
+			for(s = 0; s < length; ++s)
+				d[s] = ((int32_t *)data)[s] * gain;
+			break;
+		  case A2_F32:
+			for(s = 0; s < length; ++s)
+				d[s] = ((float *)data)[s] * gain;
+			break;
+		}
 	}
 	return A2_OK;
 }
 
 
-static A2_errors add_upload_buffer(A2_wave *w,
+/* Calculate gain factor for normalizing the specified data */
+static float a2_normalize_gain(A2_sampleformats fmt, const void *data,
+		unsigned length)
+{
+	int s;
+	switch(fmt)
+	{
+	  case A2_I8:
+	  {
+		int8_t peak = 0;
+		int8_t *d = (int8_t *)data;
+		for(s = 0; s < length; ++s)
+			if(d[s] > peak)
+				peak = d[s];
+			else if(-d[s] > peak)
+				peak = -d[s];
+		if(!peak)
+			return 1.0f;
+		return 127.0f / peak;
+	  }
+	  case A2_I16:
+	  {
+		int16_t peak = 0;
+		int16_t *d = (int16_t *)data;
+		for(s = 0; s < length; ++s)
+			if(d[s] > peak)
+				peak = d[s];
+			else if(-d[s] > peak)
+				peak = -d[s];
+		if(!peak)
+			return 1.0f;
+		return 32767.0f / peak;
+	  }
+	  case A2_I24:
+	  case A2_I32:
+	  {
+		int32_t peak = 0;
+		int32_t *d = (int32_t *)data;
+		for(s = 0; s < length; ++s)
+			if(d[s] > peak)
+				peak = d[s];
+			else if(-d[s] > peak)
+				peak = -d[s];
+		if(!peak)
+			return 1.0f;
+		if(fmt == A2_I24)
+			return 32767.0f * 256.0f / peak;
+		else
+			return 32767.0f * 65536.0f / peak;
+	  }
+	  case A2_F32:
+	  {
+		float peak = 0.0f;
+		float *d = (float *)data;
+		for(s = 0; s < length; ++s)
+			if(d[s] > peak)
+				peak = d[s];
+			else if(-d[s] > peak)
+				peak = -d[s];
+		if(!peak)
+			return 1.0f;
+		return 1.0f / peak;
+	  }
+	  default:
+		return 1.0f;	/* Internal error! */
+	}
+}
+
+
+/* Apply A2_XFAD and/or A2_REVMIX */
+static A2_errors a2_postprocess(A2_wave *w)
+{
+	int i;
+	int size = w->d.wave.size[0];
+	int sh = size / 2;
+	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
+	if(w->flags & A2_REVMIX)
+	{
+		/* Generate the first half */
+		for(i = 0; i < sh; ++i)
+			d[i] = ((int)d[i] + (int)d[size - i]) >> 1;
+
+		/* The second half is the first half reversed! */
+		for(i = 0; i < sh; ++i)
+			d[size - i] = d[i];
+	}
+	if(w->flags & A2_XFADE)
+	{
+		/*FIXME: Can we do this inplace without LSB rounding errors? */
+		double g = 0.0f;
+		double dg = 1.0f / sh;
+
+		/* Apply triangular window */
+		for(i = 0; i < sh; ++i, g += dg)
+			d[i] *= g;
+		for( ; i < size; ++i, g -= dg)
+			d[i] *= g;
+
+		/* Overlap-add */
+		/* FIXME: Is this correct for odd sizes? */
+		for(i = 0; i < sh; ++i)
+			d[i] += d[i + sh];
+		for( ; i < size; ++i)
+			d[i] = d[i - sh];
+	}
+	return A2_OK;
+}
+
+
+static A2_errors a2_add_upload_buffer(A2_wave *w,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	A2_stream *str = w->uploadstream;
 	A2_uploadbuffer *lastub = (A2_uploadbuffer *)str->streamdata;
 	A2_uploadbuffer *ub = (A2_uploadbuffer *)malloc(sizeof(A2_uploadbuffer));
-	int ss = sample_size(fmt);
+	int ss = a2_sample_size(fmt);
 	if(!ss)
 		return -A2_BADFORMAT;
 	if(!ub)
@@ -225,7 +380,7 @@ static A2_errors add_upload_buffer(A2_wave *w,
 
 
 /* Discard upload buffers without applying them */
-static void discard_upload_buffers(A2_wave *w)
+static void a2_discard_upload_buffers(A2_wave *w)
 {
 	A2_stream *str = w->uploadstream;
 	switch(w->type)
@@ -246,22 +401,43 @@ static void discard_upload_buffers(A2_wave *w)
 }
 
 
-/* Apply and discard upload buffers */
-static A2_errors apply_upload_buffers(A2_wave *w)
+/* Calculate the gain for normalizing all uploaded buffers */
+static float a2_calc_upload_gain(A2_wave *w)
 {
+	float gain = 1000.0f;
+	A2_stream *str = w->uploadstream;
+	A2_uploadbuffer *ub = (A2_uploadbuffer *)str->streamdata;
+	while(ub)
+	{
+		float bg = a2_normalize_gain(ub->fmt, ub->data, ub->size);
+		if(bg < gain)
+			gain = bg;
+		ub = ub->next;
+	}
+	return gain;
+}
+
+/* Apply and discard upload buffers */
+static A2_errors a2_apply_upload_buffers(A2_wave *w)
+{
+	float gain;
 	A2_stream *str = w->uploadstream;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
+		if(w->flags & A2_NORMALIZE)
+			gain = a2_calc_upload_gain(w);
+		else
+			gain = 1.0f;
 		while(str->streamdata)
 		{
 			A2_errors res;
 			A2_uploadbuffer *ub = (A2_uploadbuffer *)str->streamdata;
-			if((res = do_write(w, ub->offset, ub->fmt,
-					ub->data, ub->size)))
+			if((res = a2_do_write(w, ub->offset, gain,
+					ub->fmt, ub->data, ub->size)))
 			{
-				discard_upload_buffers(w);
+				a2_discard_upload_buffers(w);
 				return res;
 			}
 			str->streamdata = ub->next;
@@ -279,7 +455,7 @@ static A2_errors apply_upload_buffers(A2_wave *w)
  * Analyze buffered writes to determine total length of waveform in samples,
  * NOT including padding.
  */
-static unsigned calc_upload_length(A2_wave *w)
+static unsigned a2_calc_upload_length(A2_wave *w)
 {
 	A2_stream *str = w->uploadstream;
 	switch(w->type)
@@ -304,7 +480,7 @@ static unsigned calc_upload_length(A2_wave *w)
 }
 
 
-static A2_errors stream_write(A2_stream *str,
+static A2_errors a2_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	A2_wave *w = (A2_wave *)str->object;
@@ -313,15 +489,15 @@ static A2_errors stream_write(A2_stream *str,
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
 	  {
-		int ss = sample_size(fmt);
+		int ss = a2_sample_size(fmt);
 		if(!ss)
 			return A2_BADFORMAT;
 		size /= ss;
 		if(w->flags & A2_UNPREPARED)
-			return add_upload_buffer(w, fmt, data, size);
+			return a2_add_upload_buffer(w, fmt, data, size);
 		else
 		{
-			A2_errors res = do_write(w, str->position,
+			A2_errors res = a2_do_write(w, str->position, 1.0f,
 					fmt, data, size);
 			if(res)
 				return res;
@@ -334,33 +510,35 @@ static A2_errors stream_write(A2_stream *str,
 }
 
 
-static A2_errors stream_flush(A2_stream *str)
+static A2_errors a2_stream_flush(A2_stream *str)
 {
 	A2_errors res = A2_OK;
 	A2_wave *w = (A2_wave *)str->object;
 	if(w->flags & A2_UNPREPARED)
 	{
-		res = wave_alloc(w, calc_upload_length(w));
+		res = a2_wave_alloc(w, a2_calc_upload_length(w));
 		if(res == A2_OK)
-			res = apply_upload_buffers(w);
+			res = a2_apply_upload_buffers(w);
+		a2_postprocess(w);
 		w->flags &= ~A2_UNPREPARED;
 	}
-	render_mipmaps(w);
+	a2_render_mipmaps(w);
 	return res;
 }
 
 
 
 /* OpenStream() method for A2_TWAVE objects */
-static A2_errors stream_open(A2_stream *str)
+static A2_errors a2_stream_open(A2_stream *str)
 {
-	str->Write = stream_write;
-	str->Flush = stream_flush;	/* Also used for a2_Close() */
+	str->Write = a2_stream_write;
+	str->Flush = a2_stream_flush;	/* Also used for a2_Close() */
 	return A2_OK;
 }
 
 
-static A2_handle upload_export(A2_state *st, A2_handle bank, const char *name,
+static A2_handle a2_upload_export(A2_state *st, A2_handle bank,
+		const char *name,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
@@ -385,9 +563,11 @@ A2_handle a2_WaveUpload(A2_state *st,
 	A2_errors res;
 	A2_handle h;
 	A2_wave *w;
-	int ss = sample_size(fmt);
+	float gain;
+	int ss = a2_sample_size(fmt);
 	if(!ss)
 		return -A2_BADFORMAT;
+	size /= ss;
 	if((h = a2_WaveNew(st, wt, period, flags)) < 0)
 		return h;
 	if(!(w = a2_GetWave(st, h)))
@@ -395,13 +575,18 @@ A2_handle a2_WaveUpload(A2_state *st,
 	w->flags &= ~A2_UNPREPARED;	/* Shortcut! We alloc manually here. */
 	if(!ss || !data || !size)
 		return h;
-	if((res = wave_alloc(w, size / ss)) ||
-			(res = do_write(w, 0, fmt, data, size / ss)))
+	if(w->flags & A2_NORMALIZE)
+		gain = a2_normalize_gain(fmt, data, size);
+	else
+		gain = 1.0f;
+	if((res = a2_wave_alloc(w, size)) ||
+			(res = a2_do_write(w, 0, gain, fmt, data, size)))
 	{
 		a2_Release(st, h);
 		return res;
 	}
-	render_mipmaps(w);
+	a2_postprocess(w);
+	a2_render_mipmaps(w);
 	return h;
 }
 
@@ -449,7 +634,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	A2_wave *w;
 
 	/* "off" wave - dummy oscillator */
-	h = upload_export(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
+	h = a2_upload_export(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
 	if(h < 0)
 		return -h;
 
@@ -463,7 +648,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		for(++s; s < SC_WPER; ++s)
 			buf[s] = -32767;
 		snprintf(name, sizeof(name), "pulse%d", i);
-		h = upload_export(st, bank, name, A2_WMIPWAVE, SC_WPER,
+		h = a2_upload_export(st, bank, name, A2_WMIPWAVE, SC_WPER,
 				A2_LOOPED, A2_I16, buf, sizeof(buf));
 		if(h < 0)
 			return -h;
@@ -472,7 +657,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	/* Sawtooth wave */
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = s * 65534 / SC_WPER - 32767;
-	h = upload_export(st, bank, "saw", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "saw", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
@@ -482,7 +667,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		buf[(5 * SC_WPER / 4 - s - 1) % SC_WPER] =
 				buf[s + SC_WPER / 4] =
 				s * 65534 * 2 / SC_WPER - 32767;
-	h = upload_export(st, bank, "triangle", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "triangle", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
@@ -490,34 +675,34 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	/* Sine wave, absolute sine, half sine and quarter sine */
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = sin(s * 2.0f * M_PI / SC_WPER) * 32767.0f;
-	h = upload_export(st, bank, "sine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "sine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = SC_WPER / 2; s < SC_WPER; ++s)
 		buf[s] = -buf[s];
-	h = upload_export(st, bank, "asine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "asine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = SC_WPER / 2; s < SC_WPER; ++s)
 		buf[s] = 0;
-	h = upload_export(st, bank, "hsine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "hsine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = 0; s < SC_WPER / 4; ++s)
 		buf[s + SC_WPER / 2] = buf[s];
-	h = upload_export(st, bank, "qsine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "qsine", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	/* SID style noise generator - special oscillator */
-	h = upload_export(st, bank, "noise", A2_WNOISE, 256,
+	h = a2_upload_export(st, bank, "noise", A2_WNOISE, 256,
 			A2_LOOPED, 0, NULL, 0);
 	if(h < 0)
 		return -h;
@@ -527,7 +712,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 #if 0
 	for(s = 0; s < SC_WPER; ++s)
 		buf[s] = sin(s * (1 + s * .1) * .0005) * 32767;
-	h = upload_export(st, bank, "chirp", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "chirp", A2_WMIPWAVE, SC_WPER,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
@@ -536,7 +721,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 }
 
 
-static RCHM_errors wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
+static RCHM_errors a2_wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	int i;
 	A2_wave *w = (A2_wave *)hi->d.data;
@@ -563,8 +748,8 @@ static RCHM_errors wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 
 A2_errors a2_RegisterWaveTypes(A2_state *st)
 {
-	return a2_RegisterType(st, A2_TWAVE, "wave", wave_destructor,
-			stream_open);
+	return a2_RegisterType(st, A2_TWAVE, "wave", a2_wave_destructor,
+			a2_stream_open);
 }
 
 

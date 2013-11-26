@@ -112,9 +112,9 @@ typedef struct A2_wave
 typedef enum A2_waveflags
 {
 	A2_LOOPED =	0x00000100,	/* Waveform is looped */
-/*TODO*/A2_NORMALIZE =	0x00010000,	/* Normalize waveform amplitude */
-/*TODO*/A2_XFADE =	0x00040000,	/* Crossfade to make seamless */
-/*TODO*/A2_REVMIX =	0x00080000,	/* Mix in reversed to make seemless */
+	A2_NORMALIZE =	0x00010000,	/* Normalize waveform amplitude */
+	A2_XFADE =	0x00040000,	/* Crossfade to make seamless */
+	A2_REVMIX =	0x00080000,	/* Mix in reversed to make seemless */
 	A2_CLEAR =	0x00100000,	/* Clear (silence) the waveform */
 	A2_UNPREPARED =	0x01000000,	/* Not prepared - DO NOT PLAY! */
 } A2_waveflags;
@@ -130,10 +130,11 @@ typedef enum A2_waveflags
  *
  * 'flags' is a set of |'ed together flags from A2_waveflags;
  *	A2_LOOPED	Wave is looped. (Affects pre-processing and playback!)
-TODO:	A2_NORMALIZE	Normalize ("maximize") amplitude in the conversion.
-TODO:	A2_XFADE	Crossfade mix a copy offset by half the loop length.
-TODO:	A2_REVMIX	Mix wave with a reversed version of itself.
+ *	A2_NORMALIZE	Normalize ("maximize") amplitude in the conversion.
+ *	A2_XFADE	Crossfade mix a copy offset by half the loop length.
+ *	A2_REVMIX	Mix wave with a reversed version of itself.
  *	A2_CLEAR	Ignore 'data' (if any) and generate a silent waveform.
+ *
  * A2_XFADE and A2_REVMIX are intended for looped waves, although they (sort of)
  * work on one-shot waves as well.
  *
