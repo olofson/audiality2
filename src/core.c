@@ -735,11 +735,11 @@ static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
  * Execute VM instructions until a timing instruction is executed, or the
  * program ends. Returns A2_OK as long as the VM program wants to keep running.
  */
-#define	A2_VMABORT(e, m)				\
-	{						\
-		st->instructions += A2_INSLIMIT;	\
-		a2r_Error(st, e, m);			\
-		return e;				\
+#define	A2_VMABORT(e, m)					\
+	{							\
+		st->instructions += A2_INSLIMIT - inscount;	\
+		a2r_Error(st, e, m);				\
+		return e;					\
 	}
 static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned frame)
 {
@@ -774,28 +774,28 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			if(v->s.state == A2_FINALIZING)
 			{
 				/* Wait for subvoices to terminate */
-				st->instructions += (A2_INSLIMIT - inscount);
+				st->instructions += A2_INSLIMIT - inscount;
 				return v->sub ? A2_OK : A2_END;
 			}
 			v->s.state = A2_ENDING;
 			if((v->flags & A2_ATTACHED) || v->events)
 			{
 				/* Hang around until detached! */
-				st->instructions += (A2_INSLIMIT - inscount);
+				st->instructions += A2_INSLIMIT - inscount;
 				return A2_OK;
 			}
 			v->s.state = A2_FINALIZING;
 			if(!v->sub)
 			{
 				/* That's it - all done! */
-				st->instructions += (A2_INSLIMIT - inscount);
+				st->instructions += A2_INSLIMIT - inscount;
 				return A2_END;
 			}
 			/* Detach subvoices, then wait for them to terminate */
 			memset(v->sv, 0, sizeof(v->sv));
 			for(v = v->sub; v; v = v->next)
 				a2_VoiceDetach(v);
-			st->instructions += (A2_INSLIMIT - inscount);
+			st->instructions += A2_INSLIMIT - inscount;
 			return A2_OK;
 		  case OP_RETURN:
 		  {
@@ -1177,7 +1177,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = (A2_MAXFRAG - frame) << 8;
 			v->s.state = A2_WAITING;
-			st->instructions += (A2_INSLIMIT - inscount);
+			st->instructions += A2_INSLIMIT - inscount;
 			return A2_OK;
 		  case OP_KILLR:
 		  {
@@ -1210,7 +1210,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
 			v->s.timer = 0xffffffff;
 			v->s.state = A2_ENDING;
-			st->instructions += (A2_INSLIMIT - inscount);
+			st->instructions += A2_INSLIMIT - inscount;
 			return A2_OK;
 #if 0
 TODO:
@@ -1266,7 +1266,7 @@ TODO:
 		  case OP_INITV:
 			if((res = a2_PopulateVoice(st, v->program, v)))
 			{
-				st->instructions += (A2_INSLIMIT - inscount);
+				st->instructions += A2_INSLIMIT - inscount;
 				return res;
 			}
 			break;
@@ -1285,7 +1285,7 @@ TODO:
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, dt);
 			v->s.timer += dt;
 			v->s.state = A2_WAITING;
-			st->instructions += (A2_INSLIMIT - inscount);
+			st->instructions += A2_INSLIMIT - inscount;
 			return A2_OK;
 		}
 		v->s.timer += dt;
