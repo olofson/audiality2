@@ -974,6 +974,7 @@ static void a2c_CodeOpR(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 	  case OP_QUANT:
 	  case OP_RAND:
 	  case OP_LOAD:
+	  case OP_SIZEOF:
 		a2c_Code(c, op + 1, to, r);
 		break;
 	  case OP_DELAY:
@@ -1017,10 +1018,13 @@ static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
 	  case OP_QUANT:
 	  case OP_RAND:
 	  case OP_LOAD:
-	  case OP_DELAY:	/* ('to' is not used by these last four) */
+	  case OP_DELAY:	/* ('to' is not used by these last three) */
 	  case OP_TDELAY:
 	  case OP_DEBUG:
 		a2c_Code(c, op, to, v);
+		break;
+	  case OP_SIZEOF:	/* This one's for handles only! */
+		a2c_Code(c, op, to, v >> 16);
 		break;
 	  case OP_SUBR:
 		a2c_Code(c, OP_ADD, to, -v);
@@ -1253,6 +1257,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 		  case OP_RAND:
 		  case OP_NEGR:
 		  case OP_NOTR:
+		  case OP_SIZEOF:
 			break;
 		  default:
 			a2c_Throw(c, A2_NOTUNARY);
@@ -1447,6 +1452,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_P2DR:
 	  case OP_NEGR:
 	  case OP_NOTR:
+	  case OP_SIZEOF:
 		if(a2c_Lex(c) == '!')
 		{
 			A2_symbol *s;
@@ -2487,6 +2493,7 @@ static struct
 	{ "p2d",	TK_INSTRUCTION,	OP_P2DR		},
 	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
 	{ "set",	TK_INSTRUCTION,	OP_SET		},
+	{ "sizeof",	TK_INSTRUCTION,	OP_SIZEOF	},
 	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 
 	/* Directives, macros, keywords... */
@@ -2750,6 +2757,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SENDS:
 	  case OP_CALL:
 	  case OP_SPAWND:
+	  case OP_SIZEOF:
 		printf("%d", ins->a2);
 		break;
 	  /* <16:16(a3)> */
@@ -2765,6 +2773,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_PUSHR:
 	  case OP_SET:
 	  case OP_DEBUGR:
+	  case OP_SIZEOFR:
 		a2_PrintRegName(ins->a1);
 		break;
 	  /* <register(a2)> */

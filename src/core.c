@@ -731,6 +731,25 @@ static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
 }
 
 
+/* Get the size (number of elements) of an indexable object */
+static int a2_sizeof_object(A2_state *st, int handle)
+{
+	A2_wave *w;
+	if(handle < 0)
+		return -A2_INVALIDHANDLE << 16;
+	if(!(w = a2_GetWave(st, handle)))
+		return -A2_WRONGTYPE << 16;
+	switch(w->type)
+	{
+	  case A2_WWAVE:
+	  case A2_WMIPWAVE:
+		break;
+	  default:
+		return -A2_WRONGTYPE << 16;
+	}
+	return ((int64_t)(w->d.wave.size[0]) << 16) / w->period;
+}
+
 /*
  * Execute VM instructions until a timing instruction is executed, or the
  * program ends. Returns A2_OK as long as the VM program wants to keep running.
@@ -1269,6 +1288,18 @@ TODO:
 				st->instructions += A2_INSLIMIT - inscount;
 				return res;
 			}
+			break;
+		  case OP_SIZEOF:
+			if((res = a2_sizeof_object(st, ins->a2) < 0))
+				A2_VMABORT(-res >> 16, "VM:SIZEOF");
+			r[ins->a1] = res;
+			a2_RTMark(&rt, ins->a1);
+			break;
+		  case OP_SIZEOFR:
+			if((res = a2_sizeof_object(st, r[ins->a2] >> 16)) < 0)
+				A2_VMABORT(-res >> 16, "VM:SIZEOFR");
+			r[ins->a1] = res;
+			a2_RTMark(&rt, ins->a1);
 			break;
 
 		  case A2_OPCODES:

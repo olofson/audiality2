@@ -311,7 +311,7 @@ static inline void a2_driver_registry_cleanup(void)
 	A2_DI(DEBUG)	A2_DI(DEBUGR)					\
 									\
 	/* Special instructions */					\
-	A2_DI(INITV)
+	A2_DI(INITV)	A2_DI(SIZEOF)	A2_DI(SIZEOFR)
 
 #define	A2_DI(x)	OP_##x,
 typedef enum A2_opcodes

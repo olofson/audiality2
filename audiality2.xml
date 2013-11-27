@@ -48,6 +48,7 @@
 			<item> neg </item>
 			<item> set </item>
 			<item> debug </item>
+			<item> sizeof </item>
 		</list>
 		<list name="cregs">
 			<item> tick </item>
