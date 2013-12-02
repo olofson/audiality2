@@ -622,6 +622,7 @@ static inline void a2_poll_api(A2_state *st)
 /* Post error message to the API from engine context */
 A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 {
+	st->last_rt_error = e;
 	if(st->config->flags & A2_RTSILENT)
 		return A2_OK;
 	if(st->config->flags & A2_REALTIME)

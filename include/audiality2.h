@@ -66,8 +66,19 @@ extern "C" {
 	Error handling
 ---------------------------------------------------------*/
 
-/* Return last error code set */
+/*
+ * Return the last error code set by a2_Open(), a2_SubState(), a2_OpenConfig(),
+ * a2_AddDriver(), a2_GetDriver(), a2_OpenDrivers() or a2_NewDriver().
+ *
+ * NOTE: This does NOT reset the error code! The aforementioned calls do.
+ */
 A2_errors a2_LastError(void);
+
+/*
+ * Return and reset the last error code sent from the engine context of state
+ * 'st'.
+ */
+A2_errors a2_LastRTError(A2_state *st);
 
 /* Return textual explanation of a Audiality 2 error code */
 const char *a2_ErrorString(unsigned errorcode);

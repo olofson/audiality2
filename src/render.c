@@ -36,6 +36,7 @@ int a2_Render(A2_state *st,
 		unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv)
 {
+	A2_errors res;
 	A2_handle h;
 	A2_driver *drv;
 	A2_config *cfg;
@@ -65,7 +66,6 @@ int a2_Render(A2_state *st,
 	while(1)
 	{
 		int i;
-		A2_errors res;
 		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
 		unsigned frag = cfg->buffer;
 		if(length && (frag > length - frames))
@@ -105,6 +105,8 @@ int a2_Render(A2_state *st,
 		}
 	}
 
+	res = a2_LastRTError(ss);
+
 	a2_Now(ss);
 	a2_Send(ss, h, 1);
 	a2_Release(ss, h);
@@ -112,7 +114,10 @@ int a2_Render(A2_state *st,
 	/* Close substate */
 	a2_Close(ss);
 
-	return frames;
+	if(res)
+		return -res;
+	else
+		return frames;
 }
 
 
@@ -135,7 +140,7 @@ A2_handle a2_RenderWave(A2_state *st,
 		unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv)
 {
-	A2_errors res;
+	int res;
 	A2_handle wh;
 	if(!period)
 		period = samplerate / A2_MIDDLEC;

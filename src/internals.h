@@ -617,6 +617,8 @@ struct A2_state
 	A2_audiodriver	*audio;		/* Audio I/O driver */
 	A2_sysdriver	*sys;		/* System interfaces */
 
+	A2_errors	last_rt_error;	/* Last error posted via a2r_Error() */
+
 /*FIXME: These should really be used with read/write barriers to be safe... */
 	volatile unsigned now_frames;	/* Audio time of last cb (frames, 24:8) */
 	volatile unsigned now_ticks;	/* Tick of last audio callback (ms) */

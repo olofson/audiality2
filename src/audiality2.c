@@ -56,6 +56,17 @@ A2_errors a2_LastError(void)
 	return a2_last_error;
 }
 
+A2_errors a2_LastRTError(A2_state *st)
+{
+	/*
+	 * This "should" be synchronized, but if we have multiple errors coming
+	 * in, this isn't really going to work reliably anyway.
+	 */
+	A2_errors res = st->last_rt_error;
+	st->last_rt_error = A2_OK;
+	return res;
+}
+
 
 /*---------------------------------------------------------
 	Versioning
