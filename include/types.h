@@ -139,6 +139,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPCLOSE,	"Expected closing brace")\
   A2_DEFERR(A2_EXPNAME,		"Expected name")\
   A2_DEFERR(A2_EXPVALUE,	"Expected value")\
+  A2_DEFERR(A2_EXPVALUEHANDLE,	"Expected value or handle")\
   A2_DEFERR(A2_EXPINTEGER,	"Expected integer value")\
   A2_DEFERR(A2_EXPVARIABLE,	"Expected variable")\
   A2_DEFERR(A2_EXPLABEL,	"Expected label")\
@@ -147,6 +148,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPUNIT,		"Expected unit")\
   A2_DEFERR(A2_EXPBODY,		"Expected body")\
   A2_DEFERR(A2_EXPOP,		"Expected operator")\
+  A2_DEFERR(A2_EXPCONSTANT,	"Expected constant")\
   \
   A2_DEFERR(A2_NEXPEOF,		"Unexpected end of file")\
   A2_DEFERR(A2_NEXPNAME,	"Undefined symbol")\

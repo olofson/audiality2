@@ -31,22 +31,228 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2_Try()!
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "compiler.h"
 #include "units/inline.h"
+
+
+/*---------------------------------------------------------
+	Debug tools
+---------------------------------------------------------*/
+
+#define	A2_DEFERR(x, y)	y,
+static const char *a2_errnames[] = {
+	"Ok - no error!",
+	A2_ALLERRORS
+};
+#undef	A2_DEFERR
+
+static char a2_errbuf[128];
+
+const char *a2_ErrorString(unsigned errorcode)
+{
+	if(errorcode < A2_INTERNAL)
+		return a2_errnames[errorcode];
+	else
+	{
+		a2_errbuf[sizeof(a2_errbuf) - 1] = 0;
+		snprintf(a2_errbuf, sizeof(a2_errbuf) - 1,
+				"INTERNAL ERROR #%d; please report to "
+				"<david@olofson.net>", errorcode - A2_INTERNAL);
+		return a2_errbuf;
+	}
+}
+
+#define	A2_DI(x)	#x,
+static const char *a2_insnames[A2_OPCODES] = {
+	/* Program flow control */
+	"END",
+	A2_ALLINSTRUCTIONS
+};
+#undef	A2_DI
+
+static const char *a2_regnames[A2_CREGISTERS] = {
+	"TICK",	"TR"
+};
+
+static void a2_PrintRegName(unsigned r)
+{
+	if(r < A2_CREGISTERS)
+		fputs(a2_regnames[r], stderr);
+	else
+		fprintf(stderr, "R%d", r);
+}
+
+void a2_DumpIns(unsigned *code, unsigned pc)
+{
+	A2_instruction *ins = (A2_instruction *)(code + pc);
+	fprintf(stderr, "%d:\t%-8.8s", pc, a2_insnames[ins->opcode]);
+	switch(ins->opcode)
+	{
+	  /* No arguments */
+	  case OP_END:
+	  case OP_RETURN:
+	  case OP_SLEEP:
+	  case OP_KILLA:
+	  case OP_INITV:
+	  case A2_OPCODES:	/* (Warning eliminator) */
+		break;
+	  /* <integer(a2)> */
+	  case OP_JUMP:
+	  case OP_WAKE:
+	  case OP_FORCE:
+	  case OP_SENDA:
+	  case OP_SENDS:
+	  case OP_CALL:
+	  case OP_SPAWND:
+	  case OP_SIZEOF:
+		fprintf(stderr, "%d", ins->a2);
+		break;
+	  /* <16:16(a3)> */
+	  case OP_DELAY:
+	  case OP_TDELAY:
+	  case OP_PUSH:
+	  case OP_DEBUG:
+		fprintf(stderr, "%f", ins->a3 / 65536.0f);
+		break;
+	  /* <register(a1)> */
+	  case OP_DELAYR:
+	  case OP_TDELAYR:
+	  case OP_PUSHR:
+	  case OP_SET:
+	  case OP_DEBUGR:
+	  case OP_SIZEOFR:
+		a2_PrintRegName(ins->a1);
+		break;
+	  /* <register(a2)> */
+	  case OP_SPAWNDR:
+		a2_PrintRegName(ins->a2);
+		break;
+	  /* <register(a1), 16:16(a3)> */
+	  case OP_LOAD:
+	  case OP_ADD:
+	  case OP_MUL:
+	  case OP_MOD:
+	  case OP_QUANT:
+	  case OP_RAND:
+		a2_PrintRegName(ins->a1);
+		fprintf(stderr, " %f", ins->a3 / 65536.0f);
+		break;
+	  /* <register(a1), integer(a2)> */
+	  case OP_LOOP:
+	  case OP_JZ:
+	  case OP_JNZ:
+	  case OP_JG:
+	  case OP_JL:
+	  case OP_JGE:
+	  case OP_JLE:
+	  case OP_SPAWNV:
+		a2_PrintRegName(ins->a1);
+		fprintf(stderr, " %d", ins->a2);
+		break;
+	  /* <index(a1)> */
+	  case OP_KILL:
+	  case OP_WAIT:
+		fprintf(stderr, "%d", ins->a1);
+		break;
+	  /* <index(a1), integer(a2)> */
+	  case OP_SPAWN:
+	  case OP_SEND:
+		fprintf(stderr, "%d %d", ins->a1, ins->a2);
+		break;
+	  /* <register(a1), register(a2)> */
+	  case OP_LOADR:
+	  case OP_ADDR:
+	  case OP_SUBR:
+	  case OP_MULR:
+	  case OP_DIVR:
+	  case OP_MODR:
+	  case OP_QUANTR:
+	  case OP_RANDR:
+	  case OP_SPAWNR:
+	  case OP_SPAWNVR:
+	  case OP_SENDR:
+	  case OP_P2DR:
+	  case OP_NEGR:
+	  case OP_GR:
+	  case OP_LR:
+	  case OP_GER:
+	  case OP_LER:
+	  case OP_EQR:
+	  case OP_NER:
+	  case OP_ANDR:
+	  case OP_ORR:
+	  case OP_XORR:
+	  case OP_NOTR:
+		a2_PrintRegName(ins->a1);
+		fprintf(stderr, " ");
+		a2_PrintRegName(ins->a2);
+		break;
+	}
+	fprintf(stderr, "\n");
+}
+
+
+#if defined(DUMPTOKENS) || (DUMPLSTRINGS(1)+0)
+static const char *a2c_T2S(A2_tokens tk)
+{
+	switch(tk)
+	{
+	  case TK_EOF:		return "TK_EOF";
+	  case TK_EOS:		return "TK_EOS";
+	  case TK_NAMESPACE:	return "TK_NAMESPACE";
+	  case TK_VALUE:	return "TK_VALUE";
+	  case TK_TEMPREG:	return "TK_TEMPREG";
+	  case TK_STRING:	return "TK_STRING";
+	  case TK_BANK:		return "TK_BANK";
+	  case TK_WAVE:		return "TK_WAVE";
+	  case TK_UNIT:		return "TK_UNIT";
+	  case TK_PROGRAM:	return "TK_PROGRAM";
+	  case TK_FUNCTION:	return "TK_FUNCTION";
+	  case TK_NAME:		return "TK_NAME";
+	  case TK_FWDECL:	return "TK_FWDECL";
+	  case TK_LABEL:	return "TK_LABEL";
+	  case TK_REGISTER:	return "TK_REGISTER";
+	  case TK_INSTRUCTION:	return "TK_INSTRUCTION";
+	  case KW_DEF:		return "KW_DEF";
+	  case KW_STRUCT:	return "KW_STRUCT";
+	  case KW_WIRE:		return "KW_WIRE";
+	  case KW_TEMPO:	return "KW_TEMPO";
+	  case KW_WAVE:		return "KW_WAVE";
+	  case TK_IF:		return "TK_IF";
+	  case KW_ELSE:		return "KW_ELSE";
+	  case TK_WHILE:	return "TK_WHILE";
+	  case KW_FOR:		return "KW_FOR";
+	  case TK_GE:		return "TK_GE";
+	  case TK_LE:		return "TK_LE";
+	  case TK_EQ:		return "TK_EQ";
+	  case TK_NE:		return "TK_NE";
+	  case KW_AND:		return "KW_AND";
+	  case KW_OR:		return "KW_OR";
+	  case KW_XOR:		return "KW_XOR";
+	  case KW_NOT:		return "KW_NOT";
+	  case AT_WAVETYPE:	return "AT_WAVETYPE";
+	  case AT_PERIOD:	return "AT_PERIOD";
+	  case AT_SAMPLERATE:	return "AT_SAMPLERATE";
+	  case AT_LENGTH:	return "AT_LENGTH";
+	  case AT_FLAG:		return "AT_FLAG";
+	}
+	return "<unknown>";
+}
+#endif
 
 
 /*---------------------------------------------------------
 	Symbols
 ---------------------------------------------------------*/
 
-static A2_symbol *a2_NewSymbol(const char *name, A2_tokens token, int value)
+static A2_symbol *a2_NewSymbol(const char *name, A2_tokens token)
 {
 	A2_symbol *s = (A2_symbol *)calloc(1, sizeof(A2_symbol));
 	if(!s)
 		return NULL;
 	s->name = strdup(name);
 	s->token = token;
-	s->value = value;
 	return s;
 }
 
@@ -73,32 +279,39 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 		*(char *)NULL = 0;
 	}
 #endif
-	SYMBOLDBG(printf("a2_PushSymbol(\"%s\" tk:%d v:%d(%f) i:%d)\n",
-			s->name, s->token, s->value, s->value / 65536.0f,
-			s->index);)
+	SYMBOLDBG(
+		if(a2_IsValue(s->token))
+			fprintf(stderr, "a2_PushSymbol(\"%s\" %s (%d) v:%f)\n",
+				s->name, a2c_T2S(s->token), s->token, s->v.f);
+		else
+			fprintf(stderr, "a2_PushSymbol(\"%s\" %s (%d) v:%d)\n",
+				s->name, a2c_T2S(s->token), s->token, s->v.i);
+	)
 	s->next = *stack;
 	*stack = s;
 }
 
 static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 {
-	SYMBOLDBG(printf("a2_FindSymbol('%s'): ", name);)
+	SYMBOLDBG(fprintf(stderr, "a2_FindSymbol('%s'): ", name);)
 	for( ; s; s = s->next)
 		if(!strcmp(name, s->name))
 		{
-			SYMBOLDBG(printf("FOUND!\n");)
+			SYMBOLDBG(fprintf(stderr, "FOUND!\n");)
 			return s;
 		}
-	SYMBOLDBG(printf("NOT FOUND!\n");)
+	SYMBOLDBG(fprintf(stderr, "NOT FOUND!\n");)
 	return NULL;
 }
 
 static A2_symbol *a2c_Grab(A2_compiler *c, A2_symbol *s)
 {
-	if(c->l.sym == s)
-		c->l.sym = NULL;
-	if(c->pl.sym == s)
-		c->pl.sym = NULL;
+	if(a2_IsSymbol(c->l.token))
+		if(c->l.v.sym == s)
+			c->l.v.sym = NULL;
+	if(a2_IsSymbol(c->pl.token))
+		if(c->pl.v.sym == s)
+			c->pl.v.sym = NULL;
 	return s;
 }
 
@@ -122,6 +335,38 @@ static void a2c_AddDependency(A2_compiler *c, A2_handle h)
 	Coder
 ---------------------------------------------------------*/
 
+/*
+ * Convert a double precision value into 16:16 fixed point for the VM. May throw
+ * the following exceptions:
+ *	A2_OVERFLOW if the parsed value is too large to fit in a 16:16 fixp
+ *	A2_UNDERFLOW if a non-zero parsed value is truncated to zero
+ */
+static int a2c_Num2VM(A2_compiler *c, double v)
+{
+	int fxv = floor(v * 65536.0f + 0.5f);
+	if((v > 32767.0f) && (v < -32768.0f))
+		a2c_Throw(c, A2_OVERFLOW);
+	if(v && !fxv)
+		a2c_Throw(c, A2_UNDERFLOW);
+	return fxv;
+}
+
+
+/*
+ * Convert a double precision value into int, verifying that the value actually
+ * is integer and within range.
+ */
+static int a2c_Num2Int(A2_compiler *c, double v)
+{
+	int fxv = (int)v;
+	if((v > 2147483647.0f) && (v < -2147483648.0f))
+		a2c_Throw(c, A2_OVERFLOW);
+	if(v != fxv)
+		a2c_Throw(c, A2_EXPINTEGER);
+	return fxv;
+}
+
+
 /* Create a new coder for program 'p', function index 'func' */
 static void a2c_PushCoder(A2_compiler *c, A2_program *p, unsigned func)
 {
@@ -141,6 +386,7 @@ static void a2c_PushCoder(A2_compiler *c, A2_program *p, unsigned func)
 /* Pop current coder, transfering the code to the program it was assigned to */
 static void a2c_PopCoder(A2_compiler *c)
 {
+	A2_instruction *ins;
 	A2_function *fn;
 	A2_coder *cdr = c->coder;
 	if(!cdr)
@@ -150,7 +396,8 @@ static void a2c_PopCoder(A2_compiler *c)
 			(cdr->pos + 1) * sizeof(unsigned));
 	if(!fn->code)
 		a2c_Throw(c, A2_OOMEMORY);
-	fn->code[cdr->pos] = OP_END << 26;
+	ins = (A2_instruction *)(fn->code + cdr->pos);
+	ins->opcode = OP_END;
 	c->coder = cdr->prev;
 	free(cdr);
 }
@@ -314,6 +561,12 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 }
 
 
+static void a2c_Codef(A2_compiler *c, unsigned op, unsigned reg, double arg)
+{
+	a2c_Code(c, op, reg, a2c_Num2VM(c, arg));
+}
+
+
 static inline void a2c_SetA2(A2_compiler *c, int pos, int val)
 {
 	if((val < 0) || (val > 0xffff))
@@ -332,8 +585,11 @@ static void a2c_DoFixups(A2_compiler *c, A2_symbol *s)
 	{
 		A2_fixup *fx = s->fixups;
 		s->fixups = fx->next;
-		a2c_SetA2(c, fx->pos, s->value);
-		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fx->pos);)
+		a2c_SetA2(c, fx->pos, s->v.i);
+		DUMPCODE(
+			fprintf(stderr, "FIXUP: ");
+			a2_DumpIns(c->coder->code, fx->pos);
+		)
 		free(fx);
 	}
 }
@@ -399,14 +655,16 @@ static void a2_LexBufAdd(A2_compiler *c, int ch)
 
 
 /*
- * Read decimal value, return as signed 16:16 fixed point.
- * Returns A2_OK if everything is normal, otherwise an appropriate error code;
- *	A2_OVERFLOW if the parsed value is too large to fit in a 16:16 fixp
- *	A2_UNDERFLOW if a non-zero parsed value is truncated to zero
- *	A2_BADVALUE if a proper number could not be parsed at all
+ * Attempt to parse a decimal value and return it as double precision floating
+ * point through *v. Returns A2_OK if the operation is successful.
+ *
+ * If 'required' is true, an exception will be thrown if a valid number cannot
+ * be parsed. If 'required' is false, failure to parse a valid number is
+ * indicated through the return code.
  */
-static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
+static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v, int required)
 {
+	int startpos = c->l.pos;
 	int sign = 1;
 	double val = 0.0f;
 	unsigned xp = 0;
@@ -416,7 +674,8 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 		sign = -1;
 		ch = a2_GetChar(c);
 	}
-	for(;; ch = a2_GetChar(c))
+	while(1)
+	{
 		if((ch >= '0') && (ch <= '9'))
 		{
 			xp *= 10;
@@ -427,21 +686,13 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 		else if(ch == '.')
 		{
 			if(xp)
-			{
-				a2_UngetChar(c);
-				*v = 0;
-				return A2_BADVALUE;
-			}
+				break;
 			xp = 1;
 		}
 		else
 		{
 			if(!valid)
-			{
-				a2_UngetChar(c);
-				*v = 0;
-				return A2_BADVALUE;
-			}
+				break;
 			val *= sign;
 			if(xp)
 				val /= xp;
@@ -451,23 +702,23 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, int *v)
 				val = a2_F2P(val);
 			else
 				a2_UngetChar(c);
-			if(val >= 32767.0f)
-				*v = 0x7fffffff;
-			else if(val <= -32768.0f)
-				*v = 0x80000000;
-			else
-			{
-				*v = val * 65536.0f + 0.5f;
-				return val && !*v ? A2_UNDERFLOW : A2_OK;
-			}
-			return A2_OVERFLOW;
+			*v = val;
+			return A2_OK;
 		}
+		ch = a2_GetChar(c);
+	}
+	c->l.pos = startpos;
+	if(required)
+		a2c_Throw(c, A2_BADVALUE);
+	else
+		return A2_BADVALUE;
 }
+
 
 /* Parse a double quoted string with some basic C style control codes */
 static int a2c_LexString(A2_compiler *c)
 {
-	A2_errors res;
+	char *s;
 	while(1)
 	{
 		int ch = a2_GetChar(c);
@@ -503,9 +754,12 @@ static int a2c_LexString(A2_compiler *c)
 				ch = '\0';
 				break;
 			  case 'd':
-				if((res = a2_GetNum(c, ch, &ch)))
-					a2c_Throw(c, res);
+			  {
+				double v;
+				a2_GetNum(c, ch, &v, 1);
+				ch = v;
 				break;
+			  }
 			  case 'f':
 				ch = '\f';
 				break;
@@ -544,20 +798,16 @@ static int a2c_LexString(A2_compiler *c)
 			break;
 		a2_LexBufAdd(c, ch);
 	}
-	c->l.string = a2c_ndup(c->lexbuf, c->lexbufpos);
-	if(!c->l.string)
+	if(!(s = a2c_ndup(c->lexbuf, c->lexbufpos)))
 		a2c_Throw(c, A2_OOMEMORY);
-#if 0
-	c->l.token = TK_STRINGLIT;
-#else
 	c->l.token = TK_STRING;
-	c->l.val = a2_NewString(c->state, c->l.string);
-	if(c->l.val < 0)
-		a2c_Throw(c, -c->l.val);
-	a2c_AddDependency(c, c->l.val);
-#endif
+	c->l.v.i = a2_NewString(c->state, s);
+	if(c->l.v.i < 0)
+		a2c_Throw(c, -c->l.v.i);
+	a2c_AddDependency(c, c->l.v.i);
 	return c->l.token;
 }
+
 
 static int a2c_GetOpOrChar(A2_compiler *c, int ch)
 {
@@ -573,48 +823,89 @@ static int a2c_GetOpOrChar(A2_compiler *c, int ch)
 	return (c->l.token = ch);
 }
 
-/* NOTE:
- *	This returns names as new symbols. Use a2_Grab() to keep one of those -
- *	or it will be deleted as parsing continues!
- *	   Also note that TK_NAME symbols MUST NOT be used in any symbol tables,
- *	as the parser may delete them whenever they end up in *l.sym!
- */
-static int a2c_Lex(A2_compiler *c)
+static inline A2_lexstate *a2c_GetLexState(A2_compiler *c, unsigned li)
 {
-	char *name;
-	int nstart, ch, prevch;
-	A2_handle h;
-	if(c->pl.sym && (c->pl.sym->token == TK_NAME))
-		a2_FreeSymbol(c->pl.sym);	/* Free if not grabbed! */
-	free(c->pl.string);
-	c->pl = c->l;
-	c->l.sym = NULL;
-	c->l.string = NULL;
-	c->lexbufpos = 0;
+	if(li >= 2)
+		a2c_Throw(c, A2_INTERNAL + 141);
+	if(li)
+		return &c->pl;
+	else
+		return &c->l;
+}
 
-	/* Handle whitespace, comments and control characters */
+
+/* Release any non-grabbed symbols created by the lexer. */
+static void a2c_FreeToken(A2_compiler *c, unsigned li)
+{
+	A2_lexstate *l = a2c_GetLexState(c, li);
+	if(!a2_IsSymbol(l->token))
+		return;
+	if(!l->v.sym)
+		return;
+	if(l->v.sym->token == TK_NAME)
+		a2_FreeSymbol(l->v.sym);
+}
+
+
+static double a2c_GetValue(A2_compiler *c, unsigned li)
+{
+	A2_lexstate *l = a2c_GetLexState(c, li);
+	switch(l->token)
+	{
+	  case TK_VALUE:
+		return l->v.f;
+	  default:
+		a2c_Throw(c, A2_INTERNAL + 142);
+	}
+}
+
+
+static unsigned a2c_GetHandle(A2_compiler *c, unsigned li)
+{
+	A2_lexstate *l = a2c_GetLexState(c, li);
+	switch(l->token)
+	{
+	  case TK_STRING:
+	  case TK_BANK:
+	  case TK_WAVE:
+	  case TK_UNIT:
+	  case TK_PROGRAM:
+		return l->v.i;
+	  default:
+		a2c_Throw(c, A2_INTERNAL + 143);
+	}
+}
+
+static unsigned a2c_GetIndex(A2_compiler *c, unsigned li)
+{
+	A2_lexstate *l = a2c_GetLexState(c, li);
+	switch(l->token)
+	{
+	  case TK_TEMPREG:
+	  case TK_FUNCTION:
+	  case TK_INSTRUCTION:
+	  case TK_REGISTER:
+		return l->v.i;
+	  case TK_LABEL:
+		return l->v.sym->v.i;
+	  default:
+		a2c_Throw(c, A2_INTERNAL + 144);
+	}
+}
+
+
+/* Skip whitespace, optionally including newlines. */
+static void a2c_SkipWhite(A2_compiler *c, int skipnewline)
+{
+	int ch;
 	while(1)
 	{
 		switch((ch = a2_GetChar(c)))
 		{
-		  case -1:
-			return (c->l.token = TK_EOF);
-		  case ',':
-			if(!c->commawarned)
-			{
-				fprintf(stderr, "Audiality 2: WARNING: ',' as a "
-						"statement delimiter is "
-						"deprecated! Please use ';' or "
-						"newline.\n");
-				fprintf(stderr, "Audiality 2: (No further "
-						"warnings about this will be "
-						"issued.)\n");
-				c->commawarned = 1;
-			}
-		  case ';':
 		  case '\n':
-			c->l.val = ch;
-			return (c->l.token = TK_EOS);
+			if(!skipnewline)
+				break;
+			/* Fallthrough */
 		  case ' ':
 		  case '\t':
 		  case '\r':
@@ -623,30 +914,85 @@ static int a2c_Lex(A2_compiler *c)
 			switch(a2_GetChar(c))
 			{
 			  case '/':
-				while((ch = a2_GetChar(c)) != '\n')
-					if(ch == -1)
-						return (c->l.token = TK_EOF);
-				a2_UngetChar(c);
+				while((ch = a2_GetChar(c)) != -1)
+					if(ch == '\n')
+						break;
+				if(ch != -1)
+					a2_UngetChar(c);
 				continue;
 			  case '*':
-				for(prevch = 0; (ch = a2_GetChar(c)) != -1;
-						prevch = ch)
+			  {
+				int prevch = 0;
+				for( ; (ch = a2_GetChar(c)) != -1; prevch = ch)
 					if((prevch == '*') && (ch == '/'))
 						break;
 				continue;
+			  }
 			}
-			a2_UngetChar(c);
+			if(ch != -1)
+				a2_UngetChar(c);
 			break;
-		  case '"':
-			return a2c_LexString(c);
 		}
-		break;
+		if(ch != -1)
+			a2_UngetChar(c);
+		return;
+	}
+}
+
+
+/* NOTE:
+ *	This returns names as new symbols. Use a2_Grab() to keep one of those -
+ *	or it will be deleted as parsing continues!
+ *	   Also note that TK_NAME symbols MUST NOT be used in any symbol tables,
+ *	as the parser may delete them whenever they end up in *l.sym!
+ */
+#ifdef DUMPTOKENS
+static int a2c_Lex2(A2_compiler *c, int whitenewline)
+#else
+static int a2c_Lex(A2_compiler *c, int whitenewline)
+#endif
+{
+	char *name;
+	int nstart, ch;
+	A2_handle h;
+	A2_symbol *s;
+	a2c_FreeToken(c, 1);
+	c->pl = c->l;
+	c->l.v.sym = NULL;
+	c->lexbufpos = 0;
+
+	a2c_SkipWhite(c, whitenewline);
+	ch = a2_GetChar(c);
+
+	switch(ch)
+	{
+	  case -1:
+		return (c->l.token = TK_EOF);
+	  case ',':
+		if(!c->commawarned)
+		{
+			fprintf(stderr, "Audiality 2: WARNING: ',' as a "
+					"statement delimiter is "
+					"deprecated! Please use ';' or "
+					"newline.\n");
+			fprintf(stderr, "Audiality 2: (No further "
+					"warnings about this will be "
+					"issued.)\n");
+			c->commawarned = 1;
+		}
+		/* Fallthrough */
+	  case ';':
+	  case '\n':
+		c->l.v.i = ch;
+		return (c->l.token = TK_EOS);
+	  case '"':
+		return a2c_LexString(c);
 	}
 
 	/* Numeric literals */
 	if(((ch >= '0') && (ch <= '9')) || (ch == '-') || (ch == '.'))
 	{
-		A2_errors res = a2_GetNum(c, ch, &c->l.val);
+		A2_errors res = a2_GetNum(c, ch, &c->l.v.f, 0);
 		if(res == A2_OK)
 			return (c->l.token = TK_VALUE);
 		else if(res != A2_BADVALUE)
@@ -667,11 +1013,16 @@ static int a2c_Lex(A2_compiler *c)
 	DUMPLSTRINGS(fprintf(stderr, " [\"%s\":  ", name);)
 
 	/* Try the symbol stack... */
-	if((c->l.sym = a2_FindSymbol(c->state, c->symbols, name)))
+	if((s = a2_FindSymbol(c->state, c->symbols, name)))
 	{
-		DUMPLSTRINGS(fprintf(stderr, "symbol %p] ", c->l.sym);)
-		c->l.token = c->l.sym->token;
-		c->l.val = c->l.sym->value;
+		DUMPLSTRINGS(fprintf(stderr, "symbol %p] ", s);)
+		c->l.token = s->token;
+		if(a2_IsValue(s->token))
+			c->l.v.f = s->v.f;
+		else if(a2_IsSymbol(s->token))
+			c->l.v.sym = s;
+		else
+			c->l.v.i = s->v.i;
 		free(name);
 		return c->l.token;	/* Symbol! */
 	}
@@ -691,7 +1042,8 @@ static int a2c_Lex(A2_compiler *c)
 		  /* Warning eliminator - still warns if we miss a type! */
 		  case A2_TDETACHED:
 		  case A2_TVOICE:
-			break;
+			/* Imported a dynamic object...? Can't be right. */
+			a2c_Throw(c, A2_INTERNAL + 146);
 		}
 		if(c->l.token)
 		{
@@ -699,33 +1051,47 @@ static int a2c_Lex(A2_compiler *c)
 			 * No deps! We rely on objects found this way to be
 			 * managed by our owner, or owned by an imported bank!
 			 */
-			c->l.val = h;
-			c->l.string = name;
-			DUMPLSTRINGS(fprintf(stderr, "token %d] ", c->l.token);)
+			c->l.v.i = h;
+			DUMPLSTRINGS(fprintf(stderr, "token %s (%d)] ",
+					a2c_T2S(c->l.token), c->l.token);)
 			return c->l.token;
 		}
 	}
 
 	/* No symbol, no import! Return it as a new name. */
-	if(!(c->l.sym = a2_NewSymbol(name, TK_NAME, 0)))
+	if(!(s = a2_NewSymbol(name, TK_NAME)))
 	{
 		DUMPLSTRINGS(fprintf(stderr, "COULD NOT CREATE SYMBOL!] ");)
 		free(name);
 		a2c_Throw(c, A2_OOMEMORY);
 	}
-	c->l.token = c->l.sym->token;
-	c->l.val = c->l.sym->value;
 	DUMPLSTRINGS(fprintf(stderr, "name] ");)
+	c->l.token = TK_NAME;
+	c->l.v.sym = s;
 	free(name);
 	return c->l.token;
 }
 
-#if 0
-static int a2c_Lex(A2_compiler *c)
+#ifdef DUMPTOKENS
+static void a2c_DumpToken(A2_compiler *c, unsigned li)
 {
-	int r = a2c_Lex2(c);
-fprintf(stderr, "[%d: %d '%c']\n", c->l.pos, r, r);
-	return r;
+	A2_lexstate *l = a2c_GetLexState(c, li);
+	if((l->token >= ' ') && (l->token <= 255))
+		fprintf(stderr, "%d: '%c' (%d)", l->pos, l->token, l->token);
+	else
+		fprintf(stderr, "%d: %s (%d)", l->pos, a2c_T2S(l->token), l->token);
+	if(l->token == TK_INSTRUCTION)
+		fprintf(stderr, " %s", a2_insnames[a2c_GetIndex(c, li)]);
+}
+static int a2c_Lex(A2_compiler *c, int whitenewline)
+{
+	a2c_Lex2(c, whitenewline);
+	fprintf(stderr, " [[");
+	a2c_DumpToken(c, 0);
+	fprintf(stderr, " (");
+	a2c_DumpToken(c, 1);
+	fprintf(stderr, ")]]\n");
+	return c->l.token;
 }
 #endif
 
@@ -734,7 +1100,7 @@ static int a2c_LexNamespace(A2_compiler *c, A2_symbol *namespace)
 	int tk;
 	A2_symbol *ssave = c->symbols;
 	c->symbols = namespace;
-	tk = a2c_Lex(c);
+	tk = a2c_Lex(c, 0);
 	c->symbols = ssave;
 	return tk;
 }
@@ -742,44 +1108,28 @@ static int a2c_LexNamespace(A2_compiler *c, A2_symbol *namespace)
 
 static void a2c_Unlex(A2_compiler *c)
 {
-	DUMPLSTRINGS(fprintf(stderr, "[unlex] ");)
-	if(c->l.sym && (c->l.sym->token == TK_NAME))
-		a2_FreeSymbol(c->l.sym);
-	free(c->l.string);
+	if(!c->l.token)
+		a2c_Throw(c, A2_INTERNAL + 145);
+	a2c_FreeToken(c, 0);
 	c->l = c->pl;
 	memset(&c->pl, 0, sizeof(A2_lexstate));
+#ifdef DUMPTOKENS
+	fprintf(stderr, " [unlex ==> [");
+	a2c_DumpToken(c, 0);
+	fprintf(stderr, "]]\n");
+#else
+	DUMPLSTRINGS(fprintf(stderr, " [unlex]\n");)
+#endif
 }
 
-static void a2c_SkipLF(A2_compiler *c)
+
+/* Like a2c_Unlex() except we don't move the source position back for relex. */
+static void a2c_DropToken(A2_compiler *c)
 {
-	while(a2c_Lex(c) == TK_EOS)
-		if(c->l.val != '\n')
-			break;
+	int pos = c->l.pos;
+	DUMPLSTRINGS(fprintf(stderr, " [drop]\n");)
 	a2c_Unlex(c);
-}
-
-
-/*
- * Returns the value of the specified lexer state in a format for suitable for
- * use in VM registers and function/spawn/send arguments.
- */
-static int a2_GetVMValue(A2_lexstate *l)
-{
-	switch(l->token)
-	{
-	  /*
-	   * Handles are integers, so we need to normalize them to integer
-	   * values in the VM fixed point format to avoid corruption.
-	   */
-	  case TK_BANK:
-	  case TK_WAVE:
-	  case TK_UNIT:
-	  case TK_PROGRAM:
-	  case TK_STRING:
-		return l->val << 16;
-	  default:
-		return l->val;
-	}
+	c->l.pos = pos;
 }
 
 
@@ -808,14 +1158,9 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 	A2_nametab *x = &c->target->exports;
 	c->regtop = sc->regtop;
 
-	free(c->l.string);
-	free(c->pl.string);
-	c->l.string = c->pl.string = NULL;
-	if(c->l.sym && (c->l.sym->token == TK_NAME))
-		a2_FreeSymbol(c->l.sym);
-	if(c->pl.sym && (c->pl.sym->token == TK_NAME))
-		a2_FreeSymbol(c->pl.sym);
-	c->l.sym = c->pl.sym = NULL;
+	a2c_FreeToken(c, 0);
+	a2c_FreeToken(c, 1);
+	c->l.v.sym = c->pl.v.sym = NULL;
 
 	DBG(fprintf(stderr, "=== end scope ===\n");)
 	while(c->symbols != sc->symbols)
@@ -833,7 +1178,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		  case TK_UNIT:
 		  case TK_PROGRAM:
 		  case TK_STRING:
-			h = s->value;
+			h = s->v.i;
 			DBG(fprintf(stderr, "h: %d\t", h);)
 			DBG(fprintf(stderr, "t: %s\t", a2_TypeName(c->state,
 					a2_TypeOf(c->state, h)));)
@@ -843,8 +1188,12 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			DBG(fprintf(stderr, "(unsupported)\t");)
 			break;
 		}
-		DBG(if(s->exported)
-			fprintf(stderr, "EXPORTED\n"); else fprintf(stderr, "\n");)
+		DBG(
+			if(s->exported)
+				fprintf(stderr, "EXPORTED\n");
+			else
+				fprintf(stderr, "\n");
+		)
 		if(s->exported)
 		{
 #ifdef DEBUG
@@ -872,14 +1221,9 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 static void a2c_CleanScope(A2_compiler *c, A2_scope *sc)
 {
 	c->regtop = sc->regtop;
-	free(c->l.string);
-	free(c->pl.string);
-	c->l.string = c->pl.string = NULL;
-	if(c->l.sym && (c->l.sym->token == TK_NAME))
-		a2_FreeSymbol(c->l.sym);
-	if(c->pl.sym && (c->pl.sym->token == TK_NAME))
-		a2_FreeSymbol(c->pl.sym);
-	c->l.sym = c->pl.sym = NULL;
+	a2c_FreeToken(c, 0);
+	a2c_FreeToken(c, 1);
+	c->l.v.sym = c->pl.v.sym = NULL;
 	while(c->symbols != sc->symbols)
 	{
 		A2_symbol *s = c->symbols;
@@ -921,35 +1265,41 @@ static void a2c_FreeReg(A2_compiler *c, unsigned r)
 
 static void a2c_Expect(A2_compiler *c, A2_tokens tk, A2_errors err)
 {
-	if(a2c_Lex(c) != tk)
+	if(a2c_Lex(c, 0) != tk)
 		a2c_Throw(c, err);
 }
 
 
-static void a2c_Branch(A2_compiler *c, A2_opcodes op, int xtk, int xval,
-		unsigned to, int *fixpos)
+/*
+ * Generate branch based on 'op' and the current lexer token. The target
+ * position is specified via 'to', which can be A2_UNDEFJUMP if the position is
+ * not yet known. If not NULL, 'fixpos' receives the position of the issued
+ * branch instruction.
+ */
+static void a2c_Branch(A2_compiler *c, A2_opcodes op, unsigned to, int *fixpos)
 {
 	int r;
-	if(a2_IsValue(xtk))
+	if(a2_IsValue(c->l.token))
 	{
 		/* FIXME:
 		 *	These are no conditionals! They should be evaluated
 		 *	at compile time instead.
 		 */
 		r = a2c_AllocReg(c);
-		a2c_Code(c, OP_LOAD, r, xval);
+		a2c_Codef(c, OP_LOAD, r, c->l.v.f);
 		if(fixpos)
 			*fixpos = c->coder->pos;
 		a2c_Code(c, op, r, to);
 		a2c_FreeReg(c, r);
 	}
-	else if(a2_IsRegister(xtk))
+	else if(a2_IsRegister(c->l.token))
 	{
+		r = a2c_GetIndex(c, 0);
 		if(fixpos)
 			*fixpos = c->coder->pos;
-		a2c_Code(c, op, xval, to);
-		if(xtk == TK_TEMPREG)
-			a2c_FreeReg(c, xval);
+		a2c_Code(c, op, r, to);
+		if(c->l.token == TK_TEMPREG)
+			a2c_FreeReg(c, r);
 	}
 	else
 		a2c_Throw(c, A2_INTERNAL + 101);
@@ -959,12 +1309,12 @@ static void a2c_Branch(A2_compiler *c, A2_opcodes op, int xtk, int xval,
 static void a2c_VarDecl(A2_compiler *c, A2_symbol *s)
 {
 	s->token = TK_REGISTER;
-	s->value = a2c_AllocReg(c);
+	s->v.i = a2c_AllocReg(c);
 	a2_PushSymbol(&c->symbols, s);
 }
 
 
-static void a2c_CodeOpR(A2_compiler *c, A2_opcodes op, int to, unsigned r)
+static void a2c_code_op_r(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 {
 	switch(op)
 	{
@@ -1005,7 +1355,7 @@ static void a2c_CodeOpR(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 	}
 }
 
-static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
+static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 {
 	int tmpr = to;
 	switch(op)
@@ -1021,18 +1371,15 @@ static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
 	  case OP_DELAY:	/* ('to' is not used by these last three) */
 	  case OP_TDELAY:
 	  case OP_DEBUG:
-		a2c_Code(c, op, to, v);
-		break;
-	  case OP_SIZEOF:	/* This one's for handles only! */
-		a2c_Code(c, op, to, v >> 16);
+		a2c_Codef(c, op, to, v);
 		break;
 	  case OP_SUBR:
-		a2c_Code(c, OP_ADD, to, -v);
+		a2c_Codef(c, OP_ADD, to, -v);
 		break;
 	  case OP_DIVR:
 		if(!v)
 			a2c_Throw(c, A2_DIVBYZERO);
-		a2c_Code(c, OP_MUL, to, 0x100000000LL / v);
+		a2c_Codef(c, OP_MUL, to, 1.0f / v);
 		break;
 	  default:
 		switch(op)
@@ -1047,34 +1394,40 @@ static void a2c_CodeOpV(A2_compiler *c, A2_opcodes op, int to, int v)
 			tmpr = a2c_AllocReg(c);
 			break;
 		}
-		a2c_Code(c, OP_LOAD, tmpr, v);
-		a2c_CodeOpR(c, op, to, tmpr);
+		a2c_Codef(c, OP_LOAD, tmpr, v);
+		a2c_code_op_r(c, op, to, tmpr);
 		if(tmpr != to)
 			a2c_FreeReg(c, tmpr);
 		break;
 	}
 }
 
-/*
- * Issue code '<op> <to> <from>', where <from> is derived from the parser state
- * after a a2c_SimplExp() call.
- */
-static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
+static void a2c_code_op_h(A2_compiler *c, A2_opcodes op, int to, unsigned h)
 {
-	switch(c->l.token)
+	switch(op)
 	{
-	  case TK_VALUE:
-	  case TK_WAVE:
-	  case TK_PROGRAM:
-		a2c_CodeOpV(c, op, to, a2_GetVMValue(&c->l));
+	  case OP_SIZEOF:
+		a2c_Code(c, op, to, h);
 		break;
-	  case TK_TEMPREG:
-	  case TK_REGISTER:
-		a2c_CodeOpR(c, op, to, c->l.val);
+	  case OP_LOAD:
+		a2c_Code(c, op, to, h << 16);
 		break;
 	  default:
-		a2c_Throw(c, A2_INTERNAL + 102);	/* We should never get here! */
+		a2c_Throw(c, A2_INTERNAL + 105);
 	}
+}
+
+/* Issue code '<op> <to> <from>', where <from> is derived from the lex state */
+static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to)
+{
+	if(a2_IsRegister(c->l.token))
+		a2c_code_op_r(c, op, to, c->l.v.i);
+	else if(a2_IsHandle(c->l.token))
+		a2c_code_op_h(c, op, to, a2c_GetHandle(c, 0));
+	else if(a2_IsValue(c->l.token))
+		a2c_code_op_v(c, op, to, a2c_GetValue(c, 0));
+	else
+		a2c_Throw(c, A2_INTERNAL + 102);
 }
 
 
@@ -1087,20 +1440,14 @@ static void a2c_SimplExp(A2_compiler *c, int r);
  */
 static void a2c_Expression(A2_compiler *c, int r, int delim)
 {
-	int res_tk, res_r;
-	int op;
-	a2c_SkipLF(c);
+	int op, res_tk, res_r;
 	a2c_SimplExp(c, r);
-	if((c->l.token == TK_PROGRAM) || (c->l.token == TK_WAVE))
+	if(a2_IsHandle(c->l.token))
 		a2c_Throw(c, A2_NEXPHANDLE); /* No arithmetics on these! */
-	res_tk = c->l.token;
-	res_r = c->l.val;
-	a2c_SkipLF(c);
-	if(a2c_Lex(c) == delim)
+	if(a2c_Lex(c, 1) == delim)
 	{
 		/* Actually just a SimplExp! Return as is. */
-		c->l.token = res_tk;
-		c->l.val = res_r;
+		a2c_DropToken(c);
 		return;
 	}
 	else
@@ -1115,27 +1462,23 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 	if(r < 0)
 	{
 		/* Only allocate a tempreg if we haven't already got one! */
-		if(res_tk == TK_TEMPREG)
-			r = res_r;
+		if(c->l.token == TK_TEMPREG)
+			r = a2c_GetIndex(c, 0);
 		else
-		{
-			r = res_r = a2c_AllocReg(c);
-			res_tk = TK_TEMPREG;
-		}
+			r = a2c_AllocReg(c);
+		res_tk = TK_TEMPREG;
 	}
 	else
-	{
-		res_r = r;
 		res_tk = TK_REGISTER;
-	}
+	res_r = r;
+
 	a2c_CodeOpL(c, OP_LOAD, r);
 
 	while(1)
 	{
-		a2c_SkipLF(c);
-		switch(a2c_Lex(c))
+		switch(a2c_Lex(c, 1))
 		{
-		  case TK_INSTRUCTION:	op = c->l.val;	break;
+		  case TK_INSTRUCTION:	op = a2c_GetIndex(c, 0); break;
 
 		  /* Immediate/register operator instruction pairs */
 		  case '+':		op = OP_ADD;	break;
@@ -1163,19 +1506,19 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 			{
 				/* Done !*/
 				c->l.token = res_tk;
-				c->l.val = res_r;
+				c->l.v.i = res_r;
 				return;
 			}
 			else
 				a2c_Throw(c, A2_EXPOP);
 		}
-		a2c_SkipLF(c);
+		a2c_SkipWhite(c, 1);
 		a2c_SimplExp(c, -1);
-		if((c->l.token == TK_PROGRAM) || (c->l.token == TK_WAVE))
+		if(a2_IsHandle(c->l.token))
 			a2c_Throw(c, A2_NEXPHANDLE);
 		a2c_CodeOpL(c, op, r);
 		if(c->l.token == TK_TEMPREG)
-			a2c_FreeReg(c, c->l.val);
+			a2c_FreeReg(c, a2c_GetIndex(c, 0));
 	}
 }
 
@@ -1193,17 +1536,17 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
  */
 static int a2c_Variable(A2_compiler *c)
 {
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_REGISTER:
-		return c->l.val;
+		return a2c_GetIndex(c, 0);
 	  case TK_NAMESPACE:
 	  {
-		A2_symbol *ns = c->l.sym->symbols;
+		A2_symbol *ns = c->l.v.sym->symbols;
 		a2c_Expect(c, '.', A2_NEXPTOKEN);
 		if(a2c_LexNamespace(c, ns) != TK_REGISTER)
 			a2c_Throw(c, A2_EXPVARIABLE);
-		return c->l.val;
+		return a2c_GetIndex(c, 0);
 	  }
 	  default:
 		a2c_Throw(c, A2_EXPVARIABLE);
@@ -1227,22 +1570,13 @@ static int a2c_Variable(A2_compiler *c)
  */
 static void a2c_SimplExp(A2_compiler *c, int r)
 {
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_VALUE:
 	  case TK_WAVE:
 	  case TK_PROGRAM:
 	  case TK_STRING:
 		return;		/* Done! Just return as is - no code! */
-#if 0
-	  case TK_STRINGLIT:
-		c->l.token = TK_STRING;
-		c->l.val = a2_NewString(c->state, c->l.string);
-		if(c->l.val < 0)
-			a2c_Throw(c, -c->l.val);
-		a2c_AddDependency(c, c->l.val);
-		return;
-#endif
 	  case '(':
 		a2c_Expression(c, r, ')');
 		return;
@@ -1250,7 +1584,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 	  {
 		/* Unary operator */
 		int tmpr = r;
-		int op = c->l.val;
+		int op = a2c_GetIndex(c, 0);
 		switch(op)
 		{
 		  case OP_P2DR:
@@ -1267,7 +1601,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 		a2c_SimplExp(c, tmpr);
 		a2c_CodeOpL(c, op, tmpr);
 		c->l.token = r < 0 ? TK_TEMPREG : TK_REGISTER;
-		c->l.val = tmpr;
+		c->l.v.i = tmpr;
 		return;
 	  }
 	  default:
@@ -1283,7 +1617,7 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 	int argc;
 	for(argc = 0; argc <= maxargc; ++argc)
 	{
-		if((a2c_Lex(c) == '}') || (c->l.token == TK_EOS))
+		if((a2c_Lex(c, 0) == '}') || (c->l.token == TK_EOS))
 		{
 			a2c_Unlex(c);
 			return;		/* Done! */
@@ -1291,12 +1625,15 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 		a2c_Unlex(c);
 		a2c_SimplExp(c, -1);
 		if(a2_IsValue(c->l.token))
-			a2c_Code(c, OP_PUSH, 0, a2_GetVMValue(&c->l));
+			a2c_Codef(c, OP_PUSH, 0, a2c_GetValue(c, 0));
+		else if(a2_IsHandle(c->l.token))
+			a2c_Code(c, OP_PUSH, 0, a2c_GetHandle(c, 0) << 16);
 		else if(a2_IsRegister(c->l.token))
 		{
-			a2c_Code(c, OP_PUSHR, c->l.val, 0);
+			int r = a2c_GetIndex(c, 0);
+			a2c_Code(c, OP_PUSHR, r, 0);
 			if(c->l.token == TK_TEMPREG)
-				a2c_FreeReg(c, c->l.val);
+				a2c_FreeReg(c, r);
 		}
 		else
 			/* Shouldn't happen: a2c_SimplExp() should fail! */
@@ -1311,7 +1648,7 @@ static int a2c_ConstArguments(A2_compiler *c, int maxargc, int *argv)
 	int argc;
 	for(argc = 0; argc <= maxargc; ++argc)
 	{
-		if((a2c_Lex(c) == '}') || (c->l.token == TK_EOS))
+		if((a2c_Lex(c, 0) == '}') || (c->l.token == TK_EOS))
 		{
 			a2c_Unlex(c);
 			return argc;	/* Done! */
@@ -1322,9 +1659,12 @@ TODO: Readable attributes in wavedefs, so we can pass them as arguments to
 TODO: the rendered program!
 */
 		a2c_SimplExp(c, -1);
-		if(!a2_IsValue(c->l.token))
-			a2c_Throw(c, A2_EXPVALUE);
-		argv[argc] = a2_GetVMValue(&c->l);
+		if(a2_IsValue(c->l.token))
+			argv[argc] = a2c_Num2VM(c, a2c_GetValue(c, 0));
+		else if(a2_IsHandle(c->l.token))
+			argv[argc] = a2c_GetHandle(c, 0) << 16;
+		else
+			a2c_Throw(c, A2_EXPCONSTANT);
 	}
 	a2c_Throw(c, A2_MANYARGS);
 }
@@ -1344,14 +1684,14 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		if(!c->inhandler)
 			a2c_Throw(c, A2_NOWAKEFORCE);
 	  case OP_JUMP:
-		if((a2c_Lex(c) != TK_LABEL) && (c->l.token != TK_FWDECL))
+		if((a2c_Lex(c, 0) != TK_LABEL) && (c->l.token != TK_FWDECL))
 			a2c_Throw(c, A2_EXPLABEL);
-		a2c_Code(c, op, 0, c->l.val);
+		a2c_Code(c, op, 0, a2c_GetIndex(c, 0));
 		break;
 	  case OP_LOOP:
 		r = a2c_Variable(c);
 		a2c_Expect(c, TK_LABEL, A2_EXPLABEL);
-		a2c_Code(c, op, r, c->l.val);
+		a2c_Code(c, op, r, a2c_GetIndex(c, 0));
 		break;
 	  case OP_JZ:
 	  case OP_JNZ:
@@ -1361,20 +1701,22 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_JLE:
 		a2c_SimplExp(c, -1);
 		a2c_Expect(c, TK_LABEL, A2_EXPLABEL);
-		a2c_Branch(c, op, c->pl.token, c->pl.val, c->l.val, NULL);
+		i = a2c_GetIndex(c, 0);
+		a2c_DropToken(c);
+		a2c_Branch(c, op, i, NULL);
 		break;
 	  case OP_SPAWN:
 	  case OP_SPAWNV:
 	  case OP_SPAWND:
-		switch(a2c_Lex(c))
+		switch(a2c_Lex(c, 0))
 		{
 		  case TK_REGISTER:
 			++op;
-			p = c->l.val;
+			p = a2c_GetIndex(c, 0);
 			i = A2_MAXARGS;	/* Can't check these compile time... */
 			break;
 		  case TK_PROGRAM:
-			p = c->l.val;	/* Program handle */
+			p = a2c_GetHandle(c, 0);	/* Program handle */
 			i = (a2_GetProgram(c->state, p))->funcs[0].argc;
 			break;
 		  default:
@@ -1385,7 +1727,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		break;
 	  case OP_CALL:
 		a2c_Expect(c, TK_FUNCTION, A2_EXPFUNCTION);
-		p = c->l.val;	/* Function entry point */
+		p = a2c_GetIndex(c, 0);		/* Function entry point */
 		if(p >= c->coder->program->nfuncs)
 			a2c_Throw(c, A2_BADENTRY); /* Invalid entry point! */
 		i = c->coder->program->funcs[p].argc;
@@ -1396,21 +1738,21 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		if(c->inhandler)
 			a2c_Throw(c, A2_NORUN);
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		a2c_Code(c, op, c->l.val >> 16, 0);
+		a2c_Code(c, op, a2c_Num2Int(c, a2c_GetValue(c, 0)), 0);
 		break;
 	  case OP_SEND:
 	  case OP_SENDR:
 	  case OP_SENDS:
 	  case OP_SENDA:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		p = c->l.val >> 16;	/* Message handler entry point */
+		p = a2c_Num2Int(c, a2c_GetValue(c, 0));	/* Entry point */
 		if(!p)
 			a2c_Throw(c, A2_BADENTRY); /* 0 is not for messages! */
 		a2c_Arguments(c, A2_MAXARGS);
 		a2c_Code(c, op, r, p);
 		break;
 	  case OP_KILL:
-		if(a2c_Lex(c) == '*')
+		if(a2c_Lex(c, 0) == '*')
 			a2c_Code(c, OP_KILLA, 0, 0);
 		else
 		{
@@ -1420,9 +1762,9 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 				a2c_Code(c, OP_KILL, 0, c->l.token);
 			else if(a2_IsRegister(c->l.token))
 			{
-				a2c_Code(c, OP_KILLR, c->l.val, 0);
+				a2c_Code(c, OP_KILLR, c->l.v.i, 0);
 				if(c->l.token == TK_TEMPREG)
-					a2c_FreeReg(c, c->l.val);
+					a2c_FreeReg(c, c->l.v.i);
 			}
 			else
 				a2c_Throw(c, A2_INTERNAL + 113);
@@ -1440,7 +1782,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_SimplExp(c, -1);
 		a2c_CodeOpL(c, op, 0);
 		if(c->l.token == TK_TEMPREG)
-			a2c_FreeReg(c, c->l.val);
+			a2c_FreeReg(c, c->l.v.i);
 		break;
 	  case OP_ADD:
 	  case OP_SUBR:
@@ -1453,16 +1795,16 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_NEGR:
 	  case OP_NOTR:
 	  case OP_SIZEOF:
-		if(a2c_Lex(c) == '!')
+		if(a2c_Lex(c, 0) == '!')
 		{
 			A2_symbol *s;
 			if((op != OP_RAND) && (op != OP_P2DR) &&
 					(op != OP_NEGR) && (op != OP_NOTR))
 				a2c_Throw(c, A2_BADVARDECL);
 			a2c_Expect(c, TK_NAME, A2_EXPNAME);
-			s = a2c_Grab(c, c->l.sym);
+			s = a2c_Grab(c, c->l.v.sym);
 			a2c_VarDecl(c, s);
-			r = s->value;
+			r = s->v.i;
 		}
 		else
 		{
@@ -1473,7 +1815,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 				(op == OP_NEGR) || (op == OP_NOTR) ? r : -1);
 		a2c_CodeOpL(c, op, r);
 		if(c->l.token == TK_TEMPREG)
-			a2c_FreeReg(c, c->l.val);
+			a2c_FreeReg(c, c->l.v.i);
 		break;
 	  default:
 		a2c_Throw(c, A2_BADOPCODE);
@@ -1486,13 +1828,13 @@ static void a2c_Def(A2_compiler *c, int export)
 	A2_symbol *s;
 
 	/* Local? */
-	if(a2c_Lex(c) == '.')
+	if(a2c_Lex(c, 0) == '.')
 		export = 0;
 	else
 		a2c_Unlex(c);
 
 	a2c_Expect(c, TK_NAME, A2_EXPNAME);
-	s = a2c_Grab(c, c->l.sym);
+	s = a2c_Grab(c, c->l.v.sym);
 
 	/*
 	 * A bit ugly; we just ignore the 'export' argument if we're in a
@@ -1501,11 +1843,11 @@ static void a2c_Def(A2_compiler *c, int export)
 	if(c->canexport)
 		s->exported = export || c->exportall;
 
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_VALUE:
 		s->token = TK_VALUE;
-		s->value = c->l.val;
+		s->v.f = a2c_GetValue(c, 0);
 		break;
 	  case TK_LABEL:
 	  case TK_REGISTER:
@@ -1517,7 +1859,7 @@ static void a2c_Def(A2_compiler *c, int export)
 	  case TK_PROGRAM:
 	  case TK_STRING:
 		s->token = c->l.token;
-		s->value = c->l.val;
+		s->v.i = a2c_GetHandle(c, 0);
 		break;
 	  default:
 		a2c_Throw(c, A2_BADVALUE);
@@ -1533,18 +1875,23 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 {
 	uint8_t *argc = &fn->argc;
 	fn->argv = c->regtop;
-	for(*argc = 0; a2c_SkipLF(c), a2c_Lex(c) != ')'; ++*argc)
+	for(*argc = 0; a2c_Lex(c, 1) != ')'; ++*argc)
 	{
 		if(*argc > A2_MAXARGS)
 			a2c_Throw(c, A2_MANYARGS);
 		if(c->l.token != TK_NAME)
 			a2c_Throw(c, A2_EXPNAME);
-		a2c_VarDecl(c, a2c_Grab(c, c->l.sym));
-		if(a2c_Lex(c) == '=')
+		a2c_VarDecl(c, a2c_Grab(c, c->l.v.sym));
+		if(a2c_Lex(c, 0) == '=')
 		{
-			if(!a2_IsValue(a2c_Lex(c)))
-				a2c_Throw(c, A2_EXPVALUE);
-			fn->argdefs[*argc] = a2_GetVMValue(&c->l);
+			int v;
+			if(a2_IsValue(a2c_Lex(c, 0)))
+				v = a2c_Num2VM(c, a2c_GetValue(c, 0));
+			else if(a2_IsHandle(c->l.token))
+				v = a2c_GetHandle(c, 0) << 16;
+			else
+				a2c_Throw(c, A2_EXPVALUEHANDLE);
+			fn->argdefs[*argc] = v;
 		}
 		else
 			a2c_Unlex(c);
@@ -1578,7 +1925,7 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace,
 		c->coder->program->structure = ni;	/* First! */
 	}
 	ni->next = NULL;
-	DUMPSTRUCT(printf("  %s %d %d [", ud->name, inputs, outputs);)
+	DUMPSTRUCT(fprintf(stderr, "  %s %d %d [", ud->name, inputs, outputs);)
 
 	/* Allocate control registers and add them to the namespace! */
 	if(!namespace)
@@ -1588,13 +1935,13 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace,
 		A2_symbol *s;
 		if(a2_FindSymbol(c->state, *namespace, ud->registers[i].name))
 			a2c_Throw(c, A2_SYMBOLDEF);
-		if(!(s = a2_NewSymbol(ud->registers[i].name, TK_REGISTER,
-				a2c_AllocReg(c))))
+		if(!(s = a2_NewSymbol(ud->registers[i].name, TK_REGISTER)))
 			a2c_Throw(c, A2_OOMEMORY);
+		s->v.i = a2c_AllocReg(c);
 		a2_PushSymbol(namespace, s);
-		DUMPSTRUCT(printf(" %s:R%d", s->name, s->value);)
+		DUMPSTRUCT(fprintf(stderr, " %s:R%d", s->name, s->v.i);)
 	}
-	DUMPSTRUCT(printf(" ]\n");)
+	DUMPSTRUCT(fprintf(stderr, " ]\n");)
 	return ind;
 }
 
@@ -1603,9 +1950,10 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace,
 static A2_symbol **a2c_CreateNamespace(A2_compiler *c, const char *name,
 		A2_tokens kind)
 {
-	A2_symbol *s = a2_NewSymbol(name, TK_NAMESPACE, kind);
+	A2_symbol *s = a2_NewSymbol(name, TK_NAMESPACE);
 	if(!s)
 		a2c_Throw(c, A2_OOMEMORY);
+	s->v.i = kind;
 	a2_PushSymbol(&c->symbols, s);
 	return &s->symbols;
 }
@@ -1613,14 +1961,11 @@ static A2_symbol **a2c_CreateNamespace(A2_compiler *c, const char *name,
 
 static int a2c_IOSpec(A2_compiler *c, int min, int max, int outputs)
 {
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_VALUE:
 	  {
-		int val;
-		if(c->l.val & 0xffff)
-			a2c_Throw(c, A2_EXPINTEGER);
-		val = c->l.val >> 16;
+		int val = a2c_Num2Int(c, a2c_GetValue(c, 0));
 		if(val < min || val > max)
 			a2c_Throw(c, A2_VALUERANGE);
 		return val;
@@ -1647,14 +1992,14 @@ static void a2c_UnitSpec(A2_compiler *c)
 {
 	int inputs, outputs;
 	A2_symbol **namespace = NULL;
-	const A2_unitdesc *ud = a2_GetUnit(c->state, c->l.val);
+	const A2_unitdesc *ud = a2_GetUnit(c->state, c->l.v.i);
 	if(!ud)
 		a2c_Throw(c, A2_INTERNAL + 107); /* Object missing!? */
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_NAME:
 		/* Named unit! Put the control registers in a namespace. */
-		namespace = a2c_CreateNamespace(c, c->l.sym->name, TK_UNIT);
+		namespace = a2c_CreateNamespace(c, c->l.v.sym->name, TK_UNIT);
 		break;
 	  default:
 		/* Anonymous unit: Control registers --> current namespace. */
@@ -1675,7 +2020,7 @@ static void a2c_WireSpec(A2_compiler *c)
 
 static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 {
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_UNIT:
 		a2c_UnitSpec(c);
@@ -1690,7 +2035,7 @@ static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 			a2c_Throw(c, A2_NEXPTOKEN);
 		return 0;
 	}
-	if(a2c_Lex(c) == TK_EOS)
+	if(a2c_Lex(c, 0) == TK_EOS)
 		return 1;
 	if(c->l.token != terminator)
 		a2c_Throw(c, A2_EXPEOS);
@@ -1721,7 +2066,7 @@ static void a2c_StructDef(A2_compiler *c)
 	int matchout = 0;
 	int chainchannels = 0;	/* Number of channels in current chain */
 	A2_structitem *si;
-	if(a2c_Lex(c) != KW_STRUCT)
+	if(a2c_Lex(c, 1) != KW_STRUCT)
 	{
 		a2c_Unlex(c);
 		return;
@@ -1844,9 +2189,12 @@ static void a2c_StructDef(A2_compiler *c)
 		else
 			p->buffers = -1;
 	}
-	DUMPSTRUCT(printf("\tbuffers: %d", p->buffers);)
-	DUMPSTRUCT(if(p->vflags & A2_SUBINLINE) printf("\tSUBINLINE");)
-	DUMPSTRUCT(printf("\n");)
+	DUMPSTRUCT(
+		fprintf(stderr, "\tbuffers: %d", p->buffers);
+		if(p->vflags & A2_SUBINLINE)
+			fprintf(stderr, "\tSUBINLINE");
+		fprintf(stderr, "\n");
+	)
 }
 
 
@@ -1878,26 +2226,25 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 		a2c_Throw(c, A2_OOMEMORY);
 	for(i = 0; i < A2_MAXEPS; ++i)
 		p->eps[i] = -1;
-	if((s->value = rchm_New(&c->state->ss->hm, p, A2_TPROGRAM)) < 0)
+	if((s->v.i = rchm_New(&c->state->ss->hm, p, A2_TPROGRAM)) < 0)
 	{
 		free(p);
-		a2c_Throw(c, -s->value);
+		a2c_Throw(c, -s->v.i);
 	}
-	if((res = a2ht_AddItem(&c->target->deps, s->value)) < 0)
+	if((res = a2ht_AddItem(&c->target->deps, s->v.i)) < 0)
 		a2c_Throw(c, -res);
 	if(export && !c->canexport)
 		a2c_Throw(c, A2_CANTEXPORT);
 	s->exported = export || (c->exportall && c->canexport);
 	a2_PushSymbol(&c->symbols, s);
-	DUMPCODE(printf("program %s():\n", s->name);)
+	DUMPCODE(fprintf(stderr, "program %s():\n", s->name);)
 	a2c_PushCoder(c, p, 0);
 	if(a2c_AddFunction(c) != 0)
 		a2c_Throw(c, A2_INTERNAL + 131); /* Should be impossible! */
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[0]);
-	a2c_SkipLF(c);
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
-	a2c_SkipLF(c);
 	a2c_StructDef(c);
 	c->inhandler = c->nocode = 0;
 	if(c->coder->program->structure)
@@ -1921,13 +2268,13 @@ static void a2c_FuncDef(A2_compiler *c, A2_symbol *s)
 		a2c_Throw(c, A2_NOFUNCHERE);
 	f = a2c_AddFunction(c);
 	s->token = TK_FUNCTION;
-	s->value = f;
+	s->v.i = f;
 	a2_PushSymbol(&c->symbols, s);
-	DUMPCODE(printf("function %s() (index %d):\n", s->name, f);)
+	DUMPCODE(fprintf(stderr, "function %s() (index %d):\n", s->name, f);)
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
-	a2c_SkipLF(c);
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_RETURN, 0, 0);
@@ -1944,12 +2291,12 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 		a2c_Throw(c, A2_BADENTRY);
 	if(!c->coder || !c->coder->program || c->inhandler)
 		a2c_Throw(c, A2_NOMSGHERE);
-	DUMPCODE(printf("message %d():\n", ep);)
+	DUMPCODE(fprintf(stderr, "message %d():\n", ep);)
 	f = c->coder->program->eps[ep] = a2c_AddFunction(c);
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
-	a2c_SkipLF(c);
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	c->inhandler = 1;
 	c->nocode = 0;
@@ -1978,8 +2325,8 @@ typedef struct A2_wavedef {
 static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 {
 	int set = 1;
-	if(a2c_Lex(c) == TK_VALUE)
-		set = c->l.val;
+	if(a2_IsValue(a2c_Lex(c, 0)))
+		set = a2c_Num2Int(c, a2c_GetValue(c, 0));
 	else
 		a2c_Unlex(c);
 	if(set)
@@ -1991,52 +2338,56 @@ static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 		A2_tokens terminator)
 {
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case AT_WAVETYPE:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		wd->type = c->l.val >> 16;
+		wd->type = a2c_Num2Int(c, a2c_GetValue(c, 0));
 		break;
 	  case AT_PERIOD:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		wd->period = c->l.val >> 16;
+		wd->period = a2c_Num2Int(c, a2c_GetValue(c, 0));
 		break;
 	  case AT_SAMPLERATE:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		wd->samplerate = 1000.0f * c->l.val / 65536.0f;
+		wd->samplerate = 1000.0f * a2c_GetValue(c, 0);
 		break;
 	  case AT_LENGTH:
 		a2c_Expect(c, TK_VALUE, A2_EXPVALUE);
-		wd->length = c->l.val >> 16;
+		wd->length = a2c_Num2Int(c, a2c_GetValue(c, 0));
 		break;
 	  case AT_FLAG:
-		a2c_wd_flagattr(c, wd, c->l.val);
+		a2c_wd_flagattr(c, wd, c->l.v.i);
 		break;
 	  case TK_PROGRAM:
 	  {
 		int maxargc;
-		wd->program = c->l.val;
+		wd->program = a2c_GetHandle(c, 0);
 		maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
 		wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
-		DBG(printf("/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\\n");)
-		DBG(printf("Rendering wave %s...\n", wd->symbol->name);
-		printf("        type: %d\n", wd->type);
-		printf("       flags: %x\n", wd->flags);
-		printf("      period: %d\n", wd->period);
-		printf("  samplerate: %d\n", wd->samplerate);
-		printf("      length: %d\n", wd->length);)
-		if((wd->symbol->value = a2_RenderWave(c->state,
+		DBG(
+			fprintf(stderr, ".--------------------------------\n");
+			fprintf(stderr, "| Rendering wave %s...\n", wd->symbol->name);
+			fprintf(stderr, "|        type: %d\n", wd->type);
+			fprintf(stderr, "|       flags: %x\n", wd->flags);
+			fprintf(stderr, "|      period: %d\n", wd->period);
+			fprintf(stderr, "|  samplerate: %d\n", wd->samplerate);
+			fprintf(stderr, "|      length: %d\n", wd->length);
+		)
+		if((wd->symbol->v.i = a2_RenderWave(c->state,
 				wd->type, wd->period, wd->flags,
 				wd->samplerate, wd->length,
 				wd->program, wd->argc, wd->argv)) < 0)
-			a2c_Throw(c, -wd->symbol->value);
-		DBG(printf("  DONE!\n");)
+			a2c_Throw(c, -wd->symbol->v.i);
+		if(wd->symbol->v.i < 0)
+			a2c_Throw(c, -wd->symbol->v.i);
+		DBG(	printf("|  DONE!\n");)
 
 		/* We expect this to be the last statement in the wavedef! */
-		while(a2c_Lex(c) != terminator)
+		while(a2c_Lex(c, 1) != terminator)
 			if(c->l.token != TK_EOS)
 				a2c_Throw(c, A2_EXPEOS);
-		DBG(printf("/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\/\\\n");)
+		DBG(	fprintf(stderr, "'--------------------------------\n");)
 		return 0;
 	  }
 	  case TK_EOS:
@@ -2046,7 +2397,7 @@ static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 			a2c_Throw(c, A2_NEXPTOKEN);
 		return 0;
 	}
-	if(a2c_Lex(c) == TK_EOS)
+	if(a2c_Lex(c, 0) == TK_EOS)
 		return 1;
 	if(c->l.token != terminator)
 		a2c_Throw(c, A2_EXPEOS);
@@ -2068,10 +2419,10 @@ static struct
 	{ "xfade",	AT_FLAG,	A2_XFADE	},
 	{ "revmix",	AT_FLAG,	A2_REVMIX	},
 
-	{ "OFF",	TK_VALUE,	A2_WOFF << 16		},
-	{ "NOISE",	TK_VALUE,	A2_WNOISE << 16		},
-	{ "WAVE",	TK_VALUE,	A2_WWAVE << 16		},
-	{ "MIPWAVE",	TK_VALUE,	A2_WMIPWAVE << 16	},
+	{ "OFF",	TK_VALUE,	A2_WOFF		},
+	{ "NOISE",	TK_VALUE,	A2_WNOISE	},
+	{ "WAVE",	TK_VALUE,	A2_WWAVE	},
+	{ "MIPWAVE",	TK_VALUE,	A2_WMIPWAVE	},
 
 	{ NULL, 0, 0 }
 };
@@ -2087,21 +2438,21 @@ static void a2c_WaveDef(A2_compiler *c)
 	wd.samplerate = 44100;	/* FIXME: Parent state fs... or what...? */
 	
 	/* Local? */
-	if(a2c_Lex(c) == '.')
+	if(a2c_Lex(c, 0) == '.')
 	{
 		export = 0;
-		a2c_Lex(c);
+		a2c_Lex(c, 0);
 	}
 
 	/* Name of wave */
 	if(c->l.token != TK_NAME)
 		a2c_Throw(c, A2_EXPNAME);
-	wd.symbol = a2c_Grab(c, c->l.sym);
+	wd.symbol = a2c_Grab(c, c->l.v.sym);
 	wd.symbol->token = TK_WAVE;
 	wd.symbol->exported = export || (c->exportall && c->canexport);
 	a2_PushSymbol(&c->symbols, wd.symbol);
 
-	a2c_SkipLF(c);
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_BeginScope(c, &sc);
 
@@ -2111,9 +2462,12 @@ static void a2c_WaveDef(A2_compiler *c)
 		A2_symbol *s;
 		if(a2_FindSymbol(c->state, c->symbols, a2c_wdsyms[i].n))
 			a2c_Throw(c, A2_SYMBOLDEF);
-		if(!(s = a2_NewSymbol(a2c_wdsyms[i].n, a2c_wdsyms[i].tk,
-				a2c_wdsyms[i].v)))
+		if(!(s = a2_NewSymbol(a2c_wdsyms[i].n, a2c_wdsyms[i].tk)))
 			a2c_Throw(c, A2_OOMEMORY);
+		if(a2c_wdsyms[i].tk == TK_VALUE)
+			s->v.f = a2c_wdsyms[i].v;
+		else
+			s->v.i = a2c_wdsyms[i].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
 
@@ -2127,22 +2481,22 @@ static void a2c_WaveDef(A2_compiler *c)
 static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 {
 	int fixpos, loopto = c->coder->pos;
-	if(a2c_Lex(c) == '(')
+	if(a2c_Lex(c, 0) == '(')
 	{
 		a2c_Unlex(c);
 		a2c_SimplExp(c, -1);
-		a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
-		a2c_SkipLF(c);
+		a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
+		a2c_SkipWhite(c, 1);
 		a2c_Expect(c, '{', A2_EXPBODY);
 	}
 	else
 	{
 		a2c_Unlex(c);
 		a2c_Expression(c, -1, '{');
-		a2c_Branch(c, op, c->l.token, c->l.val, A2_UNDEFJUMP, &fixpos);
+		a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
 	}
 	a2c_Body(c, '}');
-	if(a2c_Lex(c) == KW_ELSE)
+	if(a2c_Lex(c, 1) == KW_ELSE)
 	{
 		int fixelse = c->coder->pos;
 		if(loop)
@@ -2151,13 +2505,19 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		if(fixpos >= 0)		/* False condition lands here! */
 		{
 			a2c_SetA2(c, fixpos, c->coder->pos);
-			DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixpos);)
+			DUMPCODE(
+				fprintf(stderr, "FIXUP: ");
+				a2_DumpIns(c->coder->code, fixpos);
+			)
 		}
-		a2c_SkipLF(c);
+		a2c_SkipWhite(c, 1);
 		a2c_Expect(c, '{', A2_EXPBODY);
 		a2c_Body(c, '}');
 		a2c_SetA2(c, fixelse, c->coder->pos);
-		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixelse);)
+		DUMPCODE(
+			fprintf(stderr, "FIXUP: ");
+			a2_DumpIns(c->coder->code, fixelse);
+		)
 		return;
 	}
 	else
@@ -2167,7 +2527,10 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 	if(fixpos >= 0)
 	{
 		a2c_SetA2(c, fixpos, c->coder->pos);
-		DUMPCODE(printf("FIXUP: "); a2_DumpIns(c->coder->code, fixpos);)
+		DUMPCODE(
+			fprintf(stderr, "FIXUP: ");
+			a2_DumpIns(c->coder->code, fixpos);
+		)
 	}
 }
 
@@ -2181,6 +2544,7 @@ static void a2c_TimesL(A2_compiler *c)
 	int loopto, r = a2c_AllocReg(c);
 	a2c_CodeOpL(c, OP_LOAD, r);
 	loopto = c->coder->pos;
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_LOOP, r, loopto);
@@ -2191,7 +2555,7 @@ static void a2c_TimesL(A2_compiler *c)
 static void a2c_For(A2_compiler *c)
 {
 	int loopto = c->coder->pos;
-	a2c_SkipLF(c);
+	a2c_SkipWhite(c, 1);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_JUMP, 0, loopto);
@@ -2201,11 +2565,11 @@ static void a2c_For(A2_compiler *c)
 static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 {
 	int r;
-	switch(a2c_Lex(c))
+	switch(a2c_Lex(c, 0))
 	{
 	  case TK_VALUE:
-		r = c->l.val >> 16;
-		switch(a2c_Lex(c))
+		r = a2c_Num2Int(c, a2c_GetValue(c, 0));
+		switch(a2c_Lex(c, 0))
 		{
 		  case '(':
 			a2c_MsgDef(c, r);
@@ -2228,7 +2592,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 	  case TK_NAMESPACE:
 		a2c_Unlex(c);
 		r = a2c_Variable(c);
-		switch(a2c_Lex(c))
+		switch(a2c_Lex(c, 0))
 		{
 		  case '{':
 			a2c_Unlex(c);
@@ -2256,8 +2620,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		switch(xtk)
 		{
 		  case TK_VALUE:
-			r = c->l.val >> 16;
-			switch(a2c_Lex(c))
+			r = a2c_Num2Int(c, a2c_GetValue(c, 0));
+			switch(a2c_Lex(c, 0))
 			{
 			  case '{':
 				a2c_Unlex(c);
@@ -2275,8 +2639,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 			break;
 		  case TK_REGISTER:
 		  case TK_TEMPREG:
-			r = c->l.val;
-			switch(a2c_Lex(c))
+			r = a2c_GetIndex(c, 0);
+			switch(a2c_Lex(c, 0))
 			{
 			  case '{':
 				a2c_Unlex(c);
@@ -2302,23 +2666,23 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		break;
 	  }
 	  case '.':		/* Label, def or local program */
-		switch(a2c_Lex(c))
+		switch(a2c_Lex(c, 0))
 		{
 		  case TK_NAME:
 		  case TK_FWDECL:
-			if(a2c_Lex(c) == '(')
-				a2c_ProgDef(c, a2c_Grab(c, c->pl.sym), 0);
+			if(a2c_Lex(c, 0) == '(')
+				a2c_ProgDef(c, a2c_Grab(c, c->pl.v.sym), 0);
 			else
 			{
 				A2_symbol *s;
 				if(!c->coder)
 					a2c_Throw(c, A2_NEXPLABEL);
 				a2c_Unlex(c);
-				s = a2c_Grab(c, c->l.sym);
+				s = a2c_Grab(c, c->l.v.sym);
 				s->token = TK_LABEL;
-				s->value = c->coder->pos;
+				s->v.i = c->coder->pos;
 				a2_PushSymbol(&c->symbols, s);
-				DUMPCODE(printf("label .%s:\n", s->name);)
+				DUMPCODE(fprintf(stderr, "label .%s:\n", s->name);)
 				if(c->l.token == TK_FWDECL)
 					a2c_DoFixups(c, s);
 			}
@@ -2329,19 +2693,19 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 	  case TK_FWDECL:	/* TODO: Program forward declarations. */
 		a2c_Throw(c, A2_SYMBOLDEF);
 	  case TK_NAME:
-		if(a2c_Lex(c) != '(')
+		if(a2c_Lex(c, 0) != '(')
 			a2c_Throw(c, A2_NEXPNAME);
 		if(c->coder && c->coder->program)
-			a2c_FuncDef(c, a2c_Grab(c, c->pl.sym));
+			a2c_FuncDef(c, a2c_Grab(c, c->pl.v.sym));
 		else
-			a2c_ProgDef(c, a2c_Grab(c, c->pl.sym), 1);
+			a2c_ProgDef(c, a2c_Grab(c, c->pl.v.sym), 1);
 		break;
 	  case TK_LABEL:
 		a2c_Throw(c, A2_SYMBOLDEF);	/* Already defined! */
 	  case '!':
 	  {
 		A2_symbol *s;
-		switch(a2c_Lex(c))	/* For nicer error messages... */
+		switch(a2c_Lex(c, 0))	/* For nicer error messages... */
 		{
 		  case TK_NAME:
 			break;
@@ -2352,10 +2716,10 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		  default:
 			a2c_Throw(c, A2_EXPNAME);
 		}
-		s = a2c_Grab(c, c->l.sym);
+		s = a2c_Grab(c, c->l.v.sym);
 		a2c_VarDecl(c, s);
-		a2c_SimplExp(c, s->value);
-		a2c_CodeOpL(c, OP_LOAD, s->value);
+		a2c_SimplExp(c, s->v.i);
+		a2c_CodeOpL(c, OP_LOAD, s->v.i);
 		break;
 	  }
 	  case ':':
@@ -2371,7 +2735,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Instruction(c, OP_SUBR, 0);
 		break;
 	  case '*':
-		if(a2c_Lex(c) == '<')
+		if(a2c_Lex(c, 0) == '<')
 			a2c_Instruction(c, OP_SENDA, 0);
 		else
 		{
@@ -2386,7 +2750,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Instruction(c, OP_MOD, 0);
 		break;
 	  case TK_INSTRUCTION:
-		a2c_Instruction(c, c->l.val, 0);
+		a2c_Instruction(c, a2c_GetIndex(c, 0), 0);
 		break;
 	  case TK_PROGRAM:
 		a2c_Unlex(c);
@@ -2401,10 +2765,10 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		r = a2c_AllocReg(c);
 		a2c_SimplExp(c, r);
 		a2c_CodeOpL(c, OP_LOAD, r);
-		a2c_Code(c, OP_MUL, r, 65536 / 60);
+		a2c_Codef(c, OP_MUL, r, 1.0f / 60.0f);
 		a2c_SimplExp(c, r);
 		a2c_CodeOpL(c, OP_MUL, r);
-		a2c_Code(c, OP_LOAD, R_TICK, 1000 << 16);
+		a2c_Codef(c, OP_LOAD, R_TICK, 1000.0f);
 		a2c_Code(c, OP_DIVR, R_TICK, r);
 		a2c_FreeReg(c, r);
 		break;
@@ -2415,10 +2779,10 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_WaveDef(c);
 		return 1;
 	  case TK_IF:
-		a2c_IfWhile(c, c->l.val, 0);
+		a2c_IfWhile(c, c->l.v.i, 0);
 		return 1;
 	  case TK_WHILE:
-		a2c_IfWhile(c, c->l.val, 1);
+		a2c_IfWhile(c, c->l.v.i, 1);
 		return 1;
 	  case KW_FOR:
 		a2c_For(c);
@@ -2434,7 +2798,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		return 0;
 	}
 	/* Finalizer for statements that expect a terminator */
-	if(a2c_Lex(c) == TK_EOS)
+	if(a2c_Lex(c, 0) == TK_EOS)
 		return 1;
 	if(c->l.token != terminator)
 		a2c_Throw(c, A2_EXPEOS);
@@ -2544,9 +2908,13 @@ A2_errors a2_OpenCompiler(A2_state *st, int flags)
 	for(i = 0; a2c_rootsyms[i].n; ++i)
 	{
 		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[i].n,
-				a2c_rootsyms[i].tk, a2c_rootsyms[i].v);
+				a2c_rootsyms[i].tk);
 		if(!s)
 			return A2_OOMEMORY;
+		if(a2_IsValue(a2c_rootsyms[i].tk))
+			s->v.f = a2c_rootsyms[i].v;
+		else
+			s->v.i = a2c_rootsyms[i].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
 	if(a2ht_AddItem(&c->imports, A2_ROOTBANK) < 0)
@@ -2557,12 +2925,8 @@ A2_errors a2_OpenCompiler(A2_state *st, int flags)
 
 void a2_CloseCompiler(A2_compiler *c)
 {
-	free(c->l.string);
-	if(c->l.sym && (c->l.sym->token == TK_NAME))
-		a2_FreeSymbol(c->l.sym);
-	free(c->pl.string);
-	if(c->pl.sym && (c->pl.sym->token == TK_NAME))
-		a2_FreeSymbol(c->pl.sym);
+	a2c_FreeToken(c, 0);
+	a2c_FreeToken(c, 1);
 	while(c->symbols)
 	{
 		A2_symbol *s = c->symbols;
@@ -2685,161 +3049,4 @@ A2_errors a2_CompileFile(A2_compiler *c, A2_handle bank, const char *fn)
 	}
 #endif
 	return res;
-}
-
-
-/*---------------------------------------------------------
-	Debug tools
----------------------------------------------------------*/
-
-#define	A2_DEFERR(x, y)	y,
-static const char *a2_errnames[100] = {
-	"Ok - no error!",
-	A2_ALLERRORS
-};
-#undef	A2_DEFERR
-
-static char a2_errbuf[128];
-
-const char *a2_ErrorString(unsigned errorcode)
-{
-	if(errorcode < A2_INTERNAL)
-		return a2_errnames[errorcode];
-	else
-	{
-		a2_errbuf[sizeof(a2_errbuf) - 1] = 0;
-		snprintf(a2_errbuf, sizeof(a2_errbuf) - 1,
-				"INTERNAL ERROR #%d; please report to "
-				"<david@olofson.net>", errorcode - A2_INTERNAL);
-		return a2_errbuf;
-	}
-}
-
-#define	A2_DI(x)	#x,
-static const char *a2_insnames[A2_OPCODES] = {
-	/* Program flow control */
-	"END",
-	A2_ALLINSTRUCTIONS
-};
-#undef	A2_DI
-
-static const char *a2_regnames[A2_CREGISTERS] = {
-	"TICK",	"TR"
-};
-
-static void a2_PrintRegName(unsigned r)
-{
-	if(r < A2_CREGISTERS)
-		fputs(a2_regnames[r], stdout);
-	else
-		printf("R%d", r);
-}
-
-void a2_DumpIns(unsigned *code, unsigned pc)
-{
-	A2_instruction *ins = (A2_instruction *)(code + pc);
-	printf("%d:\t%-8.8s", pc, a2_insnames[ins->opcode]);
-	switch(ins->opcode)
-	{
-	  /* No arguments */
-	  case OP_END:
-	  case OP_RETURN:
-	  case OP_SLEEP:
-	  case OP_KILLA:
-	  case OP_INITV:
-	  case A2_OPCODES:	/* (Warning eliminator) */
-		break;
-	  /* <integer(a2)> */
-	  case OP_JUMP:
-	  case OP_WAKE:
-	  case OP_FORCE:
-	  case OP_SENDA:
-	  case OP_SENDS:
-	  case OP_CALL:
-	  case OP_SPAWND:
-	  case OP_SIZEOF:
-		printf("%d", ins->a2);
-		break;
-	  /* <16:16(a3)> */
-	  case OP_DELAY:
-	  case OP_TDELAY:
-	  case OP_PUSH:
-	  case OP_DEBUG:
-		printf("%f", ins->a3 / 65536.0f);
-		break;
-	  /* <register(a1)> */
-	  case OP_DELAYR:
-	  case OP_TDELAYR:
-	  case OP_PUSHR:
-	  case OP_SET:
-	  case OP_DEBUGR:
-	  case OP_SIZEOFR:
-		a2_PrintRegName(ins->a1);
-		break;
-	  /* <register(a2)> */
-	  case OP_SPAWNDR:
-		a2_PrintRegName(ins->a2);
-		break;
-	  /* <register(a1), 16:16(a3)> */
-	  case OP_LOAD:
-	  case OP_ADD:
-	  case OP_MUL:
-	  case OP_MOD:
-	  case OP_QUANT:
-	  case OP_RAND:
-		a2_PrintRegName(ins->a1);
-		printf(" %f", ins->a3 / 65536.0f);
-		break;
-	  /* <register(a1), integer(a2)> */
-	  case OP_LOOP:
-	  case OP_JZ:
-	  case OP_JNZ:
-	  case OP_JG:
-	  case OP_JL:
-	  case OP_JGE:
-	  case OP_JLE:
-	  case OP_SPAWNV:
-		a2_PrintRegName(ins->a1);
-		printf(" %d", ins->a2);
-		break;
-	  /* <index(a1)> */
-	  case OP_KILL:
-	  case OP_WAIT:
-		printf("%d", ins->a1);
-		break;
-	  /* <index(a1), integer(a2)> */
-	  case OP_SPAWN:
-	  case OP_SEND:
-		printf("%d %d", ins->a1, ins->a2);
-		break;
-	  /* <register(a1), register(a2)> */
-	  case OP_LOADR:
-	  case OP_ADDR:
-	  case OP_SUBR:
-	  case OP_MULR:
-	  case OP_DIVR:
-	  case OP_MODR:
-	  case OP_QUANTR:
-	  case OP_RANDR:
-	  case OP_SPAWNR:
-	  case OP_SPAWNVR:
-	  case OP_SENDR:
-	  case OP_P2DR:
-	  case OP_NEGR:
-	  case OP_GR:
-	  case OP_LR:
-	  case OP_GER:
-	  case OP_LER:
-	  case OP_EQR:
-	  case OP_NER:
-	  case OP_ANDR:
-	  case OP_ORR:
-	  case OP_XORR:
-	  case OP_NOTR:
-		a2_PrintRegName(ins->a1);
-		printf(" ");
-		a2_PrintRegName(ins->a2);
-		break;
-	}
-	printf("\n");
 }

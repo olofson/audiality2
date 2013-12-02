@@ -36,7 +36,7 @@ typedef struct A2_coder A2_coder;
 #define a2c_Except	else
 #ifdef CERRDIE
 #	define	a2c_Throw(c, x)	({					\
-			printf("THROW %s\n", a2_ErrorString(c->error));	\
+			printf("THROW %s\n", a2_ErrorString(x));	\
 			assert(0);					\
 		})
 #else
@@ -48,23 +48,20 @@ typedef enum A2_tokens
 	/* (lsym points to the matching symbol where applicable) */
 	TK_EOF = 256,	/* End of file */
 	TK_EOS,		/* End of statement */
-	TK_NAMESPACE,	/* lsym = namespace symbol */
-	TK_VALUE,	/* lval = value (16:16 fixp) */
-#if 0
-	TK_STRINGLIT,	/* string = C string */
-#endif
-	TK_TEMPREG,	/* Temporary register; lval = register index */
-	TK_STRING,	/* lval = value (handle) */
-	TK_BANK,	/* lval = value (handle) */
-	TK_WAVE,	/* lval = value (handle) */
-	TK_UNIT,	/* lval = value (handle) */
-	TK_PROGRAM,	/* lval = value (handle) */
-	TK_FUNCTION,	/* lval = value (entry point index) */
-	TK_NAME,	/* lsym = new symbol (add or free!) */
-	TK_FWDECL,	/* lsym = symbol (accumulates fixups!) */
-	TK_LABEL,	/* lval = value from symbol (code position) */
-	TK_REGISTER,	/* lval = value from symbol (register index) */
-	TK_INSTRUCTION,	/* lval = value from symbol (pseudo opcode) */
+	TK_NAMESPACE,	/* sym = namespace symbol */
+	TK_VALUE,	/* f = value */
+	TK_TEMPREG,	/* Temporary register; i = register index */
+	TK_STRING,	/* i = value (handle) */
+	TK_BANK,	/* i = value (handle) */
+	TK_WAVE,	/* i = value (handle) */
+	TK_UNIT,	/* i = value (handle) */
+	TK_PROGRAM,	/* i = value (handle) */
+	TK_FUNCTION,	/* i = value (entry point index) */
+	TK_NAME,	/* sym = new symbol (add or free!) */
+	TK_FWDECL,	/* sym = symbol (accumulates fixups!) */
+	TK_LABEL,	/* sym->v.i = code position */
+	TK_REGISTER,	/* i = register index */
+	TK_INSTRUCTION,	/* i = pseudo opcode */
 	KW_DEF,		/* 'def' directive */
 	KW_STRUCT,	/* 'struct' keyword */
 	KW_WIRE,	/* 'wire' keyword */
@@ -91,16 +88,16 @@ typedef enum A2_tokens
 	AT_FLAG		/* A2_LOOPED, A2_NORMALIZE etc */
 } A2_tokens;
 
-/*
- * Returns "true" if the token represents a constant value or handle
- *
- * NOTE:
- *	Handles and the like are stored as is! To get them in the right format
- *	for immediate operands, arguments etc, use a2_GetVMValue().
- */
+/* Returns "true" if the token represents an immediate value */
 static inline int a2_IsValue(A2_tokens tk)
 {
-	return (tk == TK_VALUE) || (tk == TK_WAVE) || (tk == TK_PROGRAM) ||
+	return (tk == TK_VALUE);
+}
+
+/* Returns "true" if the token represents an object handle */
+static inline int a2_IsHandle(A2_tokens tk)
+{
+	return (tk == TK_BANK) || (tk == TK_WAVE) || (tk == TK_PROGRAM) ||
 			(tk == TK_STRING);
 }
 
@@ -108,6 +105,13 @@ static inline int a2_IsValue(A2_tokens tk)
 static inline int a2_IsRegister(A2_tokens tk)
 {
 	return (tk == TK_TEMPREG) || (tk == TK_REGISTER);
+}
+
+/* Returns "true" if the token uses the v.sym field (may still be NULL!) */
+static inline int a2_IsSymbol(A2_tokens tk)
+{
+	return (tk == TK_NAMESPACE) || (tk == TK_NAME) || (tk == TK_FWDECL) ||
+			(tk == TK_LABEL);
 }
 
 /* Symbol stack */
@@ -119,8 +123,10 @@ struct A2_symbol
 	A2_fixup	*fixups;	/* Fixups for forward branches */
 	int		exported;
 	A2_tokens	token;		/* Symbol type/token */
-	int		value;		/* Symbol value or sub-token */
-	int		index;		/* Physical object index or similar */
+	union {
+		int		i;
+		double		f;
+	} v;
 };
 
 /* Illegal jump target PC to delay checks for fixups */
@@ -149,9 +155,11 @@ typedef struct A2_lexstate
 {
 	int		pos;		/* Source code read position */
 	A2_tokens	token;
-	int		val;		/* Value; int/fixp/handle */
-	char		*string;	/* New name, string literal etc */
-	A2_symbol	*sym;		/* Value; (new) symbol */
+	union {
+		int		i;
+		double		f;
+		A2_symbol	*sym;
+	} v;
 } A2_lexstate;
 
 /* Compiler state */
