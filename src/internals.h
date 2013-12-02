@@ -118,10 +118,11 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #define	SC_WPER			2048
 
 /*
- * Max number of VM instructions to run without processing samples. If exceeded,
- * the voice will be killed, to avoid freezing the whole sound engine.
+ * Max number of VM instructions a voice VM is allowed to run without
+ * processing samples. If exceeded, the voice will be killed, to avoid freezing
+ * the whole sound engine.
  */
-#define A2_INSLIMIT		10000
+#define A2_INSLIMIT		100
 
 /*
  * Maximum allowed child voice nesting depth. (Recursive explosion inhibitor.)
