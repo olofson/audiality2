@@ -1,15 +1,110 @@
 
 TODO: -------------------------------------------------------------------------
 
+* 'fork' unit - unity gain panmix without the controls, basically.
+	* Have this added automatically when subvoice output doesn't match the
+	  parent voice?
+
+* Instructions to wait for a one-shot wave to end, and/or test if it is still
+  playing.
+
+* Proper constant power panning in panmix!
+
+* GUI media player style app? Player plugins?
+
 * Positional audio demo!
 
+* Extra package with Win32 binaries + demos!
+
+* Segfault when doing a2_FreeBank() and reloading banks a few times.
+	* Only happens in certain cases, apparently in conjunction with some
+	  compile errors!
+	* The (now commented out) old section of test.a2s seems to trigger it.
+
+* Should not be using FIFOs with offline states! We can push messages directly
+  into those, eliminating the overhead, and the risk of buffer overflows.
+
+* New wiring system:
+	* A2_structitem has one 8 bit "buffer address code" for each output and
+	  each input.
+		* Top N bits is a bus index:
+			0: Nestlevel scratch buffers
+			1: Voice main outputs
+			2: Voice effect sends
+		* Remaining bits form the buffer ("bus channel") index.
+		* We also need something corresponding to A2_IO_WIREOUT - or do
+		  we just ignore the above and do what we're doing now instead?
+	* Use {...} blocks in struct defs to explicitly define subchains!
+		* Any inputs on the first unit, and any outputs of the last
+		  unit of the subchain will be wired like inputs of a normal
+		  unit in the parent chain.
+		* Inter-unit wiring within the chain is done via separate
+		  buffers, not interfering with the parent chain, or other
+		  chains.
+	* Explicit 'mix' directive along with 'wire' in struct definitions!
+	  This way we can specify exactly what we mean in a clean way, and the
+	  implementation details are left to the engine and units.
+	* Unit output mode control registers?
+		* Replace
+		* Add
+		* Multiply
+		* Ring modulate
+
+* More built-in waveforms...? Just a few lines of tiny, fast C code.
+	* Simple library of built-in waveforms (possibly parametric) that are
+	  rendered on demand at compile time? (Could be extended to render CSL
+	  scripts later.)
+
+* On-demand waveform rendering! Just put them in the namespace as they're
+  imported, and render them when actual programs using them are compiled.
+
+* Logic somewhere (API, core...?) that uses a suitable builtin program when
+  someone attempts to play a wave like an instrument!
+
+* Maybe local function calls or subvoice spawnning should have a different call
+  syntax? Now they look the same, which is really rather confusing...
+
+* Compiler should fail or at least warn about SET on non control registers!
+
+* Compiler warnings for unused local functions and non-exported programs!
+
 * Voices need to lock banks in place while using them!
+
+* Consistent naming conventions - not a2_FreeThis() and a2_ThatFree()!
+
+* API for detecting available drivers?
+
+* TDELAY* instructions need to use a separate timer/accumulator that deals in
+  ticks, eliminating rounding error buildup as long as "clean" delay values are
+  used for 'td'.
+
+* WAKE should only have a SLEEPing voice continue execution! The current WAKE
+  behavior should be a different instruction; "FORCE-if-sleeping" or similar.
+  Or we should just plain remove that, and have FORCE work like the current
+  WAKE...?
+	NOTE:	FORCE can only ever interrupt SLEEP, END or DELAY instructions
+		anyway!
 
 * Panning with Haas effect...?
 
 * Parametric EQ!
 
-* Extra package with Win32 binaries + demos!
+* Use BLIT (temporary switch to alternate oscillator implementation) to handle
+  the transients when using 'phase'?
+
+* Port a bunch of oscillators from Audiality 1!? (Some would preferably be
+  reimplemented using IFFT synthesis and stuff.)
+	* A parameter interface might be useful for this. We may not want to
+	  implement everything as true control regs, for performance and
+	  complexity issue, and the overhead of a larger register frame. This
+	  can be of use for other voice structure units and FX units as well!
+
+* Forward declarations of functions, for mutual recursion...?
+
+* Make the VM PC a straight pointer...?
+	* We trust the VM code to be safe and correct anyway! No change there.
+	* Need to change branch instructions to PC relative, as they're
+	  currently absolute.
 
 * a2_KillSub() is actually a bitch to implement properly...! How do we find and
   release any handles that might be associated with the subvoices?
@@ -39,10 +134,6 @@ TODO: -------------------------------------------------------------------------
 * Releasing objects that don't belong to you is not very nice - but maybe the
   engine should handle it to some extent? There should at least not be crashes.
 
-* Command line interface!!!
-	* Could implement it as a separate lib - but if integrated, it could
-	  piggy-back on the A2S compiler symbol stacks and stuff, maybe...
-
 * Could we pre-allocate a range of handles that the VM can use for juggling
   live instantiated objects...?
 	* We'd add a realtime handle "sub-manager" with its own LIFO stack of
@@ -51,11 +142,6 @@ TODO: -------------------------------------------------------------------------
 	  handles to the pool as needed. For example, we can send released API
 	  handles there instead of back to the API when we're running low. (The
 	  API can just add blocks whenever it needs to.)
-
-* a2c_ConstExp(): Just a wrapper for a2c_SimplExp() that checks that the
-  returned token is actually a constant expression. Meanwhile, a2c_Expression()
-  should look at the terms at hand, and return constants rather than issuing
-  code whenever possible.
 
 * Implement TK_STRINGLIT and then wrap that with TK_VALUE etc up as a constant
   expression rule, s we don't have to handle TK_STRINGLIT and TK_STRING all
@@ -69,24 +155,8 @@ TODO: -------------------------------------------------------------------------
 	  compiling them.
 	* Constant expression evaluation would be nice to go with this!
 
-* Wave rendering expression or statement:
-	def <name> wave <period> <length> <flags> {
-		<command> <args>
-		<command> <args>
-		...
-	}
-	* Flags would be a list of keywords; looped, ...?
-	* normalize, wrap, xfade, revmix, clear etc would be commands rather
-	  than flags.
-	* Commands would be a bit like a stripped down AGW.
-	* Command for rendering output from programs!
-		* Wrap feature for rendering reverb tails etc into the start
-		  of the waveform!
-
 * Move builtin programs and waves into their own banks, so they don't pollute
   the namespace of everything!!!
-
-* The "dummy" driver should set up a thread that does "fake" processing.
 
 * Add DEBUG instructions for printing info on objects!
 
@@ -126,32 +196,6 @@ TODO: -------------------------------------------------------------------------
   need the same amount of padding on both ends?), the main issue is that linear
   pitch cannot express negative frequencies.
 
-* Logic somewhere (API, core...?) that uses a suitable builtin program when
-  someone attempts to play a wave like an instrument!
-
-* Buffered streaming from background states!
-	* Perfect for music!
-	* Can make use of additional CPU cores.
-	* Evens out CPU load as it runs buffered, at lower priority.
-	* Allows the realtime state to do something sensible if the background
-	  state falls behind - like fading out and pausing or disabling music.
-
-* Make the VM PC a straight pointer...?
-	* We trust the VM code to be safe and correct anyway! No change there.
-	* Need to change branch instructions to PC relative, as they're
-	  currently absolute.
-
-* New wiring system:
-	* A2_structitem has one 8 bit "buffer address code" for each output and
-	  each input.
-		* Top N bits is a bus index:
-			0: Nestlevel scratch buffers
-			1: Voice main outputs
-			2: Voice effect sends
-		* Remaining bits form the buffer ("bus channel") index.
-		* We also need something corresponding to A2_IO_WIREOUT - or do
-		  we just ignore the above and do what we're doing now instead?
-
 * Ramping control:
 	* Auto mode (default; what we do currently on most control regs):
 		* Ramps are automatically calculated when delay instructions
@@ -181,39 +225,18 @@ TODO: -------------------------------------------------------------------------
 	* Use another register for timing randomization?
 	* Manual trig mode?
 
-* GUI media player style app? Player plugins?
-
 * Why are we getting objects in slot 0, and builtin objects in strange orders?
 	* Doesn't seem to cause any trouble...?
-
-* Segfault when doing a2_FreeBank() and reloading banks a few times.
-	* Only happens in certain cases, apparently in conjunction with some
-	  compile errors!
-	* The (now commented out) old section of test.a2s seems to trigger it.
-
-* Use {...} blocks in struct defs to explicitly define subchains!
-	* Any inputs on the first unit, and any outputs of the last unit of the
-	  subchain will be wired like inputs of a normal unit in the parent
-	  chain.
-	* Inter-unit wiring within the chain is done via separate buffers, not
-	  interfering with the parent chain, or other chains.
 
 * Timing should probably be part of one of the drivers!
 	* Not relevant for offline rendering and the like! It's only used by
 	  the API when controlling a realtime context.
-
-* Should not be using FIFOs with offline states! We can push messages directly
-  into those, eliminating the overhead, and the risk of buffer overflows.
 
 * 'decimator' unit!
 	* Bandlimited downsampling + non-interpolated upsampling.
 	* Sample quantization.
 	* "Poor electronics" filters? (Separate unit?)
 	* "Tiny speaker" simulator? (Separate unit?)
-
-* 'fork' unit - unity gain panmix without the controls, basically.
-	* Have this added automatically when subvoice output doesn't match the
-	  parent voice?
 
 * Multi-sine "organ" waves?
 	* FFT based offline waveform generator!
@@ -227,48 +250,13 @@ TODO: -------------------------------------------------------------------------
 	  synthesis - but augmenting it with subsample accurate time domain
 	  synthesis might be interesting.
 
-* Proper constant power panning in panmix!
-	* Add special versions of cs_PrepareRamp() to handle things like
-	  clamping and transforms?
-
-* Playing mono programs under stereo groups or voices just sends to the left
-  channel. Add some sensible logic to deal with this automatically?
-	* Simple in theory, but it's complicated by the fact that voice
-	  structures output in adding mode by default, and that they may be
-	  doing that from multiple units in the chain.
-
 * FM/PM oscillator, using an audio input for modulation!
 
-* Remove CS_regtracker and move that logic into the compiler instead, using
-  extended delay instructions to handle control registers.
-
-* Use callbacks for cs_VoiceVMProcess() for cleaner and faster handling of VM
-  states?
-
 * APIs for transferring or copying objects across master states...?
-
-* Send realtime error returns somewhere, so we can debug properly, but still
-  handle/ignore errors without audio drop-outs.
-
-* Oversampled line drawing "oscillator" unit! Very handy for generating custom
-  waveforms for off-line rendering.
-	* Can be implemented (without the oversampling) using the wtosc with a
-	  DC waveform!
-
-* How do we inject master effects...?
-	* The actual master effect configurations should probably be wrapped up
-	  as programs that run as subvoices to the root and group drivers, so
-	  we can inject and control them much like normal voices.
-	* For now, we're just keeping the final compressor/limiter in the root
-	  voice, using a special program, and rewiring the existing API there.
 
 * Allow subvoices to process audio from their parent voice...? The 'inline'
   unit would need inputs, and subvoices for this would need a special exception
   from the "first unit must have no inputs" rule.
-
-* Functions with return values?
-
-* Forward declarations of functions, for mutual recursion...?
 
 * ChipVoice style auto crossfading twin oscillator!
 	* Registers:
@@ -280,7 +268,7 @@ TODO: -------------------------------------------------------------------------
 		w	Wave. Latches 'detune', 'gain' and 'time', and starts
 			the crossfade!
 
-* Implement/prototype as CSL?
+* Implement/prototype as A2S?
 	* WonkyVerb - multitap feedback delay network with modulated taps.
 	* WeirdoVerb:
 		* Set up a pool of fragment buffers.
@@ -293,18 +281,6 @@ TODO: -------------------------------------------------------------------------
 		* Normalize recording levels with a fast compressor/limiter,
 		  wired to a slow envelope tracker, to more or less eliminate
 		  transients?
-
-* Explicit 'mix' directive along with 'wire' in struct definitions! This way
-  we can specify exactly what we mean in a clean way, and the implementation
-  details are left to the engine and units.
-
-* Unit output mode control registers?
-	* Replace
-	* Add
-	* Multiply
-	* Ring modulate
-
-* Remove the default voice structure?
 
 * Realtime groove transforms for tick timing!!!
 
@@ -328,135 +304,15 @@ TODO: -------------------------------------------------------------------------
 			  just add a VM instruction GETENV that creates or gets
 			  the nearest environment of the specified type.
 
-* Render programs to waveforms! Maximum code reuse and incredible
-  power!!! Also, no additional language to learn.
-	* Specify sample rate.
-	* Render until finished (safety limit!), or snip a
-	  specified time range.
-		* How do we detect exactly when a program finishes?
-			* Maybe do off-line rendering by wrapping the program
-			  with a built-in program that calls the real one and
-			  executes a special VM instruction to terminate
-			  rendering when done?
-	* CreateSubState()
-		* Takes a "real" state as input and generates a copy for
-		  off-line rendering.
-		* Bank data is referenced - not copied!
-		* Sub states must be updated by any API calls that change
-		  the shared data!
-		* API calls for main state/sub states are NOT reentrant!
-
-* More built-in waveforms...? Just a few lines of tiny, fast C code.
-	* Simple library of built-in waveforms (possibly parametric) that are
-	  rendered on demand at compile time? (Could be extended to render CSL
-	  scripts later.)
-
-* Proper constant power panning in panmix!
-
-* On-demand waveform rendering! Just put them in the namespace as they're
-  imported, and render them when actual programs using them are compiled.
-
-* Compiler warnings for unused local functions and non-exported programs!
-
 * Fast initialization mechanism for hardcoded VM and control registers?
-
-* API timing observation:
-	API events aren't starting to arrive late until we SUBTRACT the audio
-	buffer size from the new 'now' in cs_Now(). Definitely something wrong
-	with that...!
-
-* Local functions hardwired to the last program entry point! Temporary hack
-  that needs to be fixed!
-
-* Compiler should fail or at least warn about SET on non control registers!
 
 * Control register write callbacks should probably be set by the Initialize
   callback, just like the Process callback... Different configurations may call
   for different register implementations.
 
-* Structured exports namespace? Is there really much point in having globally
-  unique names that are independent of where they're exported from...?
-
-* Proper (subsample accurate) 'run' implementation!
-	* Fixing the WAIT instruction would be a nice, generic solution that
-	  covers this as well...
-
-	* We can probably leverage the fact that the voice RUNning a subvoice
-	  isn't interested in similarly timing critical interaction with other
-	  voices at the same time.
-	* Can we just ignore the fact that subvoices can run out of sync if a
-	  voice in a "RUN context" aborts early? Typically, this will be a
-	  matter of a song "clip" firing up some subprograms, and then RUNning
-	  a final one that governs timing, instead of the typical 'td'.
-
-	* We might have cs_Process(Sub)voices() cut the fragment short in
-	  addition to the timer = 0 thing, if the parent voice is found to be
-	  in a WAIT instruction...
-
-	* Implement RUN by actually re-initializing the voice with a new
-	  program?
-		* Still nead to deal with sample accurate timing...
-
-
-	1. Voice struct definitions!
-	2. Built-in default voice struct 'default'!
-	3. csc_StructDef() pulls in 'default' if no struct keyword is found.
-	4. Anonymous struct def inside a voice program:
-		* Parse as usual, but do not store to symbol table.
-		* Apply automatically!
-
-
-* Maybe local function calls or subvoice spawnning should have a different call
-  syntax? Now they look the same, which is really rather confusing...
-
-* Consistent naming conventions - not cs_FreeThis() and cs_ThatFree()!
-
-* TDELAY* instructions need to use a separate timer/accumulator that deals in
-  ticks, eliminating rounding error buildup as long as "clean" delay values are
-  used for 'td'.
-
-* WAKE should only have a SLEEPing voice continue execution! The current WAKE
-  behavior should be a different instruction; "FORCE-if-sleeping" or similar.
-  Or we should just plain remove that, and have FORCE work like the current
-  WAKE...?
-	NOTE:	FORCE can only ever interrupt SLEEP, END or DELAY instructions
-		anyway!
-
-* Check csc_SimplExp() uses! Is anyone relying on the result always ending up
-  where indicated by an 'r' >= 0...? (That would break sometimes!)
-
-* Potential issues remaining:
-	* VM register initialization?
-		* Readable registers are implemented by units writing back to
-		  the VM registers - so registers should be initialized by the
-		  units as well!
-	* The FORCE instruction is expected to read back the current state of
-	  interrupted control ramps in progress, but we need proper register
-	  read callbacks in the unit API for this!
-		* Single call to read back all relevant registers? (Nothing's
-		  ever going to happen until the DSP callback runs anyway...)
-		* We could just have voices write back state to their control
-		  registers by convention - but there's a problem with that:
-		  Error buildup! As it is, errors are limited to actual script
-		  operations, and unaffected by sample rates and actual ramping
-		  accuracy. (Exception: FORCE...)
-	* 'phase' being a control register rather than an instruction might
-	  cause subtle issues...
-	* What does v->stack == NULL mean? (FORCE crashes on that in K2 when it
-	  fails to compile some CSL files...)
-
-* Control register optimizations:
-	* Separate registers and/or separate instructions!
-	* Special versions of flow/timing control instructions that encode the
-	  control registers that may have been altered.
-	* Can we even do readable control registers now...? That could be done
-	  very efficiently with dedicated VM instructions; just add another
-	  callback in the descriptors.
-		* Actually, not sure this is desirable. Currently, there is a
-		  lot of inplace arithmetics on control registers going on, and
-		  it's assumed that they're actually write-only from the unit
-		  POV; "reading back" is done from the local copy in the VM.
-		  Of course, we can still do that for dedicated control regs...
+* The FORCE instruction is expected to read back the current state of
+  interrupted control ramps in progress, but we need proper register read
+  callbacks in the unit API for this!
 
 * Simply add an array similar to the groups, for master fx busses? These would
   theoretically run ordinary programs, although they're fed with audio from
@@ -476,9 +332,6 @@ TODO: -------------------------------------------------------------------------
 		  explicitly send audio there anyway. And it needs master
 		  effects, like compressor/limiter.
 
-TESTING:
-	* Test CS_NOMIP with Valgrind!
-
 * Instructions + syntax for indexing and interpolating values out of waveforms!
 	* Period and/or sample oriented versions?
 	* Probably obey looping flags, plain and simple...
@@ -494,12 +347,6 @@ TESTING:
 		  overhead.
 	* Indexing and interpolation instructions + code syntax.
 
-* Why does the SDL test app stop responding after a while? Not using the
-  "real" timing features of the API is causing this...?
-	* Is this issue still there? (Fixed 
-
-* API for detecting available drivers?
-
 * Separate driver interface destruction from Close() method?
 
 * Three operand instructions! A constant table instead of immediate values
@@ -512,27 +359,10 @@ TESTING:
 
 * What's with the regular 60+% spikes in the CPU load in cstest?
 
-* ChipVoice (crossfading pair oscillator) reimplemented as a voice unit!? It's
-  of course possible to implement with two normal oscillators, but that
-  requires quite a bit of VM code to control.
-
-* Rework AGW into a proper modular synth (all audio rate signals), and make it
-  available in ChipSound as an oscillator voice unit? Or should we just wrap
-  the individual AGW operators up as ChipSound units...? Seems a bit redundant
-  to have another defintion parser and modular engine, if we can have ChipSound
-  voice structures cover that as well.
-
-* Generalize the bank object refcounting?
-
-* Hardcore optimization opportunity: Add optimized cs_VoiceProcess()
-  implementations for hardwired voice structures!
-	* Significant gains? Slightly less function call overhead, as processing
-	  and register write logic is hardcoded or inlined, but other than that,
-	  the logic has to be pretty much the same as in the generic version...
-
 * Per-program analysis tool for optimizing songs and sound effects!
 
 ---------------------------------------------------------------------------
+
 Structure sizes as of 20120905, 0.2.0:
 CS_object:      4
 CS_wave:        144
@@ -546,194 +376,68 @@ CS_message:     56
 CS_block:       256
 
 ---------------------------------------------------------------------------
-For K2 TP5:
 
-	* WAIT or SLEEP instruction that just stalls the VM until a message
-	  handler executes WAKE or FORCE!!! Must eliminate that nasty
-	  manual state trickery... Also, this can mostly eliminate FORCE,
-	  which is a bit evil anyway.
+* File system driver interface, so we can use PhysicsFS and the like?
 
-	* Proper mixer architecture:
+* What's with the a2c_SkipLF()s in various constructs? Aren't we supposed to do
+  free formatting, since the braces are required anyway?
 
-		* Stereo!
+* Minus before literal is always unary unless followed by whitespace. Might be
+  a bit annoying if one doesn't have a habit of always surrounding operators by
+  spaces anyway.
 
-		* Master effects!
+* Sleeping voices should not burn CPU! Also, inaudible voices should optimize
+  away audio rendering, filters etc. Handy for continuous sound effects and the
+  like - though that might be tricky to implement. Basically, we need to keep
+  the VM running as usual to have it in the right state if/when it's time to
+  wake it up again. Which means, doing mostly nothing, unless it's a VM
+  intensive sound, so it could be a massive win.
 
-		* Can we somehow use voices as busses? Obvious would be to
-		  use groups for this, but that's a single top-level
-		  dimension. Music, soundscapes, special FX etc need their
-		  own local busses and effects.
-			* It might be tempting to implement busses as bank
-			  objects, but that doesn't work for real time
-			  dynamic graphs!
-			* Routing that violates the current tree structure
-			  means we need to actively track and manage voice
-			  execution order, to avoid "random" latencies
-			  introduced when voices are processed in the wrong
-			  order.
+* VM command to have a voice force detach and die! Many sounds that need
+  realtime control will still go to sleep to never respond again once they
+  finish, so no point in having them hang around because someone happens to be
+  holding a handle.
 
-	* Some sort of native support for positional audio? (Mixer/routing
-	  department, probably.)
+* "Multiwaves? Waves that are essentially used like normal waves, but actually
+  map to multiple other waves as functions of pitch, amplitude, manual control,
+  or just random selection.
+     First thought was to use this when pre-rendering sounds with noise and
+  other random components, to avoid making the sounds stiff and repetitive.
+	* Free running phase! (Seems like we have that already...) We don't
+	  want waves to be reset to phase 0 whenever they're switched in. We
+	  want the whole "wave bank" to play as one, just cross-fading between
+	  "tracks".
 
----------------------------------------------------------------------------
-CRITICAL:
-	* cstest.c can somehow make ChipSound just stop responding. Reload
-	  does not help.
-		* Old...?
+* Have the asynchronous API calls return "tracking tickets" that can be used
+  for reference if errors occur, to check delivery status etc?
 
-	* "Stop" button in K2 sfxtest now generates a click - even if
-	  nothing is playing. WTF?
-		* Something with MiniTest... It hangs some voices and does
-		  something stupid, probably.
+* Programs must be able to send messages back to the API!!!
 
-	* Why does +amp (V - amp * .2) wobble around way above 0 when
-	  V is 0!?
+* Binary files! Make the compiler optional. Packed VM code? Or is it better to
+  just leave that to lzma or bzip2? Hint: Just dropping the null bytes actually
+  makes the compressed file one byte larger in a naive test...! Theoretically,
+  the only thing that can shrink compressed results is removing actual
+  information. If we use Huffman encoding based on VM instruction use frequency,
+  we remove the need for the compressor to store the results of a similar
+  analysis in each file. That might save a few bytes.
 
-	* SPAWNR/SPAWNDR doesn't work!?
-
-	* Assignment statement bug!
-		alt (1 - alt)
-	  Doesn't work; result is always zero. Apparently, the compiler
-	  doesn't understand that it can't use 'alt' for temporary storage
-	  when it's also used later in the expression.
-
----------------------------------------------------------------------------
-
-* What about the remaining uses of the SDL audio lock?
-	* csc_Code(), code buffer reallocation:
-		* Compile into off-line buffer fragments, and then send
-		  those via messages? (We should probably keep "functions"
-		  in separate buffers anyway, like EEL, Lua etc... CS is
-		  no longer assembly language!)
-	* cs_ObjAlloc(), object table reallocation:
-		* Keep a separate table on the API side, for API operation,
-		  and just send new objects via messages. When reallocating
-		  the table, send an extra copy over to the engine, which
-		  will later return the old one for destruction.
-	* cs_FreeBank(), cs_UntangleBank() etc:
-		* Send a message that has the engine detach and return all
-		  objects?
-	* Alternative solutions for the above:
-		* API<->engine roundtrip; have the engine accept the new
-		  buffer and reply before moving on.
-		* Copying the current buffer into a new, larger memory
-		  block and atomically replacing the pointer (read-only for
-		  the engine side anyway!), then throw the old buffer in a
-		  queue for deletion later, when we can be certain that the
-		  engine is no longer using it.
-==>		* Just use a lock that makes the engine skip processing...
-		  (At this point, none of this stuff will happen during
-		  normal operation anyway in Kobo II, so it's no big deal.)
-	* Switch to messages:
-		* cs_Kill()
-		* cs_NewGroup()
-		* cs_DetachGroup()
-		* cs_Insert()
-
-	* File system driver interface, so we can wire ChipSound to
-	  PhysicsFS and the like?
-
-	* cstest oscilloscopes tap their signal from the wrong place, as
-	  the final stages are currently hardwired into cs_ProcessMaster().
-
-	* Error status gets stuck after generating an illegal opcode!
-
-	* DELAY* instructions should *always* trigger message processing,
-	  even if they don't advance to the next sample frame!
-
-	* What's with the csc_SkipLF()s in various constructs? Aren't we
-	  supposed to do free formatting, since the braces are required
-	  anyway?
-
-	* Minus before literal is always unary unless followed by
-	  whitespace. Might be a bit annoying if one doesn't have a habit
-	  of always surrounding operators by spaces anyway.
-
-	* Verify that event time wrap actually works!!! (It happens every
-	  5.8 minutes at 48 kHz.)
-
-	* Random crashes? (Can't repeat...) Could have been a binary
-	  incompatibility; discovered that the cs_Wait() argument passing
-	  was broken.
-
-	* Sleeping voices should not burn CPU! Also, inaudible voices
-	  should optimize away audio rendering, filters etc. Handy for
-	  continuous sound effects and the like - though that might be
-	  tricky to implement. Basically, we need to keep the VM running as
-	  usual to have it in the right state if/when it's time to wake it
-	  up again. Which means, doing mostly nothing, unless it's a VM
-	  intensive sound, so it could be a massive win.
-
-	* VM command to have a voice force detach and die! Many sounds that
-	  need realtime control will still go to sleep to never respond
-	  again once they finish, so no point in having them hang around
-	  because someone happens to be holding a VID.
-
-	* "Multiwaves? Waves that are essentially used like normal waves,
-	  but actually map to multiple other waves as functions of pitch,
-	  amplitude, manual control, or just random selection.
-	     First thought was to use this when pre-rendering sounds with
-	  noise and other random components, to avoid making the sounds
-	  stiff and repetitive.
-		* Free running phase! (Seems like we have that already...)
-		  We don't want waves to be reset to phase 0 whenever
-		  they're switched in. We want the whole "wave bank" to
-		  play as one, just cross-fading between "tracks".
-
-	* Cross-fading oscillator! Old ChipVoice style, for click-free
-	  wave sequencing, ambient pads etc. Obviously, one can implement
-	  this just fine in CS script, but it would be much more accessible
-	  and run faster if built into the engine.
-		* Could be implemented as an insert effect that piggybacks
-		  on the main oscillator control registers, and just adds
-		  one or a few extra registers of it's own.
-		* Oscillator detune? (We probably DON'T want true
-		  independent pitch control, as that would almost bring us
-		  back to manually programming dual voices.)
-
-	* Have the asynchronous API calls return "tracking tickets" that
-	  can be used for reference if errors occur, to check delivery
-	  status etc!
-
-	* Multiple states, optionally shared banks...?
-
-	* Library versioning might be nice...?
-
-	* Programs must be able to send messages back to the API!!!
-
-	* Convert Modulation parameters to [0, 1] "sensible" range!!!
-
-	* Binary files! Make the CSL compiler optional. Packed VM code? Or
-	  is it better to just leave that to lzma or bzip2? Hint: Just
-	  dropping the null bytes actually makes the compressed file one
-	  byte larger in a naive test...! Theoretically, the only thing
-	  that can shrink compressed results is removing actual
-	  information. If we use Huffman encoding based on VM instruction
-	  use frequency, we remove the need for the compressor to store
-	  the results of a similar analysis in each file. That might save
-	  a few bytes.
-
-	* Instructions to wait for a one-shot wave to end, and/or test if
-	  it is still playing.
-
-	* Editor/synth application with:
-		* ALSA and/or other MIDI interface
-		* CSASM code editor
-			* MIDI record feature that just inserts code
-			  based on some switches and settings! Example:
-				tdelay %qdelta
-				spawn %vvid piano %pitch %vel
-		* Interactive VM debugger
-		* Voice status visualization
-		* Live multi-voice visualization in the code editor!
-			* Overlay voice status boxes with oscilloscopes,
-			  most interesting regs etc, and use lines or
-			  arrows to indicate where they are in the code.
-			* Use loop arrows and/or afterglow to visualize
-			  code that runs too fast for realtime display.
-			* Use a bunch of simple filters to eliminate
-			  silent voices, voices running, or not running,
-			  specific programs etc.
+* Editor/synth application with:
+	* ALSA and/or other MIDI interface
+	* Code editor
+		* MIDI record feature that just inserts code based on some
+		  switches and settings! Example:
+			td %qdelta
+			%vvid:piano %pitch %vel
+	* Interactive VM debugger
+	* Voice status visualization
+	* Live multi-voice visualization in the code editor!
+		* Overlay voice status boxes with oscilloscopes, most
+		  interesting regs etc, and use lines or arrows to indicate
+		  where they are in the code.
+		* Use loop arrows and/or afterglow to visualize code that runs
+		  too fast for realtime display.
+		* Use a bunch of simple filters to eliminate silent voices,
+		  voices running, or not running, specific programs etc.
 
 ---------------------------------------------------------------------------
 BUGS:
@@ -747,17 +451,9 @@ BUGS:
 		* MIDI should use one sub-group per channel, to allow
 		  proper implementation of channel-wide controllers.
 
-	* cs_ProcessMaster() needs to go away! Extract the audio using a
-	  unit in the root voice instead.
-
 	* CPU load and related properties and pretty much broken, as
 	  SDL_GetTicks() has way too low resolution for measuring such
 	  short intervals as the audio callback.
-
-	* OctStrings of K2Intro seems flaky when playing in monophonic
-	  mode. Is it mixing up the voices somehow...? Pitch handling is
-	  wrong, for one thing... The main issue, though: See above...
-		* Fixed...?
 
 	* There is a detach chain reaction that causes some minor issues;
 	  if a program is detached, it can still receive broadcast
@@ -780,8 +476,8 @@ BUGS:
 	  symbols exported etc until the point of the error are left
 	  around! Can result in "interesting" programs... :-)
 
-	* There might be an occasional CS_symbol leaked if a compile error
-	  occurs in the wrong place. csc_Grab() should probably wire the
+	* There might be an occasional symbol leaked if a compile error
+	  occurs in the wrong place. a2c_Grab() should probably wire the
 	  symbols up for some sort of garbage collection.
 
 ---------------------------------------------------------------------------
@@ -836,46 +532,16 @@ Ideas:
 		  into the parent's buffers appropriately. How do we
 		  select them...?
 
-	* Set group channel count (and more?) in cs_NewGroup? Or, do we
-	  default to mono, picking output stages of subgroups as needed
-	  to upgrade to the channel count of the parent group? (Group 0
-	  would of course have the channel count of the master output, as
-	  chosen via cs_Open().)
-
 	* Audio rate windows/envelopes for granular synthesis? Or just make
 	  it AM with two normal oscillators? Slightly heavier, but much
 	  more flexible and generally useful. On the plus side, it's very
 	  easy to add; just spawn a child voice that modulates our output
 	  instead of adding into it.
 
-	* Actually, is it a big deal if we buffer-split subvoices along
-	  with the local processing in cs_VoiceProcess()? Can't see a real
-	  need for doing intense scripting/modulation in a voice that has
-	  subvoices - unless we want to modulate the output of the
-	  subvoices, in which case the buffer splitting is DESIRED!
-	    Of course, it's just a few lines of code, and we could have
-	  both variants if it really matters. Can the right variant be
-	  selected automatically somehow? Obviously, it's much nicer if
-	  one can just implement sounds in the most straightforward way,
-	  and have the compiler and/or engine figure out the best way to
-	  run them accurately and efficiently.
-
-	* A .csl file might want to hint ChipSound as to how many voices,
+	* An .a2s file might want to provide hints as to how many voices,
 	  stack entries, various kinds of units and stuff like that it may
 	  need, so we can pre-allocate sufficient resources to handle it
 	  in a realtime safe manner.
-
-	* The 'run' mechanism causes all sorts of problems, including
-	  complicating or even breaking the design! Just for starters,
-	  I've already been bitten by the "messages go to the program
-	  currently running" quirk, and how do we deal with control
-	  registers moving around when using voice units...?
-	    How about we just turn it into a handy "spawn, wait" macro?
-
-	* Spawn/run wave as program! Arguments would initialize the voice
-	  control registers. Messages would change the control registers.
-	  Ramp duration...? That could be the second argument of the
-	  message.
 
 	* Basic, textbook PWM pulse implementation:
 		* Have a Dirac impulse oneshot wave
@@ -894,17 +560,6 @@ Ideas:
 	  tick duration. If the bank doesn't have a default, the engine's
 	  global default is used, and that can be changed by the host
 	  application.
-
-	* Add an API for setting tick, pitch and whatnot of groups! (That
-	  is, the initial values that voices inherit.)
-
-	* We could have the 'tick' register recursively applied to
-	  subvoices, but that has the side effect of programs not really
-	  being able to control their timing, as their changes can be
-	  overridden from above at any time...!
-	    Maybe separate 'tick' from BPM (which is now only an argument
-	  to 'tempo'), and have that propagate recursively, while leaving
-	  it to programs to define their local ticks per beat?
 
 	* Alternative instrument control approach to consider:
 		* A program implements a full "MIDI style" voice - mono or
@@ -935,26 +590,10 @@ Ideas:
 	  desired - and it can also just set a variable, effectively
 	  implementing the conditional jump variant.
 
-	* Port a bunch of oscillators from Audiality!? (Some would
-	  preferably be reimplemented using IFFT synthesis and stuff.)
-	  That way, ChipSound would pretty much have Audiality for
-	  breakfast; porting old sounds would be mostly trivial, and
-	  with the "render program to wave" feature, ChipSound does
-	  everything Audiality did and more, better, and real time as
-	  well as offline.
-		* A parameter interface might be useful for this. We may
-		  not want to implement everything as true control regs,
-		  for performance and complexity issue, and the overhead
-		  of a larger register frame. This can be of use for other
-		  voice structure units and FX units as well!
-
 	* 'mac' for defining macros that are pasted as text into the
 	  source. (Need stack for the source reading interface.)
 
 	* Forward declarations of programs! (There are workarounds...)
-
-	* Remove SDL dependencies? This requires some lock-free constructs
-	  or other solutions for engine/API interaction!
 
 	* RNG control instructions? We might want to separate the noise
 	  generator from the RAND* instructions, as the noise generator's
@@ -1015,50 +654,10 @@ Ideas:
 	* Reverse playback of waveforms...? (Needs some minor extra logic,
 	  but no major issues... I think.)
 
-	* Special VM instructions for reading various stuff that isn't
-	  suitable for implementing as control registers;
-		NOW/TNOW	Current time in seconds/ticks
-		PHNOW		Current oscillator phase in periods
-
-	* Should one-shot waveforms really stop the phase accumulator at
-	  the end of the waveform? At least, this must be handled by the
-	  PDELAY and PSYNC instructions! (They should fail or NOP.)
-
-	* MinBLEP oscillators?
-	     MinBLEP is probably the most appropriate solution for
-	  ChipSound, as it's trivial to handle the basic geometric
-	  waveforms we're dealing with here, and most importantly,
-	  "hardsync" and other oscillator phase manipulations.
-	     Simplest implementation is probably to keep a circular
-	  buffer where each impulse is mixed in as its issued. That
-	  way, each impulse is rendered only once, and that's it.
-
-	* Use a BLIT (temporary switch to alternate oscillator
-	  implementation) to handle the transients when using PHASE?
-
-	* Implement cs_Send(x, 0) ("send to all") as a program that just
-	  forwards messages to all subvoices? Saves code, and we can
-	  trivially allow applications to implement their own group
-	  control programs.
-		* A macro "allargs" would be handy for this; it would
-		  simply paste CS_MAXARGS names on the form aN. Then
-		  again, what would be really neet is actually knowing
-		  how many arguments were given, and being able to pass
-		  only those on.
-
 ---------------------------------------------------------------------------
 OPTIMIZATIONS:
-	* Monitor active voice count by counting allocated/freed voices!
-
-	* Special optimizations for silent voices that are just
-	  controlling subvoices? Is there much to gain by going beyond the
-	  current "Off" oscillator? Unless CS_MAXFRAG is set too low,
-	  there shouldn't be much to gain here.
-
 	* VM push/pop should only save registers that are actually
   	  clobbered by the callie! (Performance optimization...)
-
-	* Constant subexpression evaluation!
 
 	* MUL2, MUL3, ADD2, ADD3 etc, for quick construction of
 	  the final output of envelopes, LFOs, volume, velocity
@@ -1068,12 +667,6 @@ OPTIMIZATIONS:
 	  control instructions. And, it shouldn't really be needed
 	  for production VM code anyway, so maybe use it only in
 	  DEBUG builds and authoring software?
-
-	* Add special versions of LOAD, MOVE, ADD, SUB, MUL etc,
-	  without the control register stuff. The assembler should
-	  preferably use these for all but the last change to a
-	  register before *DELAY. Then again, how often does that
-	  happen...?
 
 	* case OP_AMOVE4:
 		carg[reg + 3] = v->r[(arg >> 15) & 0x1f];
@@ -1085,20 +678,7 @@ OPTIMIZATIONS:
 		carg[reg] = v->r[arg & 0x1f];
 		break;
 
-	* Lock-free reallocation of the global playable table:
-		* Keep two table pointers; one for the API and
-		  one for the audio context.
-		* When reallocation is needed; API side:
-			* Allocate new table of appropriate size.
-			* Copy old table - API side pointer!
-			* Send the new table to the audio context.
-		* Audio context:
-			* When receiving a new table, replace the
-			  old table with the new one.
-			* Dispose of the old table by sending it
-			  back to the API context for destruction.
-
-	* Build a peephole optimizer right into csa_Code()?
+	* Build a peephole optimizer right into a2c_Code()?
 		* Keep a "last break" position in the state.
 		* When declaring a label, program or other jump target,
 		  reset the last break pos to 0.
@@ -1108,21 +688,5 @@ OPTIMIZATIONS:
 		  from the last break to the new instruction. If we deal
 		  only with two instructions at a time, we only need to
 		  check that "last break" is non-zero before optimizing.
-
-	* Fast VVIDs:
-		* Use a per-group dynamically allocated VVID table for the
-		  API.
-
-		* Can a voice go away without being detached? If not,
-		  we don't need to do anything special with the VVIDs.
-		  Otherwise, they have to be invalidated as programs
-		  end.
-
-		* But, global IDs are a PITA. What to do...? We could
-		  keep groups and voices in separate namespaces on the
-		  API level. We can still have grops and subgroups, but
-		  nonsense like putting groups under voices is prevented.
-		  VVIDs would be managed on a per-group basis, which
-		  relaxes the requirement for a large VVID range.
 
 --------------------------------------------------------------------------
