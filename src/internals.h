@@ -122,7 +122,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
  * processing samples. If exceeded, the voice will be killed, to avoid freezing
  * the whole sound engine.
  */
-#define A2_INSLIMIT		100
+#define A2_INSLIMIT		1000
 
 /*
  * Maximum allowed child voice nesting depth. (Recursive explosion inhibitor.)
