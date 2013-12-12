@@ -91,9 +91,11 @@ typedef enum A2_tokens
 
 	/* Attributes for 'wave' definitions etc */
 	AT_WAVETYPE,	/* A2_wavetypes */
+	TK_WAVETYPE,	/* Token class for 'wavetype' arguments */
 	AT_PERIOD,
-	AT_SAMPLERATE,
-	AT_LENGTH,	/* (milliseconds) */
+	AT_SAMPLERATE,	/* (Hz) */
+	AT_LENGTH,	/* (sample frames) */
+	AT_DURATION,	/* (seconds) */
 	AT_FLAG		/* A2_LOOPED, A2_NORMALIZE etc */
 } A2_tokens;
 

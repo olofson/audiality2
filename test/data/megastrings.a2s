@@ -1,5 +1,5 @@
 def title	"MegaStrings"
-def version	"1.0"
+def version	"1.1"
 def description	"Test of recursive offline wave rendering"
 def author	"David Olofson"
 def copyright	"Copyright 2013 David Olofson"
@@ -42,12 +42,11 @@ RenderStringsWave(Voices Spread W)
 	}
 }
 
-//wave StringWave
 wave StringWave
 {
 	// Render basic strings loop using 100 saw oscillators
-	wavetype MIPWAVE; samplerate 96
-	length 16384; looped; normalize; xfade
+	wavetype MIPWAVE; samplerate 96000
+	duration .45; looped; normalize; xfade
 	RenderStringsWave 100 .02 saw
 }
 
@@ -55,8 +54,8 @@ wave StringsWave
 {
 	// Render megaphatt strings using 100 oscillators playing StringWave
 	wavetype MIPWAVE
-	samplerate 96
-	length 16384; looped; normalize; xfade
+	samplerate 128000
+	duration 1.1; looped; normalize; xfade
 	RenderStringsWave 100 .02 StringWave
 }
 
@@ -71,6 +70,28 @@ Strings(P V=1)
 		wtosc o2; panmix pm2 1 >
 	}
 	o1.w StringsWave; o1.p (P + .01); pm1.pan -.5; set pm1.pan
+	o1.phase rand sizeof StringsWave
+	o2.w StringsWave; o2.p (P - .01); pm2.pan .5; set pm2.pan
+	o2.phase rand sizeof StringsWave
+	o1.a (V * .5); o2.a (V * .5); d 100
+	o1.a V; o2.a V; d 500
+	end
+.rel	o1.a 0; o2.a 0; d 700
+	1() { force rel }
+}
+
+
+  //
+ // 16ths gated version of Strings
+/////////////////////////////////////////////////////////////////////
+GatedStrings(P V=1)
+{
+	struct {
+		wtosc o1; panmix pm1 1 >
+		wtosc o2; panmix pm2 1 >
+	}
+	o1.w StringsWave; o1.p (P + .01); pm1.pan -.5; set pm1.pan
+	o1.phase rand sizeof StringsWave
 	o2.w StringsWave; o2.p (P - .01); pm2.pan .5; set pm2.pan
 	o2.phase rand sizeof StringsWave
 	for {
@@ -105,14 +126,13 @@ Hit(P V=1)
   //
  // Some noise...
 /////////////////////////////////////////////////////////////////////
-Music1(P V=1)
+Music1(P V=1 I=Strings)
 {
-	def i Strings
 	+tr P
-	1:i -31n V;	td 16; 1<1
-	1:i -30n V;	td 16; 1<1
-	1:i -33n V;	td 16; 1<1
-	1:i -31n V;	td 16; 1<1
+	1:I -31n V;	td 16; 1<1
+	1:I -30n V;	td 16; 1<1
+	1:I -33n V;	td 16; 1<1
+	1:I -31n V;	td 16; 1<1
 }
 
 Hits(P V=1)
@@ -142,8 +162,14 @@ Hits(P V=1)
 }
 Music2()
 {
-	Music1 3 .2
+	Music1 3 .3 GatedStrings
 	Hits -3 1.3; Hits -1 .4; Hits -5n .4; Hits 0 .4
+}
+
+Music3()
+{
+	Music1 -1 .8
+	Music1 1 .5 GatedStrings
 }
 
 
@@ -163,8 +189,10 @@ Main(L)
 	rdelay (tick * 7 + 3); rgain .25
 .rep
 	tr (rand 4n quant 1n - 2n)
-	Music1 0 .9;		td 64
-	Music2;			td 64
+	Music1;		td 64
+	Music2;		td 64
+	Music3;		td 64
+	Music2;		td 64
 	if L {	// Loop?
 		jump rep
 	}

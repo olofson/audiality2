@@ -282,9 +282,11 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case KW_XOR:		return "KW_XOR";
 	  case KW_NOT:		return "KW_NOT";
 	  case AT_WAVETYPE:	return "AT_WAVETYPE";
+	  case TK_WAVETYPE:	return "TK_WAVETYPE";
 	  case AT_PERIOD:	return "AT_PERIOD";
 	  case AT_SAMPLERATE:	return "AT_SAMPLERATE";
 	  case AT_LENGTH:	return "AT_LENGTH";
+	  case AT_DURATION:	return "AT_DURATION";
 	  case AT_FLAG:		return "AT_FLAG";
 	}
 	return "<unknown>";
@@ -2559,6 +2561,7 @@ typedef struct A2_wavedef {
 	A2_handle	program;
 	unsigned	argc;
 	int		argv[A2_MAXARGS];
+	double		duration;
 } A2_wavedef;
 
 static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
@@ -2574,57 +2577,84 @@ static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 		wd->flags &= ~flag;
 }
 
+static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
+		A2_tokens terminator)
+{
+	int maxargc;
+	if(wd->duration)
+		wd->length = wd->duration * wd->samplerate;
+	wd->program = a2c_GetHandle(c, &c->l[0]);
+	maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
+	wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
+	DBG(
+		fprintf(stderr, ".--------------------------------\n");
+		fprintf(stderr, "| Rendering wave %s...\n", wd->symbol->name);
+		fprintf(stderr, "|        type: %d\n", wd->type);
+		fprintf(stderr, "|       flags: %x\n", wd->flags);
+		fprintf(stderr, "|      period: %d\n", wd->period);
+		fprintf(stderr, "|  samplerate: %d\n", wd->samplerate);
+		fprintf(stderr, "|      length: %d\n", wd->length);
+	)
+	if((wd->symbol->v.i = a2_RenderWave(c->state,
+			wd->type, wd->period, wd->flags,
+			wd->samplerate, wd->length,
+			wd->program, wd->argc, wd->argv)) < 0)
+		a2c_Throw(c, -wd->symbol->v.i);
+	if(wd->symbol->v.i < 0)
+		a2c_Throw(c, -wd->symbol->v.i);
+	DBG(	printf("|  DONE!\n");)
+
+	/* We expect this to be the last statement in the wavedef! */
+	while(a2c_Lex(c, 1) != terminator)
+		if(c->l[0].token != TK_EOS)
+			a2c_Throw(c, A2_EXPEOS);
+	DBG(	fprintf(stderr, "'--------------------------------\n");)
+}
+
 static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 		A2_tokens terminator)
 {
-	switch(a2c_Lex(c, 0))
+	int tk = a2c_Lex(c, 0);
+	switch(tk)
 	{
-	  case AT_WAVETYPE:
-		wd->type = a2c_Num2Int(c, a2c_Value(c));
-		break;
 	  case AT_PERIOD:
-		wd->period = a2c_Num2Int(c, a2c_Value(c));
-		break;
 	  case AT_SAMPLERATE:
-		wd->samplerate = 1000.0f * a2c_Value(c);
-		break;
 	  case AT_LENGTH:
-		wd->length = a2c_Num2Int(c, a2c_Value(c));
+	  case AT_DURATION:
+	  {
+		double v;
+		a2c_SimplExp(c, -1);
+		if(!a2_IsValue(c->l[0].token))
+			a2c_Throw(c, A2_EXPCONSTANT);
+		v = a2c_GetValue(c, &c->l[0]);
+		switch(tk)
+		{
+		  case AT_PERIOD:
+			wd->period = a2c_Num2Int(c, v);
+			break;
+		  case AT_SAMPLERATE:
+			wd->samplerate = v;
+			break;
+		  case AT_LENGTH:
+			wd->length = a2c_Num2Int(c, v);
+			wd->duration = 0.0f;
+			break;
+		  case AT_DURATION:
+			wd->duration = v;
+			break;
+		}
+		break;
+	  }
+	  case AT_WAVETYPE:
+		a2c_Expect(c, TK_WAVETYPE, A2_EXPWAVETYPE);
+		wd->type = c->l[0].v.i;
 		break;
 	  case AT_FLAG:
 		a2c_wd_flagattr(c, wd, c->l[0].v.i);
 		break;
 	  case TK_PROGRAM:
-	  {
-		int maxargc;
-		wd->program = a2c_GetHandle(c, &c->l[0]);
-		maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
-		wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
-		DBG(
-			fprintf(stderr, ".--------------------------------\n");
-			fprintf(stderr, "| Rendering wave %s...\n", wd->symbol->name);
-			fprintf(stderr, "|        type: %d\n", wd->type);
-			fprintf(stderr, "|       flags: %x\n", wd->flags);
-			fprintf(stderr, "|      period: %d\n", wd->period);
-			fprintf(stderr, "|  samplerate: %d\n", wd->samplerate);
-			fprintf(stderr, "|      length: %d\n", wd->length);
-		)
-		if((wd->symbol->v.i = a2_RenderWave(c->state,
-				wd->type, wd->period, wd->flags,
-				wd->samplerate, wd->length,
-				wd->program, wd->argc, wd->argv)) < 0)
-			a2c_Throw(c, -wd->symbol->v.i);
-		if(wd->symbol->v.i < 0)
-			a2c_Throw(c, -wd->symbol->v.i);
-		DBG(	printf("|  DONE!\n");)
-
-		/* We expect this to be the last statement in the wavedef! */
-		while(a2c_Lex(c, 1) != terminator)
-			if(c->l[0].token != TK_EOS)
-				a2c_Throw(c, A2_EXPEOS);
-		DBG(	fprintf(stderr, "'--------------------------------\n");)
+		a2c_wd_render(c, wd, terminator);
 		return 0;
-	  }
 	  case TK_EOS:
 		return 1;
 	  default:
@@ -2649,15 +2679,16 @@ static struct
 	{ "period",	AT_PERIOD,	0		},
 	{ "samplerate",	AT_SAMPLERATE,	0		},
 	{ "length",	AT_LENGTH,	0		},
+	{ "duration",	AT_DURATION,	0		},
 	{ "looped",	AT_FLAG,	A2_LOOPED	},
 	{ "normalize",	AT_FLAG,	A2_NORMALIZE	},
 	{ "xfade",	AT_FLAG,	A2_XFADE	},
 	{ "revmix",	AT_FLAG,	A2_REVMIX	},
 
-	{ "OFF",	TK_VALUE,	A2_WOFF		},
-	{ "NOISE",	TK_VALUE,	A2_WNOISE	},
-	{ "WAVE",	TK_VALUE,	A2_WWAVE	},
-	{ "MIPWAVE",	TK_VALUE,	A2_WMIPWAVE	},
+	{ "OFF",	TK_WAVETYPE,	A2_WOFF		},
+	{ "NOISE",	TK_WAVETYPE,	A2_WNOISE	},
+	{ "WAVE",	TK_WAVETYPE,	A2_WWAVE	},
+	{ "MIPWAVE",	TK_WAVETYPE,	A2_WMIPWAVE	},
 
 	{ NULL, 0, 0 }
 };
@@ -2700,10 +2731,7 @@ static void a2c_WaveDef(A2_compiler *c)
 			a2c_Throw(c, A2_SYMBOLDEF);
 		if(!(s = a2_NewSymbol(a2c_wdsyms[i].n, a2c_wdsyms[i].tk)))
 			a2c_Throw(c, A2_OOMEMORY);
-		if(a2c_wdsyms[i].tk == TK_VALUE)
-			s->v.f = a2c_wdsyms[i].v;
-		else
-			s->v.i = a2c_wdsyms[i].v;
+		s->v.i = a2c_wdsyms[i].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
 

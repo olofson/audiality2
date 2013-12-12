@@ -45,7 +45,7 @@ RenderStringsWave(Voices Spread Gain)
 wave StringsWave
 {
 	wavetype MIPWAVE		// Mipmapped wave
-	samplerate 96			// Sample rate 96 kHz at pitch 0
+	samplerate 96000		// Sample rate 96 kHz at pitch 0
 	length 15000; looped		// Short, deliberately ugly loop. :-)
 	RenderStringsWave 100 .02 .2	// Render with 100 voices!
 }
