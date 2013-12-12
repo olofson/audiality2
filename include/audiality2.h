@@ -519,6 +519,7 @@ FIXME: These don't really fit here, as states don't have handles.
 	A2_PSAMPLERATE,		/* Audio I/O sample rate */
 	A2_PBUFFER,		/* Audio I/O buffer size */
 	A2_PEXPORTALL,		/* Export all programs! (Debug) */
+	A2_PTABSIZE,		/* Tab size for script position printouts */
 	A2_POFFLINEBUFFER,	/* Buffer size for offline rendering */
 	A2_PSILENCELEVEL,	/* Max peak level considered as silence */
 	A2_PSILENCEWINDOW,	/* Rolling window size for silence detection */

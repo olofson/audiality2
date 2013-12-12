@@ -52,7 +52,9 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	EVLEAKTRACK(x)		/* Check for event leaks */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
 #	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
+#	define	DUMPSOURCE(x)	x	/* Dump source lines while compiling */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
+#	define	REGDBG(x)	x	/* Register allocation debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
@@ -68,7 +70,9 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #	define	DUMPMSGS(x)
 #	define	DUMPTOKENS(x)
 #	define	DUMPCODE(x)
+#	define	DUMPSOURCE(x)
 #	define	SYMBOLDBG(x)
+#	define	REGDBG(x)
 #	define	DUMPLSTRINGS(x)
 #	define	DUMPSTRUCT(x)
 #	define	DUMPSTRUCTRT(x)

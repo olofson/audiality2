@@ -148,6 +148,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPUNIT,		"Expected unit")\
   A2_DEFERR(A2_EXPBODY,		"Expected body")\
   A2_DEFERR(A2_EXPOP,		"Expected operator")\
+  A2_DEFERR(A2_EXPBINOP,	"Expected binary operator")\
   A2_DEFERR(A2_EXPCONSTANT,	"Expected constant")\
   \
   A2_DEFERR(A2_NEXPEOF,		"Unexpected end of file")\

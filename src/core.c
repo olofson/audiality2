@@ -977,6 +977,8 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 			++v->s.pc;
 			break;
 		  case OP_QUANTR:
+			if(!r[ins->a2])
+				A2_VMABORT(A2_DIVBYZERO, "VM:QUANTR");
 			r[ins->a1] = r[ins->a1] / r[ins->a2] * r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;

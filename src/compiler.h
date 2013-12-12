@@ -30,7 +30,11 @@ typedef struct A2_symbol A2_symbol;
 typedef struct A2_fixup A2_fixup;
 typedef struct A2_coder A2_coder;
 
-/* Compiler error handling */
+
+/*---------------------------------------------------------
+	Error handling
+---------------------------------------------------------*/
+
 #define	A2_jumpbuf	jmp_buf
 #define	a2c_Try(c)	if(((c)->error = A2_OK), !setjmp((c)->jumpbuf))
 #define a2c_Except	else
@@ -42,6 +46,11 @@ typedef struct A2_coder A2_coder;
 #else
 #	define	a2c_Throw(c, x)	longjmp((c)->jumpbuf, ((c)->error = (x)))
 #endif
+
+
+/*---------------------------------------------------------
+	Tokens
+---------------------------------------------------------*/
 
 typedef enum A2_tokens
 {
@@ -114,14 +123,24 @@ static inline int a2_IsSymbol(A2_tokens tk)
 			(tk == TK_LABEL);
 }
 
-/* Symbol stack */
+
+/*---------------------------------------------------------
+	Symbol stack
+---------------------------------------------------------*/
+
+typedef enum A2_symflags
+{
+	A2_SF_EXPORTED =	0x0001,	/* Symbol is to be exported */
+	A2_SF_TEMPORARY =	0x0002	/* Temporary symbol created by lexer */
+} A2_symflags;
+
 struct A2_symbol
 {
 	A2_symbol	*next;		/* Next older symbol on stack */
 	char		*name;
 	A2_symbol	*symbols;	/* Stack of child symbols, if any */
 	A2_fixup	*fixups;	/* Fixups for forward branches */
-	int		exported;
+	int		flags;
 	A2_tokens	token;		/* Symbol type/token */
 	union {
 		int		i;
@@ -139,7 +158,13 @@ struct A2_fixup
 	unsigned	pos;		/* Position of instruction to fix */
 };
 
-/* Code generator */
+
+/*---------------------------------------------------------
+	Code generator
+---------------------------------------------------------*/
+
+typedef char A2_regmap[A2_REGISTERS];
+
 struct A2_coder
 {
 	A2_coder	*prev;		/* Previously active coder, if any */
@@ -150,8 +175,16 @@ struct A2_coder
 	unsigned	pos;		/* Write position (instructions) */
 };
 
+
+/*---------------------------------------------------------
+	Lexer
+---------------------------------------------------------*/
+
+/* Number of lexer states to keep */
+#define	A2_LEXDEPTH	3
+
 /* Lexer state */
-typedef struct A2_lexstate
+typedef struct A2_lexvalue
 {
 	int		pos;		/* Source code read position */
 	A2_tokens	token;
@@ -160,9 +193,13 @@ typedef struct A2_lexstate
 		double		f;
 		A2_symbol	*sym;
 	} v;
-} A2_lexstate;
+} A2_lexvalue;
 
-/* Compiler state */
+
+/*---------------------------------------------------------
+	Compiler state
+---------------------------------------------------------*/
+
 struct A2_compiler
 {
 	A2_state	*state;		/* Parent engine state */
@@ -174,9 +211,10 @@ struct A2_compiler
 	unsigned	lexbufsize;
 	unsigned	lexbufpos;
 	char		*lexbuf;	/* Buffer for string parsing */
-	A2_lexstate	l, pl;		/* Current and previous lexer states */
-	unsigned	regtop;		/* First free register */
+	A2_lexvalue	l[A2_LEXDEPTH];	/* Lexer value buffer; [0] is current */
+	A2_regmap	regmap;		/* Current register allocation map */
 	int		exportall;	/* Export everything from banks! */
+	int		tabsize;	/* Script tab size for messages */
 	int		canexport;	/* Current context allows exports! */
 	int		inhandler;	/* Disallow timing, RUN, SLEEP ,... */
 	int		nocode;		/* Disallow code in current context  */
@@ -184,6 +222,11 @@ struct A2_compiler
 	A2_jumpbuf	jumpbuf;	/* Buffer for a2c_Try()/a2c_Throw() */
 	A2_errors	error;		/* Error from a2c_Throw() */
 };
+
+
+/*---------------------------------------------------------
+	Main compiler entry points
+---------------------------------------------------------*/
 
 /* Compiler open/close */
 A2_errors a2_OpenCompiler(A2_state *st, int flags);

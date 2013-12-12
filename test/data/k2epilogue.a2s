@@ -260,12 +260,14 @@ def a2sversion	"1.9"
 		-Reso 1n
 		*V .7
 	}
-	!i (500 / P); !mv (1 - (1 / (.1 * i)))
+	!i (500 / P)
+	!mv (1 - (1 / (.1 * i)))
 	i {
 		phase 0; p Reso; a V; set a; a 0; d P
 		-Reso .1n; *V mv
 	}
 }
+
 .Reso(P V=1 Wave=triangle)
 {
 	!r .5

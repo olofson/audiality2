@@ -956,6 +956,8 @@ int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
 		return st->instructions;
 	  case A2_PEXPORTALL:
 		return st->ss->c->exportall;
+	  case A2_PTABSIZE:
+		return st->ss->c->tabsize;
 	  case A2_POFFLINEBUFFER:
 		return st->ss->offlinebuffer;
 	  case A2_PSILENCELEVEL:
@@ -988,6 +990,11 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 		return A2_OK;
 	  case A2_PEXPORTALL:
 		st->ss->c->exportall = v;
+		return A2_OK;
+	  case A2_PTABSIZE:
+		if(v < 1)
+			v = 8;
+		st->ss->c->tabsize = v;
 		return A2_OK;
 	  case A2_POFFLINEBUFFER:
 		st->ss->offlinebuffer = v;
