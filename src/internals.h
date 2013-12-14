@@ -33,15 +33,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #include "waves.h"
 #include "rchm.h"
 #include "sfifo.h"
-
-#ifdef _WIN32
-# include <windows.h>
-# include <mmsystem.h>
-#else
-# include <sched.h>
-# include <sys/time.h>
-# include <sys/wait.h>
-#endif
+#include "platform.h"
 
 #ifdef DEBUG
 #	include	<stdio.h>
@@ -248,24 +240,6 @@ static inline int a2_TSDiff(unsigned a, unsigned b)
 ---------------------------------------------------------*/
 
 void a2_DumpConfig(A2_config *c);
-
-extern int a2_user_drivers_registered;
-extern int a2_master_states;
-
-/*
- * This function is used to automatically remove all driver descriptors after
- * all engine master states have been closed, and all user drivers have been
- * unregistered.
- *    The main motivation behind this is to avoid Valgrind and similar whining
- * about memory leaks - but even if it doesn't really matter normally, it's
- * poor style to expect the application to clean up things that were allocated
- * automatically!
- */
-static inline void a2_driver_registry_cleanup(void)
-{
-	if(!a2_user_drivers_registered && !a2_master_states)
-		a2_ResetDriverRegistry();
-}
 
 
 /*---------------------------------------------------------
@@ -930,46 +904,14 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info);
 
 
 /*---------------------------------------------------------
-	Timing
+	Global API resource management
 ---------------------------------------------------------*/
 
-#ifdef _WIN32
-extern DWORD a2_start_time;
-extern LARGE_INTEGER a2_perfc_frequency = 0;
-#else
-extern struct timeval a2_start_time;
-#endif
+/* Init/deinit API backend resources as needed */
+void a2_add_api_user(void);
+void a2_remove_api_user(void);
 
-static inline uint32_t a2_GetTicks(void)
-{
-#ifdef _WIN32
-	DWORD now;
-	now = timeGetTime();
-	if(now < a2_start_time)
-		return ((~(DWORD)0) - a2_start_time) + now;
-	else
-		return now - a2_start_time;
-#else
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (now.tv_sec - a2_start_time.tv_sec) * 1000 +
-			(now.tv_usec - a2_start_time.tv_usec) / 1000;
-#endif
-}
-
-static inline uint64_t a2_GetMicros(void)
-{
-#ifdef _WIN32
-	LARGE_INTEGER now;
-	if(!a2_perfc_frequency || !QueryPerformanceCounter(&now))
-		return (LARGE_INTEGER)a2_GetTicks() * 1000;
-	return now * 1000000 / a2_perfc_frequency;
-#else
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (now.tv_sec - a2_start_time.tv_sec) * 1000000.0f +
-			(now.tv_usec - a2_start_time.tv_usec);
-#endif
-}
+void a2_drivers_open(void);
+void a2_drivers_close(void);
 
 #endif /* A2_INTERNALS_H */

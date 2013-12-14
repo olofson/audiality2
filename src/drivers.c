@@ -276,6 +276,8 @@ static A2_regdriver a2_builtin_drivers[] = {
 };
 
 
+static A2_mutex a2_driver_registry_mtx;
+
 /*
  * 1: builtins already registered
  *
@@ -287,10 +289,20 @@ static A2_regdriver a2_builtin_drivers[] = {
  */
 static int a2_builtins_registered = 0;
 
-/* Number of user drivers currently registered */
-int a2_user_drivers_registered = 0;
-
 static A2_regdriver *a2_driver_registry = NULL;
+
+
+void a2_drivers_open(void)
+{
+	a2_MutexOpen(&a2_driver_registry_mtx);
+}
+
+
+void a2_drivers_close(void)
+{
+	a2_ResetDriverRegistry();
+	a2_MutexClose(&a2_driver_registry_mtx);
+}
 
 
 static void a2_register_builtin_drivers(void)
@@ -321,6 +333,8 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 {
 	A2_regdriver *rd;
 
+	a2_MutexLock(&a2_driver_registry_mtx);
+
 	/*
 	 * Make sure the built-ins are in place first! Otherwise, search order
 	 * will be undefined, and more seriously, registering a user driver
@@ -331,19 +345,24 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 
 	rd = (A2_regdriver *)calloc(1, sizeof(A2_regdriver));
 	if(!rd)
+	{
+		a2_MutexUnlock(&a2_driver_registry_mtx);
 		return A2_OOMEMORY;
+	}
 
 	rd->type = type;
 	rd->name = strdup(name);
 	if(!rd->name)
 	{
+		a2_MutexUnlock(&a2_driver_registry_mtx);
 		free(rd);
 		return A2_OOMEMORY;
 	}
 	rd->create = create;
 	rd->next = a2_driver_registry;
 	a2_driver_registry = rd;
-	++a2_user_drivers_registered;
+	a2_add_api_user();
+	a2_MutexUnlock(&a2_driver_registry_mtx);
 	return A2_OK;
 }
 
@@ -358,13 +377,13 @@ static void a2_unregister_all_drivers(void)
 		{
 			free((void *)rd->name);
 			free(rd);
+			a2_remove_api_user();
 		}
 	}
-	a2_user_drivers_registered = 0;
 }
 
 
-A2_errors a2_UnregisterDriver(const char *name)
+static A2_errors a2_unregister_driver(const char *name)
 {
 	A2_regdriver *rd, *rdd;
 	if(!name)
@@ -400,7 +419,7 @@ A2_errors a2_UnregisterDriver(const char *name)
 		{
 			free((void *)rd->name);
 			free(rd);
-			--a2_user_drivers_registered;
+			a2_remove_api_user();
 		}
 		return A2_OK;
 	}
@@ -416,16 +435,28 @@ A2_errors a2_UnregisterDriver(const char *name)
 	{
 		free((void *)rdd->name);
 		free(rdd);
-		--a2_user_drivers_registered;
+		a2_remove_api_user();
 	}
 	return A2_OK;
 }
 
 
+A2_errors a2_UnregisterDriver(const char *name)
+{
+	A2_errors res;
+	a2_MutexLock(&a2_driver_registry_mtx);
+	res = a2_unregister_driver(name);
+	a2_MutexUnlock(&a2_driver_registry_mtx);
+	return res;
+}
+
+
 void a2_ResetDriverRegistry(void)
 {
-	a2_UnregisterDriver(NULL);
+	a2_MutexLock(&a2_driver_registry_mtx);
+	a2_unregister_driver(NULL);
 	a2_builtins_registered = 0;
+	a2_MutexUnlock(&a2_driver_registry_mtx);
 }
 
 
@@ -491,6 +522,7 @@ A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts)
 	const char *optstart;
 	A2_regdriver *rd;
 	A2_driver *drv = NULL;
+	a2_MutexLock(&a2_driver_registry_mtx);
 	a2_last_error = A2_OK;
 	a2_register_builtin_drivers();
 	if(!nameopts)
@@ -510,6 +542,7 @@ A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts)
 		}
 	if(!drv)
 		a2_last_error = A2_DRIVERNOTFOUND;
+	a2_MutexUnlock(&a2_driver_registry_mtx);
 	return drv;
 }
 

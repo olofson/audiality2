@@ -33,17 +33,6 @@
 #include "fbdelay.h"
 #include "filter12.h"
 
-/* Static data for a2_GetTicks() and a2_GetMicros() */
-static int time_initialized = 0;
-#ifdef _WIN32
-DWORD a2_start_time;
-extern LARGE_INTEGER a2_perfc_frequency = 0;
-#else
-struct timeval a2_start_time;
-#endif
-
-int a2_master_states = 0;
-
 
 /*---------------------------------------------------------
 	Error handling
@@ -331,6 +320,9 @@ static A2_state *a2_Open0(A2_config *config)
 	st->config = config;
 	config->state = st;
 
+	if(!(st->config->flags & A2_SUBSTATE))
+		a2_add_api_user();
+
 	/* Get required drivers */
 	st->sys = (A2_sysdriver *)a2_GetDriver(config, A2_SYSDRIVER);
 	st->audio = (A2_audiodriver *)a2_GetDriver(config, A2_AUDIODRIVER);
@@ -338,20 +330,6 @@ static A2_state *a2_Open0(A2_config *config)
 	{
 		a2_Close(st);
 		return NULL;
-	}
-
-	if(!(st->config->flags & A2_SUBSTATE) && !time_initialized)
-	{
-/*FIXME: Move this into the sysdriver? */
-#ifdef _WIN32
-		timeBeginPeriod(1);
-		a2_start_time = timeGetTime();
-		if(!QueryPerformanceFrequency(&a2_perfc_frequency))
-			a2_perfc_frequency = 0;
-#else
-		gettimeofday(&a2_start_time, NULL);
-#endif
-		++time_initialized;
 	}
 
 	/* Open drivers */
@@ -475,7 +453,6 @@ A2_state *a2_Open(A2_config *config)
 	printf("------\n");
 #endif
 	a2_Now(st);
-	++a2_master_states;
 	return st;
 }
 
@@ -613,11 +590,6 @@ void a2_Close(A2_state *st)
 			a2_Release(st, A2_ROOTBANK);
 			a2_CloseSharedState(st);
 		}
-		--time_initialized;
-#ifdef _WIN32
-		if(!time_initialized)
-			timeEndPeriod(1);
-#endif
 	}
 
 	/* Close the A2_config, if we created it! */
@@ -657,10 +629,7 @@ void a2_Close(A2_state *st)
 		}
 	}
 	else
-	{
-		--a2_master_states;
-		a2_driver_registry_cleanup();
-	}
+		a2_remove_api_user();
 
 	free(st);
 }

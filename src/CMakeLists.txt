@@ -9,6 +9,7 @@ include_directories(${AUDIALITY2_SOURCE_DIR}/src/drivers)
 # Core files
 set(sources
 	audiality2.c
+	platform.c
 	core.c
 	stream.c
 	waves.c
