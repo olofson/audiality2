@@ -30,8 +30,8 @@
 #include <string.h>
 #include <jack/jack.h>
 #include <dlfcn.h>
-#include <pthread.h>
 #include "jackdrv.h"
+#include "platform.h"
 
 
 /* JACK library entry points */
@@ -69,8 +69,8 @@ typedef struct JACKD_audiodriver
 	A2_audiodriver	ad;
 	jack_client_t	*client;
 	jack_port_t	**ports;
+	A2_mutex	mutex;
 	int		overload;
-	pthread_mutex_t	mutex;
 	void		*libjack;
 	jackd_funcs	jack;
 } JACKD_audiodriver;
@@ -135,10 +135,10 @@ static int jackd_process(jack_nframes_t nframes, void *arg)
 	int need_clear = 1;
 	if(!jd->overload && driver->Process)
 	{
-		if(pthread_mutex_trylock(&jd->mutex) == 0)
+		if(a2_MutexTryLock(&jd->mutex))
 		{
 			driver->Process(driver, nframes);
-			pthread_mutex_unlock(&jd->mutex);
+			a2_MutexUnlock(&jd->mutex);
 			need_clear = 0;
 		}
 	}
@@ -175,15 +175,14 @@ static int jackd_process(jack_nframes_t nframes, void *arg)
 static void jackd_lock(A2_audiodriver *driver)
 {
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)driver;
-	if(pthread_mutex_lock(&jd->mutex))
-		fprintf(stderr, "WARNING: Audiality 2 API mutex lock failed!\n");
+	a2_MutexLock(&jd->mutex);
 }
 
 
 static void jackd_unlock(A2_audiodriver *driver)
 {
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)driver;
-	pthread_mutex_unlock(&jd->mutex);
+	a2_MutexUnlock(&jd->mutex);
 }
 
 
@@ -227,21 +226,21 @@ static int jackd_bufsize(jack_nframes_t nframes, void *arg)
 		fprintf(stderr, "Audiality 2: WARNING: Buffer size changed from "
 				"%d to %d after initialization!\n",
 	  			cfg->buffer, nframes);
-	pthread_mutex_lock(&jd->mutex);
+	a2_MutexLock(&jd->mutex);
 	jackd_free_buffers(driver);
 	cfg->buffer = nframes;
 	if(!(driver->buffers = calloc(cfg->channels, sizeof(int32_t *))))
 	{
-		pthread_mutex_unlock(&jd->mutex);
+		a2_MutexUnlock(&jd->mutex);
 		return A2_OOMEMORY;
 	}
 	for(c = 0; c < cfg->channels; ++c)
 		if(!(driver->buffers[c] = calloc(cfg->buffer, sizeof(int32_t))))
 		{
-			pthread_mutex_unlock(&jd->mutex);
+			a2_MutexUnlock(&jd->mutex);
 			return A2_OOMEMORY;
 		}
-	pthread_mutex_unlock(&jd->mutex);
+	a2_MutexUnlock(&jd->mutex);
 	return 0;
 }
 
@@ -269,7 +268,7 @@ static void jackd_Close(A2_driver *driver)
 	}
 	jackd_free_buffers(&jd->ad);
 	free(jd->ports);
-	pthread_mutex_destroy(&jd->mutex);
+	a2_MutexClose(&jd->mutex);
 	if(jd->libjack)
 	{
 		dlclose(jd->libjack);
@@ -323,7 +322,7 @@ static A2_errors jackd_Open(A2_driver *driver)
 
 	/* Initialize JACK client */
 	jd->ad.Run = NULL;
-	pthread_mutex_init(&jd->mutex, NULL);
+	a2_MutexOpen(&jd->mutex);
 	jd->ad.Lock = jackd_lock;
 	jd->ad.Unlock = jackd_unlock;
 	if((jd->client = jd->jack.client_open(clientname, 0, NULL)) == NULL)
