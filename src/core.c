@@ -1323,7 +1323,6 @@ TODO:
 	  timing:
 		++v->s.pc;
 	  timing_interrupt:
-//if(dt) fprintf(stderr, "DELAY: %f\n", dt / 65536.0f);
 		if(v->s.timer + dt >= 256)
 		{
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, dt);
@@ -1472,6 +1471,7 @@ A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	unsigned t1 = a2_GetTicks();	/* Event timing reference */
 	uint64_t t1u = a2_GetMicros();	/* Monitoring: pre DSP timestamp */
 	uint64_t dur;
+
 	/* API message processing */
 	a2r_PumpEngineMessages(st);
 

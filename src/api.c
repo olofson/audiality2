@@ -165,12 +165,6 @@ A2_errors a2_Retain(A2_state *st, A2_handle handle)
 }
 
 
-A2_errors a2_Release(A2_state *st, A2_handle handle)
-{
-	return -rchm_Release(&st->ss->hm, handle);
-}
-
-
 /*---------------------------------------------------------
 	Async API message gateway
 ---------------------------------------------------------*/
@@ -705,6 +699,30 @@ void a2r_DetachHandle(A2_state *st, A2_handle h)
 }
 
 
+A2_errors a2_Release(A2_state *st, A2_handle handle)
+{
+	A2_errors res = -rchm_Release(&st->ss->hm, handle);
+	if(res == A2_REFUSE)
+	{
+		/*
+		 * Special hack to deal with voices. The voice destructor
+		 * only has access to the master state - not the actual voice
+		 * owner state provided through 'st' here, which we need to get
+		 * the correct message FIFO!
+		 */
+		RCHM_handleinfo *hi = rchm_Locate(&st->ss->hm, handle);
+		if(hi->typecode == A2_TVOICE)
+		{
+			A2_apimessage am;
+			am.target = handle;
+			am.b.action = A2MT_RELEASE;
+			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
+		}
+	}
+	return res;
+}
+
+
 /*---------------------------------------------------------
 	Utilities
 ---------------------------------------------------------*/
@@ -892,11 +910,6 @@ void a2_InstaKillAllVoices(A2_state *st)
 
 static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
-	A2_state *st = ((A2_typeinfo *)ti)->state;
-	A2_apimessage am;
-	am.target = h;
-	am.b.action = A2MT_RELEASE;
-	a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
 	return RCHM_REFUSE;
 }
 
