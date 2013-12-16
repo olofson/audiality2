@@ -114,11 +114,11 @@ def a2sversion	"1.9"
 	a 0; d 300
 }
 
-.C0(pitch amp wave rmax dl)
+.C0(P V W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand .25)
-	w wave; a amp; set a; +tr pitch
+	w W; a V; set a; +tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .997; d 1 }
 	40 {
@@ -169,14 +169,14 @@ def a2sversion	"1.9"
 	1() { kill * }
 }
 
-.HatNoise(pitch vel wave spread decay)
+.HatNoise(P V W spread decay)
 {
 	struct { wtosc }
-	!env vel
-	w wave; p pitch; a env
-	!da (vel / decay)
+	!env V
+	w W; p P; a env
+	!da (V / decay)
 	decay {
-		p (rand spread + pitch); a env; -env da; d 1
+		p (rand spread + P); a env; -env da; d 1
 	}
 }
 .Hat(Vel=1 Len=1)

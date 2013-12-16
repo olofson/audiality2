@@ -8,11 +8,11 @@ def a2sversion	"1.9"
 
 // Instruments //
 
-.c0(pitch amp wave rmax dl)
+.c0(P A W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
-	w wave; a amp; set a; +tr pitch
+	w W; a A; set a; +tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
 	wg (a - .0001) {

@@ -6,11 +6,11 @@ def copyright	"Copyright 2012-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.c0(pitch amp wave rmax dl)
+.c0(P A W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
-	w wave; a amp; set a; tr pitch
+	w W; a A; set a; tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
 	wg (a - .0001) {
@@ -288,14 +288,14 @@ def a2sversion	"1.9"
 	a 0; d 20
 }
 
-.HatNoise(pitch vel wave spread decay)
+.HatNoise(P V W spread decay)
 {
 	struct { wtosc }
-	!env vel
-	w wave; p pitch; a env
-	!da (vel / decay)
+	!env V
+	w W; p P; a env
+	!da (V / decay)
 	decay {
-		p (rand spread + pitch); a env; -env da; d 1
+		p (rand spread + P); a env; -env da; d 1
 	}
 }
 .Hat(V=1 L=1)

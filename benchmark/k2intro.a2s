@@ -462,11 +462,11 @@ SubPulse(P V=1 Dur=2)
 	1() { *a .5; *ma .85; +p 1; /per 4; *<1 }
 }
 
-.c0(P amp wave rmax D)
+.c0(P V W rmax D)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
-	w wave; a amp; set a; +tr P
+	w W; a V; set a; +tr P
 	!rmh (rmax * .25)
 	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d D }
 	40 {
