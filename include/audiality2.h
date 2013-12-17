@@ -24,6 +24,7 @@
 #define AUDIALITY2_H
 
 #include "drivers.h"
+#include "properties.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +61,12 @@ extern "C" {
 
 /* Maximum number of audio channels supported */
 #define	A2_MAXCHANNELS	8
+
+/* Default seed for 'rand' instruction pseudo-random number generator */
+#define	A2_DEFAULT_RANDSEED	16576
+
+/* Default seed for 'noise' wave pseudo-random number generator */
+#define	A2_DEFAULT_NOISESEED	324357
 
 
 /*---------------------------------------------------------
@@ -301,7 +308,8 @@ int a2_Run(A2_state *st, unsigned frames);
 int a2_Render(A2_state *st,
 		A2_handle handle,
 		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv);
+		A2_handle program, unsigned argc, int *argv,
+		A2_property *props);
 
 
 /*---------------------------------------------------------
@@ -494,69 +502,6 @@ float a2_F2P(float f);
 /* Return pseudo-random number in the range [0, max[ */
 float a2_Rand(A2_state *st, float max);
 
-
-/*---------------------------------------------------------
-	Object property interface
----------------------------------------------------------*/
-
-typedef enum A2_properties
-{
-	/*
-	 * General properties (most objects)
-	 */
-	A2_PGENERAL =		0x00010000,
-
-	A2_PCHANNELS,		/* Number of channels */
-	A2_PFLAGS,		/* Flags */
-	A2_PREFCOUNT,		/* Reference count of the handle */
-
-	/*
-	 * Global settings (state)
-FIXME: These don't really fit here, as states don't have handles.
-	 */
-	A2_PSTATE =		0x00020000,
-
-	A2_PSAMPLERATE,		/* Audio I/O sample rate */
-	A2_PBUFFER,		/* Audio I/O buffer size */
-	A2_PEXPORTALL,		/* Export all programs! (Debug) */
-	A2_PTABSIZE,		/* Tab size for script position printouts */
-	A2_POFFLINEBUFFER,	/* Buffer size for offline rendering */
-	A2_PSILENCELEVEL,	/* Max peak level considered as silence */
-	A2_PSILENCEWINDOW,	/* Rolling window size for silence detection */
-	A2_PSILENCEGRACE,	/* Grace period before considering silence */
-
-	/*
-	 * Statistics (state)
-	 */
-	A2_PSTATISTICS =	0x00030000,
-
-	A2_PACTIVEVOICES,	/* Number of active voices */
-	A2_PFREEVOICES,		/* Number of voices in pool */
-	A2_PTOTALVOICES,	/* Number of voices in total */
-	A2_PCPULOADAVG,		/* Average DSP CPU load (%) */
-	A2_PCPULOADMAX,		/* Peak DSP CPU load (%) */
-	A2_PCPUTIMEAVG,		/* Average buffer processing time (ms) */
-	A2_PCPUTIMEMAX,		/* Peak buffer processing time (ms) */
-	A2_PINSTRUCTIONS,	/* VM instructions executed */
-
-	/*
-	 * Wave properties
-	 */
-	A2_PWAVE =		0x00040000,
-
-	A2_PLOOPED,		/* Waveform is looped */
-	A2_PLENGTH,		/* Length of wave (sample frames) */
-
-} A2_properties;
-
-int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p);
-A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v);
-
-#if 0
-/* TODO: */
-int a2_GetStateProperty(A2_state *st, A2_properties p);
-A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v);
-#endif
 
 #ifdef __cplusplus
 };

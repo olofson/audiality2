@@ -631,7 +631,6 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 {
 	int i, s, h;
 	int16_t buf[SC_WPER];
-	A2_wave *w;
 
 	/* "off" wave - dummy oscillator */
 	h = a2_upload_export(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
@@ -706,17 +705,6 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 			A2_LOOPED, 0, NULL, 0);
 	if(h < 0)
 		return -h;
-	if(!(w = a2_GetWave(st, h)))
-		return A2_INTERNAL + 301;
-	w->d.noise.state = A2_NOISESEED;
-#if 0
-	for(s = 0; s < SC_WPER; ++s)
-		buf[s] = sin(s * (1 + s * .1) * .0005) * 32767;
-	h = a2_upload_export(st, bank, "chirp", A2_WMIPWAVE, SC_WPER,
-			A2_LOOPED, A2_I16, buf, sizeof(buf));
-	if(h < 0)
-		return -h;
-#endif
 	return A2_OK;
 }
 

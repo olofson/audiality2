@@ -163,7 +163,7 @@ int main(int argc, const char *argv[])
 	if((h = a2_RenderWave(state,
 			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags */
 			waverate, 0,	/* sample rate, stop when silent */
-			songh, 0, NULL)) < 0)	/* program, no args */
+			songh, 0, NULL, NULL)) < 0) /* prg, no args, no props */
 		fail(9, -h);
 
 	/* Start playing! */

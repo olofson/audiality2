@@ -396,7 +396,10 @@ static A2_errors a2_Open2(A2_state *st)
 		return res;
 	st->now_ticks = a2_GetTicks();
 	st->now_micros = st->avgstart = a2_GetMicros();
-	st->noisestate = A2_NOISESEED;
+
+	/* Initialize RNGs for noise and RAND instructions */
+	st->randstate = A2_DEFAULT_RANDSEED;
+	st->noisestate = A2_DEFAULT_NOISESEED;
 
 	/* Install the master process callback! */
 	st->audio->Lock(st->audio);

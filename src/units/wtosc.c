@@ -25,6 +25,7 @@
 #include "wtosc.h"
 #include "waves.h"
 #include "dsp.h"
+#include "internals.h"
 
 /* NOTE: These all return doubled amplitude samples! */
 #ifdef A2_HIFI
@@ -107,13 +108,13 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	unsigned s, end = offset + frames;
 	int32_t *out = u->outputs[0];
 	unsigned dph = o->dphase >> 8;
-	A2_wave_noise *wdata = &o->wave->d.noise;
+	unsigned *nstate = &o->state->noisestate;
 	a2_RamperPrepare(&o->a, frames);
 	for(s = offset; s < end; ++s)
 	{
 		unsigned nph = o->phase + dph;
 		if((dph >= 32768) || ((nph ^ o->phase) >> 15))
-			o->noise = a2_Noise(&wdata->state) - 32767;
+			o->noise = a2_Noise(nstate) - 32767;
 		o->phase = nph;
 		if(add)
 			out[s] += o->noise * (o->a.value >> 10) >> 6;

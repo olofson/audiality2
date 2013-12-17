@@ -61,9 +61,6 @@ extern "C" {
 #define	A2_WAVEPOST	\
 		(A2_INTERPOST + ((A2_MAXFRAG * A2_MAXPHINC + 255) >> 8) + 1)
 
-/* Pseudo-random numbers */
-#define	A2_NOISESEED	16576
-
 
 /*---------------------------------------------------------
 	Wave data structure
@@ -85,12 +82,6 @@ typedef struct A2_wave_wave
 	unsigned	size[A2_MIPLEVELS];	/* Sizes EXCLUDING pre/post! */
 } A2_wave_wave;
 
-/* A2_wave data for noise generators */
-typedef struct A2_wave_noise
-{
-	uint32_t	state;
-} A2_wave_noise;
-
 /* A2_object: Waveform with mipmaps */
 typedef struct A2_wave
 {
@@ -99,7 +90,6 @@ typedef struct A2_wave
 	unsigned	flags;		/* A2_LOOPED etc */
 	unsigned	period;		/* Fundamental period length */
 	union {
-		A2_wave_noise	noise;		/* A2WT_NOISE */
 		A2_wave_wave	wave;		/* A2WT_WAVE, A2WT_MIPWAVE */
 	} d;
 } A2_wave;
@@ -207,7 +197,8 @@ A2_wave *a2_GetWave(A2_state *st, A2_handle handle);
 A2_handle a2_RenderWave(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv);
+		A2_handle program, unsigned argc, int *argv,
+		A2_property *props);
 
 #ifdef __cplusplus
 };

@@ -96,7 +96,9 @@ typedef enum A2_tokens
 	AT_SAMPLERATE,	/* (Hz) */
 	AT_LENGTH,	/* (sample frames) */
 	AT_DURATION,	/* (seconds) */
-	AT_FLAG		/* A2_LOOPED, A2_NORMALIZE etc */
+	AT_FLAG,	/* A2_LOOPED, A2_NORMALIZE etc */
+	AT_RANDSEED,	/* RNG seed for the 'rand' instructions */
+	AT_NOISESEED	/* RNG seed for the 'noise' wave */
 } A2_tokens;
 
 /* Returns "true" if the token represents an immediate value */

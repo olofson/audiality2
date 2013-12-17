@@ -1016,6 +1016,15 @@ int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
 		return st->ss->silencewindow;
 	  case A2_PSILENCEGRACE:
 		return st->ss->silencegrace;
+	/*
+	 * FIXME:
+	 *	This might be confusing: These two are actually returning RNG
+	 * 	*states*, as opposed to the initial seeds that were once set!
+	 */
+	  case A2_PRANDSEED:
+		return st->randstate;
+	  case A2_PNOISESEED:
+		return st->noisestate;
 	  default:
 		return 0;
 	}
@@ -1058,7 +1067,27 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 	  case A2_PSILENCEGRACE:
 		st->ss->silencegrace = v;
 		return A2_OK;
+	  case A2_PRANDSEED:
+		st->randstate = v;
+		return A2_OK;
+	  case A2_PNOISESEED:
+		st->noisestate = v;
+		return A2_OK;
 	  default:
 		return A2_NOTFOUND;
 	}
+}
+
+
+A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props)
+{
+	int p;
+	for(p = 0; props[p].property; ++p)
+	{
+		A2_errors res = a2_SetProperty(st, h, props[p].property,
+				props[p].value);
+		if(res)
+			return res;
+	}
+	return A2_OK;
 }

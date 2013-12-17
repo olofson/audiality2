@@ -2562,6 +2562,8 @@ typedef struct A2_wavedef {
 	unsigned	argc;
 	int		argv[A2_MAXARGS];
 	double		duration;
+	uint32_t	randseed;
+	uint32_t	noiseseed;
 } A2_wavedef;
 
 static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
@@ -2580,6 +2582,11 @@ static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 		A2_tokens terminator)
 {
+	A2_property props[] = {
+		{ A2_PRANDSEED,		wd->randseed	},
+		{ A2_PNOISESEED,	wd->noiseseed	},
+		{ 0, 0 }
+	};
 	int maxargc;
 	if(wd->duration)
 		wd->length = wd->duration * wd->samplerate;
@@ -2594,11 +2601,13 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 		fprintf(stderr, "|      period: %d\n", wd->period);
 		fprintf(stderr, "|  samplerate: %d\n", wd->samplerate);
 		fprintf(stderr, "|      length: %d\n", wd->length);
+		fprintf(stderr, "|    randseed: %d\n", wd->randseed);
+		fprintf(stderr, "|   noiseseed: %d\n", wd->noiseseed);
 	)
 	if((wd->symbol->v.i = a2_RenderWave(c->state,
 			wd->type, wd->period, wd->flags,
 			wd->samplerate, wd->length,
-			wd->program, wd->argc, wd->argv)) < 0)
+			wd->program, wd->argc, wd->argv, props)) < 0)
 		a2c_Throw(c, -wd->symbol->v.i);
 	if(wd->symbol->v.i < 0)
 		a2c_Throw(c, -wd->symbol->v.i);
@@ -2621,6 +2630,8 @@ static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 	  case AT_SAMPLERATE:
 	  case AT_LENGTH:
 	  case AT_DURATION:
+	  case AT_RANDSEED:
+	  case AT_NOISESEED:
 	  {
 		double v;
 		a2c_SimplExp(c, -1);
@@ -2641,6 +2652,12 @@ static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 			break;
 		  case AT_DURATION:
 			wd->duration = v;
+			break;
+		  case AT_RANDSEED:
+			wd->randseed = v;
+			break;
+		  case AT_NOISESEED:
+			wd->noiseseed = v;
 			break;
 		}
 		break;
@@ -2680,6 +2697,8 @@ static struct
 	{ "samplerate",	AT_SAMPLERATE,	0		},
 	{ "length",	AT_LENGTH,	0		},
 	{ "duration",	AT_DURATION,	0		},
+	{ "randseed",	AT_RANDSEED,	0		},
+	{ "noiseseed",	AT_NOISESEED,	0		},
 	{ "looped",	AT_FLAG,	A2_LOOPED	},
 	{ "normalize",	AT_FLAG,	A2_NORMALIZE	},
 	{ "xfade",	AT_FLAG,	A2_XFADE	},
@@ -2689,6 +2708,9 @@ static struct
 	{ "NOISE",	TK_WAVETYPE,	A2_WNOISE	},
 	{ "WAVE",	TK_WAVETYPE,	A2_WWAVE	},
 	{ "MIPWAVE",	TK_WAVETYPE,	A2_WMIPWAVE	},
+
+	{ "DEFAULT_RANDSEED",	TK_VALUE,	A2_DEFAULT_RANDSEED	},
+	{ "DEFAULT_NOISESEED",	TK_VALUE,	A2_DEFAULT_NOISESEED	},
 
 	{ NULL, 0, 0 }
 };
@@ -2702,6 +2724,12 @@ static void a2c_WaveDef(A2_compiler *c)
 	memset(&wd, 0, sizeof(wd));
 	wd.type = A2_WMIPWAVE;
 	wd.samplerate = 44100;	/* FIXME: Parent state fs... or what...? */
+	/*
+	 * FIXME: If we were to actually save the *seed* somewhere, we should
+	 * probably have substates inherit defaults from their parents.
+	 */
+	wd.randseed = A2_DEFAULT_RANDSEED;
+	wd.noiseseed = A2_DEFAULT_NOISESEED;
 	
 	/* Local? */
 	if(a2c_Lex(c, 0) == '.')
@@ -2731,7 +2759,10 @@ static void a2c_WaveDef(A2_compiler *c)
 			a2c_Throw(c, A2_SYMBOLDEF);
 		if(!(s = a2_NewSymbol(a2c_wdsyms[i].n, a2c_wdsyms[i].tk)))
 			a2c_Throw(c, A2_OOMEMORY);
-		s->v.i = a2c_wdsyms[i].v;
+		if(a2_IsValue(a2c_wdsyms[i].tk))
+			s->v.f = a2c_wdsyms[i].v;
+		else
+			s->v.i = a2c_wdsyms[i].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
 

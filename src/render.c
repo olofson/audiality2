@@ -34,7 +34,8 @@
 int a2_Render(A2_state *st,
 		A2_handle handle,
 		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, int *argv,
+		A2_property *props)
 {
 	A2_errors res;
 	A2_handle h;
@@ -57,6 +58,10 @@ int a2_Render(A2_state *st,
 		return -a2_LastError();
 	if(!(ss = a2_SubState(st, cfg)))
 		return -a2_LastError();
+
+	/* Parse the property table, if one was provided */
+	if(props)
+		a2_SetProperties(ss, -1, props);
 
 	/* Start program! */
 	if((h = a2_Starta(ss, a2_RootVoice(ss), program, argc, argv)) < 0)
@@ -138,7 +143,8 @@ int a2_Render(A2_state *st,
 A2_handle a2_RenderWave(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, int *argv,
+		A2_property *props)
 {
 	int res;
 	A2_handle wh;
@@ -147,7 +153,7 @@ A2_handle a2_RenderWave(A2_state *st,
 	if((wh = a2_WaveNew(st, wt, period, flags)) < 0)
 		return wh;
 
-	res = a2_Render(st, wh, samplerate, length, program, argc, argv);
+	res = a2_Render(st, wh, samplerate, length, program, argc, argv, props);
 	if(res < 0)
 	{
 		a2_Release(st, wh);

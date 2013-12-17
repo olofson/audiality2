@@ -621,7 +621,8 @@ struct A2_state
 	EVLEAKTRACK(unsigned numevents;)
 
 	unsigned	msdur;		/* One millisecond in samples (16:16) */
-	uint32_t	noisestate;	/* Noise generator state */
+	uint32_t	randstate;	/* RAND* instruction RNG state */
+	uint32_t	noisestate;	/* 'wtosc' noise generator state */
 
 	int		statreset;	/* Flag to reset averaging/summing */
 	uint64_t	now_micros;	/* Performance monitoring timestamp */
