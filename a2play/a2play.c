@@ -29,6 +29,8 @@
 #include "waves.h"
 #include "units.h"
 
+/* Silence detection window size (seconds) */
+#define	SILENCEWINDOW	0.25f
 
 /* Configuration */
 static const char *audiodriver = "default";
@@ -44,9 +46,13 @@ static A2_handle module = -1;	/* Handle of last loaded module */
 static double stoptime = 0.0f;	/* (Need final sample rate for stopframes!) */
 static int stopframes = 0;
 static int playedframes = 0;
-static int stoplevel = -1;
+static int silencelevel = -1;
+static unsigned silencewindow;
 
 static int do_exit = 0;
+
+/* Silence detector state */
+static unsigned lastpeak = 0;	/* Frames since last peak > abs(silencelevel) */
 
 
 /*-------------------------------------------------------------------
@@ -58,34 +64,29 @@ static A2_errors tap_process(int **buffers, unsigned nbuffers, unsigned frames,
 		void *userdata)
 {
 	int i, j;
-	int smin = 0x7fffffff;
-	int smax = 0x80000000;
 
 	/* Count sample frames processed */
 	playedframes += frames;
 
-	/* Find absolute peak level */
+	/* Silence tracking */
+	lastpeak += frames;
 	for(j = 0; j < nbuffers; ++j)
 		for(i = 0; i < frames; ++i)
 		{
 			int s = buffers[j][i];
-			if(s < smin)
-				smin = s;
-			if(s > smax)
-				smax = s;
+			if((s > silencelevel) || (-s > silencelevel))
+				lastpeak = 0;
 		}
-	if(-smin > smax)
-		smax = -smin;
 
 	/* Stop conditions */
-	if(stopframes && (stoplevel >= 0))
+	if(stopframes && (silencelevel >= 0))
 	{
-		if((playedframes >= stopframes) && (smax <= stoplevel))
+		if((playedframes >= stopframes) && (lastpeak >= silencewindow))
 			do_exit = 1;
 	}
 	else if(stopframes && (playedframes >= stopframes))
 		do_exit = 1;
-	else if((stoplevel >= 0) && (smax <= stoplevel))
+	else if((silencelevel >= 0) && (lastpeak >= silencewindow))
 		do_exit = 1;
 
 	return A2_OK;
@@ -396,7 +397,10 @@ static void parse_args(int argc, const char *argv[])
 		else if(strncmp(argv[i], "-sl", 3) == 0)
 		{
 			double sl = atof(&argv[i][3]);
-			stoplevel = sl * 65536.0f;
+			silencelevel = sl * 8388608.0f;
+			/* In case of LSB rounding errors in some effect... */
+			if(silencelevel < 1)
+				silencelevel = 1;
 			printf("[Stop below: %f]\n", sl);
 		}
 		else if(strncmp(argv[i], "-xr", 3) == 0)
@@ -425,7 +429,7 @@ static void parse_args(int argc, const char *argv[])
 
 static void breakhandler(int a)
 {
-	fprintf(stderr, "a2play: Stopping...\n");
+	fprintf(stderr, "a2play: (Break!)\n");
 	do_exit = 1;
 }
 
@@ -473,6 +477,7 @@ int main(int argc, const char *argv[])
 		printf("a2play: Actual sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 	stopframes = stoptime * cfg->samplerate;
+	silencewindow = SILENCEWINDOW * cfg->samplerate;
 
 	/* Load sounds */
 	load_sounds(argc, argv);
@@ -497,6 +502,8 @@ int main(int argc, const char *argv[])
 			sleep(1);
 		}
 
+		fprintf(stderr, "a2play: Stopping...\n");
+
 		/* Fade out */
 		a2_Now(state);
 		/* FIXME: Send stop messages and detach all voices here! */
@@ -513,13 +520,13 @@ int main(int argc, const char *argv[])
 	else
 	{
 		printf("a2play: Offline mode.\n");
-
 		while(!do_exit)
 		{
 			a2_Run(state, cfg->buffer);
 			a2_Now(state);
 		}
 	}
+	fprintf(stderr, "a2play: Stopped.\n");
 
 	/* Close and clean up */
 	a2_Close(state);
