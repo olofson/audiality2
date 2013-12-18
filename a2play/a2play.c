@@ -526,7 +526,8 @@ int main(int argc, const char *argv[])
 			a2_Now(state);
 		}
 	}
-	fprintf(stderr, "a2play: Stopped.\n");
+	fprintf(stderr, "a2play: Stopped. %d sample frames played.\n", 
+			playedframes);
 
 	/* Close and clean up */
 	a2_Close(state);
