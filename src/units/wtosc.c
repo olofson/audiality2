@@ -108,7 +108,7 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	unsigned s, end = offset + frames;
 	int32_t *out = u->outputs[0];
 	unsigned dph = o->dphase >> 8;
-	unsigned *nstate = &o->state->noisestate;
+	uint32_t *nstate = &o->state->noisestate;
 	a2_RamperPrepare(&o->a, frames);
 	for(s = offset; s < end; ++s)
 	{
