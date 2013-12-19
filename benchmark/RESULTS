@@ -11,11 +11,12 @@ Test system:
 	Linux 3.8.1-gentoo SMP PREEMPT x86_64
 	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
 
-k2epilogue.a2s		8.307s
-k2intro.a2s		7.178s
-k2loader.a2s		8.519s
-k2trance.a2s		7.127s
-pulsetronic.a2s		7.013s
+Normal (LERP 2x):
+	k2epilogue.a2s		8.307s
+	k2intro.a2s		7.178s
+	k2loader.a2s		8.519s
+	k2trance.a2s		7.127s
+	pulsetronic.a2s		7.013s
 
 =====================================================================
 20131027
@@ -29,10 +30,44 @@ Test system:
 	Linux 3.8.1-gentoo SMP PREEMPT x86_64
 	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
 
-k2epilogue.a2s		8.462s
-k2intro.a2s		7.122s
-k2loader.a2s		8.536s
-k2trance.a2s		7.128s
-pulsetronic.a2s		7.033s
+Normal (LERP 2x):
+	k2epilogue.a2s		8.462s
+	k2intro.a2s		7.122s
+	k2loader.a2s		8.536s
+	k2trance.a2s		7.128s
+	pulsetronic.a2s		7.033s
+
+=====================================================================
+20131219
+
+Version:
+	Audiality 2 1.9.0 + various commits
+	https://github.com/olofson/audiality2.git
+	65505c25104700f36d59cad65bf20019c8a5fa86
+
+Test system:
+	Linux 3.10.15 SMP PREEMPT x86_64
+	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
+
+A2_HIFI (Hermite 2x):
+	k2epilogue.a2s		12.428s
+	k2intro.a2s		10.987s
+	k2loader.a2s		11.560s
+	k2trance.a2s		10.401s
+	pulsetronic.a2s		11.286s
+
+A2_LOFI (LERP):
+	k2epilogue.a2s		7.421s
+	k2intro.a2s		6.343s
+	k2loader.a2s		7.853s
+	k2trance.a2s		6.386s
+	pulsetronic.a2s		6.098s
+
+Normal (LERP 2x):
+	k2epilogue.a2s		8.417s
+	k2intro.a2s		7.234s
+	k2loader.a2s		8.555s
+	k2trance.a2s		7.175s
+	pulsetronic.a2s		7.056s
 
 =====================================================================

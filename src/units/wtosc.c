@@ -29,16 +29,19 @@
 
 /* NOTE: These all return doubled amplitude samples! */
 #ifdef A2_HIFI
+/* Hermite interpolation with 2x oversampling */
 static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
 {
 	return a2_Hermite(d, ph) + a2_Hermite(d, ph + (dph >> 1));
 }
 #elif (defined A2_LOFI)
+/* Linear interpolation */
 static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
 {
 	return a2_Lerp(d, ph) << 1;
 }
 #else
+/* Linear interpolation with 2x oversampling */
 static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
 {
 	return a2_Lerp(d, ph) + a2_Lerp(d, ph + (dph >> 1));
