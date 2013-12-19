@@ -852,6 +852,7 @@ static int a2c_LexString(A2_compiler *c)
 		a2c_Throw(c, A2_OOMEMORY);
 	c->l[0].token = TK_STRING;
 	c->l[0].v.i = a2_NewString(c->state, s);
+	free(s);
 	if(c->l[0].v.i < 0)
 		a2c_Throw(c, -c->l[0].v.i);
 	a2c_AddDependency(c, c->l[0].v.i);
@@ -1104,6 +1105,7 @@ static int a2c_Lex(A2_compiler *c, int whitenewline)
 		  case A2_TVOICE:
 		  case A2_TSTREAM:
 			/* Imported a dynamic object...? Can't be right. */
+			free(name);
 			a2c_Throw(c, A2_INTERNAL + 146);
 		}
 		if(c->l[0].token)
@@ -1115,6 +1117,7 @@ static int a2c_Lex(A2_compiler *c, int whitenewline)
 			c->l[0].v.i = h;
 			DUMPLSTRINGS(fprintf(stderr, "token %s (%d)] ",
 					a2c_T2S(c->l[0].token), c->l[0].token);)
+			free(name);
 			return c->l[0].token;
 		}
 	}
