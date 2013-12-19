@@ -85,7 +85,6 @@ typedef struct A2_wave_wave
 /* A2_object: Waveform with mipmaps */
 typedef struct A2_wave
 {
-	A2_stream	*uploadstream;
 	A2_wavetypes	type;
 	unsigned	flags;		/* A2_LOOPED etc */
 	unsigned	period;		/* Fundamental period length */
@@ -142,15 +141,13 @@ A2_handle a2_WaveUpload(A2_state *st,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
 /*
- * Allocate a waveform for use by wavetable oscillators, and open a stream for
- * writing audio data.
+ * Allocate a waveform for use by wavetable oscillators.
  *
  * This call creates an empty, unprepared wave that can be written with the
- * desired amount of data using the stream API. (a2_Write(), a2_SetPos() etc.)
- *
- * To actually apply the data written to the wave, use a2_Flush() or
- * a2_StreamClose(). This will render mipmaps and pad zones as needed to play
- * the wave correctly.
+ * desired amount of data using the stream API. (a2_OpenStream(), a2_Write(),
+ * a2_SetPos() etc.) To actually apply the data written to the wave, use
+ * a2_Flush(), or close the stream. This will render mipmaps and pad zones as
+ * needed to play the wave correctly.
  *
  * The first flush (or stream close) will determine the length of the wave and
  * allocate the realtime playback buffers for it. The length of the wave cannot

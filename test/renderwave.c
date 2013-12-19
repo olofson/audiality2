@@ -138,7 +138,7 @@ static void fail(unsigned where, A2_errors err)
 static A2_handle render_wave(A2_state *st, A2_handle h)
 {
 	A2_errors res;
-	A2_handle wh;
+	A2_handle wh, sh;
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *ss;
@@ -170,6 +170,14 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 		return wh;
 	}
 
+	/* Open stream to write to the target wave */
+	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	{
+		a2_Close(ss);
+		a2_Release(st, wh);
+		return sh;
+	}
+
 	/* Start sound! */
 	a2_Play(ss, a2_RootVoice(ss), h);
 
@@ -194,11 +202,12 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 		if((frames > 1000) && (max < 256))
 			break;
 		frames += cfg->buffer;
-		if((res = a2_Write(st, wh, A2_I24, buf,
+		if((res = a2_Write(st, sh, A2_I24, buf,
 				cfg->buffer * sizeof(int32_t))))
 		{
 			fprintf(stderr, "a2_Write() failed!\n");
 			a2_Close(ss);
+			a2_Release(st, sh);
 			a2_Release(st, wh);
 			return -res;
 		}
@@ -207,13 +216,22 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 	/* Close substate */
 	a2_Close(ss);
 
-	/* Prepare and return wave */
-	if((res = a2_Flush(st, wh)))
+	/*
+	 * Prepare and return wave.
+	 *
+	 * NOTE: This isn't needed here, as flushing is done automatically
+	 *       as a stream is closed. a2_Flush() is really for when you
+	 *       want to keep the stream open to modify the wave later.
+	 */
+	if((res = a2_Flush(st, sh)))
 	{
 		fprintf(stderr, "a2_Flush() failed!\n");
+		a2_Release(st, sh);
 		a2_Release(st, wh);
 		return -res;
 	}	
+
+	a2_Release(st, sh);
 	return wh;
 }
 

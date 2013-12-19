@@ -344,10 +344,9 @@ static A2_errors a2_postprocess(A2_wave *w)
 }
 
 
-static A2_errors a2_add_upload_buffer(A2_wave *w,
+static A2_errors a2_add_upload_buffer(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
-	A2_stream *str = w->uploadstream;
 	A2_uploadbuffer *lastub = (A2_uploadbuffer *)str->streamdata;
 	A2_uploadbuffer *ub = (A2_uploadbuffer *)malloc(sizeof(A2_uploadbuffer));
 	int ss = a2_sample_size(fmt);
@@ -380,9 +379,9 @@ static A2_errors a2_add_upload_buffer(A2_wave *w,
 
 
 /* Discard upload buffers without applying them */
-static void a2_discard_upload_buffers(A2_wave *w)
+static void a2_discard_upload_buffers(A2_stream *str)
 {
-	A2_stream *str = w->uploadstream;
+	A2_wave *w = (A2_wave *)str->tobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -402,11 +401,10 @@ static void a2_discard_upload_buffers(A2_wave *w)
 
 
 /* Calculate the gain for normalizing all uploaded buffers */
-static float a2_calc_upload_gain(A2_wave *w)
+static float a2_calc_upload_gain(A2_stream *str)
 {
-	float gain = 1000.0f;
-	A2_stream *str = w->uploadstream;
 	A2_uploadbuffer *ub = (A2_uploadbuffer *)str->streamdata;
+	float gain = 1000.0f;
 	while(ub)
 	{
 		float bg = a2_normalize_gain(ub->fmt, ub->data, ub->size);
@@ -418,16 +416,16 @@ static float a2_calc_upload_gain(A2_wave *w)
 }
 
 /* Apply and discard upload buffers */
-static A2_errors a2_apply_upload_buffers(A2_wave *w)
+static A2_errors a2_apply_upload_buffers(A2_stream *str)
 {
+	A2_wave *w = (A2_wave *)str->tobject;
 	float gain;
-	A2_stream *str = w->uploadstream;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
 		if(w->flags & A2_NORMALIZE)
-			gain = a2_calc_upload_gain(w);
+			gain = a2_calc_upload_gain(str);
 		else
 			gain = 1.0f;
 		while(str->streamdata)
@@ -437,7 +435,7 @@ static A2_errors a2_apply_upload_buffers(A2_wave *w)
 			if((res = a2_do_write(w, ub->offset, gain,
 					ub->fmt, ub->data, ub->size)))
 			{
-				a2_discard_upload_buffers(w);
+				a2_discard_upload_buffers(str);
 				return res;
 			}
 			str->streamdata = ub->next;
@@ -455,9 +453,9 @@ static A2_errors a2_apply_upload_buffers(A2_wave *w)
  * Analyze buffered writes to determine total length of waveform in samples,
  * NOT including padding.
  */
-static unsigned a2_calc_upload_length(A2_wave *w)
+static unsigned a2_calc_upload_length(A2_stream *str)
 {
-	A2_stream *str = w->uploadstream;
+	A2_wave *w = (A2_wave *)str->tobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -483,7 +481,7 @@ static unsigned a2_calc_upload_length(A2_wave *w)
 static A2_errors a2_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
-	A2_wave *w = (A2_wave *)str->object;
+	A2_wave *w = (A2_wave *)str->tobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -494,7 +492,7 @@ static A2_errors a2_stream_write(A2_stream *str,
 			return A2_BADFORMAT;
 		size /= ss;
 		if(w->flags & A2_UNPREPARED)
-			return a2_add_upload_buffer(w, fmt, data, size);
+			return a2_add_upload_buffer(str, fmt, data, size);
 		else
 		{
 			A2_errors res = a2_do_write(w, str->position, 1.0f,
@@ -512,13 +510,13 @@ static A2_errors a2_stream_write(A2_stream *str,
 
 static A2_errors a2_stream_flush(A2_stream *str)
 {
+	A2_wave *w = (A2_wave *)str->tobject;
 	A2_errors res = A2_OK;
-	A2_wave *w = (A2_wave *)str->object;
 	if(w->flags & A2_UNPREPARED)
 	{
-		res = a2_wave_alloc(w, a2_calc_upload_length(w));
+		res = a2_wave_alloc(w, a2_calc_upload_length(str));
 		if(res == A2_OK)
-			res = a2_apply_upload_buffers(w);
+			res = a2_apply_upload_buffers(str);
 		a2_postprocess(w);
 		w->flags &= ~A2_UNPREPARED;
 	}
@@ -593,7 +591,6 @@ A2_handle a2_WaveUpload(A2_state *st,
 
 A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 {
-	A2_errors res;
 	A2_handle h;
 	A2_wave *w = (A2_wave *)calloc(1, sizeof(A2_wave));
 	if(!w)
@@ -616,11 +613,6 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 	{
 		free(w);
 		return -h;
-	}
-	if((res = a2_StreamOpen(st, h, 0)))
-	{
-		a2_Release(st, h);
-		return -res;
 	}
 	DBG(fprintf(stderr, "New wave %p %d\n", w, h);)
 	return h;
@@ -715,8 +707,6 @@ static RCHM_errors a2_wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle
 	A2_wave *w = (A2_wave *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
 	a2_InstaKillAllVoices(st);
-	if(w->uploadstream)
-		a2_StreamClose(st, h);
 	switch(w->type)
 	{
 	  case A2_WOFF:

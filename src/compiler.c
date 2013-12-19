@@ -1102,6 +1102,7 @@ static int a2c_Lex(A2_compiler *c, int whitenewline)
 		  /* Warning eliminator - still warns if we miss a type! */
 		  case A2_TDETACHED:
 		  case A2_TVOICE:
+		  case A2_TSTREAM:
 			/* Imported a dynamic object...? Can't be right. */
 			a2c_Throw(c, A2_INTERNAL + 146);
 		}

@@ -46,6 +46,7 @@ typedef enum A2_otypes
 	A2_TPROGRAM,	/* Instrument/sound/song program (compiled script) */
 	A2_TUNIT,	/* Voice structure unit ("class" - not instance!) */
 	A2_TSTRING,	/* Simple C string */
+	A2_TSTREAM,	/* Audio stream (see stream.h) */
 	A2_TDETACHED,	/* Former realtime handle that has been detached */
 
 	/* Realtime engine managed objects (data pointers not accessible!) */

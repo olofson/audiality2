@@ -47,6 +47,7 @@ typedef struct A2_event A2_event;
 typedef struct A2_voice A2_voice;
 typedef struct A2_compiler A2_compiler;
 typedef struct A2_sharedstate A2_sharedstate;
+typedef struct A2_stream A2_stream;
 
 
 /*
@@ -233,9 +234,9 @@ void a2_DumpIns(unsigned *code, unsigned pc);
 struct A2_stream
 {
 	A2_state	*state;		/* State this stream belongs to */
-	void		*object;	/* Object this stream belongs to */
 	void		*streamdata;	/* Stream implementation data */
-	A2_handle	handle;		/* Target object handle */
+	void		*tobject;	/* Target object of this stream */
+	A2_handle	thandle;		/* Target object handle */
 	unsigned	flags;		/* Stream init and state flags */
 	unsigned	position;	/* Current stream position */
 
@@ -273,6 +274,8 @@ struct A2_stream
 };
 
 typedef A2_errors (*A2_stropen_cb)(A2_stream *str);
+
+A2_errors a2_RegisterStreamTypes(A2_state *st);
 
 
 /*---------------------------------------------------------
@@ -578,6 +581,14 @@ static inline A2_voice *a2_GetVoice(A2_state *st, A2_handle handle)
 	if(!hi || (hi->typecode != A2_TVOICE))
 		return NULL;
 	return (A2_voice *)hi->d.data;
+}
+
+static inline A2_stream *a2_GetStream(A2_state *st, A2_handle handle)
+{
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
+	if(!hi || (hi->typecode != A2_TSTREAM))
+		return NULL;
+	return (A2_stream *)hi->d.data;
 }
 
 /* Brutally kill all voices. (Dirty hack for unloading objects...) */

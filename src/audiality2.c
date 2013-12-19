@@ -199,6 +199,8 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 		return res;
 	if((res = a2_RegisterAPITypes(st)))
 		return res;
+	if((res = a2_RegisterStreamTypes(st)))
+		return res;
 
 	/* Set up the root bank (MUST get handle 0!) */
 	res = a2_NewBank(st, "root", A2_LOCKED);

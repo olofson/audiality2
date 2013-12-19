@@ -46,30 +46,36 @@ static int do_exit = 0;
 static A2_handle upload_wave(A2_state *st, unsigned len)
 {
 	A2_errors res;
-	A2_handle h;
+	A2_handle wh, sh;
 	int i;
 	int s = 0;
 	int16_t buf[FRAGSIZE];
-	if((h = a2_WaveNew(st, A2_WMIPWAVE, 128, 0)) < 0)
-		return h;
+	if((wh = a2_WaveNew(st, A2_WMIPWAVE, 128, 0)) < 0)
+		return wh;
+	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	{
+		a2_Release(st, wh);
+		return sh;
+	}
 	while(s < len)
 	{
 		for(i = 0; (i < FRAGSIZE) && (s < len); ++i, ++s)
 			buf[i] = sin(s * 2.0f * M_PI / 100 +
 					sin(s * .0013) * sin(s * .002) * 10) *
 					32767.0f;
-		if((res = a2_Write(st, h, A2_I16, buf, i * sizeof(int16_t))))
+		if((res = a2_Write(st, sh, A2_I16, buf, i * sizeof(int16_t))))
 		{
-			a2_Release(st, h);
+			a2_Release(st, sh);
+			a2_Release(st, wh);
 			return -res;
 		}
 	}
-	if((res = a2_Flush(st, h)))
+	if((res = a2_Release(st, sh)))
 	{
-		a2_Release(st, h);
+		a2_Release(st, wh);
 		return -res;
 	}
-	return h;
+	return wh;
 }
 
 

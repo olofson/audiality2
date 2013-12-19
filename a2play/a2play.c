@@ -196,6 +196,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	  case A2_TSTRING:
 		printf("%s", a2_String(state, h));
 		break;
+	  case A2_TSTREAM:
 	  case A2_TDETACHED:
 	  case A2_TVOICE:
 		break;

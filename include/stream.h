@@ -29,15 +29,12 @@
 extern "C" {
 #endif
 
-/* A2_stream: Public interface for implementations of the stream API */
-typedef struct A2_stream A2_stream;
-
 /*
- * Initialize streaming on object 'handle'.
+ * Open a stream on object 'handle'.
  *
- * Returns A2_OK, or an error code.
+ * Returns the stream handle, or a negated error code.
  */
-A2_errors a2_StreamOpen(A2_state *st, A2_handle handle, unsigned flags);
+A2_handle a2_OpenStream(A2_state *st, A2_handle handle, unsigned flags);
 
 /*
  * Change stream position of 'handle' to 'offset'.
@@ -52,14 +49,14 @@ A2_errors a2_SetPos(A2_state *st, A2_handle handle, unsigned offset);
 unsigned a2_GetPos(A2_state *st, A2_handle handle);
 
 /*
- * Read 'size' bytes of audio from object 'handle', converting it into the
- * format specified by 'fmt' and writing it into 'buffer'.
+ * Read 'size' bytes of audio from 'stream', converting it into the format
+ * specified by 'fmt' and writing it into 'buffer'.
  */
-A2_errors a2_Read(A2_state *st, A2_handle handle,
+A2_errors a2_Read(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, void *buffer, unsigned size);
 
 /*
- * Write raw audio to an object, such as a wave or a streaming oscillator.
+ * Write raw audio to 'stream'.
  *
  * 'fmt' is the sample format code for the 'data'.
  *
@@ -70,7 +67,7 @@ A2_errors a2_Read(A2_state *st, A2_handle handle,
  * 'size' is the size in BYTES of 'data'. (This is still used to calculate the
  * waveform size when 'data' is NULL and/or A2_CLEAR is used.)
  */
-A2_errors a2_Write(A2_state *st, A2_handle handle,
+A2_errors a2_Write(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
 /*
@@ -78,16 +75,7 @@ A2_errors a2_Write(A2_state *st, A2_handle handle,
  *
  * Returns A2_OK, or an error code.
  */
-A2_errors a2_Flush(A2_state *st, A2_handle handle);
-
-/*
- * Flush any pending writes (see a2_Flush()) and close the stream on object
- * 'handle'.
- *
- * If there are pending writes that fail to be implemented, an error code may
- * be returned, but other than that, this call should never fail.
- */
-A2_errors a2_StreamClose(A2_state *st, A2_handle handle);
+A2_errors a2_Flush(A2_state *st, A2_handle stream);
 
 #ifdef __cplusplus
 };

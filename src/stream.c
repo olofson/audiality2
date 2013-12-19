@@ -25,14 +25,15 @@
 #include "internals.h"
 
 
-A2_errors a2_StreamOpen(A2_state *st, A2_handle handle, unsigned flags)
+A2_handle a2_OpenStream(A2_state *st, A2_handle handle, unsigned flags)
 {
+	A2_handle stream;
 	A2_errors res;
 	A2_stream *str;
 	A2_typeinfo *ti;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi)
-		return A2_INVALIDHANDLE;
+		return -A2_INVALIDHANDLE;
 	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
 #ifdef DEBUG
 	if(!ti)
@@ -42,62 +43,47 @@ A2_errors a2_StreamOpen(A2_state *st, A2_handle handle, unsigned flags)
 		return A2_NOTIMPLEMENTED;
 	if(!(str = (A2_stream *)calloc(1, sizeof(A2_stream))))
 		return A2_OOMEMORY;
+	if((stream = rchm_NewEx(&st->ss->hm, str, A2_TSTREAM, flags, 1)) < 0)
+	{
+		free(str);
+		return stream;
+	}
 	str->state = st;
-	str->handle = handle;
 	str->flags = flags;
-	*(A2_stream **)hi->d.data = str;
-	str->object = hi->d.data;
+	str->thandle = handle;
+	str->tobject = hi->d.data;
 	if((res = ti->OpenStream(str)))
 	{
-		*(A2_stream **)hi->d.data = NULL;
+		rchm_Free(&st->ss->hm, stream);
 		free(str);
 		return res;
 	}
-	return A2_OK;
+	rchm_Retain(&st->ss->hm, handle);
+	return stream;
 }
 
 
-A2_errors a2_StreamClose(A2_state *st, A2_handle handle)
+static RCHM_errors a2_StreamDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	A2_errors res = A2_OK;
-	A2_typeinfo *ti;
-	A2_stream **str;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return A2_INVALIDHANDLE;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return A2_BADTYPE;
-#endif
-	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;	/* No stream interface! */
-	str = (A2_stream **)hi->d.data;
-	if((*str)->Close)
-		res = (*str)->Close(*str);
-	else if((*str)->Flush)
-		res = (*str)->Flush(*str);
-	free(*str);
-	*str = NULL;
+	A2_stream *str = (A2_stream *)hi->d.data;
+	if(hi->userbits & A2_LOCKED)
+		return RCHM_REFUSE;
+	if(str->Close)
+		res = str->Close(str);
+	else if(str->Flush)
+		res = str->Flush(str);
+	rchm_Release(&((A2_typeinfo *)ti)->state->ss->hm, str->thandle);
+	free(str);
 	return res;
 }
 
 
-A2_errors a2_SetPos(A2_state *st, A2_handle handle, unsigned offset)
+A2_errors a2_SetPos(A2_state *st, A2_handle stream, unsigned offset)
 {
-	A2_stream *str;
-	A2_typeinfo *ti;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return A2_INVALIDHANDLE;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return A2_BADTYPE;
-#endif
-	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;	/* No stream interface! */
-	str = *(A2_stream **)hi->d.data;
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return A2_WRONGTYPE;
 	if(str->SetPos)
 		return str->SetPos(str, offset);
 	else
@@ -108,21 +94,11 @@ A2_errors a2_SetPos(A2_state *st, A2_handle handle, unsigned offset)
 }
 
 
-unsigned a2_GetPos(A2_state *st, A2_handle handle)
+unsigned a2_GetPos(A2_state *st, A2_handle stream)
 {
-	A2_stream *str;
-	A2_typeinfo *ti;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return 0;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return 0;
-#endif
-	if(!ti->OpenStream)
-		return 0;
-	str = *(A2_stream **)hi->d.data;
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return A2_WRONGTYPE;
 	if(str->GetPos)
 		return str->GetPos(str);
 	else
@@ -130,66 +106,43 @@ unsigned a2_GetPos(A2_state *st, A2_handle handle)
 }
 
 
-A2_errors a2_Read(A2_state *st, A2_handle handle,
+A2_errors a2_Read(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, void *buffer, unsigned size)
 {
-	A2_stream *str;
-	A2_typeinfo *ti;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return A2_INVALIDHANDLE;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return A2_BADTYPE;
-#endif
-	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;	/* No stream interface! */
-	str = *(A2_stream **)hi->d.data;
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return A2_WRONGTYPE;
 	if(!str->Read)
 		return A2_NOTIMPLEMENTED;
 	return str->Read(str, fmt, buffer, size);
 }
 
 
-A2_errors a2_Write(A2_state *st, A2_handle handle,
+A2_errors a2_Write(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
-	A2_stream *str;
-	A2_typeinfo *ti;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return A2_INVALIDHANDLE;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return A2_BADTYPE;
-#endif
-	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;	/* No stream interface! */
-	str = *(A2_stream **)hi->d.data;
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return A2_WRONGTYPE;
 	if(!str->Write)
 		return A2_NOTIMPLEMENTED;
 	return str->Write(str, fmt, data, size);
 }
 
 
-A2_errors a2_Flush(A2_state *st, A2_handle handle)
+A2_errors a2_Flush(A2_state *st, A2_handle stream)
 {
-	A2_stream *str;
-	A2_typeinfo *ti;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi)
-		return A2_INVALIDHANDLE;
-	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
-#ifdef DEBUG
-	if(!ti)
-		return A2_BADTYPE;
-#endif
-	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;	/* No stream interface! */
-	str = *(A2_stream **)hi->d.data;
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return A2_WRONGTYPE;
 	if(!str->Flush)
 		return A2_OK;
 	return str->Flush(str);
+}
+
+
+A2_errors a2_RegisterStreamTypes(A2_state *st)
+{
+	return a2_RegisterType(st, A2_TSTREAM, "stream",
+			a2_StreamDestructor, NULL);
 }

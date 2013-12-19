@@ -32,7 +32,7 @@
  * Returns number of sample frames rendered, or a negated A2_errors error code.
  */
 int a2_Render(A2_state *st,
-		A2_handle handle,
+		A2_handle stream,
 		unsigned samplerate, unsigned length,
 		A2_handle program, unsigned argc, int *argv,
 		A2_property *props)
@@ -90,7 +90,7 @@ int a2_Render(A2_state *st,
 						(-buf[i] > silencelevel))
 					lastpeak = frag - i;
 		}
-		if((res = a2_Write(st, handle, A2_I24, buf,
+		if((res = a2_Write(st, stream, A2_I24, buf,
 				frag * sizeof(int32_t))))
 		{
 			a2_Close(ss);
@@ -147,21 +147,26 @@ A2_handle a2_RenderWave(A2_state *st,
 		A2_property *props)
 {
 	int res;
-	A2_handle wh;
+	A2_handle wh, sh;
 	if(!period)
 		period = samplerate / A2_MIDDLEC;
 	if((wh = a2_WaveNew(st, wt, period, flags)) < 0)
 		return wh;
+	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	{
+		a2_Release(st, wh);
+		return sh;
+	}
 
-	res = a2_Render(st, wh, samplerate, length, program, argc, argv, props);
+	res = a2_Render(st, sh, samplerate, length, program, argc, argv, props);
 	if(res < 0)
 	{
+		a2_Release(st, sh);
 		a2_Release(st, wh);
 		return res;
 	}
 
-	res = a2_Flush(st, wh);
-	if(res)
+	if((res = a2_Release(st, sh)))
 	{
 		a2_Release(st, wh);
 		return -res;
