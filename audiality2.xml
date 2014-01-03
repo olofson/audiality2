@@ -6,7 +6,6 @@
 			<item> def </item>
 			<item> struct </item>
 			<item> wire </item>
-			<item> tempo </item>
 			<item> wave </item>
 		</list>
 		<list name="instructions">
@@ -41,6 +40,7 @@
 			<item> wge </item>
 			<item> kill </item>
 			<item> d </item>
+			<item> tempo </item>
 			<item> td </item>
 			<item> quant </item>
 			<item> rand </item>

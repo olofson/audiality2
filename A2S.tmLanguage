@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>fileTypes</key>
+	<array>
+		<string>a2s</string>
+	</array>
+	<key>name</key>
+	<string>Audiality 2 Script</string>
+	<key>patterns</key>
+	<array>
+		<dict>
+			<key>comment</key>
+			<string>Compiler directives</string>
+			<key>match</key>
+			<string>\b(def|struct|wire|tempo|wave)\b</string>
+			<key>name</key>
+			<string>storage.type</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Keywords and instructions</string>
+			<key>match</key>
+			<string>\b(end|return|run|wait|sleep|wake|force|jump|loop|jz|jnz|jg|jl|jge|jle|if|ifz|ifl|ifg|ifle|ifge|for|else|while|wz|wl|wg|wle|wge|kill|d|tempo|td|quant|rand|p2d|neg|set|debug|sizeof)\b</string>
+			<key>name</key>
+			<string>keyword.control</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Fixed VM control registers</string>
+			<key>match</key>
+			<string>\b(tick|tr)\b</string>
+			<key>name</key>
+			<string>storage.type</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Builtin waves</string>
+			<key>match</key>
+			<string>\b(off|pulse1|pulse2|pulse3|pulse4|pulse5|pulse10|pulse15|pulse20|pulse25|pulse30|pulse35|pulse40|pulse45|pulse50|square|saw|triangle|sine|hsine|asine|qsine|noise)\b</string>
+			<key>name</key>
+			<string>storage.type</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Numeric literal</string>
+			<key>match</key>
+			<string>\b((([0-9]+\.?[0-9]*)|(\.[0-9]+))((e|E)(\+|-)?[0-9]+)?)(n|f)?\b</string>
+			<key>name</key>
+			<string>constant.numeric</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Operator</string>
+			<key>match</key>
+			<string>([-*=+!;:])</string>
+			<key>name</key>
+			<string>keyword.operator</string>
+		</dict>
+		<dict>
+			<key>comment</key>
+			<string>Braces, brackets, parentheses...</string>
+			<key>match</key>
+			<string>([\{\}\(\)])</string>
+			<key>name</key>
+			<string>punctuation.separator.parameters.c</string>
+		</dict>
+		<dict>
+			<key>begin</key>
+			<string>\"</string>
+			<key>beginCaptures</key>
+			<dict>
+				<key>0</key>
+				<dict>
+					<key>name</key>
+					<string>punctuation.definition.string.begin</string>
+				</dict>
+			</dict>
+			<key>comment</key>
+			<string>String literal</string>
+			<key>end</key>
+			<string>\"</string>
+			<key>endCaptures</key>
+			<dict>
+				<key>0</key>
+				<dict>
+					<key>name</key>
+					<string>punctuation.definition.string.end</string>
+				</dict>
+			</dict>
+			<key>name</key>
+			<string>string.quoted.double</string>
+			<key>patterns</key>
+			<array>
+				<dict>
+					<key>match</key>
+					<string>\\(\\|[abefnprtv'"?]|[0-3]\d{,2}|[4-7]\d?|x[a-fA-F0-9]{,2}|u[a-fA-F0-9]{,4}|U[a-fA-F0-9]{,8})</string>
+					<key>name</key>
+					<string>constant.character.escape</string>
+				</dict>
+			</array>
+			<key>string_escaped_char</key>
+			<false/>
+		</dict>
+		<dict>
+			<key>begin</key>
+			<string>/\*</string>
+			<key>comment</key>
+			<string>C style comment</string>
+			<key>end</key>
+			<string>\*/</string>
+			<key>name</key>
+			<string>comment.block</string>
+		</dict>
+		<dict>
+			<key>begin</key>
+			<string>//</string>
+			<key>comment</key>
+			<string>C++ style one-line comment</string>
+			<key>end</key>
+			<string>$\n?</string>
+			<key>name</key>
+			<string>comment.block</string>
+		</dict>
+	</array>
+	<key>scopeName</key>
+	<string>source.audiality_2_script</string>
+	<key>uuid</key>
+	<string>f064a4ef-4149-4676-8762-c77e4c85fcab</string>
+</dict>
+</plist>

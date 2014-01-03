@@ -56,18 +56,18 @@ A2_HIFI (Hermite 2x):
 	k2trance.a2s		10.401s
 	pulsetronic.a2s		11.286s
 
-A2_LOFI (LERP):
-	k2epilogue.a2s		7.421s
-	k2intro.a2s		6.343s
-	k2loader.a2s		7.853s
-	k2trance.a2s		6.386s
-	pulsetronic.a2s		6.098s
-
 Normal (LERP 2x):
 	k2epilogue.a2s		8.417s
 	k2intro.a2s		7.234s
 	k2loader.a2s		8.555s
 	k2trance.a2s		7.175s
 	pulsetronic.a2s		7.056s
+
+A2_LOFI (LERP):
+	k2epilogue.a2s		7.421s
+	k2intro.a2s		6.343s
+	k2loader.a2s		7.853s
+	k2trance.a2s		6.386s
+	pulsetronic.a2s		6.098s
 
 =====================================================================
