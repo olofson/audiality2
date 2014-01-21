@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,6 +28,7 @@
 #include "dsp.h"
 #include "internals.h"
 #include "compiler.h"
+#include "xinsert.h"
 
 
 /*---------------------------------------------------------
@@ -168,72 +169,6 @@ A2_errors a2_Retain(A2_state *st, A2_handle handle)
 /*---------------------------------------------------------
 	Async API message gateway
 ---------------------------------------------------------*/
-
-/*
- * WARNING:
- *	Nasty business going on here...! To save space and bandwidth in the
- *	lock-free FIFOs (which cannot be reallocated on the fly!), we're only
- *	sending over the part of A2_apimessage that we actually use, passing
- *	the actual message size via the 'size' field. (Which could BTW be sized
- *	down to one byte - but let's not get into unaligned structs as well...)
- *	   To make matters worse, we need to write each message with a single
- *	sfifo_Write() call, because the reader at the other would need some
- *	rather hairy logic to deal with incomplete messages.
- */
-
-typedef struct A2_apimessage
-{
-	unsigned	size;	/* Actual size of message */
-	A2_handle	target;	/* Target object */
-	A2_eventbody	b;	/* Event body, as carried by A2_event */
-} A2_apimessage;
-
-/* Size of message up until and including field 'x' */
-#define	A2_MSIZE(x)	(offsetof(A2_apimessage, x) + \
-		sizeof(((A2_apimessage *)NULL)->x))
-
-/* Minimum message size - we always read this number of bytes first! */
-#define	A2_APIREADSIZE	(A2_MSIZE(b.action))
-
-
-/* Set the size field of 'm' to 'size', and write it to 'f'. */
-static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
-{
-#ifdef DEBUG
-	if(size < A2_APIREADSIZE)
-		fprintf(stderr, "WARNING: Too small message in a2_writemsg()! "
-				"%d bytes (min: %d)\n", size, A2_APIREADSIZE);
-#endif
-	if(sfifo_Space(f) < size)
-		return A2_OVERFLOW;
-	m->size = size;
-	m->b.argc = 0;
-	if(sfifo_Write(f, m, size) != size)
-		return A2_INTERNAL + 21;
-	return A2_OK;
-}
-
-/*
- * Copy arguments into 'm', setting the argument count and size of the message,
- * and then write it to 'f'.
- */
-static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
-		unsigned argc, int *argv)
-{
-	unsigned argsize = sizeof(int) * argc;
-	unsigned size = offsetof(A2_apimessage, b.a) + argsize;
-	if(argc > A2_MAXARGS)
-		return A2_MANYARGS;
-	if(sfifo_Space(f) < size)
-		return A2_OVERFLOW;
-	m->size = size;
-	m->b.argc = argc;
-	memcpy(&m->b.a, argv, argsize);
-	if(sfifo_Write(f, m, size) != size)
-		return A2_INTERNAL + 22;
-	return A2_OK;
-}
-
 
 A2_errors a2_OpenAPI(A2_state *st)
 {
@@ -429,25 +364,47 @@ static inline void a2r_em_release(A2_state *st, A2_apimessage *am)
 		a2r_Error(st, A2_BADVOICE, "a2r_em_release()[1]");
 		return;
 	}
+#if 0
+	switch(hi->typecode)
+	{
+	  case A2_TVOICE:
+		/*
+		 * Tell the voice (if any!?) that it's been detached.
+		 * NOTE: The voice handle is already in am->target!
+		 */
+		if(hi->d.data)
+		{
+			A2_voice *v = (A2_voice *)hi->d.data;
+			v->handle = -1;
+			a2_VoiceDetach(v);
+		}
+		break;
+	  case A2_TXICLIENT:
+	  	/* Get the xinsert client handle */
+		am->target = ;
+		break;
+	  default:
+		a2r_Error(st, A2_WRONGTYPE, "a2r_em_release()[2]");
+		return;
+	}
+#else
 	if(hi->typecode != A2_TVOICE)
 	{
 		a2r_Error(st, A2_WRONGTYPE, "a2r_em_release()[2]");
 		return;
 	}
-	/* Tell the voice (if any!?) that it's been detached */
+	/*
+	 * Tell the voice (if any!?) that it's been detached.
+	 * NOTE: The voice handle is already in am->target!
+	 */
 	if(hi->d.data)
 	{
 		A2_voice *v = (A2_voice *)hi->d.data;
 		v->handle = -1;
 		a2_VoiceDetach(v);
 	}
-	/*
-	 * Respond back to the API: "Clear to free the handle!"
-	 *
-	 * NOTE:
-	 *	We're reusing the message struct, so the handle we're sending
-	 *	back is already in am->target!
-	 */
+#endif
+	/* Respond back to the API: "Clear to free the handle!" */
 	am->b.action = A2MT_DETACH;
 	a2_writemsg(st->toapi, am, A2_MSIZE(b.action));
 }
@@ -500,18 +457,18 @@ static inline void a2r_em_killsub(A2_state *st, A2_apimessage *am)
 	memset(v->sv, 0, sizeof(v->sv));
 }
 
-static inline void a2r_em_callback(A2_state *st, A2_apimessage *am)
+static inline void a2r_em_xic(A2_state *st, A2_apimessage *am)
 {
 	A2_event *e;
 	A2_voice *tv = a2_GetVoice(st, am->target);
 	if(!tv)
 	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_callback()[1]");
+		a2r_Error(st, A2_BADVOICE, "a2r_em_xic()[1]");
 		return;
 	}
 	if(!(e = a2_AllocEvent(st)))
 	{
-		a2r_Error(st, A2_OOMEMORY, "a2r_em_callback()[2]");
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_xic()[2]");
 		return;
 	}
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
@@ -522,10 +479,10 @@ static inline void a2r_em_callback(A2_state *st, A2_apimessage *am)
 				"%f frames late!\n", (st->now_frames -
 				e->b.timestamp) / 256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_callback()[3]");
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_xic()[3]");
 		e->b.timestamp = st->now_frames;
 	}
-	MSGTRACK(e->source = "a2r_em_callback()";)
+	MSGTRACK(e->source = "a2r_em_xic()";)
 	a2_SendEvent(tv, e);
 }
 
@@ -570,9 +527,9 @@ A2_errors a2r_PumpEngineMessages(A2_state *st)
 		  case A2MT_KILLSUB:
 			a2r_em_killsub(st, &am);
 			break;
-		  case A2MT_TAPCB:
-		  case A2MT_INSERTCB:
-			a2r_em_callback(st, &am);
+		  case A2MT_ADDXIC:
+		  case A2MT_REMOVEXIC:
+			a2r_em_xic(st, &am);
 			break;
 #ifdef DEBUG
 		  default:
@@ -583,6 +540,19 @@ A2_errors a2r_PumpEngineMessages(A2_state *st)
 		}
 	}
 	return A2_OK;
+}
+
+
+static inline void a2_detach_or_free_handle(A2_state *st, A2_handle h)
+{
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, h);
+	if(hi)
+	{
+		if(hi->refcount)
+			hi->typecode = A2_TDETACHED;
+		else
+			rchm_Free(&st->ss->hm, h);
+	}
 }
 
 
@@ -614,21 +584,24 @@ A2_errors a2_PumpAPIMessages(A2_state *st)
 		switch(am.b.action)
 		{
 		  case A2MT_DETACH:
+			a2_detach_or_free_handle(st, am.target);
+			break;
+		  case A2MT_XICREMOVED:
 		  {
-			RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am.target);
-			if(!hi)
-				break;
-			if(hi->refcount)
-				hi->typecode = A2_TDETACHED;
-			else
-				rchm_Free(&st->ss->hm, am.target);
+			A2_xinsert_client *c = *(A2_xinsert_client **)&am.b.a1;
+			if(c->stream)
+				a2_detach_or_free_handle(st, c->stream);
+			a2_detach_or_free_handle(st, c->handle);
+			if(c->fifo)
+				sfifo_Close(c->fifo);
+		  	free(c);
 			break;
 		  }
 		  case A2MT_ERROR:
 		  {
-			const char **s = (const char **)&am.b.a2;
+			const char *s = *(const char **)&am.b.a2;
 			fprintf(stderr, "Audiality 2: [RT] %s (%s)\n",
-					a2_ErrorString(am.b.a1), *s);
+					a2_ErrorString(am.b.a1), s);
 			break;
 		  }
 #ifdef DEBUG
@@ -640,13 +613,6 @@ A2_errors a2_PumpAPIMessages(A2_state *st)
 		}
 	}
 	return A2_OK;
-}
-
-
-static inline void a2_poll_api(A2_state *st)
-{
-	if(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
-		a2_PumpAPIMessages(st);
 }
 
 
@@ -663,7 +629,7 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 		am.b.action = A2MT_ERROR;
 		am.b.timestamp = st->now_ticks;
 		am.b.a1 = e;
-		/* NOTE: This invades a[0] on platforms with 64 bit pointers! */
+		/* NOTE: Overwrites a[0] on platforms with 64 bit pointers! */
 		*d = info;
 		return a2_writemsg(st->toapi, &am,
 				A2_MSIZE(b.a2) + sizeof(void *));
@@ -681,6 +647,7 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
  * Send a message to the API context regarding handle 'h', telling it to either
  * free it immediately (refcount == 0), or to change its type to A2_TDETACHED,
  * so it can be released later.
+FIXME: This is only used in one place...
  */
 void a2r_DetachHandle(A2_state *st, A2_handle h)
 {
@@ -705,18 +672,30 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 	if(res == A2_REFUSE)
 	{
 		/*
-		 * Special hack to deal with voices. The voice destructor
-		 * only has access to the master state - not the actual voice
-		 * owner state provided through 'st' here, which we need to get
-		 * the correct message FIFO!
+		 * Special hack to deal with objects that need an engine
+		 * round trip for cleanup. Destructors only have access to the
+		 * master state - not the actual owner state provided through
+		 * 'st' here, which we need to get the correct message FIFO!
 		 */
 		RCHM_handleinfo *hi = rchm_Locate(&st->ss->hm, handle);
-		if(hi->typecode == A2_TVOICE)
+		switch(hi->typecode)
 		{
+		  case A2_TVOICE:
+		  {
 			A2_apimessage am;
 			am.target = handle;
 			am.b.action = A2MT_RELEASE;
 			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
+			break;
+		  }
+		  case A2_TXICLIENT:
+		  {
+			A2_apimessage am;
+			am.target = handle;
+			am.b.action = A2MT_REMOVEXIC;
+			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
+			break;
+		  }
 		}
 	}
 	return res;
@@ -921,173 +900,4 @@ A2_errors a2_RegisterAPITypes(A2_state *st)
 		res = a2_RegisterType(st, A2_TDETACHED, "detached",
 			NULL, NULL);
 	return res;
-}
-
-
-/*---------------------------------------------------------
-	Simplified "plugin" interface
----------------------------------------------------------*/
-
-static A2_errors a2_callback_msg(A2_state *st, A2_handle voice,
-		A2_xinsert_cb callback, void *userdata, int action)
-{
-	A2_apimessage am;
-	void **d = (void **)&am.b.a1;
-	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
-	else
-		a2_poll_api(st);
-	am.target = voice;
-	am.b.action = action;
-	am.b.timestamp = st->timestamp;
-	d[0] = callback;
-	d[1] = userdata;
-	return a2_writemsg(st->fromapi, &am,
-			A2_MSIZE(b.a1) + 2 * sizeof(void *));
-}
-
-A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
-		A2_xinsert_cb callback, void *userdata)
-{
-	return a2_callback_msg(st, voice, callback, userdata, A2MT_TAPCB);
-}
-
-A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
-		A2_xinsert_cb callback, void *userdata)
-{
-	return a2_callback_msg(st, voice, callback, userdata, A2MT_INSERTCB);
-}
-
-
-/*---------------------------------------------------------
-	Object property interface
----------------------------------------------------------*/
-
-int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
-{
-	int res;
-#if 0
-/*TODO:*/
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(hi)
-	{
-		A2_typeinfo *ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm,
-				hi->typecode);
-		
-	}
-#endif
-	switch(p)
-	{
-	  case A2_PSAMPLERATE:
-		return st->config->samplerate;
-	  case A2_PBUFFER:
-		return st->config->buffer;
-	  case A2_PCHANNELS:
-		return st->config->channels;
-	  case A2_PACTIVEVOICES:
-		return st->activevoices;
-	  case A2_PFREEVOICES:
-		return st->totalvoices - st->activevoices;
-	  case A2_PTOTALVOICES:
-		return st->totalvoices;
-	  case A2_PCPULOADAVG:
-		res = st->cpuloadavg;
-		st->statreset = 1;
-		return res;
-	  case A2_PCPULOADMAX:
-		return st->cpuloadmax;
-	  case A2_PCPUTIMEAVG:
-		res = st->cputimeavg;
-		st->statreset = 1;
-		return res;
-	  case A2_PCPUTIMEMAX:
-		return st->cputimemax;
-	  case A2_PINSTRUCTIONS:
-		return st->instructions;
-	  case A2_PEXPORTALL:
-		return st->ss->c->exportall;
-	  case A2_PTABSIZE:
-		return st->ss->c->tabsize;
-	  case A2_POFFLINEBUFFER:
-		return st->ss->offlinebuffer;
-	  case A2_PSILENCELEVEL:
-		return st->ss->silencelevel;
-	  case A2_PSILENCEWINDOW:
-		return st->ss->silencewindow;
-	  case A2_PSILENCEGRACE:
-		return st->ss->silencegrace;
-	/*
-	 * FIXME:
-	 *	This might be confusing: These two are actually returning RNG
-	 * 	*states*, as opposed to the initial seeds that were once set!
-	 */
-	  case A2_PRANDSEED:
-		return st->randstate;
-	  case A2_PNOISESEED:
-		return st->noisestate;
-	  default:
-		return 0;
-	}
-}
-
-A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
-{
-	switch(p)
-	{
-	  case A2_PCPULOADAVG:
-	  case A2_PCPUTIMEAVG:
-		st->statreset = 1;
-		return A2_OK;
-	  case A2_PCPULOADMAX:
-		st->cpuloadmax = v;
-		return A2_OK;
-	  case A2_PCPUTIMEMAX:
-		st->cputimemax = v;
-		return A2_OK;
-	  case A2_PINSTRUCTIONS:
-		st->instructions = v;
-		return A2_OK;
-	  case A2_PEXPORTALL:
-		st->ss->c->exportall = v;
-		return A2_OK;
-	  case A2_PTABSIZE:
-		if(v < 1)
-			v = 8;
-		st->ss->c->tabsize = v;
-		return A2_OK;
-	  case A2_POFFLINEBUFFER:
-		st->ss->offlinebuffer = v;
-		return A2_OK;
-	  case A2_PSILENCELEVEL:
-		st->ss->silencelevel = v;
-		return A2_OK;
-	  case A2_PSILENCEWINDOW:
-		st->ss->silencewindow = v;
-		return A2_OK;
-	  case A2_PSILENCEGRACE:
-		st->ss->silencegrace = v;
-		return A2_OK;
-	  case A2_PRANDSEED:
-		st->randstate = v;
-		return A2_OK;
-	  case A2_PNOISESEED:
-		st->noisestate = v;
-		return A2_OK;
-	  default:
-		return A2_NOTFOUND;
-	}
-}
-
-
-A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props)
-{
-	int p;
-	for(p = 0; props[p].property; ++p)
-	{
-		A2_errors res = a2_SetProperty(st, h, props[p].property,
-				props[p].value);
-		if(res)
-			return res;
-	}
-	return A2_OK;
 }

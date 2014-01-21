@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -35,6 +35,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #include "sfifo.h"
 #include "platform.h"
 #include "config.h"
+#include "xinsert.h"
 
 
 typedef struct A2_typeinfo A2_typeinfo;
@@ -224,30 +225,26 @@ void a2_DumpIns(unsigned *code, unsigned pc);
 	Stream interface internals
 ---------------------------------------------------------*/
 
-/*
- * Stream interface/instance (see <audiality2/stream.h>)
- *
- * NOTE:
- *	Objects supporting the stream interface need to have a pointer to one
- *	of these as the FIRST field in their instance struct!
- */
+/* Stream interface/instance (see <audiality2/stream.h>) */
 struct A2_stream
 {
 	A2_state	*state;		/* State this stream belongs to */
 	void		*streamdata;	/* Stream implementation data */
 	void		*tobject;	/* Target object of this stream */
-	A2_handle	thandle;		/* Target object handle */
+	A2_handle	thandle;	/* Target object handle */
+	int		channel;	/* (from a2_OpenStream()) */
+	int		size;		/* (from a2_OpenStream()) */
 	unsigned	flags;		/* Stream init and state flags */
 	unsigned	position;	/* Current stream position */
 
 	/*
-	 * a2_Read() backend. (Optional; operations will fail if not specified!)
+	 * a2_Read() backend. (Optional; Ops will fail if not specified!)
 	 */
 	A2_errors (*Read)(A2_stream *str,
 			A2_sampleformats fmt, void *buffer, unsigned size);
 
 	/*
-	 * a2_Write() backend. (Optional; operations will fail if not specified!)
+	 * a2_Write() backend. (Optional; Ops will fail if not specified!)
 	 */
 	A2_errors (*Write)(A2_stream *str,
 			A2_sampleformats fmt, const void *data, unsigned size);
@@ -261,7 +258,7 @@ struct A2_stream
 
 	/*
 	 * a2_Flush() backend. (Optional; operations will do nothing and always
-	 * suceed if this callback is not specified.)
+	 * succeed if this callback is not specified.)
 	 */
 	A2_errors (*Flush)(A2_stream *str);
 
@@ -392,14 +389,15 @@ typedef enum A2_evactions
 	A2MT_START,	/* a2_Start() */
 	A2MT_SEND,	/* a2_Send() (also an internal event) */
 	A2MT_SENDSUB,	/* a2_SendSub() */
-	A2MT_RELEASE,	/* A2_TVOICE handle destructor */
+	A2MT_RELEASE,	/* Voice and xinsert client handle destructor */
 	A2MT_KILL,	/* a2_Kill() */
 	A2MT_KILLSUB,	/* a2_KillSub() */
-	A2MT_TAPCB,	/* a2_SetTapCallback() */
-	A2MT_INSERTCB,	/* a2_SetInsertCallback() */
+	A2MT_ADDXIC,	/* Add xinsert client */
+	A2MT_REMOVEXIC,	/* Remove xinsert client */
 
 	/* Engine to API messages */
-	A2MT_DETACH,	/* Free handle if rc 0, otherwise make it A2_TDETACHED */
+	A2MT_DETACH,	/* Free handle if rc 0 otherwise type = A2_TDETACHED */
+	A2MT_XICREMOVED,/* xinsert client removed; clear to clean up */
 	A2MT_ERROR,	/* Error message from the engine */
 } A2_evactions;
 
@@ -780,6 +778,8 @@ void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames);
 /* Audio driver callback - this is what drives the whole engine! */
 A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames);
 
+A2_errors a2_RegisterXICTypes(A2_state *st);
+
 
 /*---------------------------------------------------------
 	Waves
@@ -801,8 +801,107 @@ void a2_CloseAPI(A2_state *st);
 
 void a2r_DetachHandle(A2_state *st, A2_handle h);
 
-A2_errors a2_set_xinsert_cb(A2_state *st, A2_voice *v,
-		A2_xinsert_cb callback, void *userdata, int insert_callback);
+
+/*
+ * WARNING:
+ *	Nasty business going on here...! To save space and bandwidth in the
+ *	lock-free FIFOs (which cannot be reallocated on the fly!), we're only
+ *	sending over the part of A2_apimessage that we actually use, passing
+ *	the actual message size via the 'size' field. (Which could BTW be sized
+ *	down to one byte - but let's not get into unaligned structs as well...)
+ *	   To make matters worse, we need to write each message with a single
+ *	sfifo_Write() call, because the reader at the other would need some
+ *	rather hairy logic to deal with incomplete messages.
+ */
+
+typedef struct A2_apimessage
+{
+	unsigned	size;	/* Actual size of message */
+	A2_handle	target;	/* Target object */
+	A2_eventbody	b;	/* Event body, as carried by A2_event */
+} A2_apimessage;
+
+/* Size of message up until and including field 'x' */
+#define	A2_MSIZE(x)	(offsetof(A2_apimessage, x) + \
+		sizeof(((A2_apimessage *)NULL)->x))
+
+/* Minimum message size - we always read this number of bytes first! */
+#define	A2_APIREADSIZE	(A2_MSIZE(b.action))
+
+
+/* Set the size field of 'm' to 'size', and write it to 'f'. */
+static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
+{
+#ifdef DEBUG
+	if(size < A2_APIREADSIZE)
+		fprintf(stderr, "WARNING: Too small message in a2_writemsg()! "
+				"%d bytes (min: %d)\n", size, A2_APIREADSIZE);
+#endif
+	if(sfifo_Space(f) < size)
+		return A2_OVERFLOW;
+	m->size = size;
+	m->b.argc = 0;
+	if(sfifo_Write(f, m, size) != size)
+		return A2_INTERNAL + 21;
+	return A2_OK;
+}
+
+/*
+ * Copy arguments into 'm', setting the argument count and size of the message,
+ * and then write it to 'f'.
+ */
+static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
+		unsigned argc, int *argv)
+{
+	unsigned argsize = sizeof(int) * argc;
+	unsigned size = offsetof(A2_apimessage, b.a) + argsize;
+	if(argc > A2_MAXARGS)
+		return A2_MANYARGS;
+	if(sfifo_Space(f) < size)
+		return A2_OVERFLOW;
+	m->size = size;
+	m->b.argc = argc;
+	memcpy(&m->b.a, argv, argsize);
+	if(sfifo_Write(f, m, size) != size)
+		return A2_INTERNAL + 22;
+	return A2_OK;
+}
+
+static inline void a2_poll_api(A2_state *st)
+{
+	if(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
+		a2_PumpAPIMessages(st);
+}
+
+
+/*---------------------------------------------------------
+	Internal API for xinsert
+---------------------------------------------------------*/
+
+/* Get xinsert client from handle */
+static inline A2_xinsert_client *a2_GetXIC(A2_state *st, A2_handle handle)
+{
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
+	if(!hi || (hi->typecode != A2_TXICLIENT))
+		return NULL;
+	return (A2_xinsert_client *)hi->d.data;
+}
+
+/*
+ * Add client to the first xinsert unit of voice 'v'.
+ *
+ * Use from engine context only!
+ */
+A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
+		A2_xinsert_client *xic);
+
+/*
+ * Remove client from xinsert unit, notifying the client via the callback.
+ * Use from engine context only!
+ *
+ * NOTE: This Will crash if 'xic' isn't actually in the list!
+ */
+A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic);
 
 
 /*---------------------------------------------------------

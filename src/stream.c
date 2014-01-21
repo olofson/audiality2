@@ -1,7 +1,7 @@
 /*
  * stream.c - Audiality 2 stream interface
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -25,7 +25,8 @@
 #include "internals.h"
 
 
-A2_handle a2_OpenStream(A2_state *st, A2_handle handle, unsigned flags)
+A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
+		int channel, int size, unsigned flags)
 {
 	A2_handle stream;
 	A2_errors res;
@@ -37,18 +38,20 @@ A2_handle a2_OpenStream(A2_state *st, A2_handle handle, unsigned flags)
 	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
 #ifdef DEBUG
 	if(!ti)
-		return A2_BADTYPE;
+		return -A2_BADTYPE;
 #endif
 	if(!ti->OpenStream)
-		return A2_NOTIMPLEMENTED;
+		return -A2_NOTIMPLEMENTED;
 	if(!(str = (A2_stream *)calloc(1, sizeof(A2_stream))))
-		return A2_OOMEMORY;
+		return -A2_OOMEMORY;
 	if((stream = rchm_NewEx(&st->ss->hm, str, A2_TSTREAM, flags, 1)) < 0)
 	{
 		free(str);
 		return stream;
 	}
 	str->state = st;
+	str->channel = channel;
+	str->size = size;
 	str->flags = flags;
 	str->thandle = handle;
 	str->tobject = hi->d.data;

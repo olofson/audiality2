@@ -1,7 +1,7 @@
 /*
- * streamwave.c - Audiality 2 wave upload via the stream API
+ * streamupload.c - Audiality 2 wave upload via the stream API
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -52,7 +52,7 @@ static A2_handle upload_wave(A2_state *st, unsigned len)
 	int16_t buf[FRAGSIZE];
 	if((wh = a2_WaveNew(st, A2_WMIPWAVE, 128, 0)) < 0)
 		return wh;
-	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
 	{
 		a2_Release(st, wh);
 		return sh;

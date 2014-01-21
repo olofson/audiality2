@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -25,6 +25,7 @@
 #include "internals.h"
 #include "dsp.h"
 #include "inline.h"
+#include "xinsert.h"
 
 
 /*---------------------------------------------------------
@@ -81,14 +82,15 @@ static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
 
 
 /*
- * Instantiatiate, initialize and wire a unit as described by descriptor 'ud',
+ * Instantiate, initialize and wire a unit as described by descriptor 'ud',
  * and add it at the end of the chain in voice 'v'.
  *
  * NOTE:
  *	We're not keeping a pointer to the last unit in A2_voice (voice
  *	structures are "hardwired" by the compiler anyway, so they're never
  *	rebuilt on the fly), we keep it as a temporary variable when
- *	constructing the voice, and pass it via the 'lastunit' argument instead.
+ *	constructing the voice, and pass it via the 'lastunit' argument
+ *	instead.
  */
 static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		A2_voice *v, A2_unit *lastunit, int32_t **scratch,
@@ -658,17 +660,17 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			a2_FreeEvent(st, e);
 			return res;	/* Spin the VM to process the message! */
 		  }
-		  case A2MT_TAPCB:
+		  case A2MT_ADDXIC:
 		  {
 			void **d = (void **)&e->b.a1;
-			if((res = a2_set_xinsert_cb(st, v, d[0], d[1], 0)))
+			if((res = a2_XinsertAddClient(st, v, *d)))
 				a2r_Error(st, res, "a2_VoiceProcessEvents()[3]");
 			break;
 		  }
-		  case A2MT_INSERTCB:
+		  case A2MT_REMOVEXIC:
 		  {
 			void **d = (void **)&e->b.a1;
-			if((res = a2_set_xinsert_cb(st, v, d[0], d[1], 1)))
+			if((res = a2_XinsertRemoveClient(st, *d)))
 				a2r_Error(st, res, "a2_VoiceProcessEvents()[4]");
 			break;
 		  }

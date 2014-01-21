@@ -1,7 +1,7 @@
 /*
  * render.c - Audiality 2 off-line and asynchronous rendering
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -152,7 +152,7 @@ A2_handle a2_RenderWave(A2_state *st,
 		period = samplerate / A2_MIDDLEC;
 	if((wh = a2_WaveNew(st, wt, period, flags)) < 0)
 		return wh;
-	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
 	{
 		a2_Release(st, wh);
 		return sh;

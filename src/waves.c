@@ -229,6 +229,8 @@ static A2_errors a2_do_write(A2_wave *w, unsigned offset, float gain,
 			for(s = 0; s < length; ++s)
 				d[s] = ((float *)data)[s] * gain;
 			break;
+		  default:
+			return A2_BADFORMAT;
 		}
 	}
 	return A2_OK;
@@ -478,7 +480,7 @@ static unsigned a2_calc_upload_length(A2_stream *str)
 }
 
 
-static A2_errors a2_stream_write(A2_stream *str,
+static A2_errors a2_wave_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	A2_wave *w = (A2_wave *)str->tobject;
@@ -508,7 +510,7 @@ static A2_errors a2_stream_write(A2_stream *str,
 }
 
 
-static A2_errors a2_stream_flush(A2_stream *str)
+static A2_errors a2_wave_stream_flush(A2_stream *str)
 {
 	A2_wave *w = (A2_wave *)str->tobject;
 	A2_errors res = A2_OK;
@@ -527,10 +529,10 @@ static A2_errors a2_stream_flush(A2_stream *str)
 
 
 /* OpenStream() method for A2_TWAVE objects */
-static A2_errors a2_stream_open(A2_stream *str)
+static A2_errors a2_wave_stream_open(A2_stream *str)
 {
-	str->Write = a2_stream_write;
-	str->Flush = a2_stream_flush;	/* Also used for a2_Close() */
+	str->Write = a2_wave_stream_write;
+	str->Flush = a2_wave_stream_flush;	/* Also used for a2_Close() */
 	return A2_OK;
 }
 
@@ -727,7 +729,7 @@ static RCHM_errors a2_wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle
 A2_errors a2_RegisterWaveTypes(A2_state *st)
 {
 	return a2_RegisterType(st, A2_TWAVE, "wave", a2_wave_destructor,
-			a2_stream_open);
+			a2_wave_stream_open);
 }
 
 

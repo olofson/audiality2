@@ -1,7 +1,7 @@
 /*
  * units.h - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -103,7 +103,9 @@ typedef enum A2_unitflags
  * NOTE:
  *	This will run in the real time context of Audiality 2, and will be
  *	called whenever a VM program changes the contents of the respective
- *	control register!
+ *	control register. (Actually, the current VM implementation "filters"
+ *	register writes so that only the final value is applied as a timing
+ *	instruction is executed.)
  */
 typedef void (*A2_write_cb)(A2_unit *u, int value, unsigned start,
 		unsigned duration);
@@ -129,8 +131,8 @@ typedef A2_errors (*A2_uinit_cb)(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
  * Deinitialization callback
  *
  *	This OPTIONAL callback can be used to release any resources external to
- *	the A2_unit block as a unit is destroyed. (The A2_unit block is freed by
- *	Audiality 2.) This normally happens whenever a voice terminates.
+ *	the A2_unit block as a unit is destroyed. (The A2_unit block is freed
+ *	by Audiality 2.) This normally happens whenever a voice terminates.
  */
 typedef void (*A2_udeinit_cb)(A2_unit *u, A2_state *st);
 
@@ -140,10 +142,11 @@ typedef void (*A2_udeinit_cb)(A2_unit *u, A2_state *st);
  *	This MANDATORY callback is where the actual audio processing normally
  *	happens.
  *
- *	Since Audiality 2 is using "buffer splitting" for sample accurate timing,
- *	processing is done in variable size fragments. The 'offset' argument
- *	specifies where in the connected I/O buffers processing is to begin, and
- *	'frames' specifies how many sample frames to process from that point on.
+ *	Since Audiality 2 is using "buffer splitting" for sample accurate
+ *	timing, processing is done in variable size fragments. The 'offset'
+ *	argument specifies where in the connected I/O buffers processing is to
+ *	begin, and 'frames' specifies how many sample frames to process from
+ *	that point on.
  *
  *	'frames' will never be greater than A2_MAXFRAGMENT.
  */
@@ -153,7 +156,7 @@ typedef void (*A2_process_cb)(A2_unit *u, unsigned offset, unsigned frames);
 /*
  * Control register descriptor. (End array with { NULL, NULL }!
  *
- *	This specifies the name identifying a unit control register in CSL, and
+ *	This specifies the name identifying a unit control register in A2S, and
  *	optionally provides a callback that notifies the unit about changes to
  *	the register value, along with ramping information.
  *
@@ -170,7 +173,7 @@ typedef void (*A2_process_cb)(A2_unit *u, unsigned offset, unsigned frames);
 struct A2_crdesc
 {
 	const char	*name;		/* Register name for the compiler */
-	A2_write_cb	write;		/* Callback to write control register */
+	A2_write_cb	write;		/* Callback for register writes */
 };
 
 
@@ -215,7 +218,16 @@ struct A2_unit
 	A2_unit			*next;
 	const A2_unitdesc	*descriptor;
 
-	/* Audio I/O */
+	/*
+	 * Audio I/O
+	 *
+	 * NOTE: Units must be "inplace safe," as the engine may reuse physical
+	 *       input buffers for output! That is, all input for a given
+	 *       sample frame must be read before the corresponding output
+	 *       samples are written.
+	 *          This, of course, applies only to replacing mode, that is,
+	 *       when A2_PROCADD is not set.
+	 */
 	uint16_t	ninputs;	/* Number of input channels */
 	uint16_t	noutputs;	/* Number of output channels */
 	int32_t		**inputs;	/* Ptrs to arrays of buffer pointers */

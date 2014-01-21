@@ -1,7 +1,11 @@
 /*
- * xinsert.h - Audiality 2 External Insert units
+ * xinsert.h - Audiality 2 External Insert unit
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ *	This unit implements the realtime side of the callback and stream
+ *	tap/send/insert APIs; a2_SetTapCallback(), a2_SetSendCallback(),
+ *	a2_SetInsertCallback(), a2_OpenTap() and a2_OpenSend().
+ *
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,15 +28,39 @@
 #define A2_XINSERT_H
 
 #include "units.h"
+#include "sfifo.h"
 
-typedef struct A2_xinsert
+typedef struct A2_xinsert A2_xinsert;
+typedef struct A2_xinsert_client A2_xinsert_client;
+
+typedef enum A2_xiflags
 {
-	A2_unit		header;
-	A2_xinsert_cb	callback;
-	void		*userdata;
-	A2_state	*state;
-	unsigned	flags;
-} A2_xinsert;
+	A2_XI_READ =	0x00000100,	/* Client reads from unit inputs */
+	A2_XI_WRITE =	0x00000200,	/* Client sends to unit outputs */
+	A2_XI_STREAM =	0x00000400	/* 0: callback, 1: stream */
+} A2_xiflags;
+
+struct A2_xinsert_client
+{
+	A2_xinsert_client	*next;
+	A2_xinsert		*unit;		/* Owner */
+	A2_xinsert_cb		callback;
+	void			*userdata;
+	SFIFO			*fifo;
+	int			channel;
+	A2_handle		handle;		/* Client handle */
+	A2_handle		stream;		/* Stream handle, or 0 */
+	unsigned		flags;		/* A2_xiflags */
+};
+
+struct A2_xinsert
+{
+	A2_unit			header;
+	A2_state		*state;
+	A2_xinsert_client	*clients;
+	A2_handle		voice;
+	unsigned		flags;		/* A2_unitflags */
+};
 
 static inline A2_xinsert *a2_xinsert_cast(A2_unit *u)
 {

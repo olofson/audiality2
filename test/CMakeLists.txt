@@ -17,8 +17,8 @@ target_link_libraries(renderwave ${AUDIALITY2_LIBRARY})
 add_executable(renderwave2 WIN32 MACOSX_BUNDLE renderwave2.c)
 target_link_libraries(renderwave2 ${AUDIALITY2_LIBRARY})
 
-add_executable(streamwave WIN32 MACOSX_BUNDLE streamwave.c)
-target_link_libraries(streamwave ${AUDIALITY2_LIBRARY})
+add_executable(streamupload WIN32 MACOSX_BUNDLE streamupload.c)
+target_link_libraries(streamupload ${AUDIALITY2_LIBRARY})
 
 find_package(SDL)
 if(SDL_FOUND)

@@ -1104,6 +1104,7 @@ static int a2c_Lex(A2_compiler *c, int whitenewline)
 		  case A2_TDETACHED:
 		  case A2_TVOICE:
 		  case A2_TSTREAM:
+		  case A2_TXICLIENT:
 			/* Imported a dynamic object...? Can't be right. */
 			free(name);
 			a2c_Throw(c, A2_INTERNAL + 146);

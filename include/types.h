@@ -1,7 +1,7 @@
 /*
  * types.h - Audiality 2 basic data types
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -47,6 +47,7 @@ typedef enum A2_otypes
 	A2_TUNIT,	/* Voice structure unit ("class" - not instance!) */
 	A2_TSTRING,	/* Simple C string */
 	A2_TSTREAM,	/* Audio stream (see stream.h) */
+	A2_TXICLIENT,	/* xinsert client (stream target or callback) */
 	A2_TDETACHED,	/* Former realtime handle that has been detached */
 
 	/* Realtime engine managed objects (data pointers not accessible!) */
@@ -56,12 +57,25 @@ typedef enum A2_otypes
 /* Sample formats for wave uploading, stream I/O etc */
 typedef enum A2_sampleformats
 {
+	/* Sample formats */
 	A2_I8 = 0,	/* [-128, 127] */
 	A2_I16,		/* [-32768, 32767] */
 	A2_I24,		/* [-8388608, 8388607] */
 	A2_I32,		/* [-2147483648, 2147483647] */
-	A2_F32		/* [-1.0f, 1.0f] (Range irrelevant with A2_NORMALIZE) */
+	A2_F32,		/* [-1.0f, 1.0f] (Range irrelevant /w A2_NORMALIZE) */
+
+	/* Channel counts for interleaved buffers */
+	A2_INTERLEAVED_2 = 0x200,
+	A2_INTERLEAVED_3 = 0x300,
+	A2_INTERLEAVED_4 = 0x400,
+	A2_INTERLEAVED_5 = 0x500,
+	A2_INTERLEAVED_6 = 0x600,
+	A2_INTERLEAVED_7 = 0x700,
+	A2_INTERLEAVED_8 = 0x800
 } A2_sampleformats;
+
+#define A2_SF_FORMAT_MASK	0x0000000f
+#define A2_SF_INTERLEAVE_MASK	0x00000f00
 
 
 /*---------------------------------------------------------
@@ -101,6 +115,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_MANYARGS,	"Too many arguments to VM program")\
   \
   A2_DEFERR(A2_BUFOVERFLOW,	"Buffer overflow")\
+  A2_DEFERR(A2_BUFUNDERFLOW,	"Buffer underflow")\
   A2_DEFERR(A2_DIVBYZERO,	"Division by zero")\
   A2_DEFERR(A2_INFLOOP,		"Jump would cause infinite loop")\
   A2_DEFERR(A2_OVERFLOW,	"Value does not fit in numeric type")\
@@ -118,6 +133,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_ISASSIGNED,	"Object is already assigned to this container")\
   A2_DEFERR(A2_READ,		"Error reading file")\
   A2_DEFERR(A2_WRONGTYPE,	"Wrong type of data or object")\
+  A2_DEFERR(A2_WRONGFORMAT,	"Wrong stream data format")\
   A2_DEFERR(A2_VOICEALLOC,	"Could not allocate voice")\
   A2_DEFERR(A2_VOICEINIT,	"Could not initialize voice")\
   A2_DEFERR(A2_VOICENEST,	"Subvoice nesting depth exceeded")\
@@ -127,6 +143,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NOTFOUND,	"Object not found")\
   A2_DEFERR(A2_NOOBJECT,	"Handle is not attached to an object")\
   A2_DEFERR(A2_NOXINSERT,	"No 'xinsert' unit found in voice structure")\
+  A2_DEFERR(A2_NOSTREAMCLIENT,	"'xinsert' client not set up for streaming")\
   A2_DEFERR(A2_NOREPLACE,	"Unit does not implement replacing output mode")\
   A2_DEFERR(A2_NOTOUTPUT,	"Tried to wire inputs to voice output bus")\
   A2_DEFERR(A2_EXPORTDECL,	"Export already declared")\

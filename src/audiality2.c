@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -200,6 +200,8 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 	if((res = a2_RegisterAPITypes(st)))
 		return res;
 	if((res = a2_RegisterStreamTypes(st)))
+		return res;
+	if((res = a2_RegisterXICTypes(st)))
 		return res;
 
 	/* Set up the root bank (MUST get handle 0!) */

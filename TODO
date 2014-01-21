@@ -250,8 +250,6 @@ TODO: -------------------------------------------------------------------------
 	  synthesis - but augmenting it with subsample accurate time domain
 	  synthesis might be interesting.
 
-* FM/PM oscillator, using an audio input for modulation!
-
 * APIs for transferring or copying objects across master states...?
 
 * Allow subvoices to process audio from their parent voice...? The 'inline'

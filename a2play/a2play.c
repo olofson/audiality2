@@ -1,7 +1,7 @@
 /*
  * a2play.c - Audiality 2 command line player
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -199,6 +199,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	  case A2_TSTREAM:
 	  case A2_TDETACHED:
 	  case A2_TVOICE:
+	  case A2_TXICLIENT:
 		break;
 	}
 	printf("\n");
@@ -334,7 +335,7 @@ static void print_version(const char *exename)
 			A2_MINOR(v),
 			A2_MICRO(v),
 			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2010-2013 David Olofson\n");
+	fprintf(stderr, "Copyright 2014 David Olofson\n");
 }
 
 
@@ -451,6 +452,8 @@ int main(int argc, const char *argv[])
 	A2_driver *drv = NULL;
 	A2_config *cfg;
 	float a;
+	A2_handle tcb;
+
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -485,7 +488,9 @@ int main(int argc, const char *argv[])
 
 	/* Start playing! */
 	a2_Now(state);
-	a2_SetTapCallback(state, a2_RootVoice(state), tap_process, NULL);
+	tcb = a2_TapCallback(state, a2_RootVoice(state), tap_process, NULL);
+	if(tcb < 0)
+		fail(-tcb);
 	if(play_sounds(argc, argv) != 1)
 	{
 		a2_Close(state);

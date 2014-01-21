@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -39,7 +39,7 @@ extern "C" {
 #define	A2_BUILD(ver)	((ver) & 0xff)
 
 /* Current version */
-#define	A2_VERSION	A2_MAKE_VERSION(1,9,0,0)
+#define	A2_VERSION	A2_MAKE_VERSION(@VERSION_MAJOR@, @VERSION_MINOR@, @VERSION_PATCH@, @VERSION_BUILD@)
 
 /* Default reference frequence for linear pitch 0.0; "middle C" */
 #define	A2_MIDDLEC	261.626f
@@ -446,11 +446,12 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice);
 
 
 /*---------------------------------------------------------
-	Simplified "plugin" interface
+	Callback xinsert interface
 ---------------------------------------------------------*/
 
 /*
- * Callback prototype for a2_SetTapCallback() and a2_SetInsertCallback().
+ * Callback prototype for a2_SetTapCallback(), a2_SetSendCallback() and
+ * a2_SetInsertCallback().
  *
  * This will be called with (NULL, 0, 0, <userdata>) as notification when the
  * callback is removed/replaced, or the xinput unit is destroyed.
@@ -467,29 +468,78 @@ typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
  * last in their chains.
  *
  * To use this with any other voice, the voice needs to run a program that
- * includes at 'xinsert' unit somewhere in its structure, or this call will fail
- * with A2_NOXINSERT.
+ * includes at 'xinsert' unit somewhere in its structure, or this call will
+ * fail with A2_NOXINSERT.
  *
  * Note that 'xinsert' does not need to be the last unit in a chain, so it's
  * entirely possible to use it for probing the signal at any point in the voice
  * structure.
  *
- * Returns A2_OK (0) if the operation was successful, or an error code such as:
- *	A2_EXPUNIT	voice has no units
- *	A2_NOXINSERT	no 'xinsert' unit found
- *	A2_BADVOICE	'voice' is not actually the handle of a voice
+ * Returns an xinsert client handle if the operation was successful, or a
+ * negated error code such as:
+ *	-A2_EXPUNIT	voice has no units
+ *	-A2_NOXINSERT	no 'xinsert' unit found
+ *	-A2_BADVOICE	'voice' is not actually the handle of a voice
  */
-A2_errors a2_SetTapCallback(A2_state *st, A2_handle voice,
+A2_handle a2_TapCallback(A2_state *st, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata);
 
 /*
- * Similar to a2_SetTapCallback(), but the callback will be able to alter the
- * audio buffers in order to process or generate audio. This is essentially a
- * quick and dirty way of injecting custom DSP effects without implementing
- * proper voice units.
+ * Like a2_TapCallback(), but the callback instead receives write-only buffers
+ * (undefined contents!) that will be added to the output of the 'xinsert'
+ * unit.
  */
-A2_errors a2_SetInsertCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SendCallback(A2_state *st, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata);
+
+/*
+ * Essentially a combination of a2_TapCallback() and a2_SendCallback(). The
+ * callback will receive buffers with audio from the 'xinsert' unit inputs, and
+ * whatever these buffers contain when the callback returns is added to the
+ * respective outputs of the unit. This is essentially a quick and dirty way of
+ * injecting custom DSP effects without implementing proper voice units.
+ */
+A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
+		A2_xinsert_cb callback, void *userdata);
+
+
+/*---------------------------------------------------------
+	Buffered stream xinsert interface
+---------------------------------------------------------*/
+
+/*
+ * Open a buffered asynchronous stream for tapping audio from 'channel' of the
+ * first 'xinsert' unit on 'voice'. 'size' is the buffer size in sample frames.
+ *
+TODO:
+ * Specifying -1 for 'channel' opens all available channels on 'voice', which
+ * can then be read from the stream by specifying the appropriate interleaved
+ * sample format to a2_Read(). (See types.h; A2_sampleformats.)
+ *
+ * Returns a stream handle for use with a2_Read(), or a negated error code.
+ */
+A2_handle a2_OpenTap(A2_state *st, A2_handle voice,
+		int channel, int size, unsigned flags);
+
+/*
+ * Open a buffered asynchronous stream for sending audio to 'channel' of the
+ * first 'xinsert' unit on 'voice'. 'size' is the buffer size in sample frames.
+ *
+TODO:
+ * Specifying -1 for 'channel' opens all available channels on 'voice', which
+ * can then be written to by specifying the appropriate interleaved sample
+ * format to a2_Write(). (See types.h; A2_sampleformats.)
+ *
+ * Returns a stream handle for use with a2_Write(), or a negated error code.
+ *
+ * NOTE: This doesn't quite match the callback API, as the stream API isn't
+ *       really designed for read/write streams. You can use a2_OpenTap() along
+ *       with a2_OpenSend() to implement something logically similar to
+ *       a2_SetInsertCallback(), but unlike the latter, asynchronous streams
+ *       cannot allow "zero latency" insert processing.
+ */
+A2_handle a2_OpenSend(A2_state *st, A2_handle voice,
+		int channel, int size, unsigned flags);
 
 
 /*---------------------------------------------------------
@@ -502,6 +552,16 @@ float a2_F2P(float f);
 /* Return pseudo-random number in the range [0, max[ */
 float a2_Rand(A2_state *st, float max);
 
+/*TODO*/
+/* Calculate size of converted data */
+int a2_AudioConvertSize(A2_state *st, A2_sampleformats infmt,
+		A2_sampleformats outfmt, unsigned size);
+
+/*TODO*/
+/* Convert audio data from one format to another */
+A2_errors a2_AudioConvert(A2_state *st,
+		A2_sampleformats infmt, const void *indata, unsigned insize,
+		A2_sampleformats outfmt, void *outdata, unsigned flags);
 
 #ifdef __cplusplus
 };

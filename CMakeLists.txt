@@ -1,16 +1,21 @@
 cmake_minimum_required(VERSION 2.8)
+
 project(AUDIALITY2)
 
 set(VERSION_MAJOR 1)
 set(VERSION_MINOR 9)
-set(VERSION_PATCH 0)
-set(PACKAGE "audiality2-${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
-set(VERSION_STRING "${VERSION_MAJOR}_${VERSION_MINOR}_${VERSION_PATCH}")
+set(VERSION_PATCH 1)
+set(VERSION_BUILD 0)
+
+set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
+set(PACKAGE "audiality2-${VERSION_STRING}")
 
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(a2play)
 
+configure_file(include/audiality2.h.cmake
+	${CMAKE_SOURCE_DIR}/include/audiality2.h @ONLY)
 install(DIRECTORY include/ DESTINATION include/Audiality2
 	FILES_MATCHING PATTERN "*.h")
 

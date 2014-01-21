@@ -1,7 +1,7 @@
 /*
  * stream.h - Audiality 2 stream interface
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -30,11 +30,13 @@ extern "C" {
 #endif
 
 /*
- * Open a stream on object 'handle'.
+ * Open a stream on object 'handle'. The meaning (if any) of the additional
+ * arguments depend on the object identified with 'handle'.
  *
  * Returns the stream handle, or a negated error code.
  */
-A2_handle a2_OpenStream(A2_state *st, A2_handle handle, unsigned flags);
+A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
+		int channel, int size, unsigned flags);
 
 /*
  * Change stream position of 'handle' to 'offset'.
@@ -51,6 +53,11 @@ unsigned a2_GetPos(A2_state *st, A2_handle handle);
 /*
  * Read 'size' bytes of audio from 'stream', converting it into the format
  * specified by 'fmt' and writing it into 'buffer'.
+ *
+ * This call is non-blocking, and will return A2_BUFUNDERFLOW if the requested
+ * amount of data is not available.
+ *
+FIXME: Do we want support for blocking I/O in this API?
  */
 A2_errors a2_Read(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, void *buffer, unsigned size);
@@ -66,6 +73,11 @@ A2_errors a2_Read(A2_state *st, A2_handle stream,
  * 
  * 'size' is the size in BYTES of 'data'. (This is still used to calculate the
  * waveform size when 'data' is NULL and/or A2_CLEAR is used.)
+ *
+ * This call is non-blocking, and will return A2_BUFOVERFLOW if it is not
+ * possible to write the provided amount of data at the time the call is made.
+ *
+FIXME: Do we want support for blocking I/O in this API?
  */
 A2_errors a2_Write(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size);

@@ -3,7 +3,7 @@
  *
  * This code is in the public domain. Do what you like with it. NO WARRANTY!
  *
- * 2011-2013 David Olofson
+ * 2011-2014 David Olofson
  */
 
 #include <stdlib.h>
@@ -471,6 +471,8 @@ int main(int argc, const char *argv[])
 {
 	A2_config *cfg;
 	int lasttick;
+	A2_handle tcb;
+
 	parse_args(argc, argv);
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		exit(1);
@@ -513,7 +515,8 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "Couldn't allocate visualization buffers!\n");
 		exit(1);
 	}
-	a2_SetTapCallback(state, rootvoice, grab_process, NULL);
+	if((tcb = a2_TapCallback(state, rootvoice, grab_process, NULL)) < 0)
+		fail(-tcb);
 
 	gui_draw_screen();
 
@@ -544,6 +547,7 @@ int main(int argc, const char *argv[])
 		SDL_Delay(10);
 	}
 
+	a2_Release(state, tcb);
 	a2_Release(state, songbank);
 	a2_Close(state);
 	gui_close();

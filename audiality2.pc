@@ -9,7 +9,7 @@ includedir=${prefix}/include/Audiality2
 
 Name: Audiality2
 Description: Audiality 2 - a realtime script driven sound synthesis and audio engine.
-Version: 1.9.0
+Version: 1.9.1
 Requires: sdl >= 1.2.10
 Libs: -L${libdir} -laudiality2
 Libs.private: -L${libdir} -lSDL

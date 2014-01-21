@@ -5,7 +5,7 @@
  *	latter to render sound into a wave, and then plays that on the realtime
  *	context.
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -171,7 +171,7 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 	}
 
 	/* Open stream to write to the target wave */
-	if((sh = a2_OpenStream(st, wh, 0)) < 0)
+	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
 	{
 		a2_Close(ss);
 		a2_Release(st, wh);

@@ -15,6 +15,8 @@ set(sources
 	waves.c
 	bank.c
 	api.c
+	xinsertapi.c
+	properties.c
 	compiler.c
 	drivers.c
 	utilities.c
@@ -65,6 +67,11 @@ endif(HAVE_JACK_H)
 
 add_library(audiality2 SHARED ${sources})
 target_link_libraries(audiality2 m ${SDL_LIBRARY})
+
+# Until 2.0, we assume there's no ABI compatibility across releases!
+set_target_properties(audiality2 PROPERTIES VERSION ${VERSION_STRING}
+	SOVERSION ${VERSION_STRING})
+
 
 #add_library(audiality2 STATIC ${sources})
 #target_link_libraries(audiality2 m)

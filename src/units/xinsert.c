@@ -1,7 +1,7 @@
 /*
  * xinsert.c - Audiality 2 External Insert unit
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -22,134 +22,191 @@
 
 #include "xinsert.h"
 #include "internals.h"
-#include <string.h>
-#include <stdio.h>
+#include <stdlib.h>
+
+static inline void xi_copy(int32_t *in, int32_t *out, unsigned offset,
+		unsigned frames)
+{
+	int s;
+	for(s = offset; s < offset + frames; ++s)
+		out[s] = in[s];
+}
+
+static inline void xi_add(int32_t *in, int32_t *out, unsigned offset,
+		unsigned frames)
+{
+	int s;
+	for(s = offset; s < offset + frames; ++s)
+		out[s] += in[s];
+}
 
 
-static inline void xinsert_run_callback(A2_unit *u, unsigned offset,
-		unsigned frames, int32_t **bufs)
+static inline void xi_run_callback(A2_unit *u, A2_xinsert_client *xic,
+		unsigned offset, unsigned frames, int32_t **bufs)
 {
 	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	int32_t *bufp[A2_MAXCHANNELS];
 	int i;
+
+	/* API doesn't support 'offset', so we need adjusted pointers! */
 	for(i = 0; i < u->ninputs; ++i)
 		bufp[i] = bufs[i] + offset;
-	if((res = xi->callback(bufp, u->ninputs, frames, xi->userdata)))
-		a2r_Error(xi->state, res, "xinsert user callback");
+
+	if((res = xic->callback(bufp, u->ninputs, frames, xic->userdata)))
+		a2r_Error(xi->state, res, "xinsert client callback");
 }
 
-static void xinsert_ProcessTap(A2_unit *u, unsigned offset, unsigned frames)
+
+static inline void xi_process(A2_unit *u, unsigned o, unsigned f, int add)
 {
-	A2_xinsert *xi = a2_xinsert_cast(u);
 	int i;
-	if(xi->callback)
-		xinsert_run_callback(u, offset, frames, u->inputs);
-	for(i = 0; i < u->ninputs; ++i)
-		if(u->inputs[i] != u->outputs[i])
-			memcpy(u->outputs[i] + offset,
-					u->inputs[i] + offset,
-					frames * sizeof(int));
-}
-
-static void xinsert_ProcessTapAdd(A2_unit *u, unsigned offset, unsigned frames)
-{
+	A2_xinsert_client *xic;
 	A2_xinsert *xi = a2_xinsert_cast(u);
-	int i;
-	if(xi->callback)
-		xinsert_run_callback(u, offset, frames, u->inputs);
-	for(i = 0; i < u->ninputs; ++i)
-	{
-		int s;
-		int32_t *in = u->inputs[i];
-		int32_t *out = u->outputs[i];
-		for(s = offset; s < offset + frames; ++s)
-			out[s] += in[s];
-	}
-}
-
-static void xinsert_ProcessInsert(A2_unit *u, unsigned offset, unsigned frames)
-{
 	int32_t bufs[A2_MAXCHANNELS][A2_MAXFRAG];
 	int32_t *bufp[A2_MAXCHANNELS];
-	int i;
+	int32_t obufs[A2_MAXCHANNELS][A2_MAXFRAG];
+	int32_t *obufp[A2_MAXCHANNELS];
+	int has_inserts = 0;
+
 	/*
-	 * The callback is going to overwrite the buffers (inplace processing
-	 * only), so we need to use intermediate buffers for inputs that don't
-	 * share buffers with the corresponding outputs!
+	 * Set up pointers for processing and output buffers.
+	 *
+	 * Since we're not inherently inplace safe, in replace mode, we need
+	 * to use intermediate output buffers for input/output pairs that
+	 * share buffers! We also clear all output buffers (intermediate or
+	 * external), since we're going to add the output from all clients into
+	 * those buffers.
+	 *
+	 * In adding mode, inputs and outputs cannot share buffers, so we
+	 * always use the actual output buffers directly.
 	 */
 	for(i = 0; i < u->ninputs; ++i)
-		if(u->inputs[i] == u->outputs[i])
-			bufp[i] = u->outputs[i];	/* Inplace! */
+	{
+		bufp[i] = bufs[i];
+		if(add || (u->inputs[i] != u->outputs[i]))
+			obufp[i] = u->outputs[i];
 		else
-			bufp[i] = bufs[i];	/* Intermediate buffer! */
-	xinsert_run_callback(u, offset, frames, bufp);
-	for(i = 0; i < u->ninputs; ++i)
-		if(bufp[i] != u->outputs[i])
+			obufp[i] = obufs[i];
+		if(!add)
+			memset(obufp[i], 0, sizeof(int32_t) * A2_MAXFRAG);
+	}
+
+	for(xic = xi->clients; xic; xic = xic->next)
+	{
+		if(!(xic->flags & A2_XI_WRITE))
 		{
-			/* Copy output from intermediate buffers as needed! */
-			int s;
-			int32_t *in = u->inputs[i];
-			int32_t *out = u->outputs[i];
-			for(s = offset; s < offset + frames; ++s)
-				out[s] = in[s];
+			/* READ-only client */
+			xi_run_callback(u, xic, o, f, u->inputs);
+			continue;
 		}
+
+		if(xic->flags & A2_XI_READ)
+		{
+			/* INSERT (READ/WRITE): Copy the input first! */
+			for(i = 0; i < u->ninputs; ++i)
+				xi_copy(u->inputs[i], bufs[i], o, f);
+
+			/* Disable built-in bypass! */
+			has_inserts = 1;
+		}
+
+		/* Process! */
+		xi_run_callback(u, xic, o, f, bufp);
+
+		/* Mix the output into the "master" output buffers */
+		for(i = 0; i < u->ninputs; ++i)
+			xi_add(bufs[i], obufp[i], o, f);
+	}
+
+	/* If there are no insert (READ/WRITE) clients, enable bypass! */
+	if(!has_inserts)
+		for(i = 0; i < u->ninputs; ++i)
+			xi_add(u->inputs[i], obufp[i], o, f);
+
+	/* Replace: Write back any output buffers that were... buffered. :-) */
+	if(!add)
+		for(i = 0; i < u->ninputs; ++i)
+			if(obufp[i] != u->outputs[i])
+				xi_copy(obufp[i], u->outputs[i], o, f);
 }
 
-static void xinsert_ProcessInsertAdd(A2_unit *u, unsigned offset,
+static void xi_Process(A2_unit *u, unsigned offset, unsigned frames)
+{
+	xi_process(u, offset, frames, 0);
+}
+
+static void xi_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
+{
+	xi_process(u, offset, frames, 1);
+}
+
+
+static void xi_ProcessBypass(A2_unit *u, unsigned offset,
 		unsigned frames)
 {
-	int32_t bufs[A2_MAXCHANNELS][A2_MAXFRAG];
-	int32_t *bufp[A2_MAXCHANNELS];
 	int i;
-	/*
-	 * The callback is going to overwrite the buffers (inplace processing
-	 * only), so in this case, we need to use intermediate buffers for ALL
-	 * inputs, so we can mix the callback's output into whatever buffers
-	 * we've been pointed at.
-	 */
 	for(i = 0; i < u->ninputs; ++i)
-		bufp[i] = bufs[i];
-	xinsert_run_callback(u, offset, frames, bufp);
+		if(u->inputs[i] != u->outputs[i])
+			xi_copy(u->inputs[i], u->outputs[i], offset, frames);
+}
+
+
+static void xi_ProcessBypassAdd(A2_unit *u, unsigned offset,
+		unsigned frames)
+{
+	int i;
 	for(i = 0; i < u->ninputs; ++i)
+		xi_add(u->inputs[i], u->outputs[i], offset, frames);
+}
+
+
+/* Install the appropriate Process callback */
+static void xi_set_process(A2_unit *u)
+{
+	A2_xinsert *xi = a2_xinsert_cast(u);
+	if(xi->clients)
 	{
-		int s;
-		int32_t *in = bufs[i];
-		int32_t *out = u->outputs[i];
-		for(s = offset; s < offset + frames; ++s)
-			out[s] += in[s];
+		if(xi->flags & A2_PROCADD)
+			u->Process = xi_ProcessAdd;
+		else
+			u->Process = xi_Process;
+	}
+	else
+	{
+		if(xi->flags & A2_PROCADD)
+			u->Process = xi_ProcessBypassAdd;
+		else
+			u->Process = xi_ProcessBypass;
 	}
 }
 
 
-static A2_errors xinsert_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors xi_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		unsigned flags)
 {
 	A2_xinsert *xi = a2_xinsert_cast(u);
+	A2_voice *v = a2_voice_from_vms(vms);
 
 	/* Initialize private fields */
 	xi->state = cfg->state;
 	xi->flags = flags;
-	xi->callback = NULL;
+	xi->clients = NULL;
+	xi->voice = v->handle;
 
-	/* Install Process callback */
-	if(flags & A2_PROCADD)
-		u->Process = xinsert_ProcessTapAdd;
-	else
-		u->Process = xinsert_ProcessTap;
+	xi_set_process(u);
 
 	return A2_OK;
 }
 
 
-static void xinsert_Deinitialize(A2_unit *u, A2_state *st)
+static void xi_Deinitialize(A2_unit *u, A2_state *st)
 {
-	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
-	if(xi->callback)
-		if((res = xi->callback(NULL, 0, 0, xi->userdata)))
-			a2r_Error(xi->state, res, "xinsert user callback; "
-					"deinit notification");
+
+	/* Remove all clients! */
+	while(xi->clients)
+		a2_XinsertRemoveClient(st, xi->clients);
 }
 
 
@@ -170,8 +227,8 @@ const A2_unitdesc a2_xinsert_unitdesc =
 	1, A2_MAXCHANNELS,	/* [min,max]outputs */
 
 	sizeof(A2_xinsert),	/* instancesize */
-	xinsert_Initialize,	/* Initialize */
-	xinsert_Deinitialize	/* Deinitialize */
+	xi_Initialize,		/* Initialize */
+	xi_Deinitialize		/* Deinitialize */
 };
 
 
@@ -179,12 +236,14 @@ const A2_unitdesc a2_xinsert_unitdesc =
 	External insert API
 ---------------------------------------------------------*/
 
-A2_errors a2_set_xinsert_cb(A2_state *st, A2_voice *v,
-		A2_xinsert_cb callback, void *userdata, int insert_callback)
+/* NOTE: These run in engine context, as responses to A2MT_* messages! */
+
+A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
+		A2_xinsert_client *xic)
 {
-	A2_errors res;
 	A2_unit *u;
 	A2_xinsert *xi;
+	A2_xinsert_client *c;
 
 	/* Find first 'xinsert' unit */
 	if(!(u = v->units))
@@ -193,30 +252,61 @@ A2_errors a2_set_xinsert_cb(A2_state *st, A2_voice *v,
 		if(!(u = u->next))
 			return A2_NOXINSERT; /* No 'xinsert' unit found! --> */
 
-	/* Install callback! */
+	/* Add client last in list! */
 	xi = a2_xinsert_cast(u);
-	if(xi->callback)
-		if((res = xi->callback(NULL, 0, 0, xi->userdata)))
-			a2r_Error(xi->state, res, "xinsert user callback; "
-					"replace notification");
-	xi->callback = callback;
-	xi->userdata = userdata;
-
-	/* Select a suitable unit Process callback */
-	if(insert_callback && callback)
+	c = xi->clients;
+	if(c)
 	{
-		if(xi->flags & A2_PROCADD)
-			u->Process = xinsert_ProcessInsertAdd;
-		else
-			u->Process = xinsert_ProcessInsert;
+		while(c->next)
+			c = c->next;
+		c->next = xic;
+	}
+	else
+		xi->clients = xic;
+	xic->unit = xi;
+
+	xi_set_process(u);
+
+	return A2_OK;
+}
+
+
+A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
+{
+	A2_errors res;
+
+	/* Detach from the list */
+	A2_xinsert_client *c = xic->unit->clients;
+	if(c != xic)
+	{
+		while(c->next && (c->next != xic))
+			c = c->next;
+		c->next = c->next->next;
+	}
+	else
+		xic->unit->clients = xic->next;
+
+	/* Notify client that it's being removed */
+	if((res = xic->callback(NULL, 0, 0, xic->userdata)))
+		a2r_Error(st, res, "xinsert client; removal notification");
+
+	xi_set_process(&xic->unit->header);
+
+	/* Destroy entry in a suitable fashion for the engine context */
+	if(st->config->flags & A2_REALTIME)
+	{
+		A2_apimessage am;
+		A2_xinsert_client **d = (A2_xinsert_client **)&am.b.a1;
+		am.b.action = A2MT_XICREMOVED;
+		am.b.timestamp = st->now_ticks;
+		/* NOTE: Also uses a2 on platforms with 64 bit pointers! */
+		*d = xic;
+		return a2_writemsg(st->toapi, &am,
+				A2_MSIZE(b.a1) + sizeof(void *));
 	}
 	else
 	{
-		/* NOTE: We use these for the "no callback" state as well! */
-		if(xi->flags & A2_PROCADD)
-			u->Process = xinsert_ProcessTapAdd;
-		else
-			u->Process = xinsert_ProcessTap;
+		free(xic);
+		return A2_OK;
 	}
-	return A2_OK;
 }
