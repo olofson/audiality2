@@ -1,8 +1,8 @@
 /*
 ------------------------------------------------------------
-   SFIFO 2.0 - Simple portable lock-free FIFO
+   SFIFO 2.1 - Simple portable lock-free FIFO
 ------------------------------------------------------------
- * Copyright 2000-2009, 2012 David Olofson
+ * Copyright 2000-2009, 2012, 2014 David Olofson
  *
  * This software is provided 'as-is', without any express or
  * implied warranty. In no event will the authors be held
@@ -103,19 +103,12 @@ void sfifo_Close(SFIFO *f)
 }
 
 
-void sfifo_Flush(SFIFO *f)
-{
-	f->readpos = 0;
-	f->writepos = 0;
-}
-
-
 int sfifo_Write(SFIFO *f, const void *_buf, unsigned len)
 {
 	unsigned total;
 	int i;
 	const char *buf = (const char *)_buf;
-	char *buffer = (char *)(f + 1);
+	char *fbuf = (char *)(f + 1);
 
 	if(!(f->flags & SFIFO_IS_OPEN))
 		return SFIFO_CLOSED;
@@ -130,12 +123,12 @@ int sfifo_Write(SFIFO *f, const void *_buf, unsigned len)
 	i = f->writepos;
 	if(i + len > f->size)
 	{
-		memcpy(buffer + i, buf, f->size - i);
+		memcpy(fbuf + i, buf, f->size - i);
 		buf += f->size - i;
 		len -= f->size - i;
 		i = 0;
 	}
-	memcpy(buffer + i, buf, len);
+	memcpy(fbuf + i, buf, len);
 	f->writepos = i + len;
 
 	return (int)total;
@@ -147,7 +140,7 @@ int sfifo_Read(SFIFO *f, void *_buf, unsigned len)
 	unsigned total;
 	int i;
 	char *buf = (char *)_buf;
-	char *buffer = (char *)(f + 1);
+	char *fbuf = (char *)(f + 1);
 
 	if(!(f->flags & SFIFO_IS_OPEN))
 		return SFIFO_CLOSED;
@@ -162,12 +155,37 @@ int sfifo_Read(SFIFO *f, void *_buf, unsigned len)
 	i = f->readpos;
 	if(i + len > f->size)
 	{
-		memcpy(buf, buffer + i, f->size - i);
+		memcpy(buf, fbuf + i, f->size - i);
 		buf += f->size - i;
 		len -= f->size - i;
 		i = 0;
 	}
-	memcpy(buf, buffer + i, len);
+	memcpy(buf, fbuf + i, len);
+	f->readpos = i + len;
+
+	return (int)total;
+}
+
+
+int sfifo_Skip(SFIFO *f, unsigned len)
+{
+	unsigned total;
+	int i;
+	if(!(f->flags & SFIFO_IS_OPEN))
+		return SFIFO_CLOSED;
+
+	total = sfifo_Used(f);
+	if(len > total)
+		len = total;
+	else
+		total = len;
+
+	i = f->readpos;
+	if(i + len > f->size)
+	{
+		len -= f->size - i;
+		i = 0;
+	}
 	f->readpos = i + len;
 
 	return (int)total;

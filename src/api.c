@@ -99,7 +99,7 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	char *sb = st->ss->strbuf;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
-	switch(hi->typecode)
+	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TBANK:
 	  {
@@ -127,6 +127,21 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	  }
 	  case A2_TSTRING:
 		return ((A2_string *)hi->d.data)->buffer;
+	  case A2_TSTREAM:
+	  {
+		A2_stream *p = (A2_stream *)hi->d.data;
+		snprintf(sb, A2_TMPSTRINGSIZE, "<stream %p>", p);
+		return sb;
+	  }
+	  case A2_TXICLIENT:
+	  {
+		snprintf(sb, A2_TMPSTRINGSIZE, "<xinsert client %p>",
+				hi->d.data);
+		return sb;
+	  }
+	  case A2_TDETACHED:
+		snprintf(sb, A2_TMPSTRINGSIZE, "<detached handle %d>", handle);
+		return sb;
 	  case A2_TVOICE:
 	  {
 		A2_voice *v = (A2_voice *)hi->d.data;
@@ -139,12 +154,13 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	return "<object of unknown type>";
 }
 
+
 const char *a2_Name(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
-	switch(hi->typecode)
+	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TBANK:
 		return ((A2_bank *)hi->d.data)->name;
@@ -153,10 +169,66 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 	  case A2_TWAVE:
 	  case A2_TPROGRAM:
 	  case A2_TSTRING:
+	  case A2_TSTREAM:
+	  case A2_TXICLIENT:
+	  case A2_TDETACHED:
 	  case A2_TVOICE:
 		return NULL;
 	}
 	return NULL;
+}
+
+
+int a2_Size(A2_state *st, A2_handle handle)
+{
+	RCHM_handleinfo *hi;
+	if(!(hi = rchm_Get(&st->ss->hm, handle)))
+		return -A2_INVALIDHANDLE;
+	switch((A2_otypes)hi->typecode)
+	{
+	  case A2_TBANK:
+		return ((A2_bank *)hi->d.data)->exports.nitems;
+	  case A2_TWAVE:
+	  {
+		A2_wave *w = (A2_wave *)hi->d.data;
+		switch(w->type)
+		{
+		  case A2_WOFF:
+		  case A2_WNOISE:
+			return -A2_NOTIMPLEMENTED;
+		  case A2_WWAVE:
+		  case A2_WMIPWAVE:
+			return w->d.wave.size[0];
+		}
+		return -(A2_INTERNAL + 30);
+	  }
+	  case A2_TSTRING:
+		return ((A2_string *)hi->d.data)->length;
+	  case A2_TPROGRAM:
+	  {
+	  	/* Calculate total code size ("words") of program */
+		A2_program *p = (A2_program *)hi->d.data;
+		int size = 0;
+		int i;
+		for(i = 0; i < p->nfuncs; ++i)
+			size += p->funcs[i].size;
+		return size;
+	  }
+	  case A2_TSTREAM:
+	  {
+		A2_stream *str = a2_GetStream(st, handle);
+		if(str->Size)
+			return str->Size(str);
+		else
+			return str->size;
+	  }
+	  case A2_TUNIT:
+	  case A2_TXICLIENT:
+	  case A2_TDETACHED:
+	  case A2_TVOICE:
+		return -A2_NOTIMPLEMENTED;
+	}
+	return -(A2_INTERNAL + 31);
 }
 
 
@@ -365,7 +437,7 @@ static inline void a2r_em_release(A2_state *st, A2_apimessage *am)
 		return;
 	}
 #if 0
-	switch(hi->typecode)
+	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TVOICE:
 		/*
@@ -678,7 +750,7 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 		 * 'st' here, which we need to get the correct message FIFO!
 		 */
 		RCHM_handleinfo *hi = rchm_Locate(&st->ss->hm, handle);
-		switch(hi->typecode)
+		switch((A2_otypes)hi->typecode)
 		{
 		  case A2_TVOICE:
 		  {
@@ -696,6 +768,14 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
 			break;
 		  }
+		  case A2_TBANK:
+		  case A2_TUNIT:
+		  case A2_TWAVE:
+		  case A2_TPROGRAM:
+		  case A2_TSTRING:
+		  case A2_TSTREAM:
+		  case A2_TDETACHED:
+			break;
 		}
 	}
 	return res;

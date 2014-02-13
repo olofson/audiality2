@@ -38,17 +38,28 @@ extern "C" {
 A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
 		int channel, int size, unsigned flags);
 
+
 /*
- * Change stream position of 'handle' to 'offset'.
+ * Change read/write position of 'stream' to 'offset'.
  *
  * Returns A2_OK, or an error code.
  */
-A2_errors a2_SetPos(A2_state *st, A2_handle handle, unsigned offset);
+A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset);
+
+/* Read the current read/write position of 'stream'. */
+unsigned a2_GetPosition(A2_state *st, A2_handle stream);
 
 /*
- * Read the current stream position of 'handle'.
+ * Returns number of items currently available for reading from 'stream', or
+ * -A2_NOTIMPLEMENTED if this feature is not implemented on this object.
  */
-unsigned a2_GetPos(A2_state *st, A2_handle handle);
+int a2_Available(A2_state *st, A2_handle stream);
+
+/*
+ * Returns the available space for writing to 'stream', or
+ * -A2_NOTIMPLEMENTED if this feature is not implemented on this object.
+ */
+int a2_Space(A2_state *st, A2_handle stream);
 
 /*
  * Read 'size' bytes of audio from 'stream', converting it into the format
@@ -83,7 +94,8 @@ A2_errors a2_Write(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
 /*
- * Ensure that stream writes until this point are applied to the target object.
+ * For write streams: Ensure that writes until this point are applied to the
+ * target object. For read streams: Discard any remaining data in the buffer.
  *
  * Returns A2_OK, or an error code.
  */

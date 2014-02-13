@@ -250,11 +250,24 @@ struct A2_stream
 			A2_sampleformats fmt, const void *data, unsigned size);
 
 	/*
-	 * a2_[SG]etPos() backends. (Optional; the 'position' field is updated
-	 * directly if no callback is specified.)
+	 * a2_[SG]etPosition() backends. (Optional; the 'position' field is
+	 * updated directly if no callback is specified.)
 	 */
-	A2_errors (*SetPos)(A2_stream *str, unsigned offset);
-	unsigned (*GetPos)(A2_stream *str);
+	A2_errors (*SetPosition)(A2_stream *str, unsigned offset);
+	unsigned (*GetPosition)(A2_stream *str);
+
+	/*
+	 * a2_Size() backend. (Optional; the 'size' field is returned if no
+	 * callback is specified.)
+	 */
+	int (*Size)(A2_stream *str);
+
+	/*
+	 * a2_Available()/a2_Space() backends. (Optional; -A2_NOTAVAILABLE is
+	 * returned if no callback is specified.)
+	 */
+	int (*Available)(A2_stream *str);
+	int (*Space)(A2_stream *str);
 
 	/*
 	 * a2_Flush() backend. (Optional; operations will do nothing and always
@@ -347,7 +360,7 @@ struct A2_structitem
 typedef struct A2_function
 {
 	unsigned	*code;		/* VM code */
-	uint16_t	size;		/* Size of 'code' (instructions) */
+	uint16_t	size;		/* Size of 'code' (32 bit words) */
 	uint8_t		argv;		/* First register of argument list */
 	uint8_t		argc;		/* Number of arguments */
 	int		argdefs[A2_MAXARGS];	/* Argument default values */

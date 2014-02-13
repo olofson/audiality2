@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -45,6 +45,15 @@ typedef enum A2_properties
 	A2_PREFCOUNT,		/* Reference count of the handle */
 
 	/*
+	 * Size, position, buffer status, for waves, streams etc. Units depend
+	 * on the target object, but are typically sample frames.
+	 */
+	A2_PSIZE,		/* Total size of object */
+	A2_PPOSITION,		/* Current read or write position */
+	A2_PAVAILABLE,		/* Items currently available for reading */
+	A2_PSPACE,		/* Space currently available for writing */
+
+	/*
 	 * Global settings (state)
 FIXME: These don't really fit here, as states don't have handles.
 	 */
@@ -80,8 +89,7 @@ FIXME: These don't really fit here, as states don't have handles.
 	 */
 	A2_PWAVE =		0x00040000,
 
-	A2_PLOOPED,		/* Waveform is looped */
-	A2_PLENGTH,		/* Length of wave (sample frames) */
+	A2_PLOOPED		/* Waveform is looped */
 
 } A2_properties;
 

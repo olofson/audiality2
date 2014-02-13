@@ -1,8 +1,8 @@
 /*
 ------------------------------------------------------------
-   SFIFO 2.0 - Simple portable lock-free FIFO
+   SFIFO 2.1 - Simple portable lock-free FIFO
 ------------------------------------------------------------
- * Copyright 2000-2009, 2012 David Olofson
+ * Copyright 2000-2009, 2012, 2014 David Olofson
  *
  * This software is provided 'as-is', without any express or
  * implied warranty. In no event will the authors be held
@@ -85,8 +85,17 @@ SFIFO *sfifo_Init(void *mem, unsigned memsize);
 /* Close and (where applicable) deallocate the specified FIFO. */
 void sfifo_Close(SFIFO *f);
 
-/* Clear the FIFO. NOTE: NOT thread safe! */
-void sfifo_Flush(SFIFO *f);
+/* Returns the number of bytes in use (available for reading) in 'f'. */
+static inline int sfifo_Used(SFIFO *f)
+{
+	return (f->writepos - f->readpos) & SFIFO_SIZEMASK(f);
+}
+
+/* Returns the number of unused bytes (available for writing) in 'f'. */
+static inline int sfifo_Space(SFIFO *f)
+{
+	return f->size - 1 - sfifo_Used(f);
+}
 
 /*
  * Write up to 'len' bytes to FIFO 'f'. Returns the number of bytes written,
@@ -101,6 +110,26 @@ int sfifo_Write(SFIFO *f, const void *buf, unsigned len);
 int sfifo_Read(SFIFO *f, void *buf, unsigned len);
 
 /*
+ * Skip up to 'len' bytes from FIFO 'f' without actually reading it. Returns
+ * the number of bytes discarded, or a negative error code.
+ *
+ * NOTE: This is thread safe when called from the sfifo_Read() context.
+ */
+int sfifo_Skip(SFIFO *f, unsigned len);
+
+/*
+ * Clear the FIFO, discarding all data currently available for reading. Returns
+ * the number of bytes discarded, or a negative error code.
+ *
+ * NOTE: As of version 2.1, this is actually thread safe - but only when called
+ *       from the sfifo_Read() context!
+ */
+static inline int sfifo_Flush(SFIFO *f)
+{
+	return sfifo_Skip(f, sfifo_Used(f));
+}
+
+/*
  * Spinning versions of sfifo_Read() and sfifo_Write().
  *
  * NOTE:
@@ -110,15 +139,6 @@ int sfifo_Read(SFIFO *f, void *buf, unsigned len);
  */
 int sfifo_WriteSpin(SFIFO *f, const void *buf, unsigned len);
 int sfifo_ReadSpin(SFIFO *f, void *buf, unsigned len);
-
-static inline int sfifo_Used(SFIFO *f)
-{
-	return (f->writepos - f->readpos) & SFIFO_SIZEMASK(f);
-}
-static inline int sfifo_Space(SFIFO *f)
-{
-	return f->size - 1 - sfifo_Used(f);
-}
 
 #ifdef __cplusplus
 };

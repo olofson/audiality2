@@ -131,7 +131,10 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_DEVICEOPEN,	"Error opening device")\
   A2_DEFERR(A2_ALREADYOPEN,	"Device is already open")\
   A2_DEFERR(A2_ISASSIGNED,	"Object is already assigned to this container")\
-  A2_DEFERR(A2_READ,		"Error reading file")\
+  A2_DEFERR(A2_READ,		"Error reading file or stream")\
+  A2_DEFERR(A2_WRITE,		"Error writing file or stream")\
+  A2_DEFERR(A2_READONLY,	"Object is read-only")\
+  A2_DEFERR(A2_WRITEONLY,	"Object is write-only")\
   A2_DEFERR(A2_WRONGTYPE,	"Wrong type of data or object")\
   A2_DEFERR(A2_WRONGFORMAT,	"Wrong stream data format")\
   A2_DEFERR(A2_VOICEALLOC,	"Could not allocate voice")\

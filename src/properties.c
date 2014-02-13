@@ -45,6 +45,15 @@ int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
 #endif
 	switch(p)
 	{
+	  case A2_PSIZE:
+	  	return a2_Size(st, h);
+	  case A2_PPOSITION:
+	  	return a2_GetPosition(st, h);
+	  case A2_PAVAILABLE:
+	  	return a2_Available(st, h);
+	  case A2_PSPACE:
+	  	return a2_Space(st, h);
+
 	  case A2_PSAMPLERATE:
 		return st->config->samplerate;
 	  case A2_PBUFFER:
@@ -102,6 +111,13 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 {
 	switch(p)
 	{
+	  case A2_PSIZE:
+	  case A2_PAVAILABLE:
+	  case A2_PSPACE:
+		return A2_READONLY;
+	  case A2_PPOSITION:
+	  	return a2_SetPosition(st, h, v);
+
 	  case A2_PCPULOADAVG:
 	  case A2_PCPUTIMEAVG:
 		st->statreset = 1;

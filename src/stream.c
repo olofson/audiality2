@@ -82,13 +82,13 @@ static RCHM_errors a2_StreamDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handl
 }
 
 
-A2_errors a2_SetPos(A2_state *st, A2_handle stream, unsigned offset)
+A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset)
 {
 	A2_stream *str = a2_GetStream(st, stream);
 	if(!str)
 		return A2_WRONGTYPE;
-	if(str->SetPos)
-		return str->SetPos(str, offset);
+	if(str->SetPosition)
+		return str->SetPosition(str, offset);
 	else
 	{
 		str->position = offset;
@@ -97,15 +97,39 @@ A2_errors a2_SetPos(A2_state *st, A2_handle stream, unsigned offset)
 }
 
 
-unsigned a2_GetPos(A2_state *st, A2_handle stream)
+unsigned a2_GetPosition(A2_state *st, A2_handle stream)
 {
 	A2_stream *str = a2_GetStream(st, stream);
 	if(!str)
-		return A2_WRONGTYPE;
-	if(str->GetPos)
-		return str->GetPos(str);
+		return -A2_WRONGTYPE;
+	if(str->GetPosition)
+		return str->GetPosition(str);
 	else
 		return str->position;
+}
+
+
+int a2_Available(A2_state *st, A2_handle stream)
+{
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return -A2_WRONGTYPE;
+	if(str->Available)
+		return str->Available(str);
+	else
+		return -A2_NOTIMPLEMENTED;
+}
+
+
+int a2_Space(A2_state *st, A2_handle stream)
+{
+	A2_stream *str = a2_GetStream(st, stream);
+	if(!str)
+		return -A2_WRONGTYPE;
+	if(str->Space)
+		return str->Space(str);
+	else
+		return -A2_NOTIMPLEMENTED;
 }
 
 

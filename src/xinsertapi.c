@@ -244,6 +244,28 @@ static A2_errors xi_stream_write(A2_stream *str,
 }
 
 
+static int xi_stream_available(A2_stream *str)
+{
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	return sfifo_Used(xic->fifo) / sizeof(int32_t);
+}
+
+
+static int xi_stream_space(A2_stream *str)
+{
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	return sfifo_Space(xic->fifo) / sizeof(int32_t);
+}
+
+
+static A2_errors xi_stream_flush(A2_stream *str)
+{
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	sfifo_Flush(xic->fifo);
+	return A2_OK;
+}
+
+
 /* OpenStream() method for A2_TXICLIENT objects (with the A2_XI_STREAM flag) */
 static A2_errors xi_stream_open(A2_stream *str)
 {
@@ -262,10 +284,14 @@ static A2_errors xi_stream_open(A2_stream *str)
 		str->Read = xi_stream_read;
 	else
 		return A2_INTERNAL + 500;
+	str->Available = xi_stream_available;
+	str->Space = xi_stream_space;
+	str->Flush = xi_stream_flush;
 	if(str->size <= 0)
 		return A2_VALUERANGE;
 	if(!(xic->fifo = sfifo_Open(str->size * sizeof(int32_t))))
 		return A2_OOMEMORY;
+	str->size = xic->fifo->size / sizeof(int32_t);	/* Actual size! */
 	xic->channel = str->channel;
 	xic->stream = str->thandle;
 	return A2_OK;

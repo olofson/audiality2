@@ -202,6 +202,12 @@ const char *a2_String(A2_state *st, A2_handle handle);
 const char *a2_Name(A2_state *st, A2_handle handle);
 
 /*
+ * Returns the size of the object assigned to 'handle', or a negated error
+ * code if the operation failed, or isn't applicable to the object.
+ */
+int a2_Size(A2_state *st, A2_handle handle);
+
+/*
  * Attempt to increase the reference count of 'handle' by one.
  */
 A2_errors a2_Retain(A2_state *st, A2_handle handle);
@@ -450,8 +456,8 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice);
 ---------------------------------------------------------*/
 
 /*
- * Callback prototype for a2_SetTapCallback(), a2_SetSendCallback() and
- * a2_SetInsertCallback().
+ * Callback prototype for a2_TapCallback(), a2_SendCallback() and
+ * a2_InsertCallback().
  *
  * This will be called with (NULL, 0, 0, <userdata>) as notification when the
  * callback is removed/replaced, or the xinput unit is destroyed.
