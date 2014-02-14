@@ -380,17 +380,20 @@ static void handle_events(int argc, const char *argv[])
 
 static void update_main(int dt)
 {
+	int v;
 	int w = (screen->w - 270) / 2 - 8;
 	gui_oscilloscope(osc_left, dbuffer, plotpos,
 			270, 8, w, 128, screen);
 	gui_oscilloscope(osc_right, dbuffer, plotpos,
 			270 + w + 8, 8, w, 128, screen);
-	gui_cpuload(a2_GetProperty(state, 0, A2_PCPULOADAVG));
-	gui_voices(a2_GetProperty(state, 0, A2_PACTIVEVOICES));
+	a2_GetProperty(state, 0, A2_PCPULOADAVG, &v);
+	gui_cpuload(v);
+	a2_GetProperty(state, 0, A2_PACTIVEVOICES, &v);
+	gui_voices(v);
 	if(now - lastreset > 300)
 	{
-		gui_instructions(a2_GetProperty(state, 0, A2_PINSTRUCTIONS) *
-				1000 / (now - lastreset));
+		a2_GetProperty(state, 0, A2_PINSTRUCTIONS, &v);
+		gui_instructions(v * 1000 / (now - lastreset));
 		a2_SetProperty(state, 0, A2_PCPULOADAVG, 0);
 		a2_SetProperty(state, 0, A2_PINSTRUCTIONS, 0);
 		lastreset = now;

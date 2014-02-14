@@ -30,79 +30,89 @@
 #include "compiler.h"
 
 
-int a2_GetProperty(A2_state *st, A2_handle h, A2_properties p)
+A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
 {
-	int res;
-#if 0
-/*TODO:*/
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(hi)
-	{
-		A2_typeinfo *ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm,
-				hi->typecode);
-		
-	}
-#endif
 	switch(p)
 	{
 	  case A2_PSIZE:
-	  	return a2_Size(st, h);
+	  	*v = a2_Size(st, h);
+	  	return A2_OK;
 	  case A2_PPOSITION:
-	  	return a2_GetPosition(st, h);
+	  	*v = a2_GetPosition(st, h);
+	  	return A2_OK;
 	  case A2_PAVAILABLE:
-	  	return a2_Available(st, h);
+	  	*v = a2_Available(st, h);
+	  	return A2_OK;
 	  case A2_PSPACE:
-	  	return a2_Space(st, h);
+	  	*v = a2_Space(st, h);
+	  	return A2_OK;
 
 	  case A2_PSAMPLERATE:
-		return st->config->samplerate;
+		*v = st->config->samplerate;
+	  	return A2_OK;
 	  case A2_PBUFFER:
-		return st->config->buffer;
+		*v = st->config->buffer;
+	  	return A2_OK;
 	  case A2_PCHANNELS:
-		return st->config->channels;
+		*v = st->config->channels;
+	  	return A2_OK;
 	  case A2_PACTIVEVOICES:
-		return st->activevoices;
+		*v = st->activevoices;
+	  	return A2_OK;
 	  case A2_PFREEVOICES:
-		return st->totalvoices - st->activevoices;
+		*v = st->totalvoices - st->activevoices;
+	  	return A2_OK;
 	  case A2_PTOTALVOICES:
-		return st->totalvoices;
+		*v = st->totalvoices;
+	  	return A2_OK;
 	  case A2_PCPULOADAVG:
-		res = st->cpuloadavg;
+		*v = st->cpuloadavg;
 		st->statreset = 1;
-		return res;
+	  	return A2_OK;
 	  case A2_PCPULOADMAX:
-		return st->cpuloadmax;
+		*v = st->cpuloadmax;
+	  	return A2_OK;
 	  case A2_PCPUTIMEAVG:
-		res = st->cputimeavg;
+		*v = st->cputimeavg;
 		st->statreset = 1;
-		return res;
+	  	return A2_OK;
 	  case A2_PCPUTIMEMAX:
-		return st->cputimemax;
+		*v = st->cputimemax;
+	  	return A2_OK;
 	  case A2_PINSTRUCTIONS:
-		return st->instructions;
+		*v = st->instructions;
+	  	return A2_OK;
 	  case A2_PEXPORTALL:
-		return st->ss->c->exportall;
+		*v = st->ss->c->exportall;
+	  	return A2_OK;
 	  case A2_PTABSIZE:
-		return st->ss->c->tabsize;
+		*v = st->ss->c->tabsize;
+	  	return A2_OK;
 	  case A2_POFFLINEBUFFER:
-		return st->ss->offlinebuffer;
+		*v = st->ss->offlinebuffer;
+	  	return A2_OK;
 	  case A2_PSILENCELEVEL:
-		return st->ss->silencelevel;
+		*v = st->ss->silencelevel;
+	  	return A2_OK;
 	  case A2_PSILENCEWINDOW:
-		return st->ss->silencewindow;
+		*v = st->ss->silencewindow;
+	  	return A2_OK;
 	  case A2_PSILENCEGRACE:
-		return st->ss->silencegrace;
+		*v = st->ss->silencegrace;
+	  	return A2_OK;
 	/*
 	 * FIXME:
 	 *	This might be confusing: These two are actually returning RNG
 	 * 	*states*, as opposed to the initial seeds that were once set!
 	 */
 	  case A2_PRANDSEED:
-		return st->randstate;
+		*v = st->randstate;
+	  	return A2_OK;
 	  case A2_PNOISESEED:
-		return st->noisestate;
+		*v = st->noisestate;
+	  	return A2_OK;
 	  default:
-		return 0;
+		return A2_NOTFOUND;
 	}
 }
 

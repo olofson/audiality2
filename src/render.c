@@ -43,11 +43,13 @@ int a2_Render(A2_state *st,
 	A2_config *cfg;
 	A2_state *ss;
 	int frames = 0;
-	unsigned lastpeak = 0;	/* Frames since last peak > abs(silencelevel) */
-	int offlinebuffer = a2_GetProperty(st, -1, A2_POFFLINEBUFFER);
-	int silencelevel = a2_GetProperty(st, -1, A2_PSILENCELEVEL);
-	int silencewindow = a2_GetProperty(st, -1, A2_PSILENCEWINDOW);
-	int silencegrace = a2_GetProperty(st, -1, A2_PSILENCEGRACE);
+	unsigned lastpeak = 0; /* Frames since last peak > abs(silencelevel) */
+	int offlinebuffer, silencelevel, silencewindow, silencegrace;
+
+	a2_GetProperty(st, -1, A2_POFFLINEBUFFER, &offlinebuffer);
+	a2_GetProperty(st, -1, A2_PSILENCELEVEL, &silencelevel);
+	a2_GetProperty(st, -1, A2_PSILENCEWINDOW, &silencewindow);
+	a2_GetProperty(st, -1, A2_PSILENCEGRACE, &silencegrace);
 
 	/* Open off-line substate for rendering */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, "buffer")))
