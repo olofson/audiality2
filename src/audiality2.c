@@ -530,17 +530,6 @@ void a2_Close(A2_state *st)
 {
 	int i;
 
-	/* Master state? */
-	if(!st->parent)
-	{
-		/* Unload any "forgotten" API created objects... */
-		a2_UnloadAll(st);
-
-		/* Close all substates! */
-		while(st->next)
-			a2_Close(st->next);
-	}
-
 	/* Detach the audio callack */
 	if(st->audio)
 	{
@@ -552,6 +541,17 @@ void a2_Close(A2_state *st)
 			d->Process = NULL;
 			d->Unlock(d);
 		}
+	}
+
+	/* Master state? */
+	if(!st->parent)
+	{
+		/* Close all substates! */
+		while(st->next)
+			a2_Close(st->next);
+
+		/* Unload any "forgotten" API created objects... */
+		a2_UnloadAll(st);
 	}
 
 	/* Handle engine/RT error messages, handle release notifications etc */
