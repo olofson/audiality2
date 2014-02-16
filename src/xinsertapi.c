@@ -281,12 +281,14 @@ static A2_errors xi_stream_open(A2_stream *str)
 	if(xic->flags & A2_XI_WRITE)
 		str->Write = xi_stream_write;
 	else if(xic->flags & A2_XI_READ)
+	{
 		str->Read = xi_stream_read;
+		str->Flush = xi_stream_flush;
+	}
 	else
 		return A2_INTERNAL + 500;
 	str->Available = xi_stream_available;
 	str->Space = xi_stream_space;
-	str->Flush = xi_stream_flush;
 	if(str->size <= 0)
 		return A2_VALUERANGE;
 	if(!(xic->fifo = sfifo_Open(str->size * sizeof(int32_t))))
