@@ -1,0 +1,53 @@
+def title	"TestPrograms"
+def version	"1.0"
+def description	"Test programs for rendertest.c, wavestress.c etc"
+def author	"David Olofson"
+def copyright	"Copyright 2013-2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+// Play specified wave with simple envelope (for rendertest.c)
+PlayTestWave(P V=1 W=sine)
+{
+	struct { wtosc; panmix }
+	w W; p P
+	a V; d 10
+	end
+.rel	a 0; d 500
+	1() { force rel }
+}
+
+// Play specified wave with simple envelope (for waveupload.c)
+PlayTestWave2(P V=1 W=sine)
+{
+	struct { wtosc; panmix }
+	w W; p P
+	a V; set a
+	end
+.rel	a 0; d 100
+	1() { force rel }
+}
+
+// Play specified wave - no messages (for wavestress.c)
+PlayTestWave3(P V=1 W=sine)
+{
+	struct { wtosc; panmix }
+	w W; p P
+	a V; set a
+	d 100
+	a 0; d 100
+}
+
+// Simple "instrument" for voicestress.c
+PlayTestNote(P V=1)
+{
+	struct { wtosc; panmix }
+	w triangle; p P
+	a V; set a
+	while a > 0.01 {
+		*a .8; d 10
+	}
+	end
+.rel	a 0; d 10
+	1() { force rel }
+}

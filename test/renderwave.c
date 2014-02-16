@@ -272,7 +272,7 @@ int main(int argc, const char *argv[])
 		fail(6, -songh);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/playtestwave.a2s")) < 0)
+	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
 		fail(7, -h);
 	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
 		fail(8, -ph);

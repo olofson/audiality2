@@ -1,10 +1,7 @@
 /*
- * renderwave2.c - Audiality 2 render-to-wave via a2_RenderWave()
+ * waveupload.c - Audiality 2 wave upload via a2_WaveUpload()
  *
- *	This does essentially the same thing as renderwave.c, except using the
- *	higher level conveniency API call a2_RenderWave().
- *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,9 +25,15 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <math.h>
 #include "audiality2.h"
 #include "waves.h"
 
+#define	WAVELEN	20000
+#define	WAVEPER	128
+#define	DECAY	0.9997f
+#define	FMDEPTH	10.0f
+#define	FMDECAY	0.9995f
 
 /* Configuration */
 const char *audiodriver = "default";
@@ -40,6 +43,8 @@ int audiobuf = 4096;
 int waverate = 0;
 
 static int do_exit = 0;
+
+int16_t *wbuf = NULL;
 
 
 static void usage(const char *exename)
@@ -112,16 +117,20 @@ static void breakhandler(int a)
 static void fail(unsigned where, A2_errors err)
 {
 	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
+	free(wbuf);
 	exit(100);
 }
 
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h, songh, ph, vh;
+	int s;
+	float a, fmd;
+	A2_handle h, ph, wh, vh;
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
+
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -142,34 +151,37 @@ int main(int argc, const char *argv[])
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
-	fprintf(stderr, "Loading...\n");
-
-	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
-		fail(5, -h);
-	if((songh = a2_Get(state, h, "Song")) < 0)
-		fail(6, -songh);
-
 	/* Load wave player program */
 	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
-		fail(7, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
-		fail(8, -ph);
+		fail(5, -h);
+	if((ph = a2_Get(state, h, "PlayTestWave2")) < 0)
+		fail(6, -ph);
 
 	/* Render! */
 	fprintf(stderr, "Rendering...\n");
-	if(!waverate)
-		waverate = samplerate;
-	if((h = a2_RenderWave(state,
-			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags */
-			waverate, 0,	/* sample rate, stop when silent */
-			songh, 0, NULL, NULL)) < 0) /* prg, no args, no props */
-		fail(9, -h);
+	if(!(wbuf = malloc(sizeof(int16_t) * WAVELEN)))
+		fail(7, A2_OOMEMORY);
+	a = 32767.0f;
+	fmd = FMDEPTH;
+	for(s = 0; s < WAVELEN; ++s)
+	{
+		float phase = s * 2.0f * M_PI / WAVEPER;
+		float poffs = sin(phase) * fmd;
+		wbuf[s] = sin(phase + poffs) * a;
+		a *= DECAY;
+		fmd *= FMDECAY;
+	}
+
+	fprintf(stderr, "Uploading...\n");
+	wh = a2_WaveUpload(state, A2_WWAVE, WAVEPER, 0,
+			A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
+	if(wh < 0)
+		fail(8, -wh);
 
 	/* Start playing! */
 	fprintf(stderr, "Playing...\n");
 	a2_Now(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
+	vh = a2_Start(state, a2_RootVoice(state), ph, -2.0f, 0.5f, wh);
 	if(vh < 0)
 		fail(10, -vh);
 
@@ -186,5 +198,6 @@ int main(int argc, const char *argv[])
 	sleep(1);
 
 	a2_Close(state);
+	free(wbuf);
 	return 0;
 }

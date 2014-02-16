@@ -45,7 +45,8 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 	am.b.action = A2MT_ADDXIC;
 	am.b.timestamp = st->timestamp;
 	*d = xic;
-	res = a2_writemsg(st->fromapi, &am, A2_MSIZE(b.a1) + sizeof(void *));
+	res = a2_writemsg(st->fromapi, &am,
+			A2_MSIZE(b.a1) - sizeof(am.b.a1) + sizeof(void *));
 	if(res)
 		return -res;
 	return xic->handle;
@@ -318,7 +319,8 @@ static RCHM_errors xi_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 	am.b.action = A2MT_REMOVEXIC;
 	am.b.timestamp = st->timestamp;
 	*d = xic;
-	a2_writemsg(st->fromapi, &am, A2_MSIZE(b.a1) + sizeof(void *));
+	a2_writemsg(st->fromapi, &am,
+			A2_MSIZE(b.a1) - sizeof(am.b.a1) + sizeof(void *));
 	return RCHM_REFUSE;
 }
 

@@ -1,10 +1,10 @@
 /*
- * renderwave2.c - Audiality 2 render-to-wave via a2_RenderWave()
+ * voicestress.c - Audiality 2 voice management stress test
  *
- *	This does essentially the same thing as renderwave.c, except using the
- *	higher level conveniency API call a2_RenderWave().
+ *	This test starts, communicates with, and releases voices at an extreme
+ *	rate, in order to stress test the engine voice management logic.
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,8 +28,17 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <math.h>
+#include "SDL.h"
 #include "audiality2.h"
 #include "waves.h"
+
+
+/* Number of voices hold on to at any one time */
+#define	VOICES	10
+
+/* Delay between notes (ms) */
+#define	DELAY	10
 
 
 /* Configuration */
@@ -118,10 +127,12 @@ static void fail(unsigned where, A2_errors err)
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h, songh, ph, vh;
+	int vhi, t;
+	A2_handle h, ph, vh[VOICES];
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
+
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -142,48 +153,47 @@ int main(int argc, const char *argv[])
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
-	fprintf(stderr, "Loading...\n");
-
-	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
-		fail(5, -h);
-	if((songh = a2_Get(state, h, "Song")) < 0)
-		fail(6, -songh);
-
 	/* Load wave player program */
 	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
-		fail(7, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
-		fail(8, -ph);
+		fail(5, -h);
+	if((ph = a2_Get(state, h, "PlayTestNote")) < 0)
+		fail(6, -ph);
 
-	/* Render! */
-	fprintf(stderr, "Rendering...\n");
-	if(!waverate)
-		waverate = samplerate;
-	if((h = a2_RenderWave(state,
-			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags */
-			waverate, 0,	/* sample rate, stop when silent */
-			songh, 0, NULL, NULL)) < 0) /* prg, no args, no props */
-		fail(9, -h);
-
-	/* Start playing! */
-	fprintf(stderr, "Playing...\n");
+	/* Abuse! */
+	memset(vh, 0, sizeof(vh));
+	vhi = 0;
+	t = SDL_GetTicks();
 	a2_Now(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
-	if(vh < 0)
-		fail(10, -vh);
-
-	/* Wait for completion or abort */
+	fprintf(stderr, "Starting!\n");
 	while(!do_exit)
 	{
-		a2_Now(state);
-		sleep(1);
-	}
+		/* Stop and detach! */
+		if(vh[vhi])
+		{
+			a2_Send(state, vh[vhi], 1);
+			a2_Release(state, vh[vhi]);
+		}
 
-	a2_Now(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
-	sleep(1);
+		/* Play! */
+		vh[vhi] = a2_Start(state, a2_RootVoice(state), ph,
+				a2_Rand(state, 2.0f), 0.5f);
+		if(vh[vhi] < 0)
+			fail(10, -vh[vhi]);
+
+		a2_Wait(state, DELAY);
+
+		vhi = (vhi + 1) % VOICES;
+
+		/* Timing... */
+		if(vhi == 0)
+		{
+			t += DELAY * VOICES;
+			while((t - (int)SDL_GetTicks() > 0) && !do_exit)
+				SDL_Delay(1);
+			fprintf(stderr, "(batch)\n");
+			a2_Now(state);
+		}
+	}
 
 	a2_Close(state);
 	return 0;

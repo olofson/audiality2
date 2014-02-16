@@ -1,7 +1,7 @@
 /*
  * wtosc.c - Audiality 2 wavetable oscillator unit
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -138,6 +138,21 @@ static void wtosc_Noise(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
+/* Handle waveforms that have just been unloaded */
+static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
+{
+	A2_wtosc *o = wtosc_cast(u);
+	if(w->d.wave.size[0])
+		return 0;
+	o->wave = NULL;
+	if(o->flags & A2_PROCADD)
+		u->Process = wtosc_OffAdd;
+	else
+		u->Process = wtosc_Off;
+	return 1;
+}
+
+
 static inline void wtosc_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 		int add)
 {
@@ -147,6 +162,8 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset, unsigned frames,
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
 	int16_t *d;
+	if(wtosc_check_unloaded(u, w))
+		return;
 	if(o->dphase > 0x000fffff)
 		dph = (o->dphase >> 8) * w->period >> 8;
 	else
@@ -208,6 +225,8 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 	A2_wave *w = o->wave;
 	unsigned perfixp = w->d.wave.size[0] << 8;
 	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
+	if(wtosc_check_unloaded(u, w))
+		return;
 	if(o->dphase > 0x000fffff)
 		dph = (o->dphase >> 8) * w->period >> 8;
 	else
@@ -338,7 +357,6 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	return A2_OK;
 }
 
-
 static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
@@ -364,6 +382,7 @@ static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 	  default:
 /* FIXME: Error/warning message here! */
 	  case A2_WOFF:
+		o->wave = NULL;
 		if(o->flags & A2_PROCADD)
 			u->Process = wtosc_OffAdd;
 		else

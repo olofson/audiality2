@@ -8,6 +8,9 @@ link_directories(${AUDIALITY2_BINARY_DIR})
 
 set(AUDIALITY2_LIBRARY audiality2)
 
+add_executable(waveupload WIN32 MACOSX_BUNDLE waveupload.c)
+target_link_libraries(waveupload ${AUDIALITY2_LIBRARY})
+
 add_executable(rtsubstate WIN32 MACOSX_BUNDLE rtsubstate.c)
 target_link_libraries(rtsubstate ${AUDIALITY2_LIBRARY})
 
@@ -24,8 +27,18 @@ find_package(SDL)
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
 	link_libraries(${SDL_LIBRARY} SDLmain)
+
 	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
 	target_link_libraries(a2test ${AUDIALITY2_LIBRARY})
+
+	add_executable(wavestress WIN32 MACOSX_BUNDLE wavestress.c)
+	target_link_libraries(wavestress ${AUDIALITY2_LIBRARY})
+
+	add_executable(wavestress2 WIN32 MACOSX_BUNDLE wavestress2.c)
+	target_link_libraries(wavestress2 ${AUDIALITY2_LIBRARY})
+
+	add_executable(voicestress WIN32 MACOSX_BUNDLE voicestress.c)
+	target_link_libraries(voicestress ${AUDIALITY2_LIBRARY})
 endif(SDL_FOUND)
 
 # Release build: full optimization, no debug features, no debug info

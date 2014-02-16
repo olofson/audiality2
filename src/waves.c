@@ -1,7 +1,7 @@
 /*
  * waves.c - Audiality 2 waveform management
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -703,26 +703,49 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 }
 
 
+static void a2_free_wave_cb(A2_state *st, void *userdata)
+{
+/*
+ * FIXME: For some reason, it's not sufficient to wait for one process cycle
+ * of all states. There can still be voices that haven't processed, and thus,
+ * we occasionally get a segfault after freeing waves.
+ */
+#if 0
+	free(userdata);
+#endif
+}
+
+/* Stop any oscillators using 'w', and ensure that 'w' is freed eventually. */
+static void a2_discard_wave(A2_state *st, A2_wave *w)
+{
+	a2_LockAllStates(st);
+	w->d.wave.size[0] = 0;
+	a2_UnlockAllStates(st);
+	a2_WhenAllHaveProcessed(st, a2_free_wave_cb, w);
+}
+
+
 static RCHM_errors a2_wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	int i;
 	A2_wave *w = (A2_wave *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
-	a2_InstaKillAllVoices(st);
 	switch(w->type)
 	{
 	  case A2_WOFF:
 	  case A2_WNOISE:
+		free(w);
 		break;
 	  case A2_WWAVE:
+	  	a2_discard_wave(st, w);
 		free(w->d.wave.data[0]);
 		break;
 	  case A2_WMIPWAVE:
+	  	a2_discard_wave(st, w);
 		for(i = 0; i < A2_MIPLEVELS; ++i)
 			free(w->d.wave.data[i]);
 		break;
 	}
-	free(w);
 	return RCHM_OK;
 }
 

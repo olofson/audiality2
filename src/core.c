@@ -1464,7 +1464,7 @@ static void a2_ProcessMaster(A2_state *st, unsigned offset, unsigned frames)
 }
 
 
-A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
+void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 {
 	A2_state *st = (A2_state *)driver->state;
 	A2_voice *rootvoice = a2_GetVoice(st, st->rootvoice);
@@ -1520,7 +1520,9 @@ A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	st->now_frames = st->now_fragstart;
 	st->now_ticks = t1;
 	st->now_guard = st->now_frames;
-	return 0;
+
+	/* Process end-of-cycle messages */
+	a2r_ProcessEOCEvents(st, frames);
 }
 
 
@@ -1529,4 +1531,69 @@ int a2_Run(A2_state *st, unsigned frames)
 	if(!st->audio->Run)
 		return -A2_NOTIMPLEMENTED;
 	return st->audio->Run(st->audio, frames);
+}
+
+
+static void a2_kill_subvoices_using_program(A2_state *st, A2_voice *v,
+		A2_program *p)
+{
+	A2_voice *sv;
+	for(sv = v->sub; sv; sv = sv->next)
+		if(sv)
+		{
+			int i;
+			a2_VoiceKill(st, sv);
+			for(i = 0; i < A2_REGISTERS; ++i)
+				if(v->sv[i] == sv)
+				{
+					v->sv[i] = NULL;
+					break;
+				}
+		}
+		else
+			a2_kill_subvoices_using_program(st, sv, p);
+}
+
+void a2_KillVoicesUsingProgram(A2_state *st, A2_handle program)
+{
+	A2_program *p = a2_GetProgram(st, program);
+	if(!p)
+		return;
+	if(st->parent)
+		st = st->parent;
+	for( ; st; st = st->next)
+	{
+		RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, st->rootvoice);
+		st->audio->Lock(st->audio);
+		if(!hi || (hi->typecode != A2_TVOICE) || (!hi->d.data))
+		{
+			/* Wut? Root voice died...? */
+			st->audio->Unlock(st->audio);
+			continue;
+		}
+		a2_kill_subvoices_using_program(st, (A2_voice *)hi->d.data, p);
+		st->audio->Unlock(st->audio);
+	}
+}
+
+
+int a2_LockAllStates(A2_state *st)
+{
+	int count = 0;
+	if(st->parent)
+		st = st->parent;
+	for( ; st; st = st->next, ++count)
+		st->audio->Lock(st->audio);
+	return count;
+}
+
+
+int a2_UnlockAllStates(A2_state *st)
+{
+	int count = 0;
+	if(st->parent)
+		st = st->parent;
+	for( ; st; st = st->next, ++count)
+		st->audio->Unlock(st->audio);
+	return count;
 }

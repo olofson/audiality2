@@ -1,10 +1,11 @@
 /*
- * renderwave2.c - Audiality 2 render-to-wave via a2_RenderWave()
+ * wavestress2.c - Audiality 2 wave management stress test, version 2
  *
- *	This does essentially the same thing as renderwave.c, except using the
- *	higher level conveniency API call a2_RenderWave().
+ *	This is like wavestress.c, but using "PlayTestWave2" with a2_Start(),
+ *	a2_Send() and a2_Detach(), to stress attached voice management along
+ *	with wave management.
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,8 +29,32 @@
 #include <string.h>
 #include <signal.h>
 #include <unistd.h>
+#include <math.h>
+#include "SDL.h"
 #include "audiality2.h"
 #include "waves.h"
+
+
+/* Length of waveform (samples) */
+#define	WAVELEN	1000
+
+/* Period at pitch 0 (samples) */
+#define	WAVEPER	32
+
+/* Amplitude decay coefficient */
+#define	DECAY	0.997f
+
+/* FM (actually PM...) depth */
+#define	FMDEPTH	20.0f
+
+/* Modulation depth decay coefficient */
+#define	FMDECAY	0.995f
+
+/* Number of waves to buffer */
+#define	WAVES	100
+
+/* Delay between notes (ms) */
+#define	DELAY	10
 
 
 /* Configuration */
@@ -40,6 +65,8 @@ int audiobuf = 4096;
 int waverate = 0;
 
 static int do_exit = 0;
+
+int16_t *wbuf = NULL;
 
 
 static void usage(const char *exename)
@@ -112,16 +139,19 @@ static void breakhandler(int a)
 static void fail(unsigned where, A2_errors err)
 {
 	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
+	free(wbuf);
 	exit(100);
 }
 
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h, songh, ph, vh;
+	int s, whi, t;
+	A2_handle h, ph, wh[WAVES];
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
+
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -142,49 +172,74 @@ int main(int argc, const char *argv[])
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
-	fprintf(stderr, "Loading...\n");
-
-	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
-		fail(5, -h);
-	if((songh = a2_Get(state, h, "Song")) < 0)
-		fail(6, -songh);
-
 	/* Load wave player program */
 	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
-		fail(7, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
-		fail(8, -ph);
+		fail(5, -h);
+	if((ph = a2_Get(state, h, "PlayTestWave2")) < 0)
+		fail(6, -ph);
 
-	/* Render! */
-	fprintf(stderr, "Rendering...\n");
-	if(!waverate)
-		waverate = samplerate;
-	if((h = a2_RenderWave(state,
-			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags */
-			waverate, 0,	/* sample rate, stop when silent */
-			songh, 0, NULL, NULL)) < 0) /* prg, no args, no props */
-		fail(9, -h);
+	/* Allocate wave render buffer */
+	if(!(wbuf = malloc(sizeof(int16_t) * WAVELEN)))
+		fail(7, A2_OOMEMORY);
 
-	/* Start playing! */
-	fprintf(stderr, "Playing...\n");
+	/* Abuse! */
+	memset(wh, 0, sizeof(wh));
+	whi = 0;
+	t = SDL_GetTicks();
 	a2_Now(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
-	if(vh < 0)
-		fail(10, -vh);
-
-	/* Wait for completion or abort */
+	fprintf(stderr, "Starting!\n");
 	while(!do_exit)
 	{
-		a2_Now(state);
-		sleep(1);
+		A2_handle vh;
+		float a, fmd;
+
+		/* Unload! */
+		if(wh[whi])
+			a2_Release(state, wh[whi]);
+
+		/* Render! */
+		a = 32767.0f;
+		fmd = a2_Rand(state, FMDEPTH);
+		for(s = 0; s < WAVELEN; ++s)
+		{
+			float phase = s * 2.0f * M_PI / WAVEPER;
+			float poffs = sin(phase) * fmd;
+			wbuf[s] = sin(phase + poffs) * a;
+			a *= DECAY;
+			fmd *= FMDECAY;
+		}
+
+		wh[whi] = a2_WaveUpload(state, A2_WWAVE, WAVEPER, 0,
+				A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
+		if(wh[whi] < 0)
+			fail(8, -wh[whi]);
+
+		/* Play! */
+		vh = a2_Start(state, a2_RootVoice(state), ph,
+				a2_Rand(state, 1.0f), 0.5f, wh[whi]);
+		if(vh < 0)
+			fail(10, -vh);
+
+		a2_Wait(state, DELAY);
+
+		/* Stop and release! */
+		a2_Send(state, vh, 1);
+		a2_Release(state, vh);
+
+		whi = (whi + 1) % WAVES;
+
+		/* Timing... */
+		if(whi == 0)
+		{
+			t += DELAY * WAVES;
+			while((t - (int)SDL_GetTicks() > 0) && !do_exit)
+				SDL_Delay(1);
+			fprintf(stderr, "(batch)\n");
+			a2_Now(state);
+		}
 	}
 
-	a2_Now(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
-	sleep(1);
-
 	a2_Close(state);
+	free(wbuf);
 	return 0;
 }

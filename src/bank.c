@@ -1,7 +1,7 @@
 /*
  * bank.c - Audiality 2 banks and symbols
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -55,7 +55,7 @@ static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_hand
 	A2_program *p = (A2_program *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
-	a2_InstaKillAllVoices(st);
+	a2_KillVoicesUsingProgram(st, h);
 	while(p->structure)
 	{
 		A2_structitem *pp = p->structure;

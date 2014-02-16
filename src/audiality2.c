@@ -546,6 +546,10 @@ void a2_Close(A2_state *st)
 	/* Master state? */
 	if(!st->parent)
 	{
+		/* Unload the root bank and any other A2_LOCKed objects! */
+		a2_unlock_all(st);
+		a2_Release(st, A2_ROOTBANK);
+
 		/* Close all substates! */
 		while(st->next)
 			a2_Close(st->next);
@@ -557,6 +561,12 @@ void a2_Close(A2_state *st)
 	/* Handle engine/RT error messages, handle release notifications etc */
 	if(st->fromapi)
 		a2r_PumpEngineMessages(st);
+	/*
+	 * We lie about the frame count here, so that events will actually be
+	 * processed. Otherwise, we'll leak deleted shared objects that use
+	 * a2_WhenAllHaveProcessed() for thread safe cleanup.
+	 */
+	a2r_ProcessEOCEvents(st, 1);
 	if(st->toapi)
 		a2_PumpAPIMessages(st);
 
@@ -587,17 +597,8 @@ void a2_Close(A2_state *st)
 		st->sys->RTFree(st->sys, b);
 	}
 
-	/* If this is a master state... */
 	if(!st->parent)
-	{
-		/* Unload the root bank and any other A2_LOCKed objects! */
-		if(st->ss)
-		{
-			a2_unlock_all(st);
-			a2_Release(st, A2_ROOTBANK);
-			a2_CloseSharedState(st);
-		}
-	}
+		a2_CloseSharedState(st);
 
 	/* Close the A2_config, if we created it! */
 	if(st->config)

@@ -412,6 +412,9 @@ typedef enum A2_evactions
 	A2MT_DETACH,	/* Free handle if rc 0 otherwise type = A2_TDETACHED */
 	A2MT_XICREMOVED,/* xinsert client removed; clear to clean up */
 	A2MT_ERROR,	/* Error message from the engine */
+
+	/* Messages sent both ways */
+	A2MT_WAHP,	/* When-All-Have-Processed callback */
 } A2_evactions;
 
 typedef struct A2_eventbody
@@ -524,6 +527,7 @@ struct A2_state
 	unsigned	timestamp;	/* Current timestamp for async API */
 	SFIFO		*fromapi;	/* Messages from async. API calls */
 	SFIFO		*toapi;		/* Responses to the API context */
+	A2_event	*eocevents;	/* To be sent to API at end of cycle */
 
 	A2_voice	*voicepool;	/* LIFO stack of voices */
 	unsigned	totalvoices;	/* Number of voices in use + pool */
@@ -602,8 +606,16 @@ static inline A2_stream *a2_GetStream(A2_state *st, A2_handle handle)
 	return (A2_stream *)hi->d.data;
 }
 
-/* Brutally kill all voices. (Dirty hack for unloading objects...) */
-void a2_InstaKillAllVoices(A2_state *st);
+/* Kill any voices using 'program' */
+void a2_KillVoicesUsingProgram(A2_state *st, A2_handle program);
+
+
+/*
+ * Lock/unlock all realtime states related to 'st'. Return the number of
+ * states that were locked/unlocked.
+ */
+int a2_LockAllStates(A2_state *st);
+int a2_UnlockAllStates(A2_state *st);
 
 
 /*---------------------------------------------------------
@@ -789,7 +801,7 @@ void a2_inline_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames);
 void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames);
 
 /* Audio driver callback - this is what drives the whole engine! */
-A2_errors a2_AudioCallback(A2_audiodriver *driver, unsigned frames);
+void a2_AudioCallback(A2_audiodriver *driver, unsigned frames);
 
 A2_errors a2_RegisterXICTypes(A2_state *st);
 
@@ -808,8 +820,9 @@ A2_errors a2_RegisterWaveTypes(A2_state *st);
 
 A2_errors a2_OpenAPI(A2_state *st);
 A2_errors a2_RegisterAPITypes(A2_state *st);
-A2_errors a2r_PumpEngineMessages(A2_state *st);
-A2_errors a2_PumpAPIMessages(A2_state *st);
+void a2r_PumpEngineMessages(A2_state *st);
+void a2r_ProcessEOCEvents(A2_state *st, unsigned frames);
+void a2_PumpAPIMessages(A2_state *st);
 void a2_CloseAPI(A2_state *st);
 
 void a2r_DetachHandle(A2_state *st, A2_handle h);
@@ -885,6 +898,24 @@ static inline void a2_poll_api(A2_state *st)
 	if(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
 		a2_PumpAPIMessages(st);
 }
+
+
+typedef void (*A2_generic_cb)(A2_state *st, void *userdata);
+
+typedef struct A2_wahp_entry
+{
+	A2_state	*state;
+	A2_generic_cb	callback;
+	void		*userdata;
+	int		count;	/* Number of states we're still waiting for. */
+} A2_wahp_entry;
+
+/*
+ * Set up 'cb' to be called with 'userdata' after 'st' and any related states
+ * have executed at least one more process() cycle.
+ */
+A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
+		void *userdata);
 
 
 /*---------------------------------------------------------

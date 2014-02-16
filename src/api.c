@@ -558,25 +558,40 @@ static inline void a2r_em_xic(A2_state *st, A2_apimessage *am)
 	a2_SendEvent(tv, e);
 }
 
-A2_errors a2r_PumpEngineMessages(A2_state *st)
+static inline void a2r_em_eocevent(A2_state *st, A2_apimessage *am)
+{
+	A2_event *e = a2_AllocEvent(st);
+	if(!e)
+	{
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_eocevent()[1]");
+		return;
+	}
+	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
+	MSGTRACK(e->source = "a2r_em_eocevent()";)
+	/* FIXME: Events are queued in reverse order here... */
+	e->next = st->eocevents;
+	st->eocevents = e;
+}
+
+void a2r_PumpEngineMessages(A2_state *st)
 {
 	while(sfifo_Used(st->fromapi) >= A2_APIREADSIZE)
 	{
 		A2_apimessage am;
 		if(sfifo_Read(st->fromapi, &am, (unsigned)A2_APIREADSIZE) < 0)
 		{
-			fprintf(stderr, "Audiality 2: Engine side FIFO read"
-					" error!\n");
-			return A2_INTERNAL + 25;
+			a2r_Error(st, A2_INTERNAL + 25,
+					"Engine side FIFO read error");
+			return;
 		}
 		if(am.size > A2_APIREADSIZE)
 			if(sfifo_Read(st->fromapi,
 					((char *)&am) + A2_APIREADSIZE,
 					am.size - A2_APIREADSIZE) < 0)
 			{
-				fprintf(stderr, "Audiality 2: Engine side FIFO"
-						" read error!\n");
-				return A2_INTERNAL + 26;
+				a2r_Error(st, A2_INTERNAL + 26,
+						"Engine side FIFO read error");
+				return;
 			}
 		switch(am.b.action)
 		{
@@ -603,6 +618,9 @@ A2_errors a2r_PumpEngineMessages(A2_state *st)
 		  case A2MT_REMOVEXIC:
 			a2r_em_xic(st, &am);
 			break;
+		  case A2MT_WAHP:
+			a2r_em_eocevent(st, &am);
+			break;
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unknown API message "
@@ -611,7 +629,6 @@ A2_errors a2r_PumpEngineMessages(A2_state *st)
 #endif
 		}
 	}
-	return A2_OK;
 }
 
 
@@ -632,24 +649,24 @@ static inline void a2_detach_or_free_handle(A2_state *st, A2_handle h)
  * API side message pump
  */
 
-A2_errors a2_PumpAPIMessages(A2_state *st)
+void a2_PumpAPIMessages(A2_state *st)
 {
 	while(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
 	{
 		A2_apimessage am;
 		if(sfifo_Read(st->toapi, &am, (unsigned)A2_APIREADSIZE) < 0)
 		{
-			fprintf(stderr, "Audiality 2: Engine side FIFO read"
-					" error!\n");
-			return A2_INTERNAL + 27;
+			fprintf(stderr, "Audiality 2: API side FIFO read"
+					" error! (27)\n");
+			return;
 		}
 		if(am.size > A2_APIREADSIZE)
 			if(sfifo_Read(st->toapi, (char *)&am + A2_APIREADSIZE,
 					am.size - A2_APIREADSIZE) < 0)
 			{
-				fprintf(stderr, "Audiality 2: Engine side FIFO"
-						" read error!\n");
-				return A2_INTERNAL + 28;
+				fprintf(stderr, "Audiality 2: API side FIFO"
+						" read error! (28)\n");
+				return;
 			}
 		if(am.size < A2_MSIZE(b.argc))
 			am.b.argc = 0;
@@ -676,6 +693,18 @@ A2_errors a2_PumpAPIMessages(A2_state *st)
 					a2_ErrorString(am.b.a1), s);
 			break;
 		  }
+		  case A2MT_WAHP:
+		  {
+			A2_wahp_entry *we = *((A2_wahp_entry **)&am.b.a1);
+			--we->count;
+			if(!we->count)
+			{
+				/* We're last. Let's make the callback! */
+				we->callback(we->state, we->userdata);
+				free(we);
+			}
+			break;
+		  }
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unknown engine message "
@@ -684,6 +713,70 @@ A2_errors a2_PumpAPIMessages(A2_state *st)
 #endif
 		}
 	}
+}
+
+
+void a2r_ProcessEOCEvents(A2_state *st, unsigned frames)
+{
+	/*
+	 * We don't count it as a cycle unless samples were processed!
+	 *
+	 * NOTE: This is to make sure A2MT_WAHP works as intended. We may have
+	 *       have to change this if we add other EOC events later.
+	 */
+	if(!frames)
+		return;
+
+	while(st->eocevents)
+	{
+		A2_event *e = st->eocevents;
+		switch(e->b.action)
+		{
+		  case A2MT_WAHP:
+		  {
+		  	/* Just send it back as is to the API context! */
+		  	A2_apimessage am;
+		  	int msize = A2_MSIZE(b.a1) + sizeof(void *);
+			memcpy(&am.b, &e->b,
+					msize - offsetof(A2_apimessage, b));
+			a2_writemsg(st->toapi, &am, msize);
+			break;
+		  }
+#ifdef DEBUG
+		  default:
+			fprintf(stderr, "Audiality 2: Unexpected message "
+					"%d in a2r_ProcessEOCEvents()!\n",
+					e->b.action);
+			break;
+#endif
+		}
+		st->eocevents = e->next;
+		a2_FreeEvent(st, e);
+	}
+}
+
+
+A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
+		void *userdata)
+{
+	A2_apimessage am;
+	A2_wahp_entry **d = (A2_wahp_entry **)&am.b.a1;
+	A2_state *pstate = st->parent ? st->parent : st;
+	A2_wahp_entry *we = (A2_wahp_entry *)malloc(sizeof(A2_wahp_entry));
+	if(!we)
+		return A2_OOMEMORY;
+	we->state = st;
+	we->callback = cb;
+	we->userdata = userdata;
+	we->count = 0;
+	for(st = pstate; st; st = st->next)
+		++we->count;
+	am.b.action = A2MT_WAHP;
+	/* NOTE: Overwrites a2 on platforms with 64 bit pointers! */
+	*d = we;
+	for(st = pstate; st; st = st->next)
+		a2_writemsg(st->toapi, &am, A2_MSIZE(b.a1) - sizeof(am.b.a1) +
+				sizeof(void *));
 	return A2_OK;
 }
 
@@ -704,7 +797,8 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 		/* NOTE: Overwrites a[0] on platforms with 64 bit pointers! */
 		*d = info;
 		return a2_writemsg(st->toapi, &am,
-				A2_MSIZE(b.a2) + sizeof(void *));
+				A2_MSIZE(b.a2) - sizeof(am.b.a2) +
+				sizeof(void *));
 	}
 	else
 	{
@@ -946,24 +1040,6 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice)
 	am.b.action = A2MT_KILLSUB;
 	am.b.timestamp = st->timestamp;
 	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
-}
-
-
-void a2_InstaKillAllVoices(A2_state *st)
-{
-	A2_voice *v, *sv;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, st->rootvoice);
-	st->audio->Lock(st->audio);
-	if(!hi || (hi->typecode != A2_TVOICE) || (!hi->d.data))
-	{
-		st->audio->Unlock(st->audio);
-		return;
-	}
-	v = (A2_voice *)hi->d.data;
-	for(sv = v->sub; sv; sv = sv->next)
-		a2_VoiceKill(st, sv);
-	memset(v->sv, 0, sizeof(v->sv));
-	st->audio->Unlock(st->audio);
 }
 
 

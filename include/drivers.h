@@ -1,7 +1,7 @@
 /*
  * drivers.h - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -257,7 +257,7 @@ struct A2_audiodriver
 
 	/* Engine interface */
 	void		*state;		/* State data for Process() */
-	A2_errors (*Process)(A2_audiodriver *driver, unsigned frames);
+	void (*Process)(A2_audiodriver *driver, unsigned frames);
 	int32_t		**buffers;	/* Array of 8:24 fixp audio buffers */
 
 	/* (Implementation specific data may follow) */
