@@ -125,7 +125,11 @@ static void fail(unsigned where, A2_errors err)
 }
 
 
+#ifdef _WIN32
+int main(int argc, char *argv[])
+#else
 int main(int argc, const char *argv[])
+#endif
 {
 	int vhi, t;
 	A2_handle h, ph, vh[VOICES];

@@ -1,7 +1,7 @@
 /*
  * platform.c - Audiality 2 platform interface
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -20,7 +20,25 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
+#include <stdlib.h>
 #include "platform.h"
+
+#ifdef _WIN32
+char *strndup(const char *s, size_t size)
+{
+	char *r;
+	char *end = memchr(s, 0, size);
+	if(end)	/* Length + 1 */
+		size = end - s + 1;
+	r = malloc(size);
+	if(size)
+	{
+		memcpy(r, s, size - 1);
+		r[size - 1] = '\0';
+	}
+	return r;
+}
+#endif
 
 
 /*---------------------------------------------------------
@@ -30,7 +48,7 @@
 /* Static data for a2_GetTicks() and a2_GetMicros() */
 #ifdef _WIN32
 DWORD a2_start_time;
-extern LARGE_INTEGER a2_perfc_frequency = 0;
+LARGE_INTEGER a2_perfc_frequency = { 0 };
 #else
 struct timeval a2_start_time;
 #endif
@@ -42,7 +60,7 @@ void a2_time_open(void)
 	timeBeginPeriod(1);
 	a2_start_time = timeGetTime();
 	if(!QueryPerformanceFrequency(&a2_perfc_frequency))
-		a2_perfc_frequency = 0;
+		a2_perfc_frequency.QuadPart = 0;
 #else
 	gettimeofday(&a2_start_time, NULL);
 #endif

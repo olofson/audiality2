@@ -29,6 +29,10 @@
 #include "audiality2.h"
 #include "waves.h"
 
+#ifdef _WIN32
+# include <windows.h>
+# define sleep(x) Sleep((x) * 1000)
+#endif
 
 /* Fragment size for wave rendering/uploading */
 #define	FRAGSIZE	2048

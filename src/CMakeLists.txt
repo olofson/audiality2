@@ -1,4 +1,4 @@
-INCLUDE (CheckIncludeFiles)
+include(CheckIncludeFiles)
 
 include_directories(${AUDIALITY2_SOURCE_DIR}/include)
 include_directories(${AUDIALITY2_SOURCE_DIR}/src)
@@ -51,7 +51,6 @@ find_package(SDL)
 if(SDL_FOUND)
 	add_definitions(-DA2_HAVE_SDL)
 	include_directories(${SDL_INCLUDE_DIR})
-	link_libraries(${SDL_LIBRARY})
 endif(SDL_FOUND)
 
 CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
@@ -65,23 +64,27 @@ endif(HAVE_JACK_H)
 #endif(ALSA_FOUND)
 
 
-add_library(audiality2 SHARED ${sources})
-target_link_libraries(audiality2 m ${SDL_LIBRARY})
+# FIXME: We don't build DLLs at this point...
+
+if(WIN32)
+	add_library(audiality2 STATIC ${sources})
+else(WIN32)
+	add_library(audiality2 SHARED ${sources})
+endif(WIN32)
+
+target_link_libraries(audiality2 m)
+
+if(SDL_FOUND)
+	target_link_libraries(audiality2 ${SDL_LIBRARY})
+endif(SDL_FOUND)
+
+if(WIN32)
+	target_link_libraries(audiality2 -lwinmm -ldxguid)
+endif(WIN32)
 
 # Until 2.0, we assume there's no ABI compatibility across releases!
 set_target_properties(audiality2 PROPERTIES VERSION ${VERSION_STRING}
 	SOVERSION ${VERSION_STRING})
-
-
-#add_library(audiality2 STATIC ${sources})
-#target_link_libraries(audiality2 m)
-#if(WIN32)
-#	add_library(audiality2 STATIC ${sources})
-#	target_link_libraries(audiality2 m ${SDL_LIBRARY} -lwinmm -ldxguid)
-#else(WIN32)
-#	add_library(audiality2 SHARED ${sources})
-#	target_link_libraries(audiality2 m ${SDL_LIBRARY})
-#endif(WIN32)
 
 
 # Release build: full optimization, no debug features, no debug info

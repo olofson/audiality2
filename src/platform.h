@@ -1,7 +1,7 @@
 /*
  * platform.h - Audiality 2 platform interface
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -42,6 +42,10 @@
 # include <sys/wait.h>
 # include <pthread.h>
 # include <errno.h>
+#endif
+
+#ifdef _WIN32
+char *strndup(const char *s, size_t size);
 #endif
 
 
@@ -166,7 +170,7 @@ static inline void a2_MutexClose(A2_mutex *mtx)
 
 #ifdef _WIN32
 extern DWORD a2_start_time;
-extern LARGE_INTEGER a2_perfc_frequency = 0;
+extern LARGE_INTEGER a2_perfc_frequency;
 #else
 extern struct timeval a2_start_time;
 #endif
@@ -192,9 +196,9 @@ static inline uint64_t a2_GetMicros(void)
 {
 #ifdef _WIN32
 	LARGE_INTEGER now;
-	if(!a2_perfc_frequency || !QueryPerformanceCounter(&now))
-		return (LARGE_INTEGER)a2_GetTicks() * 1000;
-	return now * 1000000 / a2_perfc_frequency;
+	if(!a2_perfc_frequency.QuadPart || !QueryPerformanceCounter(&now))
+		return (uint64_t)a2_GetTicks() * 1000;
+	return now.QuadPart * 1000000 / a2_perfc_frequency.QuadPart;
 #else
 	struct timeval now;
 	gettimeofday(&now, NULL);

@@ -3,10 +3,16 @@ echo "=========================================================="
 echo "Setting up build directories for all targets..."
 echo "=========================================================="
 
+if [ -z $MXEPATH ]; then
+	MXEPATH=~/src/other/mxe
+fi
+
 SOURCEDIR=$(pwd)
 BUILDDIR=$SOURCEDIR/build
 
-mkdir $BUILDDIR
+if [ ! -e $BUILDDIR ]; then
+	mkdir $BUILDDIR
+fi
 
 create_build_dir() {
 	local dname=$1
@@ -16,17 +22,50 @@ create_build_dir() {
 	local opts=$5
 	echo
 	echo "=== build/$dname ($btype, $desc) ==="
-	mkdir $BUILDDIR/$dname
+	if [ ! -e $BUILDDIR/$dname ]; then
+		mkdir $BUILDDIR/$dname
+	fi
 	cd $BUILDDIR/$dname
 	cmake "$opts" $SOURCEDIR -DCMAKE_INSTALL_PREFIX=$prefix -DCMAKE_BUILD_TYPE="$btype"
-	ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
+	if [ ! -e $BUILDDIR/$dname/test/data ]; then
+		ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
+	fi
 	cd $SOURCEDIR
 }
 
+create_build_dir_cross() {
+	local dname=$1
+	local btype=$2
+	local desc=$3
+	local target=$4
+	local opts=$5
+	echo
+	echo "=== build/$dname ($btype, $desc) ==="
+	if [ ! -e $BUILDDIR/$dname ]; then
+		mkdir $BUILDDIR/$dname
+	fi
+	cd $BUILDDIR/$dname
+	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake
+	if [ ! -e $BUILDDIR/$dname/test/data ]; then
+		ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
+	fi
+	cd $SOURCEDIR
+}
+
+# Native builds
 create_build_dir release Release "host native" /usr
 create_build_dir maintainer Maintainer "host native" /usr
 create_build_dir debug Debug "host native" /usr
-create_build_dir mingw-release Release "MinGW32 cross" /mingw '-G "MSYS Makefiles"'
+
+# MinGW32 cross build using MXE (http://mxe.cc/)
+echo -n "Looking for MXE in '$MXEPATH'... "
+if [ -e $MXEPATH ]; then
+	echo "Found!"
+	create_build_dir_cross mingw-release Release "MinGW32 cross" i686-pc-mingw32
+else
+	echo "Not found!"
+	echo "(Please install MXE and set MXEPATH to cross-compile!)"
+fi
 
 echo
 echo "=========================================================="

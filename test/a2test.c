@@ -470,7 +470,11 @@ static void fail(A2_errors err)
 }
 
 
+#ifdef _WIN32
+int main(int argc, char *argv[])
+#else
 int main(int argc, const char *argv[])
+#endif
 {
 	A2_config *cfg;
 	int lasttick;

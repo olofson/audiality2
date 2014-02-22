@@ -32,6 +32,10 @@
 #include "audiality2.h"
 #include "waves.h"
 
+#ifdef _WIN32
+# include <windows.h>
+# define sleep(x) Sleep((x) * 1000)
+#endif
 
 /* Configuration */
 typedef struct TEST_settings {

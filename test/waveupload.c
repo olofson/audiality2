@@ -29,6 +29,11 @@
 #include "audiality2.h"
 #include "waves.h"
 
+#ifdef _WIN32
+# include <windows.h>
+# define sleep(x) Sleep((x) * 1000)
+#endif
+
 #define	WAVELEN	20000
 #define	WAVEPER	128
 #define	DECAY	0.9997f

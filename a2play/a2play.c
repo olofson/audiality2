@@ -29,6 +29,11 @@
 #include "waves.h"
 #include "units.h"
 
+#ifdef _WIN32
+# include <windows.h>
+# define sleep(x) Sleep((x) * 1000)
+#endif
+
 /* Silence detection window size (seconds) */
 #define	SILENCEWINDOW	0.25f
 

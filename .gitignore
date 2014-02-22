@@ -2,6 +2,7 @@ build
 CMakeCache.txt
 CMakeFiles
 Makefile
+audiality2.pc
 cmake_install.cmake
 install_manifest.txt
 include/audiality2.h
