@@ -72,7 +72,9 @@ else(WIN32)
 	add_library(audiality2 SHARED ${sources})
 endif(WIN32)
 
-target_link_libraries(audiality2 m)
+if(UNIX)
+	target_link_libraries(audiality2 m)
+endif(UNIX)
 
 if(SDL_FOUND)
 	target_link_libraries(audiality2 ${SDL_LIBRARY})
