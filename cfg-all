@@ -4,7 +4,7 @@ echo "Setting up build directories for all targets..."
 echo "=========================================================="
 
 if [ -z $MXEPATH ]; then
-	MXEPATH=~/src/other/mxe
+	MXEPATH=~/src/mxe
 fi
 
 SOURCEDIR=$(pwd)
