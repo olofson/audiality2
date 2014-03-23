@@ -1,7 +1,7 @@
 /*
  * compiler.c - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -765,6 +765,59 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v, int required)
 }
 
 
+/*
+ * Simple base-n integer number parser for string escapes.
+ *
+ * If 'figures' is positive, it specifies the number of figures to read, and
+ * the call will fail if that number of valid figures cannot be read.
+ *
+ * If 'figures' is negative, this function reads at most abs(figures) figures,
+ * and fails only if it gets no figures at all.
+ */
+static inline int get_figure(A2_compiler *c, int base)
+{
+	int n = a2_GetChar(c);
+	if(n >= '0' && n <= '9')
+		n -= '0';
+	else if(n >= 'a' && n <= 'z')
+		n -= 'a' - 10;
+	else if(n >= 'A' && n <= 'Z')
+		n -= 'A' - 10;
+	else
+		return -1;
+	if(n >= base)
+		return -1;
+	return n;
+}
+
+static int a2_GetIntNum(A2_compiler *c, int base, int figures)
+{
+	int value = 0;
+	int limitonly = 0;
+	int figures_read = 0;
+	if(figures < 0)
+	{
+		figures = -figures;
+		limitonly = 1;
+	}
+	while(figures--)
+	{
+		int n = get_figure(c, base);
+		if(n < 0)
+		{
+			if(limitonly && figures_read)
+				return value;
+			else
+				return n;
+		}
+		value *= base;
+		value += n;
+		++figures_read;
+	}
+	return value;
+}
+
+
 /* Parse a double quoted string with some basic C style control codes */
 static int a2c_LexString(A2_compiler *c)
 {
@@ -782,34 +835,26 @@ static int a2c_LexString(A2_compiler *c)
 			{
 			  case -1:
 				a2c_Throw(c, A2_NEXPEOF);
-#if 0
 			  case '0':
 			  case '1':
 			  case '2':
 			  case '3':
-				ch = get_num(es, 8, 2);
+				a2_UngetChar(c);
+			  	ch = a2_GetIntNum(c, 8, -3);
 				if(ch < 0)
-					eel_cerror(es, "Illegal octal number!");
+					a2c_Throw(c, A2_BADOCTESCAPE);
 				break;
-				ch += 64 * (ch - '0');
-				break;
-#endif
 			  case 'a':
 				ch = '\a';
 				break;
 			  case 'b':
 				ch = '\b';
 				break;
-			  case 'c':
-				ch = '\0';
-				break;
 			  case 'd':
-			  {
-				double v;
-				a2_GetNum(c, ch, &v, 1);
-				ch = v;
+				ch = a2_GetIntNum(c, 10, -3);
+				if(ch < 0)
+					a2c_Throw(c, A2_BADDECESCAPE);
 				break;
-			  }
 			  case 'f':
 				ch = '\f';
 				break;
@@ -825,13 +870,11 @@ static int a2c_LexString(A2_compiler *c)
 			  case 'v':
 				ch = '\v';
 				break;
-#if 0
 			  case 'x':
-				ch = get_num(es, 16, 2);
+				ch = a2_GetIntNum(c, 16, -2);
 				if(ch < 0)
-					eel_cerror(es, "Illegal hex number!");
+					a2c_Throw(c, A2_BADHEXESCAPE);
 				break;
-#endif
 			  default:
 				a2_LexBufAdd(c, ch);
 				continue;

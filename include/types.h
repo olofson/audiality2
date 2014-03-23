@@ -196,6 +196,9 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_BADREG2,		"Invalid VM register index, second argument")\
   A2_DEFERR(A2_BADIMMARG,	"Immediate argument out of range")\
   A2_DEFERR(A2_BADVARDECL,	"Variable cannot be declared here")\
+  A2_DEFERR(A2_BADOCTESCAPE,	"Bad octal escape format in string literal")\
+  A2_DEFERR(A2_BADDECESCAPE,	"Bad decimal escape format in string literal")\
+  A2_DEFERR(A2_BADHEXESCAPE,	"Bad hex escape format in string literal")\
   \
   A2_DEFERR(A2_CANTEXPORT,	"Cannot export from this scope")\
   A2_DEFERR(A2_CANTINPUT,	"Unit cannot have inputs")\
