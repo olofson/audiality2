@@ -761,5 +761,10 @@ A2_wave *a2_GetWave(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi || (hi->typecode != A2_TWAVE))
 		return NULL;
+#ifdef DEBUG
+	/* Should be impossible, as the wave destructor will never refuse! */
+	if(!hi->refcount)
+		return NULL;
+#endif
 	return (A2_wave *)hi->d.data;
 }

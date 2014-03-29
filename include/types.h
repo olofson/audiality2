@@ -108,6 +108,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_INVALIDHANDLE,	"Invalid handle")\
   A2_DEFERR(A2_FREEHANDLE,	"Handle already returned to the free pool")\
 /* ========================================================= */\
+  A2_DEFERR(A2_DEADHANDLE,	"Released (refcount == 0) handle used by API")\
   A2_DEFERR(A2_END,		"VM program ended normally")\
   A2_DEFERR(A2_OVERLOAD,	"VM overload; too many instructions back-to-back")\
   A2_DEFERR(A2_ILLEGALOP,	"Illegal VM opcode")\

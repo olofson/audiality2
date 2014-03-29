@@ -274,6 +274,8 @@ static A2_errors xi_stream_open(A2_stream *str)
 	RCHM_handleinfo *hi = rchm_Get(&str->state->ss->hm, str->thandle);
 	if(!hi)
 		return A2_INVALIDHANDLE;
+	if(!hi->refcount)
+		return A2_DEADHANDLE;
 	xic = (A2_xinsert_client *)hi->d.data;
 	if(!(xic->flags & A2_XI_STREAM))
 		return A2_NOSTREAMCLIENT;

@@ -189,7 +189,10 @@ A2_handle a2_RootVoice(A2_state *st);
  * General handle operations
  */
 
-/* Return type of object with 'handle', or -1 if 'handle' is invalid. */
+/*
+ * Return type of object with 'handle', or a negated error code if 'handle' is
+ * invalid, or the operation failed for other reasons.
+ */
 A2_otypes a2_TypeOf(A2_state *st, A2_handle handle);
 
 /* Return name string of 'type'. */

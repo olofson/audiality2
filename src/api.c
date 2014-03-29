@@ -82,7 +82,9 @@ A2_otypes a2_TypeOf(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi)
-		return -1;
+		return -A2_INVALIDHANDLE;
+	if(!hi->refcount)
+		return -A2_DEADHANDLE;
 	return (A2_otypes)hi->typecode;
 }
 
@@ -98,6 +100,8 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi;
 	char *sb = st->ss->strbuf;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
+		return NULL;
+	if(!hi->refcount)
 		return NULL;
 	switch((A2_otypes)hi->typecode)
 	{
@@ -160,6 +164,8 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
+	if(!hi->refcount)
+		return NULL;
 	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TBANK:
@@ -184,6 +190,8 @@ int a2_Size(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return -A2_INVALIDHANDLE;
+	if(!hi->refcount)
+		return -A2_DEADHANDLE;
 	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TBANK:
