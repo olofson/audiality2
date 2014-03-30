@@ -224,7 +224,10 @@ int a2_Size(A2_state *st, A2_handle handle)
 	  }
 	  case A2_TSTREAM:
 	  {
-		A2_stream *str = a2_GetStream(st, handle);
+		A2_stream *str;
+		A2_errors res = a2_GetStream(st, handle, &str);
+		if(res)
+			return -res;
 		if(str->Size)
 			return str->Size(str);
 		else

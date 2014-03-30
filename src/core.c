@@ -1467,7 +1467,8 @@ static void a2_ProcessMaster(A2_state *st, unsigned offset, unsigned frames)
 void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 {
 	A2_state *st = (A2_state *)driver->state;
-	A2_voice *rootvoice = a2_GetVoice(st, st->rootvoice);
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, st->rootvoice);
+	A2_voice *rootvoice = (A2_voice *)hi->d.data;
 	unsigned offset = 0;
 	unsigned remain = frames;
 	unsigned t1 = a2_GetTicks();	/* Event timing reference */

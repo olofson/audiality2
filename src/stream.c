@@ -87,9 +87,10 @@ static RCHM_errors a2_StreamDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handl
 
 A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return res;
 	if(str->SetPosition)
 		return str->SetPosition(str, offset);
 	else
@@ -102,9 +103,10 @@ A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset)
 
 unsigned a2_GetPosition(A2_state *st, A2_handle stream)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return -A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return -res;
 	if(str->GetPosition)
 		return str->GetPosition(str);
 	else
@@ -114,9 +116,10 @@ unsigned a2_GetPosition(A2_state *st, A2_handle stream)
 
 int a2_Available(A2_state *st, A2_handle stream)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return -A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return -res;
 	if(str->Available)
 		return str->Available(str);
 	else
@@ -126,9 +129,10 @@ int a2_Available(A2_state *st, A2_handle stream)
 
 int a2_Space(A2_state *st, A2_handle stream)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return -A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return -res;
 	if(str->Space)
 		return str->Space(str);
 	else
@@ -139,9 +143,10 @@ int a2_Space(A2_state *st, A2_handle stream)
 A2_errors a2_Read(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, void *buffer, unsigned size)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return res;
 	if(!str->Read)
 		return A2_NOTIMPLEMENTED;
 	return str->Read(str, fmt, buffer, size);
@@ -151,9 +156,10 @@ A2_errors a2_Read(A2_state *st, A2_handle stream,
 A2_errors a2_Write(A2_state *st, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return res;
 	if(!str->Write)
 		return A2_NOTIMPLEMENTED;
 	return str->Write(str, fmt, data, size);
@@ -162,9 +168,10 @@ A2_errors a2_Write(A2_state *st, A2_handle stream,
 
 A2_errors a2_Flush(A2_state *st, A2_handle stream)
 {
-	A2_stream *str = a2_GetStream(st, stream);
-	if(!str)
-		return A2_WRONGTYPE;
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return res;
 	if(!str->Flush)
 		return A2_OK;
 	return str->Flush(str);
