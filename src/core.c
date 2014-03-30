@@ -459,12 +459,12 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 	for(r = A2_FIXEDREGS; r < v->cregisters; ++r)
 		v->cwrite[r] = NULL;
 	v->cregisters = A2_FIXEDREGS;
-	while(v->events)
-	{
-		A2_event *e = v->events;
-		v->events = e->next;
-		a2_FreeEvent(st, e);
-	}
+	/*
+	 * NOTE: a2_VoiceKill() deals with the voice handle, so we don't need
+	 *       or want a2_FlushEventQueue() to interfere with that!
+	 */
+	if(v->events)
+		a2_FlushEventQueue(st, &v->events, -1);
 	while(v->units)
 	{
 		A2_unit *u = v->units;
