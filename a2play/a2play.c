@@ -203,6 +203,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	  case A2_TSTREAM:
 	  case A2_TDETACHED:
+	  case A2_TNEWVOICE:
 	  case A2_TVOICE:
 	  case A2_TXICLIENT:
 		break;

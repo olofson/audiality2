@@ -48,7 +48,10 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 	res = a2_writemsg(st->fromapi, &am,
 			A2_MSIZE(b.a1) - sizeof(am.b.a1) + sizeof(void *));
 	if(res)
+	{
+		rchm_Free(&st->ss->hm, xic->handle);
 		return -res;
+	}
 	return xic->handle;
 }
 

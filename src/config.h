@@ -27,14 +27,14 @@
 #	include	<stdio.h>
 #	include	<assert.h>
 #	define	DBG(x)		x	/* General debug output */
-#	define	NUMMSGS(x)		/* Message order tracking */
-#	define	MSGTRACK(x)		/* Track origin of messages */
-#	define	EVLEAKTRACK(x)		/* Check for event leaks */
+#	define	NUMMSGS(x)	x	/* Message order tracking */
+#	define	MSGTRACK(x)	x	/* Track origin of messages */
+#	define	EVLEAKTRACK(x)	x	/* Check for event leaks */
 #	define	DUMPMSGS(x)		/* Dump messages from the VM/msg loop */
-#	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
-#	define	DUMPSOURCE(x)	x	/* Dump source lines while compiling */
+#	define	DUMPCODE(x)		/* Enable compiler VM code output */
+#	define	DUMPSOURCE(x)		/* Dump source lines while compiling */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
-#	define	REGDBG(x)	x	/* Register allocation debugging */
+#	define	REGDBG(x)		/* Register allocation debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */

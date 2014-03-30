@@ -275,22 +275,25 @@ A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
 {
 	A2_errors res;
 
-	/* Detach from the list */
-	A2_xinsert_client *c = xic->unit->clients;
-	if(c != xic)
+	if(xic->unit)
 	{
-		while(c->next && (c->next != xic))
-			c = c->next;
-		c->next = c->next->next;
+		/* Detach from the list */
+		A2_xinsert_client *c = xic->unit->clients;
+		if(c != xic)
+		{
+			while(c->next && (c->next != xic))
+				c = c->next;
+			c->next = c->next->next;
+		}
+		else
+			xic->unit->clients = xic->next;
+
+		xi_set_process(&xic->unit->header);
 	}
-	else
-		xic->unit->clients = xic->next;
 
 	/* Notify client that it's being removed */
 	if((res = xic->callback(NULL, 0, 0, xic->userdata)))
 		a2r_Error(st, res, "xinsert client; removal notification");
-
-	xi_set_process(&xic->unit->header);
 
 	/* Destroy entry in a suitable fashion for the engine context */
 	if(st->config->flags & A2_REALTIME)

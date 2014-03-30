@@ -51,6 +51,7 @@ typedef enum A2_otypes
 	A2_TDETACHED,	/* Former realtime handle that has been detached */
 
 	/* Realtime engine managed objects (data pointers not accessible!) */
+	A2_TNEWVOICE,	/* Virtual (not yet instantiated) voice */
 	A2_TVOICE,	/* Playing voice instance */
 } A2_otypes;
 

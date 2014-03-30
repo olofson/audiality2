@@ -1145,6 +1145,7 @@ static int a2c_Lex(A2_compiler *c, int whitenewline)
 		  case A2_TSTRING:	c->l[0].token = TK_STRING;	break;
 		  /* Warning eliminator - still warns if we miss a type! */
 		  case A2_TDETACHED:
+		  case A2_TNEWVOICE:
 		  case A2_TVOICE:
 		  case A2_TSTREAM:
 		  case A2_TXICLIENT:

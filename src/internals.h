@@ -394,6 +394,9 @@ struct A2_stackentry
 
 /*
  * Internal event struct - sent directly to voice event queues
+ *
+ * NOTE: The A2MT_*SUB actions need to be right after the corresponding A2MT_*
+ *       actions! (See a2_VoiceProcessEvents().)
  */
 typedef enum A2_evactions
 {
@@ -742,13 +745,36 @@ static inline void a2_FreeEvent(A2_state *st, A2_event *e)
 	st->eventpool = e;
 }
 
-static inline void a2_SendEvent(A2_voice *v, A2_event *e)
+/*
+ * Get the event queue for the object represented by 'handle'. Note that this
+ * may be a temporary event queue, rather than an actual voice!
+ *
+ * Returns NULL if 'handle' is invalid, or does not refer to something that has
+ * an event queue.
+ */
+static inline A2_event **a2_GetEventQueue(A2_state *st, A2_handle handle)
 {
-	A2_event *pe = v->events;
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
+	if(!hi)
+		return NULL;
+	switch(hi->typecode)
+	{
+	  case A2_TNEWVOICE:
+		return (A2_event **)&hi->d.data;
+	  case A2_TVOICE:
+		return &((A2_voice *)hi->d.data)->events;
+	  default:
+	  	return NULL;
+	}
+}
+
+static inline void a2_SendEvent(A2_event **q, A2_event *e)
+{
+	A2_event *pe = *q;
 	if(!pe || (a2_TSDiff(pe->b.timestamp, e->b.timestamp) > 0))
 	{
 		e->next = pe;
-		v->events = e;
+		*q = e;
 	}
 	else
 	{
@@ -759,6 +785,12 @@ static inline void a2_SendEvent(A2_voice *v, A2_event *e)
 		pe->next = e;
 	}
 }
+
+/*
+ * Flush a queue of rejected events, cleaning up any "limbo" data that the
+ * events may be carrying. 'h' is the voice handle, or -1 if there isn't one.
+ */
+void a2_FlushEventQueue(A2_state *st, A2_event **eq, A2_handle h);
 
 
 /*---------------------------------------------------------
@@ -944,10 +976,10 @@ A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
 		A2_xinsert_client *xic);
 
 /*
- * Remove client from xinsert unit, notifying the client via the callback.
- * Use from engine context only!
+ * Remove client from xinsert unit (if attached), notifying the client via the
+ * callback.
  *
- * NOTE: This Will crash if 'xic' isn't actually in the list!
+ * Use from engine context only!
  */
 A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic);
 

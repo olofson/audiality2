@@ -146,6 +146,11 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	  case A2_TDETACHED:
 		snprintf(sb, A2_TMPSTRINGSIZE, "<detached handle %d>", handle);
 		return sb;
+	  case A2_TNEWVOICE:
+	  {
+		snprintf(sb, A2_TMPSTRINGSIZE, "<new voice>");
+		return sb;
+	  }
 	  case A2_TVOICE:
 	  {
 		A2_voice *v = (A2_voice *)hi->d.data;
@@ -178,6 +183,7 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 	  case A2_TSTREAM:
 	  case A2_TXICLIENT:
 	  case A2_TDETACHED:
+	  case A2_TNEWVOICE:
 	  case A2_TVOICE:
 		return NULL;
 	}
@@ -236,6 +242,7 @@ int a2_Size(A2_state *st, A2_handle handle)
 	  case A2_TUNIT:
 	  case A2_TXICLIENT:
 	  case A2_TDETACHED:
+	  case A2_TNEWVOICE:
 	  case A2_TVOICE:
 		return -A2_NOTIMPLEMENTED;
 	}
@@ -320,241 +327,23 @@ void a2_CloseAPI(A2_state *st)
  * Engine side message pump
  */
 
-static inline void a2r_em_start(A2_state *st, A2_apimessage *am)
+static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am)
 {
 	A2_event *e;
-	A2_voice *tv = a2_GetVoice(st, am->target);
-	if(!(tv))
+	A2_event **eq = a2_GetEventQueue(st, am->target);
+	if(!eq)
 	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_start()[1]");
+		a2r_Error(st, A2_BADVOICE, "a2r_em_forwardevent()[1]");
 		return;
 	}
 	if(!(e = a2_AllocEvent(st)))
 	{
-		a2r_Error(st, A2_OOMEMORY, "a2r_em_start()[2]");
-		return;
-	}
-	e->b.action = am->b.action;
-	/* Adjust late messages, to avoid "bad" timestamps internally! */
-	if(a2_TSDiff(am->b.timestamp, st->now_frames) < 0)
-	{
-#ifdef DEBUG
-		fprintf(stderr, "Audiality 2: API message deliverad "
-				"%f frames late!\n", (st->now_frames -
-				am->b.timestamp) / 256.0f);
-#endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_start()[3]");
-		am->b.timestamp = st->now_frames;
-	}
-	e->b.timestamp = am->b.timestamp;
-	e->b.a1 = am->b.a1;	/* program handle */
-	e->b.a2 = am->b.a2;	/* handle for new voice */
-	if(am->size >= A2_MSIZE(b.argc))
-	{
-		e->b.argc = am->b.argc;
-		memcpy(&e->b.a, &am->b.a, sizeof(int) * am->b.argc);
-	}
-	else
-		e->b.argc = 0;
-	MSGTRACK(e->source = "a2r_em_start()";)
-	a2_SendEvent(tv, e);
-}
-
-static inline void a2r_em_send(A2_state *st, A2_apimessage *am)
-{
-	A2_event *e;
-	A2_voice *tv = a2_GetVoice(st, am->target);
-	if(!(tv))
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_send()[1]");
-		return;
-	}
-	if(!(e = a2_AllocEvent(st)))
-	{
-		a2r_Error(st, A2_OOMEMORY, "a2r_em_send()[2]");
-		return;
-	}
-	e->b.action = am->b.action;
-	if(a2_TSDiff(am->b.timestamp, st->now_frames) < 0)
-	{
-#ifdef DEBUG
-		fprintf(stderr, "Audiality 2: API message deliverad "
-				"%f frames late!\n", (st->now_frames -
-				am->b.timestamp) / 256.0f);
-#endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_send()[3]");
-		am->b.timestamp = st->now_frames;
-	}
-	e->b.timestamp = am->b.timestamp;
-	e->b.a1 = am->b.a1;	/* entry point index */
-	if(am->size >= A2_MSIZE(b.argc))
-	{
-		e->b.argc = am->b.argc;
-		memcpy(&e->b.a, &am->b.a, sizeof(int) * am->b.argc);
-	}
-	else
-		e->b.argc = 0;
-	MSGTRACK(e->source = "a2r_em_send()";)
-	a2_SendEvent(tv, e);
-}
-
-static inline void a2r_em_sendsub(A2_state *st, A2_apimessage *am)
-{
-	A2_voice *v = a2_GetVoice(st, am->target);
-	if(!v)
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_sendsub()[1]");
-		return;
-	}
-	if(a2_TSDiff(am->b.timestamp, st->now_frames) < 0)
-	{
-#ifdef DEBUG
-		fprintf(stderr, "Audiality 2: API message deliverad "
-				"%f frames late!\n", (st->now_frames -
-				am->b.timestamp) / 256.0f);
-#endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_sendsub()[2]");
-		am->b.timestamp = st->now_frames;
-	}
-	for(v = v->sub; v; v = v->next)
-	{
-		A2_event *e = a2_AllocEvent(st);
-		if(!e)
-		{
-			a2r_Error(st, A2_OOMEMORY, "a2r_em_sendsub()[3]");
-			return;
-		}
-		e->b.action = am->b.action;
-		e->b.timestamp = am->b.timestamp;
-		e->b.a1 = am->b.a1;	/* entry point index */
-		if(am->size >= A2_MSIZE(b.argc))
-		{
-			e->b.argc = am->b.argc;
-			memcpy(&e->b.a, &am->b.a, sizeof(int) * am->b.argc);
-		}
-		else
-			e->b.argc = 0;
-		MSGTRACK(e->source = "a2r_em_sendsub()";)
-		a2_SendEvent(v, e);
-	}
-}
-
-static inline void a2r_em_release(A2_state *st, A2_apimessage *am)
-{
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
-	if(!hi)
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_release()[1]");
-		return;
-	}
-#if 0
-	switch((A2_otypes)hi->typecode)
-	{
-	  case A2_TVOICE:
-		/*
-		 * Tell the voice (if any!?) that it's been detached.
-		 * NOTE: The voice handle is already in am->target!
-		 */
-		if(hi->d.data)
-		{
-			A2_voice *v = (A2_voice *)hi->d.data;
-			v->handle = -1;
-			a2_VoiceDetach(v);
-		}
-		break;
-	  case A2_TXICLIENT:
-	  	/* Get the xinsert client handle */
-		am->target = ;
-		break;
-	  default:
-		a2r_Error(st, A2_WRONGTYPE, "a2r_em_release()[2]");
-		return;
-	}
-#else
-	if(hi->typecode != A2_TVOICE)
-	{
-		a2r_Error(st, A2_WRONGTYPE, "a2r_em_release()[2]");
-		return;
-	}
-	/*
-	 * Tell the voice (if any!?) that it's been detached.
-	 * NOTE: The voice handle is already in am->target!
-	 */
-	if(hi->d.data)
-	{
-		A2_voice *v = (A2_voice *)hi->d.data;
-		v->handle = -1;
-		a2_VoiceDetach(v);
-	}
-#endif
-	/* Respond back to the API: "Clear to free the handle!" */
-	am->b.action = A2MT_DETACH;
-	a2_writemsg(st->toapi, am, A2_MSIZE(b.action));
-}
-
-static inline void a2r_em_kill(A2_state *st, A2_apimessage *am)
-{
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
-	if(!hi)
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_kill()[1]");
-		return;
-	}
-	if(hi->typecode != A2_TVOICE)
-	{
-		a2r_Error(st, A2_WRONGTYPE, "a2r_em_kill()[2]");
-		return;
-	}
-	if(!hi->d.data)
-	{
-		a2r_Error(st, A2_NOOBJECT, "a2r_em_kill()[3]");
-		return;
-	}
-	a2_VoiceKill(st, (A2_voice *)hi->d.data);
-	am->b.action = A2MT_DETACH;
-	a2_writemsg(st->toapi, am, A2_MSIZE(b.action));
-}
-
-static inline void a2r_em_killsub(A2_state *st, A2_apimessage *am)
-{
-	A2_voice *v, *sv;
-	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, am->target);
-	if(!hi)
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_killsub()[1]");
-		return;
-	}
-	if(hi->typecode != A2_TVOICE)
-	{
-		a2r_Error(st, A2_WRONGTYPE, "a2r_em_killsub()[2]");
-		return;
-	}
-	if(!hi->d.data)
-	{
-		a2r_Error(st, A2_NOOBJECT, "a2r_em_killsub()[3]");
-		return;
-	}
-	v = (A2_voice *)hi->d.data;
-	for(sv = v->sub; sv; sv = sv->next)
-		a2_VoiceKill(st, sv);
-	memset(v->sv, 0, sizeof(v->sv));
-}
-
-static inline void a2r_em_xic(A2_state *st, A2_apimessage *am)
-{
-	A2_event *e;
-	A2_voice *tv = a2_GetVoice(st, am->target);
-	if(!tv)
-	{
-		a2r_Error(st, A2_BADVOICE, "a2r_em_xic()[1]");
-		return;
-	}
-	if(!(e = a2_AllocEvent(st)))
-	{
-		a2r_Error(st, A2_OOMEMORY, "a2r_em_xic()[2]");
+		a2r_Error(st, A2_OOMEMORY, "a2r_em_forwardevent()[2]");
 		return;
 	}
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
+	if(am->size < A2_MSIZE(b.argc))
+		e->b.argc = 0;
 	if(a2_TSDiff(e->b.timestamp, st->now_frames) < 0)
 	{
 #ifdef DEBUG
@@ -562,11 +351,11 @@ static inline void a2r_em_xic(A2_state *st, A2_apimessage *am)
 				"%f frames late!\n", (st->now_frames -
 				e->b.timestamp) / 256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_xic()[3]");
+		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_forwardevent()[3]");
 		e->b.timestamp = st->now_frames;
 	}
-	MSGTRACK(e->source = "a2r_em_xic()";)
-	a2_SendEvent(tv, e);
+	MSGTRACK(e->source = "a2r_em_forwardevent()";)
+	a2_SendEvent(eq, e);
 }
 
 static inline void a2r_em_eocevent(A2_state *st, A2_apimessage *am)
@@ -608,26 +397,14 @@ void a2r_PumpEngineMessages(A2_state *st)
 		{
 		  case A2MT_PLAY:
 		  case A2MT_START:
-			a2r_em_start(st, &am);
-			break;
 		  case A2MT_SEND:
-			a2r_em_send(st, &am);
-			break;
 		  case A2MT_SENDSUB:
-			a2r_em_sendsub(st, &am);
-			break;
-		  case A2MT_RELEASE:
-			a2r_em_release(st, &am);
-			break;
 		  case A2MT_KILL:
-			a2r_em_kill(st, &am);
-			break;
 		  case A2MT_KILLSUB:
-			a2r_em_killsub(st, &am);
-			break;
 		  case A2MT_ADDXIC:
 		  case A2MT_REMOVEXIC:
-			a2r_em_xic(st, &am);
+		  case A2MT_RELEASE:
+			a2r_em_forwardevent(st, &am);
 			break;
 		  case A2MT_WAHP:
 			a2r_em_eocevent(st, &am);
@@ -648,6 +425,11 @@ static inline void a2_detach_or_free_handle(A2_state *st, A2_handle h)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, h);
 	if(hi)
 	{
+#ifdef DEBUG
+		if(hi->typecode == A2_TNEWVOICE)
+			fprintf(stderr, "Audiality 2: Incorrect detachment of "
+					"A2_TNEWVOICE handle!\n");
+#endif
 		if(hi->refcount)
 			hi->typecode = A2_TDETACHED;
 		else
@@ -689,8 +471,15 @@ void a2_PumpAPIMessages(A2_state *st)
 		  case A2MT_XICREMOVED:
 		  {
 			A2_xinsert_client *c = *(A2_xinsert_client **)&am.b.a1;
+#if 0
+			/*
+			 * Can't be right! The XIC is normally owned by the
+			 * stream only, so the stream should already be gone
+			 * and cleaned up at this point!
+			 */
 			if(c->stream)
 				a2_detach_or_free_handle(st, c->stream);
+#endif
 			a2_detach_or_free_handle(st, c->handle);
 			if(c->fifo)
 				sfifo_Close(c->fifo);
@@ -707,10 +496,9 @@ void a2_PumpAPIMessages(A2_state *st)
 		  case A2MT_WAHP:
 		  {
 			A2_wahp_entry *we = *((A2_wahp_entry **)&am.b.a1);
-			--we->count;
-			if(!we->count)
+			if(!--we->count)
 			{
-				/* We're last. Let's make the callback! */
+				/* Last response! Let's make the callback. */
 				we->callback(we->state, we->userdata);
 				free(we);
 			}
@@ -781,13 +569,26 @@ A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
 	we->userdata = userdata;
 	we->count = 0;
 	for(st = pstate; st; st = st->next)
-		++we->count;
-	am.b.action = A2MT_WAHP;
-	/* NOTE: Overwrites a2 on platforms with 64 bit pointers! */
-	*d = we;
-	for(st = pstate; st; st = st->next)
-		a2_writemsg(st->toapi, &am, A2_MSIZE(b.a1) - sizeof(am.b.a1) +
-				sizeof(void *));
+		if(st->toapi)
+			++we->count;
+	if(we->count)
+	{
+		am.b.action = A2MT_WAHP;
+		/* NOTE: Overwrites a2 on platforms with 64 bit pointers! */
+		*d = we;
+		for(st = pstate; st; st = st->next)
+			if(st->toapi)
+				a2_writemsg(st->toapi, &am,
+						A2_MSIZE(b.a1) -
+						sizeof(am.b.a1) +
+						sizeof(void *));
+	}
+	else
+	{
+		/* Emergency: No functional engine states present! */
+		we->callback(we->state, we->userdata);
+		free(we);
+	}
 	return A2_OK;
 }
 
@@ -824,7 +625,6 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
  * Send a message to the API context regarding handle 'h', telling it to either
  * free it immediately (refcount == 0), or to change its type to A2_TDETACHED,
  * so it can be released later.
-FIXME: This is only used in one place...
  */
 void a2r_DetachHandle(A2_state *st, A2_handle h)
 {
@@ -857,20 +657,22 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 		RCHM_handleinfo *hi = rchm_Locate(&st->ss->hm, handle);
 		switch((A2_otypes)hi->typecode)
 		{
+		  case A2_TNEWVOICE:
 		  case A2_TVOICE:
-		  {
-			A2_apimessage am;
-			am.target = handle;
-			am.b.action = A2MT_RELEASE;
-			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
-			break;
-		  }
 		  case A2_TXICLIENT:
 		  {
 			A2_apimessage am;
+			if(!(st->config->flags & A2_TIMESTAMP))
+				a2_Now(st);
+			else
+				a2_poll_api(st);
+			am.b.timestamp = st->timestamp;
 			am.target = handle;
-			am.b.action = A2MT_REMOVEXIC;
-			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.action));
+			if(hi->typecode == A2_TXICLIENT)
+				am.b.action = A2MT_REMOVEXIC;
+			else
+				am.b.action = A2MT_RELEASE;
+			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
 			break;
 		  }
 		  case A2_TBANK:
@@ -957,7 +759,7 @@ A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
 	am.b.action = A2MT_START;
 	am.b.timestamp = st->timestamp;
 	am.b.a1 = program;
-	if((am.b.a2 = rchm_New(&st->ss->hm, NULL, A2_TVOICE)) < 0)
+	if((am.b.a2 = rchm_New(&st->ss->hm, NULL, A2_TNEWVOICE)) < 0)
 		return am.b.a2;
 	if((res = a2_writemsgargs(st->fromapi, &am, argc, argv)))
 		return res;
@@ -1065,7 +867,10 @@ static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle
 
 A2_errors a2_RegisterAPITypes(A2_state *st)
 {
-	A2_errors res = a2_RegisterType(st, A2_TVOICE, "voice",
+	A2_errors res = a2_RegisterType(st, A2_TNEWVOICE, "newvoice",
+			a2_VoiceDestructor, NULL);
+	if(!res)
+		res = a2_RegisterType(st, A2_TVOICE, "voice",
 			a2_VoiceDestructor, NULL);
 	if(!res)
 		res = a2_RegisterType(st, A2_TDETACHED, "detached",

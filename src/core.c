@@ -21,11 +21,73 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
 #include "internals.h"
 #include "dsp.h"
 #include "inline.h"
 #include "xinsert.h"
+
+
+/*---------------------------------------------------------
+	Event handling
+---------------------------------------------------------*/
+
+/*
+ * Discard events (sort of) without processing them. This is to make sure we
+ * don't leak objects when killing voices prematurely, including when closing
+ * the engine.
+ */
+static inline void a2_flush_event(A2_state *st, A2_event *e, A2_handle h)
+{
+	switch(e->b.action)
+	{
+	  case A2MT_ADDXIC:
+	  {
+	  	/*
+	  	 * The logic here is that we discard any incoming XICs right
+	  	 * here, whether or not this queue belongs to a real voice or a
+	  	 * NEWVOICE. (A handle serving as a temporary event queue.)
+	  	 * A2MT_REMOVEXIC events can just be ignored, since if there's
+	  	 * no voice, any XICs would already have been discarded, and if
+	  	 * there is a voice, the xinsert unit will take care of XICs in
+	  	 * Deinitialize().
+	  	 */
+		A2_xinsert_client **xic = (A2_xinsert_client **)&e->b.a1;
+		if(st->config->flags & A2_REALTIME)
+		{
+			A2_apimessage am;
+			A2_xinsert_client **d = (A2_xinsert_client **)&am.b.a1;
+			am.b.action = A2MT_XICREMOVED;
+			am.b.timestamp = st->now_ticks;
+			/* NOTE: Also uses a2 on 64 bit platforms! */
+			*d = *xic;
+			a2_writemsg(st->toapi, &am,
+					A2_MSIZE(b.a1) + sizeof(void *));
+		}
+		else
+			free(xic);
+		break;
+	  }
+	  case A2MT_RELEASE:
+	  	if(h >= 0)
+			a2r_DetachHandle(st, h);
+		break;
+	  default:
+		break;
+	}
+}
+
+void a2_FlushEventQueue(A2_state *st, A2_event **eq, A2_handle h)
+{
+	while(*eq)
+	{
+		A2_event *e = *eq;
+		*eq = e->next;
+		a2_flush_event(st, e, h);
+		a2_FreeEvent(st, e);
+	}
+}
 
 
 /*---------------------------------------------------------
@@ -284,9 +346,9 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 }
 
 
-/*============================================================================
+/*===========================================================================
  * WARNING: These are tuned for minimal init/cleanup overhead! Be careful...
- *============================================================================*/
+ *===========================================================================*/
 
 A2_voice *a2_VoiceAlloc(A2_state *st)
 {
@@ -437,9 +499,9 @@ void a2_VoiceKill(A2_state *st, A2_voice *v)
 }
 
 
-/*============================================================================
+/*===========================================================================
  * /WARNING
- *============================================================================*/
+ *===========================================================================*/
 
 
 /*
@@ -512,7 +574,7 @@ static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
 	e->b.a1 = ep;
 	e->b.argc = argc;
 	memcpy(e->b.a, argv, argc * sizeof(int));
-	a2_SendEvent(v, e);
+	a2_SendEvent(&v->events, e);
 	return A2_OK;
 }
 
@@ -558,13 +620,9 @@ DUMPMSGS(static void printargs(int argc, int *argv)
 			fprintf(stderr, "%f", argv[i] / 65536.0f);
 })
 
-/*
- * Start a new voice as specified by 'eb' under 'parent', and if specified,
- * attach it to 'handle', which would typically by pointed at the d.data
- * pointer in the RCHM_handleinfo struct.
- */
-static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
-		A2_eventbody *eb, A2_voice **handle)
+/* Start a detached new voice as specified by 'eb' under 'parent'. */
+static inline A2_errors a2_event_play(A2_state *st, A2_voice *parent,
+		A2_eventbody *eb)
 {
 	A2_voice *v;
 	A2_program *p = a2_GetProgram(st, eb->a1);
@@ -573,15 +631,69 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 	if(!(v = a2_VoiceNew(st, parent)))
 		return parent->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
-	if(handle)
-	{
-		*handle = v;
-		v->flags = A2_ATTACHED;
-	}
-	else
-		v->flags = 0;
+	v->flags = 0;
 	v->s.timer = eb->timestamp - st->now_fragstart;
 	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
+}
+
+/*
+ * Start a new voice as specified by 'eb' under 'parent', and if specified,
+ * attach it to 'handle', which would typically by pointed at the d.data
+ * pointer in the RCHM_handleinfo struct.
+ */
+static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
+		A2_eventbody *eb, RCHM_handleinfo *hi)
+{
+	A2_voice *v;
+	A2_program *p = a2_GetProgram(st, eb->a1);
+	if(!p)
+		return A2_BADPROGRAM;
+	if(!(v = a2_VoiceNew(st, parent)))
+		return parent->nestlevel < A2_NESTLIMIT ?
+				A2_VOICEALLOC : A2_VOICENEST;
+	/*
+	 * At this point, the handle type is A2_TNEWVOICE! The handle itself
+	 * may have events enqueued, so we need to grab those here.
+	 */
+	v->events = (A2_event *)hi->d.data;
+	hi->d.data = (void *)v;
+	hi->typecode = A2_TVOICE;
+	v->flags = A2_ATTACHED;
+	v->s.timer = eb->timestamp - st->now_fragstart;
+	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
+}
+
+/*
+ * Forward event 'e' to the first subvoice of 'parent', then send copies of 'e'
+ * to any further subvoices.
+ */
+static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
+		A2_event *e)
+{
+	int esize = A2_MSIZE(b.a2) - A2_MSIZE(b) + sizeof(int) * e->b.argc;
+	A2_voice *sv = parent->sub;
+#ifdef DEBUG
+	if(!sv)
+	{
+		fprintf(stderr, "a2_event_subforward() called with no "
+				" subvoices!\n");
+		return;
+	}
+#endif
+	a2_SendEvent(&sv->events, e);
+	while(sv->next)
+	{
+		A2_event *ne = a2_AllocEvent(st);
+		if(!ne)
+		{
+			a2r_Error(st, A2_OOMEMORY, "a2_event_subforward()");
+			return;
+		}
+		sv = sv->next;
+		memcpy(&ne->b, &e->b, esize);
+		MSGTRACK(ne->source = "a2_event_subforward()";)
+		a2_SendEvent(&sv->events, ne);
+	}
 }
 
 /*
@@ -590,8 +702,6 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
  *	* Time/audio needs to advance. (Returns A2_END)
  *	* There are no more events in the queue. (Returns A2_END)
  *	* There is an error. (Returns an error code)
- *
-TODO: Forward events where applicable, to save a realloc + copy.
  */
 static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 {
@@ -623,17 +733,31 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 				printargs(e->b.argc, e->b.a);
 				fprintf(stderr, ")\n");
 			)
-			a2_event_start(st, v, &e->b, NULL);
+			if((res = a2_event_play(st, v, &e->b)))
+				a2r_Error(st, res, "A2MT_PLAY");
 			break;
 		  case A2MT_START:
 		  {
 			RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, e->b.a2);
+#ifdef DEBUG
+			if(!hi)
+			{
+				a2r_Error(st, A2_BADVOICE, "A2MT_START[1]");
+				break;
+			}
+#endif
 			DUMPMSGS(
 				fprintf(stderr, "START(");
 				printargs(e->b.argc, e->b.a);
 				fprintf(stderr, ")\n");
 			)
-			a2_event_start(st, v, &e->b, (A2_voice **)(&hi->d.data));
+			if((res = a2_event_start(st, v, &e->b, hi)))
+			{
+				a2r_Error(st, res, "A2MT_START[2]");
+				a2_FlushEventQueue(st,
+						(A2_event **)&hi->d.data, -1);
+				a2r_DetachHandle(st, e->b.a2);
+			}
 			break;
 		  }
 		  case A2MT_SEND:
@@ -650,7 +774,8 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 						"a2_VoiceProcessEvents()[1]");
 				break;
 			}
-			if((res = a2_VoiceCall(st, v, ep, e->b.argc, e->b.a, 1)))
+			if((res = a2_VoiceCall(st, v, ep, e->b.argc, e->b.a,
+					1)))
 			{
 				a2r_Error(st, res, "a2_VoiceProcessEvents()[2]");
 				break;
@@ -660,9 +785,39 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			a2_FreeEvent(st, e);
 			return res;	/* Spin the VM to process the message! */
 		  }
+		  case A2MT_SENDSUB:
+		  case A2MT_KILLSUB:
+			DUMPMSGS(
+				if(e->b.action == A2MT_SENDSUB)
+				{
+					fprintf(stderr, "SENDSUB(%u: ",
+							e->b.a1);
+					printargs(e->b.argc, e->b.a);
+					fprintf(stderr, ")\n");
+				}
+				else
+					fprintf(stderr, "KILLSUB\n");
+			)
+		  	if(v->sub)
+		  	{
+				--e->b.action;	/* Turn into non-SUB event! */
+				v->events = e->next;
+				a2_event_subforward(st, v, e);
+				continue;	/* The event is reused! */
+		  	}
+			break;
+		  case A2MT_KILL:
+			DUMPMSGS(fprintf(stderr, "KILL\n");)
+			/*
+			 * This will allow audio processing to finish, and then
+			 * a2_VoiceVMProcess() will have the voice freed.
+			 */
+			a2_VoiceKill(st, v);
+			return A2_END;
 		  case A2MT_ADDXIC:
 		  {
 			void **d = (void **)&e->b.a1;
+			DUMPMSGS(fprintf(stderr, "ADDXIC\n");)
 			if((res = a2_XinsertAddClient(st, v, *d)))
 				a2r_Error(st, res, "a2_VoiceProcessEvents()[3]");
 			break;
@@ -670,10 +825,17 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		  case A2MT_REMOVEXIC:
 		  {
 			void **d = (void **)&e->b.a1;
+			DUMPMSGS(fprintf(stderr, "REMOVEXIC\n");)
 			if((res = a2_XinsertRemoveClient(st, *d)))
 				a2r_Error(st, res, "a2_VoiceProcessEvents()[4]");
 			break;
 		  }
+		  case A2MT_RELEASE:
+			DUMPMSGS(fprintf(stderr, "RELEASE\n");)
+			a2r_DetachHandle(st, v->handle);
+			v->handle = -1;
+			a2_VoiceDetach(v);
+			break;
 		}
 		v->events = e->next;
 		a2_FreeEvent(st, e);
