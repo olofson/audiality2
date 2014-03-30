@@ -240,7 +240,7 @@ A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return A2_DEADHANDLE;
 	switch(hi->typecode)
 	{
@@ -273,7 +273,7 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return A2_DEADHANDLE;
 	if(!name)
 		if(!(name = a2_Name(st, handle)))
@@ -305,7 +305,7 @@ A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
 		return -A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return -A2_DEADHANDLE;
 	switch(hi->typecode)
 	{
@@ -332,7 +332,7 @@ A2_handle a2_GetExport(A2_state *st, A2_handle node, unsigned i)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
 		return -A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return -A2_DEADHANDLE;
 	switch(hi->typecode)
 	{
@@ -354,7 +354,7 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
 		return NULL;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	switch(hi->typecode)
 	{

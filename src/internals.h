@@ -569,7 +569,9 @@ A2_errors a2_RegisterBankTypes(A2_state *st);
 static inline A2_bank *a2_GetBank(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi || (hi->typecode != A2_TBANK) || !hi->refcount)
+	if(!hi || (hi->typecode != A2_TBANK))
+		return NULL;
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	return (A2_bank *)hi->d.data;
 }
@@ -577,7 +579,9 @@ static inline A2_bank *a2_GetBank(A2_state *st, A2_handle handle)
 static inline A2_program *a2_GetProgram(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi || (hi->typecode != A2_TPROGRAM) || !hi->refcount)
+	if(!hi || (hi->typecode != A2_TPROGRAM))
+		return NULL;
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	return (A2_program *)hi->d.data;
 }
@@ -585,7 +589,9 @@ static inline A2_program *a2_GetProgram(A2_state *st, A2_handle handle)
 static inline A2_unitdesc *a2_GetUnit(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi || (hi->typecode != A2_TUNIT) || !hi->refcount)
+	if(!hi || (hi->typecode != A2_TUNIT))
+		return NULL;
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	return (A2_unitdesc *)hi->d.data;
 }
@@ -598,7 +604,7 @@ static inline A2_errors a2_GetStream(A2_state *st, A2_handle handle,
 		return A2_INVALIDHANDLE;
 	if(hi->typecode != A2_TSTREAM)
 		return A2_WRONGTYPE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return A2_DEADHANDLE;
 	*sp = (A2_stream *)hi->d.data;
 	return A2_OK;

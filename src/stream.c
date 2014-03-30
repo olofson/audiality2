@@ -35,8 +35,7 @@ A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi)
 		return -A2_INVALIDHANDLE;
-	/* Not asynchronous, but can be locked, so this can still happen... */
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return -A2_DEADHANDLE;
 	ti = (A2_typeinfo *)rchm_TypeUserdata(&st->ss->hm, hi->typecode);
 #ifdef DEBUG

@@ -730,6 +730,8 @@ static RCHM_errors a2_wave_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle
 	int i;
 	A2_wave *w = (A2_wave *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
+	if(hi->userbits & A2_LOCKED)
+		return RCHM_REFUSE;
 	switch(w->type)
 	{
 	  case A2_WOFF:
@@ -763,7 +765,7 @@ A2_wave *a2_GetWave(A2_state *st, A2_handle handle)
 		return NULL;
 #ifdef DEBUG
 	/* Should be impossible, as the wave destructor will never refuse! */
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 #endif
 	return (A2_wave *)hi->d.data;

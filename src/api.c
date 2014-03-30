@@ -83,7 +83,7 @@ A2_otypes a2_TypeOf(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi)
 		return -A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return -A2_DEADHANDLE;
 	return (A2_otypes)hi->typecode;
 }
@@ -101,7 +101,7 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	char *sb = st->ss->strbuf;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	switch((A2_otypes)hi->typecode)
 	{
@@ -164,7 +164,7 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return NULL;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return NULL;
 	switch((A2_otypes)hi->typecode)
 	{
@@ -190,7 +190,7 @@ int a2_Size(A2_state *st, A2_handle handle)
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, handle)))
 		return -A2_INVALIDHANDLE;
-	if(!hi->refcount)
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return -A2_DEADHANDLE;
 	switch((A2_otypes)hi->typecode)
 	{
@@ -1053,6 +1053,10 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice)
 	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
 }
 
+
+/*---------------------------------------------------------
+	Handle types for API objects
+---------------------------------------------------------*/
 
 static RCHM_errors a2_VoiceDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
