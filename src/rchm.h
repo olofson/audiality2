@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------.
         rchm.h - Reference Counting Handle Manager 0.3                        |
  .----------------------------------------------------------------------------'
- | Copyright 2012-2013 David Olofson <david@olofson.net>
+ | Copyright 2012-2014 David Olofson <david@olofson.net>
  |
  | This software is provided 'as-is', without any express or implied warranty.
  | In no event will the authors be held liable for any damages arising from the
@@ -220,7 +220,7 @@ static inline RCHM_handle rchm_NewEx(RCHM_manager *m, void *data,
  */
 static inline RCHM_handle rchm_New(RCHM_manager *m, void *d, RCHM_typecode tc)
 {
-	return rchm_NewEx(m, d, tc, 0, 0);
+	return rchm_NewEx(m, d, tc, 0, 1);
 }
 
 
