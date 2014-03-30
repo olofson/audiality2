@@ -1540,10 +1540,14 @@ static void a2_kill_subvoices_using_program(A2_state *st, A2_voice *v,
 {
 	A2_voice *sv;
 	for(sv = v->sub; sv; sv = sv->next)
-		if(sv)
+		if(sv->program == p)
 		{
 			int i;
 			a2_VoiceKill(st, sv);
+			/*
+			 * Since we may be killing voices started by scripts,
+			 * we need to make sure those are detached properly!
+			 */
 			for(i = 0; i < A2_REGISTERS; ++i)
 				if(v->sv[i] == sv)
 				{
@@ -1557,21 +1561,20 @@ static void a2_kill_subvoices_using_program(A2_state *st, A2_voice *v,
 
 void a2_KillVoicesUsingProgram(A2_state *st, A2_handle program)
 {
-	A2_program *p = a2_GetProgram(st, program);
-	if(!p)
+	/* Can't use a2_GetProgram() because we may see zero refcounts here! */
+	A2_program *p;
+	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, program);
+	if(!hi || (hi->typecode != A2_TPROGRAM))
 		return;
+	p = (A2_program *)hi->d.data;
 	if(st->parent)
 		st = st->parent;
 	for( ; st; st = st->next)
 	{
-		RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, st->rootvoice);
-		st->audio->Lock(st->audio);
+		hi = rchm_Get(&st->ss->hm, st->rootvoice);
 		if(!hi || (hi->typecode != A2_TVOICE) || (!hi->d.data))
-		{
-			/* Wut? Root voice died...? */
-			st->audio->Unlock(st->audio);
-			continue;
-		}
+			continue;	/* Wut? Root voice died...? */
+		st->audio->Lock(st->audio);
 		a2_kill_subvoices_using_program(st, (A2_voice *)hi->d.data, p);
 		st->audio->Unlock(st->audio);
 	}
