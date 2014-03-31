@@ -705,14 +705,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 
 static void a2_free_wave_cb(A2_state *st, void *userdata)
 {
-/*
- * FIXME: For some reason, it's not sufficient to wait for one process cycle
- * of all states. There can still be voices that haven't processed, and thus,
- * we occasionally get a segfault after freeing waves.
- */
-#if 0
 	free(userdata);
-#endif
 }
 
 /* Stop any oscillators using 'w', and ensure that 'w' is freed eventually. */

@@ -569,7 +569,7 @@ A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
 	we->userdata = userdata;
 	we->count = 0;
 	for(st = pstate; st; st = st->next)
-		if(st->toapi)
+		if(st->fromapi)
 			++we->count;
 	if(we->count)
 	{
@@ -577,8 +577,8 @@ A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
 		/* NOTE: Overwrites a2 on platforms with 64 bit pointers! */
 		*d = we;
 		for(st = pstate; st; st = st->next)
-			if(st->toapi)
-				a2_writemsg(st->toapi, &am,
+			if(st->fromapi)
+				a2_writemsg(st->fromapi, &am,
 						A2_MSIZE(b.a1) -
 						sizeof(am.b.a1) +
 						sizeof(void *));
