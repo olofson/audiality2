@@ -471,16 +471,9 @@ void a2_PumpAPIMessages(A2_state *st)
 		  case A2MT_XICREMOVED:
 		  {
 			A2_xinsert_client *c = *(A2_xinsert_client **)&am.b.a1;
-#if 0
-			/*
-			 * Can't be right! The XIC is normally owned by the
-			 * stream only, so the stream should already be gone
-			 * and cleaned up at this point!
-			 */
-			if(c->stream)
-				a2_detach_or_free_handle(st, c->stream);
-#endif
 			a2_detach_or_free_handle(st, c->handle);
+			if(c->stream)
+				a2_DetachStream(st, c->stream);
 			if(c->fifo)
 				sfifo_Close(c->fifo);
 		  	free(c);

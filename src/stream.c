@@ -28,7 +28,7 @@
 A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
 		int channel, int size, unsigned flags)
 {
-	A2_handle stream;
+	A2_handle h;
 	A2_errors res;
 	A2_stream *str;
 	A2_typeinfo *ti;
@@ -46,25 +46,25 @@ A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
 		return -A2_NOTIMPLEMENTED;
 	if(!(str = (A2_stream *)calloc(1, sizeof(A2_stream))))
 		return -A2_OOMEMORY;
-	if((stream = rchm_NewEx(&st->ss->hm, str, A2_TSTREAM, flags, 1)) < 0)
+	if((h = rchm_NewEx(&st->ss->hm, str, A2_TSTREAM, flags, 1)) < 0)
 	{
 		free(str);
-		return stream;
+		return h;
 	}
 	str->state = st;
 	str->channel = channel;
 	str->size = size;
 	str->flags = flags;
-	str->thandle = handle;
-	str->tobject = hi->d.data;
-	if((res = ti->OpenStream(str)))
+	str->targetobject = hi->d.data;
+	str->targethandle = handle;
+	if((res = ti->OpenStream(str, h)))
 	{
-		rchm_Free(&st->ss->hm, stream);
+		rchm_Free(&st->ss->hm, h);
 		free(str);
 		return res;
 	}
-	rchm_Retain(&st->ss->hm, handle);
-	return stream;
+	rchm_Retain(&st->ss->hm, str->targethandle);
+	return h;
 }
 
 
@@ -78,7 +78,7 @@ static RCHM_errors a2_StreamDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handl
 		res = str->Close(str);
 	else if(str->Flush)
 		res = str->Flush(str);
-	rchm_Release(&((A2_typeinfo *)ti)->state->ss->hm, str->thandle);
+	rchm_Release(&((A2_typeinfo *)ti)->state->ss->hm, str->targethandle);
 	free(str);
 	return res;
 }
@@ -181,4 +181,53 @@ A2_errors a2_RegisterStreamTypes(A2_state *st)
 {
 	return a2_RegisterType(st, A2_TSTREAM, "stream",
 			a2_StreamDestructor, NULL);
+}
+
+
+static A2_errors closed_Read(A2_stream *str,
+		A2_sampleformats fmt, void *buffer, unsigned size)
+{
+	return A2_STREAMCLOSED;
+}
+
+static A2_errors closed_Write(A2_stream *str,
+		A2_sampleformats fmt, const void *data, unsigned size)
+{
+	return A2_STREAMCLOSED;
+}
+
+static A2_errors closed_SetPosition(A2_stream *str, unsigned offset)
+{
+	return A2_STREAMCLOSED;
+}
+
+static unsigned closed_GetPosition(A2_stream *str)
+{
+	return 0;
+}
+
+static int closed_Size(A2_stream *str)
+{
+	return -A2_STREAMCLOSED;
+}
+
+static A2_errors closed_Flush(A2_stream *str)
+{
+	return A2_STREAMCLOSED;
+}
+
+A2_errors a2_DetachStream(A2_state *st, A2_handle stream)
+{
+	A2_stream *str;
+	A2_errors res = a2_GetStream(st, stream, &str);
+	if(res)
+		return res;
+	str->Read = closed_Read;
+	str->Write = closed_Write;
+	str->SetPosition = closed_SetPosition;
+	str->GetPosition = closed_GetPosition;
+	str->Size = str->Available = str->Space = closed_Size;
+	str->Flush = closed_Flush;
+	str->Close = NULL;
+	return A2_OK;
 }

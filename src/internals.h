@@ -230,8 +230,8 @@ struct A2_stream
 {
 	A2_state	*state;		/* State this stream belongs to */
 	void		*streamdata;	/* Stream implementation data */
-	void		*tobject;	/* Target object of this stream */
-	A2_handle	thandle;	/* Target object handle */
+	void		*targetobject;	/* Target object of this stream */
+	A2_handle	targethandle;	/* Target object handle */
 	int		channel;	/* (from a2_OpenStream()) */
 	int		size;		/* (from a2_OpenStream()) */
 	unsigned	flags;		/* Stream init and state flags */
@@ -283,9 +283,15 @@ struct A2_stream
 	A2_errors (*Close)(A2_stream *str);
 };
 
-typedef A2_errors (*A2_stropen_cb)(A2_stream *str);
+typedef A2_errors (*A2_stropen_cb)(A2_stream *str, A2_handle h);
 
 A2_errors a2_RegisterStreamTypes(A2_state *st);
+
+/*
+ * Force detach the stream. Further operations will fail, returning
+ * A2_STREAMCLOSED where applicable.
+ */
+A2_errors a2_DetachStream(A2_state *st, A2_handle stream);
 
 
 /*---------------------------------------------------------

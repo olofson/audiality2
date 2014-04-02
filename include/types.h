@@ -137,6 +137,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_WRITE,		"Error writing file or stream")\
   A2_DEFERR(A2_READONLY,	"Object is read-only")\
   A2_DEFERR(A2_WRITEONLY,	"Object is write-only")\
+  A2_DEFERR(A2_STREAMCLOSED,	"Stream closed by the other party")\
   A2_DEFERR(A2_WRONGTYPE,	"Wrong type of data or object")\
   A2_DEFERR(A2_WRONGFORMAT,	"Wrong stream data format")\
   A2_DEFERR(A2_VOICEALLOC,	"Could not allocate voice")\

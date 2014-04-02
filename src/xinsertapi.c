@@ -115,6 +115,35 @@ A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
 	Buffered stream xinsert interface
 ---------------------------------------------------------*/
 
+static A2_handle a2_open_xic_stream(A2_state *st, A2_handle voice,
+		int channel, int size, unsigned flags,
+		A2_xinsert_cb callback, unsigned xiflags)
+{
+	A2_handle h, sh;
+
+	/* First, add a client... */
+	A2_xinsert_client *xic = (A2_xinsert_client *)calloc(1,
+			sizeof(A2_xinsert_client));
+	if(!xic)
+		return -A2_OOMEMORY;
+	xic->callback = callback;
+	xic->userdata = xic;
+	xic->flags = A2_XI_STREAM | xiflags;
+	if((h = a2_add_xic(st, voice, xic)) < 0)
+	{
+		free(xic);
+		return h;
+	}
+
+	/* Then open a stream on it! */
+	sh = a2_OpenStream(st, h, channel, size, flags);
+
+	/* NOTE: This also does the right thing if a2_OpenStream() fails! */
+	a2_Release(st, h);	/* Owned only by the stream! */
+	return sh;
+}
+
+
 static A2_errors a2_tapstream_process(int **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
@@ -135,28 +164,8 @@ static A2_errors a2_tapstream_process(int **buffers, unsigned nbuffers,
 A2_handle a2_OpenTap(A2_state *st, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
-	A2_handle h, sh;
-
-	/* First, add a client... */
-	A2_xinsert_client *xic = (A2_xinsert_client *)calloc(1,
-			sizeof(A2_xinsert_client));
-	if(!xic)
-		return -A2_OOMEMORY;
-	xic->callback = a2_tapstream_process;
-	xic->userdata = xic;
-	xic->flags = A2_XI_STREAM | A2_XI_READ;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
-	{
-		free(xic);
-		return h;
-	}
-
-	/* Then open a stream on it! */
-	sh = a2_OpenStream(st, h, channel, size, flags);
-
-	/* NOTE: This also does the right thing if a2_OpenStream() fails! */
-	a2_Release(st, h);	/* Owned only by the stream! */
-	return sh;
+	return a2_open_xic_stream(st, voice, channel, size, flags,
+			a2_tapstream_process, A2_XI_READ);
 }
 
 
@@ -180,23 +189,8 @@ static A2_errors a2_sendstream_process(int **buffers, unsigned nbuffers,
 A2_handle a2_OpenSend(A2_state *st, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
-	A2_handle h, sh;
-	A2_xinsert_client *xic = (A2_xinsert_client *)calloc(1,
-			sizeof(A2_xinsert_client));
-	if(!xic)
-		return -A2_OOMEMORY;
-	xic->callback = a2_sendstream_process;
-	xic->userdata = xic;
-	xic->flags = A2_XI_STREAM | A2_XI_WRITE;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
-	{
-		free(xic);
-		return h;
-	}
-	sh = a2_OpenStream(st, h, channel, size, flags);
-	/* NOTE: This also does the right thing if a2_OpenStream() fails! */
-	a2_Release(st, h);	/* Owned only by the stream! */
-	return sh;
+	return a2_open_xic_stream(st, voice, channel, size, flags,
+			a2_sendstream_process, A2_XI_WRITE);
 }
 
 
@@ -208,7 +202,7 @@ static A2_errors xi_stream_read(A2_stream *str,
 		A2_sampleformats fmt, void *data, unsigned size)
 {
 	int res;
-	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
 	if(sfifo_Used(xic->fifo) < size)
 		return A2_BUFUNDERFLOW;
 /*HACK*/
@@ -230,7 +224,7 @@ static A2_errors xi_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	int res;
-	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
 	if(sfifo_Space(xic->fifo) < size)
 		return A2_BUFOVERFLOW;
 /*HACK*/
@@ -250,31 +244,31 @@ static A2_errors xi_stream_write(A2_stream *str,
 
 static int xi_stream_available(A2_stream *str)
 {
-	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
 	return sfifo_Used(xic->fifo) / sizeof(int32_t);
 }
 
 
 static int xi_stream_space(A2_stream *str)
 {
-	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
 	return sfifo_Space(xic->fifo) / sizeof(int32_t);
 }
 
 
 static A2_errors xi_stream_flush(A2_stream *str)
 {
-	A2_xinsert_client *xic = (A2_xinsert_client *)str->tobject;
+	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
 	sfifo_Flush(xic->fifo);
 	return A2_OK;
 }
 
 
 /* OpenStream() method for A2_TXICLIENT objects (with the A2_XI_STREAM flag) */
-static A2_errors xi_stream_open(A2_stream *str)
+static A2_errors xi_stream_open(A2_stream *str, A2_handle h)
 {
 	A2_xinsert_client *xic;
-	RCHM_handleinfo *hi = rchm_Get(&str->state->ss->hm, str->thandle);
+	RCHM_handleinfo *hi = rchm_Get(&str->state->ss->hm, str->targethandle);
 	if(!hi)
 		return A2_INVALIDHANDLE;
 	if(!hi->refcount)
@@ -301,7 +295,7 @@ static A2_errors xi_stream_open(A2_stream *str)
 		return A2_OOMEMORY;
 	str->size = xic->fifo->size / sizeof(int32_t);	/* Actual size! */
 	xic->channel = str->channel;
-	xic->stream = str->thandle;
+	xic->stream = h;
 	return A2_OK;
 }
 

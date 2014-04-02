@@ -383,7 +383,7 @@ static A2_errors a2_add_upload_buffer(A2_stream *str,
 /* Discard upload buffers without applying them */
 static void a2_discard_upload_buffers(A2_stream *str)
 {
-	A2_wave *w = (A2_wave *)str->tobject;
+	A2_wave *w = (A2_wave *)str->targetobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -420,7 +420,7 @@ static float a2_calc_upload_gain(A2_stream *str)
 /* Apply and discard upload buffers */
 static A2_errors a2_apply_upload_buffers(A2_stream *str)
 {
-	A2_wave *w = (A2_wave *)str->tobject;
+	A2_wave *w = (A2_wave *)str->targetobject;
 	float gain;
 	switch(w->type)
 	{
@@ -457,7 +457,7 @@ static A2_errors a2_apply_upload_buffers(A2_stream *str)
  */
 static unsigned a2_calc_upload_length(A2_stream *str)
 {
-	A2_wave *w = (A2_wave *)str->tobject;
+	A2_wave *w = (A2_wave *)str->targetobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -483,7 +483,7 @@ static unsigned a2_calc_upload_length(A2_stream *str)
 static A2_errors a2_wave_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
-	A2_wave *w = (A2_wave *)str->tobject;
+	A2_wave *w = (A2_wave *)str->targetobject;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
@@ -512,7 +512,7 @@ static A2_errors a2_wave_stream_write(A2_stream *str,
 
 static A2_errors a2_wave_stream_flush(A2_stream *str)
 {
-	A2_wave *w = (A2_wave *)str->tobject;
+	A2_wave *w = (A2_wave *)str->targetobject;
 	A2_errors res = A2_OK;
 	if(w->flags & A2_UNPREPARED)
 	{
@@ -529,7 +529,7 @@ static A2_errors a2_wave_stream_flush(A2_stream *str)
 
 
 /* OpenStream() method for A2_TWAVE objects */
-static A2_errors a2_wave_stream_open(A2_stream *str)
+static A2_errors a2_wave_stream_open(A2_stream *str, A2_handle h)
 {
 	str->Write = a2_wave_stream_write;
 	str->Flush = a2_wave_stream_flush;	/* Also used for a2_Close() */
