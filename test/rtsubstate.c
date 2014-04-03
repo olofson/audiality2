@@ -8,7 +8,7 @@
  *	NOTE:	This test needs a driver/API that supports multiple opens
  *		or multiple soundcards, or the substate will fail to open!
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -35,11 +35,6 @@
 #include "audiality2.h"
 #include "waves.h"
 #include "units.h"
-
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(x) Sleep((x) * 1000)
-#endif
 
 /* Configuration */
 typedef struct TEST_settings {
@@ -200,7 +195,7 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Now(state);
-		sleep(1);
+		a2_Sleep(100);
 	}
 
 	/*

@@ -29,11 +29,6 @@
 #include "waves.h"
 #include "units.h"
 
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(x) Sleep((x) * 1000)
-#endif
-
 /* Silence detection window size (seconds) */
 #define	SILENCEWINDOW	0.25f
 
@@ -511,7 +506,7 @@ int main(int argc, const char *argv[])
 		while(!do_exit)
 		{
 			a2_Now(state);
-			sleep(1);
+			a2_Sleep(100);
 		}
 
 		fprintf(stderr, "a2play: Stopping...\n");
@@ -527,7 +522,7 @@ int main(int argc, const char *argv[])
 			a *= 0.5f;
 		}
 		a2_Send(state, a2_RootVoice(state), 2, 0.0f);
-		sleep(1);
+		a2_Sleep(1000);
 	}
 	else
 	{

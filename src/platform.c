@@ -73,3 +73,70 @@ void a2_time_close(void)
 	timeEndPeriod(1);
 #endif
 }
+
+
+unsigned a2_GetTicks(void)
+{
+#ifdef _WIN32
+	DWORD now;
+	now = timeGetTime();
+	if(now < a2_start_time)
+		return ((~(DWORD)0) - a2_start_time) + now;
+	else
+		return now - a2_start_time;
+#else
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return (now.tv_sec - a2_start_time.tv_sec) * 1000 +
+			(now.tv_usec - a2_start_time.tv_usec) / 1000;
+#endif
+}
+
+
+uint64_t a2_GetMicros(void)
+{
+#ifdef _WIN32
+	LARGE_INTEGER now;
+	if(!a2_perfc_frequency.QuadPart || !QueryPerformanceCounter(&now))
+		return (uint64_t)a2_GetTicks() * 1000;
+	return now.QuadPart * 1000000 / a2_perfc_frequency.QuadPart;
+#else
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	return (now.tv_sec - a2_start_time.tv_sec) * 1000000.0f +
+			(now.tv_usec - a2_start_time.tv_usec);
+#endif
+}
+
+
+unsigned a2_Sleep(unsigned milliseconds)
+{
+#ifdef _WIN32
+	DWORD t1 = timeGetTime();
+	Sleep(milliseconds);
+	return timeGetTime() - t1;
+#else
+	struct timeval tv;
+	unsigned long t1, then, now, elapsed;
+	t1 = then = a2_GetTicks();
+	if(!milliseconds)
+	{
+		sched_yield();
+		now = a2_GetTicks();
+	}
+	else
+		while(1)
+		{
+			now = a2_GetTicks();
+			elapsed = now - then;
+			then = now;
+			if(elapsed >= milliseconds)
+				break;
+			milliseconds -= elapsed;
+			tv.tv_sec = milliseconds / 1000;
+			tv.tv_usec = (milliseconds % 1000) * 1000;
+			select(0, NULL, NULL, NULL, &tv);
+		}
+	return now - t1;
+#endif
+}

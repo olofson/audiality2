@@ -561,6 +561,15 @@ float a2_F2P(float f);
 /* Return pseudo-random number in the range [0, max[ */
 float a2_Rand(A2_state *st, float max);
 
+/* Returns the number of milliseconds elapsed since A2 API initialization */
+unsigned a2_GetTicks(void);
+
+/*
+ * Attempt to sleep for 'milliseconds', letting go of the CPU. Returns the
+ * number of milliseconds actually slept.
+ */
+unsigned a2_Sleep(unsigned milliseconds);
+
 /*TODO*/
 /* Calculate size of converted data */
 int a2_AudioConvertSize(A2_state *st, A2_sampleformats infmt,

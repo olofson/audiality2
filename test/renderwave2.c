@@ -4,7 +4,7 @@
  *	This does essentially the same thing as renderwave.c, except using the
  *	higher level conveniency API call a2_RenderWave().
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -30,11 +30,6 @@
 #include <unistd.h>
 #include "audiality2.h"
 #include "waves.h"
-
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(x) Sleep((x) * 1000)
-#endif
 
 /* Configuration */
 const char *audiodriver = "default";
@@ -181,13 +176,13 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Now(state);
-		sleep(1);
+		a2_Sleep(100);
 	}
 
 	a2_Now(state);
 	a2_Send(state, vh, 1);
 	a2_Release(state, vh);
-	sleep(1);
+	a2_Sleep(1000);
 
 	a2_Close(state);
 	return 0;

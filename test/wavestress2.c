@@ -30,7 +30,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include <math.h>
-#include "SDL.h"
 #include "audiality2.h"
 #include "waves.h"
 
@@ -189,7 +188,7 @@ int main(int argc, const char *argv[])
 	/* Abuse! */
 	memset(wh, 0, sizeof(wh));
 	whi = 0;
-	t = SDL_GetTicks();
+	t = a2_GetTicks();
 	a2_Now(state);
 	fprintf(stderr, "Starting!\n");
 	while(!do_exit)
@@ -236,8 +235,8 @@ int main(int argc, const char *argv[])
 		if(whi == 0)
 		{
 			t += DELAY * WAVES;
-			while((t - (int)SDL_GetTicks() > 0) && !do_exit)
-				SDL_Delay(1);
+			while((t - (int)a2_GetTicks() > 0) && !do_exit)
+				a2_Sleep(1);
 			fprintf(stderr, "(batch)\n");
 			a2_Now(state);
 		}

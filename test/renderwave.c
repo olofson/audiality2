@@ -32,11 +32,6 @@
 #include "audiality2.h"
 #include "waves.h"
 
-#ifdef _WIN32
-# include <windows.h>
-# define sleep(x) Sleep((x) * 1000)
-#endif
-
 /* Configuration */
 typedef struct TEST_settings {
 	const char	*audiodriver;
@@ -297,13 +292,13 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Now(state);
-		sleep(1);
+		a2_Sleep(100);
 	}
 
 	a2_Now(state);
 	a2_Send(state, vh, 1);
 	a2_Release(state, vh);
-	sleep(1);
+	a2_Sleep(1000);
 
 	/*
 	 * Not very nice at all - just butcher everything! But this is supposed

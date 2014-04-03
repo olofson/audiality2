@@ -168,47 +168,9 @@ static inline void a2_MutexClose(A2_mutex *mtx)
 	Timing
 ---------------------------------------------------------*/
 
-#ifdef _WIN32
-extern DWORD a2_start_time;
-extern LARGE_INTEGER a2_perfc_frequency;
-#else
-extern struct timeval a2_start_time;
-#endif
-
-static inline uint32_t a2_GetTicks(void)
-{
-#ifdef _WIN32
-	DWORD now;
-	now = timeGetTime();
-	if(now < a2_start_time)
-		return ((~(DWORD)0) - a2_start_time) + now;
-	else
-		return now - a2_start_time;
-#else
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (now.tv_sec - a2_start_time.tv_sec) * 1000 +
-			(now.tv_usec - a2_start_time.tv_usec) / 1000;
-#endif
-}
-
-static inline uint64_t a2_GetMicros(void)
-{
-#ifdef _WIN32
-	LARGE_INTEGER now;
-	if(!a2_perfc_frequency.QuadPart || !QueryPerformanceCounter(&now))
-		return (uint64_t)a2_GetTicks() * 1000;
-	return now.QuadPart * 1000000 / a2_perfc_frequency.QuadPart;
-#else
-	struct timeval now;
-	gettimeofday(&now, NULL);
-	return (now.tv_sec - a2_start_time.tv_sec) * 1000000.0f +
-			(now.tv_usec - a2_start_time.tv_usec);
-#endif
-}
-
-
 void a2_time_open(void);
 void a2_time_close(void);
+
+uint64_t a2_GetMicros(void);
 
 #endif /* A2_PLATFORM_H */
