@@ -23,24 +23,21 @@ target_link_libraries(renderwave2 ${AUDIALITY2_LIBRARY})
 add_executable(streamupload WIN32 MACOSX_BUNDLE streamupload.c)
 target_link_libraries(streamupload ${AUDIALITY2_LIBRARY})
 
+add_executable(wavestress WIN32 MACOSX_BUNDLE wavestress.c)
+target_link_libraries(wavestress ${AUDIALITY2_LIBRARY})
+
+add_executable(wavestress2 WIN32 MACOSX_BUNDLE wavestress2.c)
+target_link_libraries(wavestress2 ${AUDIALITY2_LIBRARY})
+
+add_executable(voicestress WIN32 MACOSX_BUNDLE voicestress.c)
+target_link_libraries(voicestress ${AUDIALITY2_LIBRARY})
+
 find_package(SDL)
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
 
 	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
 	target_link_libraries(a2test ${AUDIALITY2_LIBRARY}
-		SDLmain ${A2_WIN32_LIBS})
-
-	add_executable(wavestress WIN32 MACOSX_BUNDLE wavestress.c)
-	target_link_libraries(wavestress ${AUDIALITY2_LIBRARY}
-		SDLmain ${A2_WIN32_LIBS})
-
-	add_executable(wavestress2 WIN32 MACOSX_BUNDLE wavestress2.c)
-	target_link_libraries(wavestress2 ${AUDIALITY2_LIBRARY}
-		SDLmain ${A2_WIN32_LIBS})
-
-	add_executable(voicestress WIN32 MACOSX_BUNDLE voicestress.c)
-	target_link_libraries(voicestress ${AUDIALITY2_LIBRARY}
 		SDLmain ${A2_WIN32_LIBS})
 endif(SDL_FOUND)
 
