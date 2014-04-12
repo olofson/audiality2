@@ -37,7 +37,8 @@ typedef enum A2_xiflags
 {
 	A2_XI_READ =	0x00000100,	/* Client reads from unit inputs */
 	A2_XI_WRITE =	0x00000200,	/* Client sends to unit outputs */
-	A2_XI_STREAM =	0x00000400	/* 0: callback, 1: stream */
+	A2_XI_STREAM =	0x00000400,	/* 0: callback, 1: stream */
+	A2_XI_SILENT =	0x00000800	/* Don't report realtime xflows */
 } A2_xiflags;
 
 struct A2_xinsert_client
@@ -51,6 +52,7 @@ struct A2_xinsert_client
 	A2_handle		handle;		/* Client handle */
 	A2_handle		stream;		/* Stream handle, or 0 */
 	unsigned		flags;		/* A2_xiflags */
+	int			xflow;		/* 1 if in an xflow state */
 };
 
 struct A2_xinsert

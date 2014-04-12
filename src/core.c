@@ -702,15 +702,18 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
  *	* Time/audio needs to advance. (Returns A2_END)
  *	* There are no more events in the queue. (Returns A2_END)
  *	* There is an error. (Returns an error code)
+ *
+ * NOTE: This function now stops as soon as timestamps aren't EXACTLY equal!
+ *       (Previous versions would keep going until the next sample frame.)
  */
-static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
+static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 {
-	unsigned current = v->events->b.timestamp >> 8;
+	unsigned current = v->events->b.timestamp;
 	while(v->events)
 	{
 		int res;
 		A2_event *e = v->events;
-		if((e->b.timestamp >> 8) != current)
+		if(e->b.timestamp != current)
 			return A2_END;
 		DUMPMSGS(fprintf(stderr, "%f:\th (%p) ", e->b.timestamp / 256.0f, v);)
 		NUMMSGS(fprintf(stderr, "[ %u ] ", e->number);)
@@ -770,20 +773,19 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			)
 			if((ep = v->program->eps[e->b.a1]) < 0)
 			{
-				a2r_Error(st, A2_BADENTRY,
-						"a2_VoiceProcessEvents()[1]");
+				a2r_Error(st, A2_BADENTRY, "A2MT_SEND[1]");
 				break;
 			}
 			if((res = a2_VoiceCall(st, v, ep, e->b.argc, e->b.a,
 					1)))
 			{
-				a2r_Error(st, res, "a2_VoiceProcessEvents()[2]");
+				a2r_Error(st, res, "A2MT_SEND[2]");
 				break;
 			}
 			v->s.timer = e->b.timestamp & 0xff;
 			v->events = e->next;
 			a2_FreeEvent(st, e);
-			return res;	/* Spin the VM to process the message! */
+			return res;	/* Spin the VM to process message! */
 		  }
 		  case A2MT_SENDSUB:
 		  case A2MT_KILLSUB:
@@ -819,7 +821,7 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			void **d = (void **)&e->b.a1;
 			DUMPMSGS(fprintf(stderr, "ADDXIC\n");)
 			if((res = a2_XinsertAddClient(st, v, *d)))
-				a2r_Error(st, res, "a2_VoiceProcessEvents()[3]");
+				a2r_Error(st, res, "A2MT_ADDXIC");
 			break;
 		  }
 		  case A2MT_REMOVEXIC:
@@ -827,7 +829,7 @@ static A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			void **d = (void **)&e->b.a1;
 			DUMPMSGS(fprintf(stderr, "REMOVEXIC\n");)
 			if((res = a2_XinsertRemoveClient(st, *d)))
-				a2r_Error(st, res, "a2_VoiceProcessEvents()[4]");
+				a2r_Error(st, res, "A2MT_REMOVEXIC");
 			break;
 		  }
 		  case A2MT_RELEASE:
@@ -923,6 +925,8 @@ static int a2_sizeof_object(A2_state *st, int handle)
 /*
  * Execute VM instructions until a timing instruction is executed, or the
  * program ends. Returns A2_OK as long as the VM program wants to keep running.
+ *
+ * NOTE: 'limit' is the number of 256th frames to process.
  */
 #define	A2_VMABORT(e, m)					\
 	{							\
@@ -930,7 +934,8 @@ static int a2_sizeof_object(A2_state *st, int handle)
 		a2r_Error(st, e, m);				\
 		return e;					\
 	}
-static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned frame)
+static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
+		unsigned frame, unsigned limit)
 {
 	int res;
 	int cargc = 0, cargv[A2_MAXARGS];	/* run/spawn argument stack */
@@ -938,7 +943,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v, unsigned fr
 	int *r = v->s.r;
 	unsigned inscount = A2_INSLIMIT;
 	A2_regtracker rt;
-	if(v->s.timer >= 256)
+	if(v->s.timer >= limit)
 		return A2_OK;
 	if(v->s.state == A2_WAITING)
 		v->s.state = A2_RUNNING;
@@ -1487,7 +1492,7 @@ TODO:
 	  timing:
 		++v->s.pc;
 	  timing_interrupt:
-		if(v->s.timer + dt >= 256)
+		if(v->s.timer + dt >= limit)
 		{
 			a2_RTApply(&rt, st, v, 255 - v->s.timer, dt);
 			v->s.timer += dt;
@@ -1539,41 +1544,43 @@ void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames)
 static inline A2_errors a2_VoiceProcess(A2_state *st, A2_voice *v,
 		unsigned offset, unsigned frames)
 {
-	int s_end = offset;
 	int s = offset;
 	int s_stop = offset + frames;
 	while(s < s_stop)
 	{
 		A2_unit *u;
-		int vmres;
-		while(1)
+		int s_end, res, vmres;
+		int s_end_ev = s_stop;
+
+		/* Alternate between VM and events while we have events */
+/*FIXME: Needs to break when reaching the end of the current sample frame!*/
+		while(v->events)
 		{
-			int res = 0, et;
-			if((vmres = a2_VoiceVMProcess(st, v, s)) > A2_END)
+			unsigned ts = v->events->b.timestamp;
+			if((vmres = a2_VoiceVMProcess(st, v, s, 1)) > A2_END)
 				return vmres;
-			s_end = s + (v->s.timer >> 8);
-			if(!v->events)
-				break;
-			et = a2_TSDiff(v->events->b.timestamp,
-					st->now_fragstart + (s << 8));
-			if((et >= 256) || (res = a2_VoiceProcessEvents(st, v)))
+			if((res = a2_VoiceProcessEvents(st, v)))
 			{
-				/* Time to do some audio processing! */
-				DBG(if(res > A2_END)
-					fprintf(stderr, "a2_VoiceProcessEvents(): %s!\n",
-							a2_ErrorString(res));)
-				/*
-				 * Process until VM timer expires, or until the
-				 * next event is to be processed; whichever
-				 * comes first.
-				 */
-				if(et < v->s.timer)
-					s_end = s + (et >> 8);
+				DBG(if(res > A2_END) fprintf(stderr,
+						"a2_VoiceProcessEvents():"
+						" %s!\n",
+						a2_ErrorString(res));)
+				s_end_ev = s + (a2_TSDiff(ts,
+						st->now_fragstart +
+						(s << 8)) >> 8);
 				break;
 			}
 		}
+
+		/* Process any remaining instructions for the current frame */
+		if((vmres = a2_VoiceVMProcess(st, v, s, 256)) > A2_END)
+			return vmres;
+		s_end = s + (v->s.timer >> 8);
+
 		if(vmres == A2_END)
 			return A2_END;
+		if(s_end > s_end_ev)
+			s_end = s_end_ev;
 		if(s_end > s_stop)
 			s_end = s_stop;
 		if(!(frames = s_end - s))

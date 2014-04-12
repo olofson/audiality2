@@ -219,6 +219,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NOPORT,		"Port is unavailable or does not exist")\
   A2_DEFERR(A2_NOINPUT,		"Unit with inputs where no audio is available")\
   A2_DEFERR(A2_NONAME,		"Object has no name")\
+  A2_DEFERR(A2_NOUNITS,		"Voice has no units")\
   A2_DEFERR(A2_MULTIINLINE,	"Voice cannot have multiple inline units")\
   A2_DEFERR(A2_CHAINMISMATCH,	"Unit input channel count does not match chain")\
   A2_DEFERR(A2_NOOUTPUT,	"Final unit must send to voice output")\
@@ -243,12 +244,13 @@ typedef enum A2_initflags
 	/* Flags for A2_config */
 	A2_EXPORTALL =	0x00000100,	/* Export all programs! (Debug/tool) */
 	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Now()/a2_Wait() API */
-	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect of audio ports */
-	A2_REALTIME =	0x00000800,	/* Configure(d) for realtime operation */
+	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect (JACK etc) */
+	A2_REALTIME =	0x00000800,	/* Configure for realtime operation */
 	A2_SILENT =	0x00001000,	/* No API context stderr errors */
 	A2_RTSILENT =	0x00002000,	/* No engine context stderr errors */
 
 	A2_INITFLAGS =	0x0000ff00,	/* Mask for the flags above */
+
 
 	/* NOTE: Application code should NEVER set any of the flags below! */
 

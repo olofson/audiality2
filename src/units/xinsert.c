@@ -96,7 +96,7 @@ static inline void xi_process(A2_unit *u, unsigned o, unsigned f, int add)
 	{
 		if(!(xic->flags & A2_XI_WRITE))
 		{
-			/* READ-only client */
+			/* READ-only client (assume no NOP clients...) */
 			xi_run_callback(u, xic, o, f, u->inputs);
 			continue;
 		}
@@ -247,7 +247,7 @@ A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
 
 	/* Find first 'xinsert' unit */
 	if(!(u = v->units))
-		return A2_EXPUNIT;	/* Voice has no units! --> */
+		return A2_NOUNITS;	/* Voice has no units! --> */
 	while(u->descriptor != &a2_xinsert_unitdesc)
 		if(!(u = u->next))
 			return A2_NOXINSERT; /* No 'xinsert' unit found! --> */

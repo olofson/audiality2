@@ -129,6 +129,8 @@ static A2_handle a2_open_xic_stream(A2_state *st, A2_handle voice,
 	xic->callback = callback;
 	xic->userdata = xic;
 	xic->flags = A2_XI_STREAM | xiflags;
+	if(flags & A2_RTSILENT)
+		xic->flags |= A2_XI_SILENT;
 	if((h = a2_add_xic(st, voice, xic)) < 0)
 	{
 		free(xic);
@@ -148,10 +150,26 @@ static A2_errors a2_tapstream_process(int **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;
+	void *data;
 	A2_xinsert_client *xic = (A2_xinsert_client *)userdata;
-	void *data = buffers[xic->channel];
 	int size = frames * sizeof(int32_t);
-	if((res = sfifo_Write(xic->fifo, data, size) != size))
+	if(!buffers)
+		return A2_OK;	/* "removed" notification - nothing to do! */
+/* FIXME: This should handle partial buffers! */
+	if(sfifo_Space(xic->fifo) < size)
+	{
+		/* Not enough space! */
+		if((xic->flags & A2_XI_SILENT) || xic->xflow)
+			return A2_OK;
+		else
+		{
+			xic->xflow = 1;
+			return A2_BUFOVERFLOW;
+		}
+	}
+	xic->xflow = 0;
+	data = buffers[xic->channel];
+	if((res = sfifo_Write(xic->fifo, data, size)) != size)
 	{
 		if(res == SFIFO_CLOSED)
 			return A2_INTERNAL + 521;
@@ -173,10 +191,27 @@ static A2_errors a2_sendstream_process(int **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;
+	void *data;
 	A2_xinsert_client *xic = (A2_xinsert_client *)userdata;
-	void *data = buffers[xic->channel];
 	int size = frames * sizeof(int32_t);
-	if((res = sfifo_Read(xic->fifo, data, size) != size))
+	if(!buffers)
+		return A2_OK;	/* "removed" notification - nothing to do! */
+	data = buffers[xic->channel];
+/* FIXME: This should handle partial buffers! */
+	if(sfifo_Used(xic->fifo) < size)
+	{
+		/* Not enough data! */
+		memset(data, 0, size);
+		if((xic->flags & A2_XI_SILENT) || xic->xflow)
+			return A2_OK;
+		else
+		{
+			xic->xflow = 1;
+			return A2_BUFUNDERFLOW;
+		}
+	}
+	xic->xflow = 0;
+	if((res = sfifo_Read(xic->fifo, data, size)) != size)
 	{
 		if(res == SFIFO_CLOSED)
 			return A2_INTERNAL + 531;
@@ -219,7 +254,6 @@ static A2_errors xi_stream_read(A2_stream *str,
 	return A2_NOTIMPLEMENTED;
 }
 
-
 static A2_errors xi_stream_write(A2_stream *str,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
@@ -245,6 +279,7 @@ static A2_errors xi_stream_write(A2_stream *str,
 static int xi_stream_available(A2_stream *str)
 {
 	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
+/* HACK: A2_I24 format only! */
 	return sfifo_Used(xic->fifo) / sizeof(int32_t);
 }
 
@@ -252,6 +287,7 @@ static int xi_stream_available(A2_stream *str)
 static int xi_stream_space(A2_stream *str)
 {
 	A2_xinsert_client *xic = (A2_xinsert_client *)str->targetobject;
+/* HACK: A2_I24 format only! */
 	return sfifo_Space(xic->fifo) / sizeof(int32_t);
 }
 

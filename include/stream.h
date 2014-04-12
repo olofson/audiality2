@@ -50,13 +50,14 @@ A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset);
 unsigned a2_GetPosition(A2_state *st, A2_handle stream);
 
 /*
- * Returns number of items currently available for reading from 'stream', or
- * -A2_NOTIMPLEMENTED if this feature is not implemented on this object.
+ * Returns number of sample frames currently available for reading from
+ * 'stream', or -A2_NOTIMPLEMENTED if this feature is not implemented on this
+ * object.
  */
 int a2_Available(A2_state *st, A2_handle stream);
 
 /*
- * Returns the available space for writing to 'stream', or
+ * Returns the available space (sample frames) for writing to 'stream', or
  * -A2_NOTIMPLEMENTED if this feature is not implemented on this object.
  */
 int a2_Space(A2_state *st, A2_handle stream);

@@ -51,3 +51,13 @@ PlayTestNote(P V=1)
 .rel	a 0; d 10
 	1() { force rel }
 }
+
+// Streaming voice program for streamstress.c
+StreamVoice(V=1 Pan Dur)
+{
+	struct { wtosc; xinsert; panmix }
+w triangle; a .1; set a
+	pan Pan
+	vol V; d (Dur / 2)
+	vol 0; d (Dur / 2)
+}
