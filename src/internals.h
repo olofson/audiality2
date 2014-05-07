@@ -389,7 +389,7 @@ struct A2_stackentry
 {
 	A2_stackentry	*prev;
 	A2_vstates	state;
-	unsigned	timer;		/* Timer as message is handled */
+	unsigned	waketime;	/* Timer as message is handled */
 	unsigned	pc;		/* PC of calling instruction */
 	uint16_t	func;		/* Index of calling function */
 	uint8_t		firstreg;	/* First register saved */
@@ -805,19 +805,19 @@ void a2_FlushEventQueue(A2_state *st, A2_event **eq, A2_handle h);
 
 A2_voice *a2_VoiceAlloc(A2_state *st);
 A2_errors a2_init_root_voice(A2_state *st);
-A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent);
+A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent, unsigned when);
 A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 		A2_program *p, int argc, int *argv);
 A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 		int argc, int *argv, int interrupt);
-void a2_VoiceKill(A2_state *st, A2_voice *v);
+void a2_VoiceKill(A2_state *st, A2_voice *v, unsigned when);
 void a2_VoiceFree(A2_state *st, A2_voice **head);
 
-static inline void a2_VoiceDetach(A2_voice *v)
+static inline void a2_VoiceDetach(A2_voice *v, unsigned when)
 {
 	v->flags &= ~A2_ATTACHED;
 	if(v->s.state >= A2_ENDING)
-		v->s.timer = 0;	/* Wake up and terminate! */
+		v->s.waketime = when;	/* Wake up and terminate! */
 }
 
 /*

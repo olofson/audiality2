@@ -1,7 +1,7 @@
 /*
  * config.h - Audiality 2 compile time configuration
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -30,17 +30,17 @@
 #	define	NUMMSGS(x)	x	/* Message order tracking */
 #	define	MSGTRACK(x)		/* Track origin of messages */
 #	define	EVLEAKTRACK(x)	x	/* Check for event leaks */
-#	define	DUMPMSGS(x)	x	/* Dump messages from the VM/msg loop */
+#	define	DUMPMSGS(x)	x	/* Dump messages from audio context */
 #	define	DUMPCODE(x)		/* Enable compiler VM code output */
 #	define	DUMPSOURCE(x)		/* Dump source lines while compiling */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	REGDBG(x)		/* Register allocation debugging */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
-#	define	DUMPSTRUCTRT(x)	x	/* Realtime voice structure dumping */
+#	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)	x	/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
-#	undef	CERRDIE			/* Die in assert(0) on compile errors */
+#	undef	CERRDIE			/* Die in assert(0) on compile errs */
 #	undef	DUMPTOKENS		/* Enable lexer token printout */
 #else
 #	define	DBG(x)

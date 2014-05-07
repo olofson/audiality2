@@ -52,7 +52,7 @@ typedef enum A2_cregisters
 /* Public VM state data (needed by some voice units) */
 typedef struct A2_vmstate
 {
-	unsigned	timer;		/* Delay timer (frames, 24:8 fixp) */
+	unsigned	waketime;	/* Wakeup time (frames, 24:8 fixp) */
 	uint8_t		state;		/* Current state */
 	uint8_t		func;		/* Current function index */
 	uint16_t	pc;		/* PC of calling instruction */

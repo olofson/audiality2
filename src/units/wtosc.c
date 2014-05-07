@@ -339,7 +339,7 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	a2_RamperInit(&o->a, 0);
 	a2_OscFrequency(o, powf(2.0f, (*o->transpose) * (1.0f / 65536.0f)) *
 			A2_MIDDLEC);
-	a2_OscPhase(o, 0, 255 - vms->timer);
+	a2_OscPhase(o, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
 	ur[A2OR_WAVE] = 0;

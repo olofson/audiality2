@@ -106,7 +106,7 @@ static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
 	se->func = v->s.func;
 	se->pc = v->s.pc;
 	se->interrupt = interrupt;
-	se->timer = v->s.timer;
+	se->waketime = v->s.waketime;
 	se->firstreg = firstreg;
 	memcpy(se->r, v->s.r + firstreg, sizeof(int) * (A2_REGISTERS - firstreg));
 	return A2_OK;
@@ -122,7 +122,7 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 	if(inter)
 	{
 		v->s.pc = se->pc;
-		v->s.timer = se->timer;
+		v->s.waketime = se->waketime;
 	}
 	else
 		v->s.pc = se->pc + 1;
@@ -139,7 +139,7 @@ static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
 {
 	A2_write_cb cb = v->cwrite[reg];
 	if(cb)
-		cb(v->cunit[reg], v->s.r[reg], start, duration);
+		cb(v->cunit[reg], v->s.r[reg], start & 255, duration);
 }
 
 
@@ -377,7 +377,7 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 }
 
 
-A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent)
+A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent, unsigned when)
 {
 	A2_voice *v = st->voicepool;
 	if(parent->nestlevel >= A2_NESTLIMIT - 1)
@@ -394,7 +394,7 @@ A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent)
 	v->nestlevel = parent->nestlevel + 1;
 	v->next = parent->sub;
 	parent->sub = v;
-	v->s.timer = 0;
+	v->s.waketime = when;
 	v->s.r[R_TICK] = parent->s.r[R_TICK];
 	v->s.r[R_TRANSPOSE] = parent->s.r[R_TRANSPOSE];
 	v->noutputs = parent->noutputs;
@@ -428,7 +428,7 @@ A2_errors a2_init_root_voice(A2_state *st)
 	++st->activevoices;
 	v->nestlevel = 0;
 	v->flags = A2_ATTACHED;
-	v->s.timer = 0;
+	v->s.waketime = st->now_fragstart;
 	v->next = NULL;
 	v->s.r[R_TICK] = A2_DEFAULTTICK;
 	v->s.r[R_TRANSPOSE] = 0;
@@ -450,7 +450,7 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 {
 	unsigned r;
 	A2_voice *v = *head;
-	a2_VoiceKill(st, v);
+	a2_VoiceKill(st, v, v->s.waketime);
 	*head = v->next;
 	v->next = st->voicepool;
 	st->voicepool = v;
@@ -459,12 +459,14 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 	for(r = A2_FIXEDREGS; r < v->cregisters; ++r)
 		v->cwrite[r] = NULL;
 	v->cregisters = A2_FIXEDREGS;
+#if 0
 	/*
 	 * NOTE: a2_VoiceKill() deals with the voice handle, so we don't need
 	 *       or want a2_FlushEventQueue() to interfere with that!
 	 */
 	if(v->events)
 		a2_FlushEventQueue(st, &v->events, -1);
+#endif
 	while(v->units)
 	{
 		A2_unit *u = v->units;
@@ -478,14 +480,14 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 }
 
 
-void a2_VoiceKill(A2_state *st, A2_voice *v)
+void a2_VoiceKill(A2_state *st, A2_voice *v, unsigned when)
 {
 	while(v->stack)
 		a2_VoicePop(st, v);
 	v->program = st->ss->terminator;
 	v->s.func = 0;
 	v->s.pc = 0;
-	v->s.timer = 0;
+	v->s.waketime = when;
 	v->s.state = A2_RUNNING;
 	v->flags &= ~A2_ATTACHED;
 	if(v->handle >= 0)
@@ -495,6 +497,9 @@ void a2_VoiceKill(A2_state *st, A2_voice *v)
 	}
 	while(v->sub)
 		a2_VoiceFree(st, &v->sub);
+	/* NOTE: -1 because we deal with the voice handles here! */
+	if(v->events)
+		a2_FlushEventQueue(st, &v->events, -1);
 	memset(v->sv, 0, sizeof(v->sv));
 }
 
@@ -570,7 +575,7 @@ static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
 		return A2_OOMEMORY;
 	MSGTRACK(e->source = "a2_VoiceSend()";)
 	e->b.action = A2MT_SEND;
-	e->b.timestamp = when + st->now_fragstart;
+	e->b.timestamp = when;
 	e->b.a1 = ep;
 	e->b.argc = argc;
 	memcpy(e->b.a, argv, argc * sizeof(int));
@@ -580,17 +585,17 @@ static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
 
 
 /* Start a new voice, at the specified time, with the specified program. */
-static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, unsigned when,
-		int vid, A2_handle program, int argc, int *argv)
+static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, int vid,
+		A2_handle program, int argc, int *argv)
 {
 	int res;
 	A2_voice *nv;
 	A2_program *p = a2_GetProgram(st, program);
 	if((vid > 0) && (v->sv[vid]))	/* NOTE: No detach for id 0! */
-		a2_VoiceDetach(v->sv[vid]);
+		a2_VoiceDetach(v->sv[vid], v->s.waketime);
 	if(!p)
 		return A2_BADPROGRAM;
-	if(!(nv = a2_VoiceNew(st, v)))
+	if(!(nv = a2_VoiceNew(st, v, v->s.waketime)))
 		return v->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
 	if(vid > 0)
@@ -603,7 +608,6 @@ static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, unsigned when,
 	if(!nv)
 		return v->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
-	nv->s.timer = when;
 	if((res = a2_VoiceStart(st, nv, p, argc, argv)))
 		a2_VoiceFree(st, &v->sub);
 	return res;
@@ -628,11 +632,10 @@ static inline A2_errors a2_event_play(A2_state *st, A2_voice *parent,
 	A2_program *p = a2_GetProgram(st, eb->a1);
 	if(!p)
 		return A2_BADPROGRAM;
-	if(!(v = a2_VoiceNew(st, parent)))
+	if(!(v = a2_VoiceNew(st, parent, eb->timestamp)))
 		return parent->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
 	v->flags = 0;
-	v->s.timer = eb->timestamp - st->now_fragstart;
 	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
 }
 
@@ -648,7 +651,7 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 	A2_program *p = a2_GetProgram(st, eb->a1);
 	if(!p)
 		return A2_BADPROGRAM;
-	if(!(v = a2_VoiceNew(st, parent)))
+	if(!(v = a2_VoiceNew(st, parent, eb->timestamp)))
 		return parent->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
 	/*
@@ -659,7 +662,6 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 	hi->d.data = (void *)v;
 	hi->typecode = A2_TVOICE;
 	v->flags = A2_ATTACHED;
-	v->s.timer = eb->timestamp - st->now_fragstart;
 	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
 }
 
@@ -720,6 +722,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 #ifdef DEBUG
 		if(a2_TSDiff(e->b.timestamp, st->now_fragstart) < 0)
 		{
+			/* NOTE: Can only happen if there's a bug somewhere! */
 			fprintf(stderr, "Audiality 2: Incorrect timestamp for voice %p!"
 					" (%f frames late.)", v,
 			       		(st->now_fragstart - e->b.timestamp) / 256.0f);
@@ -782,7 +785,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 				a2r_Error(st, res, "A2MT_SEND[2]");
 				break;
 			}
-			v->s.timer = e->b.timestamp & 0xff;
+			v->s.waketime = e->b.timestamp;
 			v->events = e->next;
 			a2_FreeEvent(st, e);
 			return res;	/* Spin the VM to process message! */
@@ -814,7 +817,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			 * This will allow audio processing to finish, and then
 			 * a2_VoiceVMProcess() will have the voice freed.
 			 */
-			a2_VoiceKill(st, v);
+			a2_VoiceKill(st, v, e->b.timestamp);
 			return A2_END;
 		  case A2MT_ADDXIC:
 		  {
@@ -836,7 +839,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			DUMPMSGS(fprintf(stderr, "RELEASE\n");)
 			a2r_DetachHandle(st, v->handle);
 			v->handle = -1;
-			a2_VoiceDetach(v);
+			a2_VoiceDetach(v, e->b.timestamp);
 			break;
 		}
 		v->events = e->next;
@@ -934,8 +937,7 @@ static int a2_sizeof_object(A2_state *st, int handle)
 		a2r_Error(st, e, m);				\
 		return e;					\
 	}
-static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
-		unsigned frame, unsigned limit)
+static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v)
 {
 	int res;
 	int cargc = 0, cargv[A2_MAXARGS];	/* run/spawn argument stack */
@@ -943,8 +945,6 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 	int *r = v->s.r;
 	unsigned inscount = A2_INSLIMIT;
 	A2_regtracker rt;
-	if(v->s.timer >= limit)
-		return A2_OK;
 	if(v->s.state == A2_WAITING)
 		v->s.state = A2_RUNNING;
 	a2_RTInit(&rt);
@@ -958,7 +958,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 		)
 		if(!--inscount)
 		{
-			a2_VoiceKill(st, v);
+			a2_VoiceKill(st, v, v->s.waketime);
 			A2_VMABORT(A2_OVERLOAD, "VM");
 		}
 		switch(ins->opcode)
@@ -966,12 +966,21 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 
 		/* Program flow control */
 		  case OP_END:
-			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
-			v->s.timer = 0xffffffff;
+		  {
+		  	unsigned now = v->s.waketime;
+			a2_RTApply(&rt, st, v, v->s.waketime, 0);
+			v->s.waketime += 1000000;
 			if(v->s.state == A2_FINALIZING)
 			{
 				/* Wait for subvoices to terminate */
 				st->instructions += A2_INSLIMIT - inscount;
+				DUMPCODERT(
+				  if(v->sub)
+				    fprintf(stderr, "%p: [still waiting for "
+				        "subvoices]\n", v);
+				  else
+				    fprintf(stderr, "%p: [end]\n", v);
+				)
 				return v->sub ? A2_OK : A2_END;
 			}
 			v->s.state = A2_ENDING;
@@ -979,6 +988,10 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 			{
 				/* Hang around until detached! */
 				st->instructions += A2_INSLIMIT - inscount;
+				DUMPCODERT(
+				  fprintf(stderr, "%p: [waiting for detach]\n",
+				      v);
+				)
 				return A2_OK;
 			}
 			v->s.state = A2_FINALIZING;
@@ -986,25 +999,29 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 			{
 				/* That's it - all done! */
 				st->instructions += A2_INSLIMIT - inscount;
+				DUMPCODERT(fprintf(stderr, "%p: [end]\n", v);)
 				return A2_END;
 			}
 			/* Detach subvoices, then wait for them to terminate */
 			memset(v->sv, 0, sizeof(v->sv));
 			for(v = v->sub; v; v = v->next)
-				a2_VoiceDetach(v);
+				a2_VoiceDetach(v, now);
 			st->instructions += A2_INSLIMIT - inscount;
+			DUMPCODERT(fprintf(stderr, "%p: [waiting for "
+					"subvoices]\n", v);)
 			return A2_OK;
+		  }
 		  case OP_RETURN:
 		  {
-			unsigned now = v->s.timer;
+			unsigned now = v->s.waketime;
 			if(a2_VoicePop(st, v))
 			{
 				/* Return from interrupt */
 				code = v->program->funcs[v->s.func].code;
 				if(v->s.state >= A2_ENDING)
 					continue;
-				dt = v->s.timer;
-				v->s.timer = now;
+				dt = v->s.waketime - now;
+				v->s.waketime = now;
 				goto timing_interrupt;
 			}
 			else
@@ -1210,7 +1227,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 
 		/* Unit control */
 		  case OP_SET:
-			a2_VoiceControl(st, v, ins->a1, 255 - v->s.timer, 0);
+			a2_VoiceControl(st, v, ins->a1, v->s.waketime, 0);
 			a2_RTUnmark(&rt, ins->a1);
 			break;
 #if 0
@@ -1221,6 +1238,7 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 			a2_VoiceControl(v, ins->a1,
 					(int64_t)ins->a3 * st->msdur >> 32);
 			a2_RTMark(&rt, ins->a1);
+			++v->s.pc;
 			break;
 		  case OP_RAMPR:
 			if(ins->a1 >= v->cregisters)
@@ -1264,12 +1282,9 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 		  case OP_SPAWNVR:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
 			if(vid >= A2_REGISTERS)
 				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
-			a2_VoiceSpawn(st, v, when, vid, r[ins->a2] >> 16,
+			a2_VoiceSpawn(st, v, vid, r[ins->a2] >> 16,
 					cargc, cargv);
 			cargc = 0;
 			break;
@@ -1277,63 +1292,37 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 		  case OP_SPAWNV:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
 			if(vid >= A2_REGISTERS)
 				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
-			a2_VoiceSpawn(st, v, when, vid, ins->a2,
-					cargc, cargv);
+			a2_VoiceSpawn(st, v, vid, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  }
 		  case OP_SPAWNR:
-		  {
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, ins->a1, r[ins->a2] >> 16,
+			a2_VoiceSpawn(st, v, ins->a1, r[ins->a2] >> 16,
 					cargc, cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SPAWN:
-		  {
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, ins->a1, ins->a2,
-					cargc, cargv);
+			a2_VoiceSpawn(st, v, ins->a1, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SPAWNDR:
-		  {
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, -1, r[ins->a2] >> 16,
-					cargc, cargv);
+			a2_VoiceSpawn(st, v, -1, r[ins->a2] >> 16, cargc,
+					cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SPAWND:
-		  {
-			unsigned when = v->s.timer;
-			if(!(v->flags & A2_SUBINLINE))
-				when += frame << 8;
-			a2_VoiceSpawn(st, v, when, -1, ins->a2, cargc, cargv);
+			a2_VoiceSpawn(st, v, -1, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SENDR:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
 			if(vid >= A2_REGISTERS)
 				A2_VMABORT(A2_BADVOICE, "VM:SENDR");
 			if(v->sv[vid])
-				a2_VoiceSend(st, v->sv[vid],
-						(frame << 8) + v->s.timer,
+				a2_VoiceSend(st, v->sv[vid], v->s.waketime,
 						ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
@@ -1342,17 +1331,16 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 			DBG(if(!ins->a2)
 				fprintf(stderr, "Weird...! SEND to EP0...\n");)
 			if(v->sv[ins->a1])
-				a2_VoiceSend(st, v->sv[ins->a1],
-						(frame << 8) + v->s.timer,
+				a2_VoiceSend(st, v->sv[ins->a1], v->s.waketime,
 						ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  case OP_SENDA:
 		  {
 			A2_voice *sv;
-			unsigned when = (frame << 8) + v->s.timer;
 			for(sv = v->sub; sv; sv = sv->next)
-				a2_VoiceSend(st, sv, when, ins->a2, cargc, cargv);
+				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
+						cargc, cargv);
 			cargc = 0;
 			break;
 		  }
@@ -1370,13 +1358,14 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 		  case OP_WAIT:
 			if(!v->sv[ins->a1])
 				break;	/* No voice to wait for! */
-			/* NOTE: This only waits with buffer granularity! */
+			/* NOTE: This only waits with fragment granularity! */
 			if(v->sv[ins->a1]->s.state >= A2_ENDING)
 				break;	/* Done! */
-			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
-			v->s.timer = (A2_MAXFRAG - frame) << 8;
+			a2_RTApply(&rt, st, v, v->s.waketime, 0);
+			v->s.waketime = st->now_fragstart + (A2_MAXFRAG << 8);
 			v->s.state = A2_WAITING;
 			st->instructions += A2_INSLIMIT - inscount;
+			DUMPCODERT(fprintf(stderr, "%p: [waiting]\n", v);)
 			return A2_OK;
 		  case OP_KILLR:
 		  {
@@ -1385,31 +1374,31 @@ static inline A2_errors a2_VoiceVMProcess(A2_state *st, A2_voice *v,
 				A2_VMABORT(A2_BADVOICE, "VM:KILLR");
 			if(!v->sv[vid])
 				break;
-			a2_VoiceKill(st, v->sv[vid]);
+			a2_VoiceKill(st, v->sv[vid], v->s.waketime);
 			v->sv[vid] = NULL;
 			break;
 		  }
 		  case OP_KILL:
 			if(!v->sv[ins->a1])
 				break;
-			a2_VoiceKill(st, v->sv[ins->a1]);
+			a2_VoiceKill(st, v->sv[ins->a1], v->s.waketime);
 			v->sv[ins->a1] = NULL;
 			break;
 		  case OP_KILLA:
 		  {
 			A2_voice *sv;
 			for(sv = v->sub; sv; sv = sv->next)
-				a2_VoiceKill(st, sv);
+				a2_VoiceKill(st, sv, v->s.waketime);
 			memset(v->sv, 0, sizeof(v->sv));
 			break;
 		  }
 
 		/* Message handling */
 		  case OP_SLEEP:
-			a2_RTApply(&rt, st, v, 255 - v->s.timer, 0);
-			v->s.timer = 0xffffffff;
+			a2_RTApply(&rt, st, v, v->s.waketime, 0);
 			v->s.state = A2_ENDING;
 			st->instructions += A2_INSLIMIT - inscount;
+			v->s.waketime += 1000000;
 			return A2_OK;
 #if 0
 TODO:
@@ -1438,7 +1427,10 @@ TODO:
 				se = se->prev;
 			if(se->state < A2_ENDING)
 				break;
-			/* Fall through for the actual wakeup! */
+			se->pc = ins->a2;
+			se->state = A2_RUNNING;
+			se->waketime = v->s.waketime;
+			break;
 		  }
 		  case OP_FORCE:
 		  {
@@ -1446,8 +1438,8 @@ TODO:
 			while(se->prev && (se->state == A2_INTERRUPT))
 				se = se->prev;
 			se->pc = ins->a2;
-			se->timer = 0;
 			se->state = A2_RUNNING;
+			se->waketime = v->s.waketime;
 			break;
 		  }
 
@@ -1460,6 +1452,7 @@ TODO:
 		  case OP_DEBUG:
 			fprintf(stderr, ":: Audiality 2 DEBUG: %f\t(%p)\n",
 					ins->a3 * (1.0f / 65536.0f), v);
+			++v->s.pc;
 			break;
 
 		/* Special instructions */
@@ -1492,15 +1485,15 @@ TODO:
 	  timing:
 		++v->s.pc;
 	  timing_interrupt:
-		if(v->s.timer + dt >= limit)
-		{
-			a2_RTApply(&rt, st, v, 255 - v->s.timer, dt);
-			v->s.timer += dt;
-			v->s.state = A2_WAITING;
-			st->instructions += A2_INSLIMIT - inscount;
-			return A2_OK;
-		}
-		v->s.timer += dt;
+		if(!dt)
+			continue;
+		DUMPCODERT(fprintf(stderr, "%p: [reschedule; dt=%f]\n",
+				v, dt / 256.0f);)
+		a2_RTApply(&rt, st, v, v->s.waketime, dt);
+		v->s.state = A2_WAITING;
+		st->instructions += A2_INSLIMIT - inscount;
+		v->s.waketime += dt;
+		return A2_OK;
 	}
 }
 #undef	A2_VMABORT
@@ -1515,7 +1508,8 @@ static inline void a2_ProcessSubvoices(A2_state *st, A2_voice *v,
 	a2_ProcessVoices(st, &v->sub, offset, frames);
 	if(!v->sub)
 		if(v->s.state >= A2_ENDING)
-			v->s.timer = 0;	/* Notify parent that subs are done! */
+			/* Notify parent that subs are done! */
+			v->s.waketime = st->now_fragstart + (frames << 8);
 }
 
 
@@ -1537,6 +1531,54 @@ void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames)
 
 
 /*
+ * Process all events and instructions for the current sample frame. Returns
+ * the number of sample frames to the next instruction or event, or a negative
+ * VM return code.
+ */
+static inline int a2_VoiceProcessVMEv(A2_state *st, A2_voice *v, unsigned now)
+{
+	/* Events + VM loop */
+	while(v->events)
+	{
+		int nextvm = a2_TSDiff(v->s.waketime, now);
+		int nextev = a2_TSDiff(v->events->b.timestamp, now);
+		if((nextvm > 255) && (nextev > 255))
+		{
+			if(nextvm < nextev)
+				return nextvm >> 8;
+			else
+				return nextev >> 8;
+		}
+		if(nextvm < nextev)
+		{
+			int res = a2_VoiceVMProcess(st, v);
+			if(res >= A2_END)
+				return -res;
+		}
+		else
+		{
+			DBG(int res = )a2_VoiceProcessEvents(st, v);
+			DBG(if(res > A2_END)
+				fprintf(stderr, "a2_VoiceProcessEvents(): "
+						"%s!\n", a2_ErrorString(res));)
+		}
+	}
+
+	/* VM only loop */
+	while(1)
+	{
+		int res;
+		int nextvm = a2_TSDiff(v->s.waketime, now);
+		if(nextvm > 255)
+			return nextvm >> 8;
+		res = a2_VoiceVMProcess(st, v);
+		if(res >= A2_END)
+			return -res;
+	}
+}
+
+
+/*
  * Process a single voice, alternating between the VM and units (if any) as
  * needed. Note that 'inline' units also run here, so this may recursively do
  * subvoice processing as well!
@@ -1545,55 +1587,28 @@ static inline A2_errors a2_VoiceProcess(A2_state *st, A2_voice *v,
 		unsigned offset, unsigned frames)
 {
 	int s = offset;
-	int s_stop = offset + frames;
+	int s_stop = offset + frames;	/* End of fragment */
 	while(s < s_stop)
 	{
 		A2_unit *u;
-		int s_end, res, vmres;
-		int s_end_ev = s_stop;
-
-		/* Alternate between VM and events while we have events */
-/*FIXME: Needs to break when reaching the end of the current sample frame!*/
-		while(v->events)
+		unsigned now = st->now_fragstart + (s << 8);
+		int res = a2_VoiceProcessVMEv(st, v, now);
+		if(res < 0)
 		{
-			unsigned ts = v->events->b.timestamp;
-			if((vmres = a2_VoiceVMProcess(st, v, s, 1)) > A2_END)
-				return vmres;
-			if((res = a2_VoiceProcessEvents(st, v)))
-			{
-				DBG(if(res > A2_END) fprintf(stderr,
-						"a2_VoiceProcessEvents():"
-						" %s!\n",
-						a2_ErrorString(res));)
-				s_end_ev = s + (a2_TSDiff(ts,
-						st->now_fragstart +
-						(s << 8)) >> 8);
-				break;
-			}
+			DBG(if(-res != A2_END)
+				fprintf(stderr, "a2_VoiceProcessVMEv(): "
+						"%s!\n", a2_ErrorString(
+						-res));)
+			return -res;
 		}
-
-		/* Process any remaining instructions for the current frame */
-		if((vmres = a2_VoiceVMProcess(st, v, s, 256)) > A2_END)
-			return vmres;
-		s_end = s + (v->s.timer >> 8);
-
-		if(vmres == A2_END)
-			return A2_END;
-		if(s_end > s_end_ev)
-			s_end = s_end_ev;
-		if(s_end > s_stop)
-			s_end = s_stop;
-		if(!(frames = s_end - s))
-			continue;
-		/*
-		 * Must adjust the timer BEFORE any subvoice processing if
-		 * subvoices are processed in here, or the timer = 0 hack to
-		 * notify the parent of terminating voices won't work!
-		 */
-		v->s.timer -= frames << 8;
+		DBG(if(!res)
+			fprintf(stderr, "a2_VoiceProcessVMEv() returned 0!\n");
+		)
+		if(s + res > s_stop)
+			res = s_stop - s;
 		for(u = v->units; u; u = u->next)
-			u->Process(u, s, frames);
-		s = s_end;
+			u->Process(u, s, res);
+		s += res;
 	}
 	return A2_OK;
 }
@@ -1712,7 +1727,7 @@ static void a2_kill_subvoices_using_program(A2_state *st, A2_voice *v,
 		if(sv->program == p)
 		{
 			int i;
-			a2_VoiceKill(st, sv);
+			a2_VoiceKill(st, sv, st->now_fragstart);
 			/*
 			 * Since we may be killing voices started by scripts,
 			 * we need to make sure those are detached properly!

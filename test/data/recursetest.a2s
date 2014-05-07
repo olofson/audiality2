@@ -1,0 +1,45 @@
+def title	"RecurseTest"
+def version	"1.0"
+def description	"Audiality 2 recursive spawning tests"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+Recurse(Level Delay)
+{
+	struct { wtosc; panmix }
+	debug Level
+	-Level 1
+	d Delay
+
+	if Level {
+		1:Recurse Level Delay
+	}
+	w triangle; p (2 - (Level * 3n)); a .25; set a
+	while (a > .001) {
+		*a .97; d 10
+	}
+	a 0; d 100
+
+	debug (0 - Level - 1)
+	wait 1
+}
+
+Song()
+{
+	// Ten recursive voices at 50 ms intervals
+	1:Recurse 10 50
+	wait 1
+	debug 1000
+
+	// Ten recursive voices triggered at once
+	1:Recurse 10 0
+	wait 1
+	debug 2000
+
+	end
+
+.stop	kill *
+	1() { force stop }
+}
