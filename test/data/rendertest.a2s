@@ -2,7 +2,7 @@ def title	"RenderTest"
 def version	"1.0"
 def description	"Test of rendering a program off-line into a wave"
 def author	"David Olofson"
-def copyright	"Copyright 2013 David Olofson"
+def copyright	"Copyright 2014 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
 
@@ -47,7 +47,7 @@ wave StringsWave
 	wavetype MIPWAVE		// Mipmapped wave
 	samplerate 96000		// Sample rate 96 kHz at pitch 0
 	length 15000; looped		// Short, deliberately ugly loop. :-)
-	RenderStringsWave 100 .02 .2	// Render with 100 voices!
+	RenderStringsWave 100 .02 .1	// Render with 100 voices!
 }
 
 
