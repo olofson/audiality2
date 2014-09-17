@@ -1,7 +1,7 @@
 /*
  * fbdelay.c - Audiality 2 feedback delay unit
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -68,16 +68,18 @@ static inline A2_fbdelay *fbdelay_cast(A2_unit *u)
 
 #define	WI(x)	((fbd->bufpos - (x)) & (A2FBD_BUFSIZE - 1))
 static inline void fbdelay_process22(A2_unit *u, unsigned offset,
-		unsigned frames, int add)
+		unsigned frames, int add, int stereoin, int stereoout)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
 	unsigned s, end = offset + frames;
 	int32_t	*b0 = fbd->lbuf;
 	int32_t	*b1 = fbd->rbuf;
 	int32_t *in0 = u->inputs[0];
-	int32_t *in1 = u->inputs[1];
+	int32_t *in1 = u->inputs[stereoin ? 1 : 0];
 	int32_t *out0 = u->outputs[0];
-	int32_t *out1 = u->outputs[1];
+	int32_t *out1;
+	if(stereoout)
+		out1 = u->outputs[1];
 	for(s = offset; s < end; ++s)
 	{
 		int i0 = in0[s];
@@ -102,13 +104,23 @@ static inline void fbdelay_process22(A2_unit *u, unsigned offset,
 		/* Output */
 		if(add)
 		{
-			out0[s] += o0;
-			out1[s] += o1;
+			if(stereoout)
+			{
+				out0[s] += o0;
+				out1[s] += o1;
+			}
+			else
+				out0[s] += (o0 + o1) >> 1;
 		}
 		else
 		{
-			out0[s] = o0;
-			out1[s] = o1;
+			if(stereoout)
+			{
+				out0[s] = o0;
+				out1[s] = o1;
+			}
+			else
+				out0[s] = (o0 + o1) >> 1;
 		}
 		++fbd->bufpos;
 	}
@@ -117,12 +129,42 @@ static inline void fbdelay_process22(A2_unit *u, unsigned offset,
 
 static void fbdelay_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 1);
+	fbdelay_process22(u, offset, frames, 1, 1, 1);
 }
 
 static void fbdelay_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 0);
+	fbdelay_process22(u, offset, frames, 0, 1, 1);
+}
+
+static void fbdelay_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 1, 0, 1);
+}
+
+static void fbdelay_Process12(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 0, 0, 1);
+}
+
+static void fbdelay_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 1, 1, 0);
+}
+
+static void fbdelay_Process21(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 0, 1, 0);
+}
+
+static void fbdelay_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 1, 0, 0);
+}
+
+static void fbdelay_Process11(A2_unit *u, unsigned offset, unsigned frames)
+{
+	fbdelay_process22(u, offset, frames, 0, 0, 0);
 }
 
 
@@ -158,9 +200,21 @@ static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	fbd->rgain = ur[A2FBDR_RGAIN] = 32768;
 
 	if(flags & A2_PROCADD)
-		u->Process = fbdelay_Process22Add;
+		switch(((u->ninputs - 1) << 1) + (u->noutputs - 1))
+		{
+		  case 0: u->Process = fbdelay_Process11Add; break;
+		  case 1: u->Process = fbdelay_Process12Add; break;
+		  case 2: u->Process = fbdelay_Process21Add; break;
+		  case 3: u->Process = fbdelay_Process22Add; break;
+		}
 	else
-		u->Process = fbdelay_Process22;
+		switch(((u->ninputs - 1) << 1) + (u->noutputs - 1))
+		{
+		  case 0: u->Process = fbdelay_Process11; break;
+		  case 1: u->Process = fbdelay_Process12; break;
+		  case 2: u->Process = fbdelay_Process21; break;
+		  case 3: u->Process = fbdelay_Process22; break;
+		}
 
 	return A2_OK;
 }
@@ -233,8 +287,8 @@ const A2_unitdesc a2_fbdelay_unitdesc =
 
 	regs,			/* registers */
 
-	2, 2,			/* [min,max]inputs */
-	2, 2,			/* [min,max]outputs */
+	1, 2,			/* [min,max]inputs */
+	1, 2,			/* [min,max]outputs */
 
 	sizeof(A2_fbdelay),	/* instancesize */
 	fbdelay_Initialize,	/* Initialize */

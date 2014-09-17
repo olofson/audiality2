@@ -110,7 +110,7 @@ def a2sversion	"1.9"
 
 .BackArp(P V=1 Maj=0)
 {
-	struct { wtosc; panmix 1 2; fbdelay  }
+	struct { wtosc; panmix 1 2; fbdelay 2 > }
 	vol .2; set vol
 	fbdelay (tick * 2); fbgain .3
 	ldelay (tick * 3); lgain .3
@@ -147,7 +147,7 @@ def a2sversion	"1.9"
 
 .SoftArp(P V=1 Maj=0)
 {
-	struct { wtosc; panmix 1 2; fbdelay }
+	struct { wtosc; panmix 1 2; fbdelay 2 > }
 	vol .2; set vol
 	fbdelay (tick * 3); fbgain .3
 	ldelay (tick * 4); lgain .3
