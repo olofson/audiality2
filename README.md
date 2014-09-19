@@ -26,8 +26,8 @@ Now, as the former Audiality is no longer maintained, and the new sound engine i
 Installing
 ----------
 
-* Install the dependencies. You'll need SDL and/or JACK for integrated audio I/O, but it is possible to build Audiality 2 without an audio drivers at all, if you want to use it for offline rendering, or handle audio I/O in the host applications.
-  * SDL (optional; needed for a2test)
+* Install the dependencies. You'll need SDL and/or JACK for the integrated audio I/O drivers, but it is possible to build Audiality 2 without any audio drivers at all, if you want to use Audiality 2 for offline rendering, or handle audio I/O in the host applications.
+  * SDL 1.2 (optional; needed for a2test)
     * http://libsdl.org
   * JACK (optional; preferred for low latency audio and studio integration)
     * http://jackaudio.org
