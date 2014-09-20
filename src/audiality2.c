@@ -81,7 +81,7 @@ A2_errors a2_RegisterType(A2_state *st, A2_otypes otype, const char *name,
 		return A2_OOMEMORY;
 	ti->state = st;
 	ti->OpenStream = stropen;
-	res = rchm_RegisterType(m, otype, name, destroy, ti);
+	res = (A2_errors)rchm_RegisterType(m, otype, name, destroy, ti);
 	if(res)
 		free(ti);
 	return res;
@@ -189,7 +189,7 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 		return A2_OOMEMORY;
 
 	/* Init handle manager */
-	if((res = rchm_Init(&st->ss->hm, A2_INITHANDLES)))
+	if((res = (A2_errors)rchm_Init(&st->ss->hm, A2_INITHANDLES)))
 		return res;
 
 	/* Register handle types */

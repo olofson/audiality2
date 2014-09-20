@@ -37,7 +37,7 @@ int a2_Render(A2_state *st,
 		A2_handle program, unsigned argc, int *argv,
 		A2_property *props)
 {
-	A2_errors res;
+	int res;
 	A2_handle h;
 	A2_driver *drv;
 	A2_config *cfg;

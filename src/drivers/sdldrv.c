@@ -1,7 +1,7 @@
 /*
  * sdldrv.c - Audiality 2 SDL audio driver
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -34,7 +34,7 @@ static void sdld_callback(void *ud, Uint8 *stream, int len)
 	A2_config *cfg = driver->driver.config;
 	int frames = len / 4;
 	int c, i;
-	Sint16 *out = (Sint16 *)stream;
+	Sint16 *out = (Sint16 *)(void *)stream;
 	if(driver->Process)
 		driver->Process(driver, frames);
 	else

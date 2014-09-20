@@ -80,7 +80,7 @@ static RCHM_errors a2_StreamDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handl
 		res = str->Flush(str);
 	rchm_Release(&((A2_typeinfo *)ti)->state->ss->hm, str->targethandle);
 	free(str);
-	return res;
+	return (RCHM_errors)res;
 }
 
 

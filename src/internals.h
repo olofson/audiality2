@@ -830,7 +830,7 @@ void a2_ProcessVoices(A2_state *st, A2_voice **head, unsigned offset,
 /* Get the A2_voice that the specified A2_vmstate belongs to */
 static inline A2_voice *a2_voice_from_vms(A2_vmstate *vms)
 {
-	return (A2_voice *)((char *)vms - offsetof(A2_voice, s));
+	return (A2_voice *)(void *)((char *)vms - offsetof(A2_voice, s));
 }
 
 

@@ -115,7 +115,7 @@
 /*
  * Maximum allowed child voice nesting depth. (Recursive explosion inhibitor.)
  */
-#define	A2_NESTLIMIT		256
+#define	A2_NESTLIMIT		255
 
 /* Default initial pool sizes for A2_REALTIME states */
 #define	A2_INITHANDLES		256

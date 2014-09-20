@@ -252,7 +252,7 @@ int a2_Size(A2_state *st, A2_handle handle)
 
 A2_errors a2_Retain(A2_state *st, A2_handle handle)
 {
-	return rchm_Retain(&st->ss->hm, handle);
+	return (A2_errors)rchm_Retain(&st->ss->hm, handle);
 }
 
 
@@ -783,7 +783,7 @@ A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
 		unsigned argc, int *argv)
 {
 	A2_apimessage am;
-	if((ep < 0) || (ep >= A2_MAXEPS))
+	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_Now(st);
@@ -804,7 +804,7 @@ A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
 		unsigned argc, int *argv)
 {
 	A2_apimessage am;
-	if((ep < 0) || (ep >= A2_MAXEPS))
+	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_Now(st);

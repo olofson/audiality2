@@ -364,11 +364,11 @@ static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 /* Add dependency on 'h' to current bank, if there isn't one already */
 static void a2c_AddDependency(A2_compiler *c, A2_handle h)
 {
-	RCHM_errors res;
+	int ind;
 	if(a2ht_FindItem(&c->target->deps, h) >= 0)
 		return;		/* Already in there! */
-	if((res = a2ht_AddItem(&c->target->deps, h)) < 0)
-		a2c_Throw(c, -res);
+	if((ind = a2ht_AddItem(&c->target->deps, h)) < 0)
+		a2c_Throw(c, -ind);
 }
 
 
@@ -2502,7 +2502,6 @@ static int a2c_AddFunction(A2_compiler *c)
 
 static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 {
-	A2_errors res;
 	int i;
 	A2_program *p;
 	A2_scope sc;
@@ -2520,8 +2519,8 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 		free(p);
 		a2c_Throw(c, -s->v.i);
 	}
-	if((res = a2ht_AddItem(&c->target->deps, s->v.i)) < 0)
-		a2c_Throw(c, -res);
+	if((i = a2ht_AddItem(&c->target->deps, s->v.i)) < 0)
+		a2c_Throw(c, -i);
 	if(export && !c->canexport)
 		a2c_Throw(c, A2_CANTEXPORT);
 	if(export || (c->exportall && c->canexport))

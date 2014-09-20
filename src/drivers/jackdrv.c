@@ -1,7 +1,7 @@
 /*
  * jackdrv.c - Audiality 2 JACK audio driver
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -113,7 +113,8 @@ static int jackd_load_jack(JACKD_audiodriver *jd)
 	}
 	for(i = 0; jackfuncs[i].name; ++i)
 	{
-		void **fns = (void **)((char *)(&jd->jack) + jackfuncs[i].fn);
+		void **fns = (void **)(void *)((char *)(&jd->jack) +
+				jackfuncs[i].fn);
 		if(!(*fns = dlsym(jd->libjack, jackfuncs[i].name)))
 		{
 			printf("Audiality 2: Required JACK call '%s' missing!\n",

@@ -236,7 +236,6 @@ A2_handle a2_NewString(A2_state *st, const char *string)
 
 A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
 {
-	A2_errors res;
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
@@ -246,11 +245,12 @@ A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
 	{
 	  case A2_TBANK:
 	  {
+		int ind;
 		A2_bank *b = (A2_bank *)hi->d.data;
 		if(a2ht_FindItem(&b->deps, handle) >= 0)
 			return A2_ISASSIGNED;
-		if((res = a2ht_AddItem(&b->deps, handle)) < 0)
-			return -res;
+		if((ind = a2ht_AddItem(&b->deps, handle)) < 0)
+			return -ind;
 		if((hi = rchm_Get(&st->ss->hm, handle)))
 			hi->userbits &= ~A2_APIOWNED;
 		return A2_OK;

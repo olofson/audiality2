@@ -1,7 +1,7 @@
 /*----------------------------------------------------------------------------.
-        rchm.c - Reference Counting Handle Manager 0.3                        |
+        rchm.c - Reference Counting Handle Manager 0.4                        |
  .----------------------------------------------------------------------------'
- | Copyright 2012-2013 David Olofson <david@olofson.net>
+ | Copyright 2012-2014 David Olofson <david@olofson.net>
  |
  | This software is provided 'as-is', without any express or implied warranty.
  | In no event will the authors be held liable for any damages arising from the
@@ -68,7 +68,7 @@ void rchm_Cleanup(RCHM_manager *m)
 	for(i = 0; i < m->ntypes; ++i)
 		free(m->types[i].name);
 	free(m->types);
-	memset(m, 0, sizeof(m));
+	memset(m, 0, sizeof(*m));
 }
 
 
@@ -78,7 +78,7 @@ RCHM_errors rchm_Init(RCHM_manager *m, int inithandles)
 	int i, ii = (inithandles - 1) >> RCHM_BLOCKSIZE_POW2;
 	if(ii >= RCHM_MAXBLOCKS)
 		return RCHM_OOHANDLES;
-	memset(m, 0, sizeof(m));
+	memset(m, 0, sizeof(*m));
 	m->pool = -1;
 	for(i = 0; i < ii; ++i)
 		if((res = rchm_AddBlock(m, i)))

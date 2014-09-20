@@ -136,7 +136,7 @@ static void fail(unsigned where, A2_errors err)
 
 static A2_handle render_wave(A2_state *st, A2_handle h)
 {
-	A2_errors res;
+	int res;
 	A2_handle wh, sh;
 	A2_driver *drv;
 	A2_config *cfg;

@@ -1,5 +1,5 @@
 /*----------------------------------------------------------------------------.
-        rchm.h - Reference Counting Handle Manager 0.3                        |
+        rchm.h - Reference Counting Handle Manager 0.4                        |
  .----------------------------------------------------------------------------'
  | Copyright 2012-2014 David Olofson <david@olofson.net>
  |
