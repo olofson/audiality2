@@ -98,10 +98,11 @@ set(f "${f} -Wbad-function-cast -Waggregate-return")
 set(f "${f} -Wstrict-prototypes -fno-builtin -Wshadow")
 set(f "${f} -Wdeclaration-after-statement -Wmissing-prototypes")
 set(f "${f} -Wmissing-declarations -Wdisabled-optimization")
-set(CMAKE_C_FLAGS_MAINTAINER "${f} -Werror")
+set(f "${f} -Werror")
+set(CMAKE_C_FLAGS_MAINTAINER "${f}")
 
 # Debug build: Maintainer + extra debug features, don't fail on warnings
 set(f "${f} -DDEBUG")
-set(CMAKE_C_FLAGS_DEBUG ${f})
+set(CMAKE_C_FLAGS_DEBUG "${f}")
 
 install(TARGETS audiality2 DESTINATION lib)
