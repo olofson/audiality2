@@ -489,7 +489,7 @@ int main(int argc, const char *argv[])
 
 	/* Start playing! */
 	a2_Now(state);
-	tcb = a2_TapCallback(state, a2_RootVoice(state), tap_process, NULL);
+	tcb = a2_SendCallback(state, a2_RootVoice(state), tap_process, NULL);
 	if(tcb < 0)
 		fail(-tcb);
 	if(play_sounds(argc, argv) != 1)

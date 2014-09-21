@@ -522,7 +522,7 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "Couldn't allocate visualization buffers!\n");
 		exit(1);
 	}
-	if((tcb = a2_TapCallback(state, rootvoice, grab_process, NULL)) < 0)
+	if((tcb = a2_SendCallback(state, rootvoice, grab_process, NULL)) < 0)
 		fail(-tcb);
 
 	gui_draw_screen();

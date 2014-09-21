@@ -74,7 +74,7 @@ a2_Now(st);
 	if(vh < 0)
 		return vh;
 a2_Wait(st, 1.0f);
-	so->stream = a2_OpenSend(st, vh, 0,
+	so->stream = a2_OpenReturn(st, vh, 0,
 			samplerate * STREAMBUFFER / 1000, 0);
 	if(so->stream < 0)
 		return so->stream;

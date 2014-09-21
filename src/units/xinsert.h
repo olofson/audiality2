@@ -2,8 +2,8 @@
  * xinsert.h - Audiality 2 External Insert unit
  *
  *	This unit implements the realtime side of the callback and stream
- *	tap/send/insert APIs; a2_SetTapCallback(), a2_SetSendCallback(),
- *	a2_SetInsertCallback(), a2_OpenTap() and a2_OpenSend().
+ *	send/return/insert APIs; a2_SendCallback(), a2_ReturnCallback(),
+ *	a2_InsertCallback(), a2_OpenSend() and a2_OpenReturn().
  *
  * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
@@ -36,7 +36,7 @@ typedef struct A2_xinsert_client A2_xinsert_client;
 typedef enum A2_xiflags
 {
 	A2_XI_READ =	0x00000100,	/* Client reads from unit inputs */
-	A2_XI_WRITE =	0x00000200,	/* Client sends to unit outputs */
+	A2_XI_WRITE =	0x00000200,	/* Client writes to unit outputs */
 	A2_XI_STREAM =	0x00000400,	/* 0: callback, 1: stream */
 	A2_XI_SILENT =	0x00000800	/* Don't report realtime xflows */
 } A2_xiflags;
