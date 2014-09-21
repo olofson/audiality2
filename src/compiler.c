@@ -328,7 +328,7 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 		fprintf(stderr, "INTERNAL ERROR: Tried to push symbol '%s', "
 				"which has a non-NULL 'next' field!\n",
 				s->name);
-		*(char *)NULL = 0;
+		*(volatile char *)NULL = 0;
 	}
 #endif
 	SYMBOLDBG(

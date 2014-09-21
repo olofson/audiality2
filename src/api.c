@@ -498,7 +498,7 @@ void a2_PumpAPIMessages(A2_state *st)
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unknown engine message "
-					"%d!\n", am.b.action);
+					"%d!\n", am.b.common.action);
 			break;
 #endif
 		}

@@ -673,13 +673,13 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 	int esize;
 	A2_voice *sv = parent->sub;
 #ifdef DEBUG
-	switch(e->common.action)
+	switch(e->b.common.action)
 	{
 	  case A2MT_SEND:
 	  case A2MT_KILL:
 	  default:
 		fprintf(stderr, "a2_event_subforward() used on unsupported "
-				"action %d!\n", e->common.action);
+				"action %d!\n", e->b.common.action);
 		return;
 	}
 	if(!sv)
@@ -732,18 +732,20 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		A2_event *e = v->events;
 		if(e->b.common.timestamp != current)
 			return A2_END;
-		DUMPMSGS(fprintf(stderr, "%f:\th (%p) ", e->b.timestamp / 256.0f, v);)
+		DUMPMSGS(fprintf(stderr, "%f:\th (%p) ",
+				e->b.common.timestamp / 256.0f, v);)
 		NUMMSGS(fprintf(stderr, "[ %u ] ", e->number);)
 #ifdef DEBUG
-		if(a2_TSDiff(e->b.timestamp, st->now_fragstart) < 0)
+		if(a2_TSDiff(e->b.common.timestamp, st->now_fragstart) < 0)
 		{
 			/* NOTE: Can only happen if there's a bug somewhere! */
-			fprintf(stderr, "Audiality 2: Incorrect timestamp for voice %p!"
-					" (%f frames late.)", v,
-			       		(st->now_fragstart - e->b.timestamp) / 256.0f);
+			fprintf(stderr, "Audiality 2: Incorrect timestamp for "
+					"voice %p! (%f frames late.)", v,
+			       		(st->now_fragstart -
+			       		e->b.common.timestamp) / 256.0f);
 			MSGTRACK(fprintf(stderr, "(ev %p from %s)", e, e->source);)
 			fprintf(stderr, "\n");
-			e->b.timestamp = st->now_fragstart;
+			e->b.common.timestamp = st->now_fragstart;
 		}
 #endif
 		switch(e->b.common.action)
@@ -751,7 +753,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		  case A2MT_PLAY:
 			DUMPMSGS(
 				fprintf(stderr, "PLAY(");
-				printargs(e->b.argc, e->b.a);
+				printargs(e->b.common.argc, e->b.play.a);
 				fprintf(stderr, ")\n");
 			)
 			if((res = a2_event_play(st, v, &e->b)))
