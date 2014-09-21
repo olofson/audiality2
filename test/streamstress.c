@@ -65,15 +65,12 @@ typedef struct STREAMOSC
 /* Create and start streaming oscillator. Returns 0 (A2_OK) on success. */
 static A2_errors so_Start(A2_state *st, STREAMOSC *so)
 {
-	A2_handle vh;
-a2_Now(st);
-	vh = a2_Start(st, a2_RootVoice(st), streamprogram,
+	A2_handle vh = a2_Start(st, a2_RootVoice(st), streamprogram,
 			1.0f,				/* velocity */
 			a2_Rand(st, 2.0f) - 1.0f,	/* pan */
 			200.0f + a2_Rand(st, 2000.0f));	/* duration */
 	if(vh < 0)
 		return vh;
-a2_Wait(st, 1.0f);
 	so->stream = a2_OpenReturn(st, vh, 0,
 			samplerate * STREAMBUFFER / 1000, 0);
 	if(so->stream < 0)

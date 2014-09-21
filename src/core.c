@@ -1564,7 +1564,7 @@ static inline int a2_VoiceProcessVMEv(A2_state *st, A2_voice *v, unsigned now)
 			else
 				return nextev >> 8;
 		}
-		if(nextvm < nextev)
+		if(nextvm <= nextev)
 		{
 			int res = a2_VoiceVMProcess(st, v);
 			if(res >= A2_END)
