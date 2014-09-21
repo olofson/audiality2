@@ -40,7 +40,7 @@
  */
 static inline void a2_flush_event(A2_state *st, A2_event *e, A2_handle h)
 {
-	switch(e->b.action)
+	switch(e->b.common.action)
 	{
 	  case A2MT_ADDXIC:
 	  {
@@ -53,20 +53,16 @@ static inline void a2_flush_event(A2_state *st, A2_event *e, A2_handle h)
 	  	 * there is a voice, the xinsert unit will take care of XICs in
 	  	 * Deinitialize().
 	  	 */
-		A2_xinsert_client **xic = (A2_xinsert_client **)&e->b.a1;
 		if(st->config->flags & A2_REALTIME)
 		{
 			A2_apimessage am;
-			A2_xinsert_client **d = (A2_xinsert_client **)&am.b.a1;
-			am.b.action = A2MT_XICREMOVED;
-			am.b.timestamp = st->now_ticks;
-			/* NOTE: Also uses a2 on 64 bit platforms! */
-			*d = *xic;
-			a2_writemsg(st->toapi, &am,
-					A2_MSIZE(b.a1) + sizeof(void *));
+			am.b.common.action = A2MT_XICREMOVED;
+			am.b.common.timestamp = st->now_ticks;
+			am.b.xic.client = e->b.xic.client;
+			a2_writemsg(st->toapi, &am, A2_MSIZE(b.xic));
 		}
 		else
-			free(xic);
+			free(e->b.xic.client);
 		break;
 	  }
 	  case A2MT_RELEASE:
@@ -574,11 +570,11 @@ static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
 	MSGTRACK(e->source = "a2_VoiceSend()";)
-	e->b.action = A2MT_SEND;
-	e->b.timestamp = when;
-	e->b.a1 = ep;
-	e->b.argc = argc;
-	memcpy(e->b.a, argv, argc * sizeof(int));
+	e->b.common.action = A2MT_SEND;
+	e->b.common.timestamp = when;
+	e->b.play.program = ep;
+	e->b.common.argc = argc;
+	memcpy(e->b.play.a, argv, argc * sizeof(int));
 	a2_SendEvent(&v->events, e);
 	return A2_OK;
 }
@@ -629,14 +625,14 @@ static inline A2_errors a2_event_play(A2_state *st, A2_voice *parent,
 		A2_eventbody *eb)
 {
 	A2_voice *v;
-	A2_program *p = a2_GetProgram(st, eb->a1);
+	A2_program *p = a2_GetProgram(st, eb->play.program);
 	if(!p)
 		return A2_BADPROGRAM;
-	if(!(v = a2_VoiceNew(st, parent, eb->timestamp)))
+	if(!(v = a2_VoiceNew(st, parent, eb->common.timestamp)))
 		return parent->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
 	v->flags = 0;
-	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
+	return a2_VoiceStart(st, v, p, eb->common.argc, eb->play.a);
 }
 
 /*
@@ -648,10 +644,10 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 		A2_eventbody *eb, RCHM_handleinfo *hi)
 {
 	A2_voice *v;
-	A2_program *p = a2_GetProgram(st, eb->a1);
+	A2_program *p = a2_GetProgram(st, eb->start.program);
 	if(!p)
 		return A2_BADPROGRAM;
-	if(!(v = a2_VoiceNew(st, parent, eb->timestamp)))
+	if(!(v = a2_VoiceNew(st, parent, eb->common.timestamp)))
 		return parent->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
 	/*
@@ -662,27 +658,46 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 	hi->d.data = (void *)v;
 	hi->typecode = A2_TVOICE;
 	v->flags = A2_ATTACHED;
-	return a2_VoiceStart(st, v, p, eb->argc, eb->a);
+	return a2_VoiceStart(st, v, p, eb->common.argc, eb->start.a);
 }
 
 /*
  * Forward event 'e' to the first subvoice of 'parent', then send copies of 'e'
  * to any further subvoices.
+ *
+ * NOTE: This is for KILL and SEND events only!
  */
 static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 		A2_event *e)
 {
-	int esize = A2_MSIZE(b.a2) - A2_MSIZE(b) + sizeof(int) * e->b.argc;
+	int esize;
 	A2_voice *sv = parent->sub;
 #ifdef DEBUG
+	switch(e->common.action)
+	{
+	  case A2MT_SEND:
+	  case A2MT_KILL:
+	  default:
+		fprintf(stderr, "a2_event_subforward() used on unsupported "
+				"action %d!\n", e->common.action);
+		return;
+	}
 	if(!sv)
 	{
 		fprintf(stderr, "a2_event_subforward() called with no "
-				" subvoices!\n");
+				"subvoices!\n");
 		return;
 	}
 #endif
 	a2_SendEvent(&sv->events, e);
+	if(sv->next)
+	{
+		if(e->b.common.argc)
+			esize = offsetof(A2_eventbody, play.a) +
+					sizeof(int) * (e->b.common.argc);
+		else
+			esize = offsetof(A2_eventbody, play.program);
+	}
 	while(sv->next)
 	{
 		A2_event *ne = a2_AllocEvent(st);
@@ -710,12 +725,12 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
  */
 static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 {
-	unsigned current = v->events->b.timestamp;
+	unsigned current = v->events->b.common.timestamp;
 	while(v->events)
 	{
 		int res;
 		A2_event *e = v->events;
-		if(e->b.timestamp != current)
+		if(e->b.common.timestamp != current)
 			return A2_END;
 		DUMPMSGS(fprintf(stderr, "%f:\th (%p) ", e->b.timestamp / 256.0f, v);)
 		NUMMSGS(fprintf(stderr, "[ %u ] ", e->number);)
@@ -731,7 +746,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			e->b.timestamp = st->now_fragstart;
 		}
 #endif
-		switch(e->b.action)
+		switch(e->b.common.action)
 		{
 		  case A2MT_PLAY:
 			DUMPMSGS(
@@ -744,7 +759,8 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			break;
 		  case A2MT_START:
 		  {
-			RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, e->b.a2);
+			RCHM_handleinfo *hi = rchm_Get(&st->ss->hm,
+					e->b.start.voice);
 #ifdef DEBUG
 			if(!hi)
 			{
@@ -754,7 +770,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 #endif
 			DUMPMSGS(
 				fprintf(stderr, "START(");
-				printargs(e->b.argc, e->b.a);
+				printargs(e->b.start.argc, e->b.start.a);
 				fprintf(stderr, ")\n");
 			)
 			if((res = a2_event_start(st, v, &e->b, hi)))
@@ -762,7 +778,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 				a2r_Error(st, res, "A2MT_START[2]");
 				a2_FlushEventQueue(st,
 						(A2_event **)&hi->d.data, -1);
-				a2r_DetachHandle(st, e->b.a2);
+				a2r_DetachHandle(st, e->b.start.voice);
 			}
 			break;
 		  }
@@ -770,22 +786,23 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		  {
 			int ep;
 			DUMPMSGS(
-				fprintf(stderr, "SEND(%u: ", e->b.a1);
-				printargs(e->b.argc, e->b.a);
+				fprintf(stderr, "SEND(%u: ",
+						e->b.play.program);
+				printargs(e->b.common.argc, e->b.play.a);
 				fprintf(stderr, ")\n");
 			)
-			if((ep = v->program->eps[e->b.a1]) < 0)
+			if((ep = v->program->eps[e->b.play.program]) < 0)
 			{
 				a2r_Error(st, A2_BADENTRY, "A2MT_SEND[1]");
 				break;
 			}
-			if((res = a2_VoiceCall(st, v, ep, e->b.argc, e->b.a,
-					1)))
+			if((res = a2_VoiceCall(st, v, ep, e->b.common.argc,
+					e->b.play.a, 1)))
 			{
 				a2r_Error(st, res, "A2MT_SEND[2]");
 				break;
 			}
-			v->s.waketime = e->b.timestamp;
+			v->s.waketime = e->b.common.timestamp;
 			v->events = e->next;
 			a2_FreeEvent(st, e);
 			return res;	/* Spin the VM to process message! */
@@ -793,11 +810,12 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		  case A2MT_SENDSUB:
 		  case A2MT_KILLSUB:
 			DUMPMSGS(
-				if(e->b.action == A2MT_SENDSUB)
+				if(e->b.common.action == A2MT_SENDSUB)
 				{
 					fprintf(stderr, "SENDSUB(%u: ",
-							e->b.a1);
-					printargs(e->b.argc, e->b.a);
+							e->b.play.program);
+					printargs(e->b.common.argc,
+							e->b.play.a);
 					fprintf(stderr, ")\n");
 				}
 				else
@@ -805,7 +823,8 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			)
 		  	if(v->sub)
 		  	{
-				--e->b.action;	/* Turn into non-SUB event! */
+				/* Turn into non-SUB event! */
+				--e->b.common.action;
 				v->events = e->next;
 				a2_event_subforward(st, v, e);
 				continue;	/* The event is reused! */
@@ -817,29 +836,23 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			 * This will allow audio processing to finish, and then
 			 * a2_VoiceVMProcess() will have the voice freed.
 			 */
-			a2_VoiceKill(st, v, e->b.timestamp);
+			a2_VoiceKill(st, v, e->b.common.timestamp);
 			return A2_END;
 		  case A2MT_ADDXIC:
-		  {
-			void **d = (void **)&e->b.a1;
 			DUMPMSGS(fprintf(stderr, "ADDXIC\n");)
-			if((res = a2_XinsertAddClient(st, v, *d)))
+			if((res = a2_XinsertAddClient(st, v, e->b.xic.client)))
 				a2r_Error(st, res, "A2MT_ADDXIC");
 			break;
-		  }
 		  case A2MT_REMOVEXIC:
-		  {
-			void **d = (void **)&e->b.a1;
 			DUMPMSGS(fprintf(stderr, "REMOVEXIC\n");)
-			if((res = a2_XinsertRemoveClient(st, *d)))
+			if((res = a2_XinsertRemoveClient(st, e->b.xic.client)))
 				a2r_Error(st, res, "A2MT_REMOVEXIC");
 			break;
-		  }
 		  case A2MT_RELEASE:
 			DUMPMSGS(fprintf(stderr, "RELEASE\n");)
 			a2r_DetachHandle(st, v->handle);
 			v->handle = -1;
-			a2_VoiceDetach(v, e->b.timestamp);
+			a2_VoiceDetach(v, e->b.common.timestamp);
 			break;
 		}
 		v->events = e->next;
@@ -1541,7 +1554,7 @@ static inline int a2_VoiceProcessVMEv(A2_state *st, A2_voice *v, unsigned now)
 	while(v->events)
 	{
 		int nextvm = a2_TSDiff(v->s.waketime, now);
-		int nextev = a2_TSDiff(v->events->b.timestamp, now);
+		int nextev = a2_TSDiff(v->events->b.common.timestamp, now);
 		if((nextvm > 255) && (nextev > 255))
 		{
 			if(nextvm < nextev)

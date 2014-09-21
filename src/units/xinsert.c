@@ -299,13 +299,10 @@ A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
 	if(st->config->flags & A2_REALTIME)
 	{
 		A2_apimessage am;
-		A2_xinsert_client **d = (A2_xinsert_client **)&am.b.a1;
-		am.b.action = A2MT_XICREMOVED;
-		am.b.timestamp = st->now_ticks;
-		/* NOTE: Also uses a2 on platforms with 64 bit pointers! */
-		*d = xic;
-		return a2_writemsg(st->toapi, &am,
-				A2_MSIZE(b.a1) + sizeof(void *));
+		am.b.common.action = A2MT_XICREMOVED;
+		am.b.common.timestamp = st->now_ticks;
+		am.b.xic.client = xic;
+		return a2_writemsg(st->toapi, &am, A2_MSIZE(b.xic));
 	}
 	else
 	{

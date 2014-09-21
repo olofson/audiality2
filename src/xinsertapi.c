@@ -31,7 +31,6 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 {
 	A2_errors res;
 	A2_apimessage am;
-	void **d = (void **)&am.b.a1;
 
 	/* Create a handle for the client (both streams and callbacks!) */
 	xic->handle = rchm_NewEx(&st->ss->hm, xic, A2_TXICLIENT, 0, 1);
@@ -42,11 +41,10 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_Now(st);
 	am.target = voice;
-	am.b.action = A2MT_ADDXIC;
-	am.b.timestamp = st->timestamp;
-	*d = xic;
-	res = a2_writemsg(st->fromapi, &am,
-			A2_MSIZE(b.a1) - sizeof(am.b.a1) + sizeof(void *));
+	am.b.common.action = A2MT_ADDXIC;
+	am.b.common.timestamp = st->timestamp;
+	am.b.xic.client = xic;
+	res = a2_writemsg(st->fromapi, &am, A2_MSIZE(b.xic));
 	if(res)
 	{
 		rchm_Free(&st->ss->hm, xic->handle);
@@ -347,15 +345,13 @@ static RCHM_errors xi_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 	A2_apimessage am;
 	A2_xinsert_client *xic = (A2_xinsert_client *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
-	void **d = (void **)&am.b.a1;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_Now(st);
 	am.target = xic->unit->voice;
-	am.b.action = A2MT_REMOVEXIC;
-	am.b.timestamp = st->timestamp;
-	*d = xic;
-	a2_writemsg(st->fromapi, &am,
-			A2_MSIZE(b.a1) - sizeof(am.b.a1) + sizeof(void *));
+	am.b.common.action = A2MT_REMOVEXIC;
+	am.b.common.timestamp = st->timestamp;
+	am.b.xic.client = xic;
+	a2_writemsg(st->fromapi, &am, A2_MSIZE(b.xic));
 	return RCHM_REFUSE;
 }
 

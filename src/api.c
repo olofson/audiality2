@@ -342,17 +342,17 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am)
 		return;
 	}
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
-	if(am->size < A2_MSIZE(b.argc))
-		e->b.argc = 0;
-	if(a2_TSDiff(e->b.timestamp, st->now_frames) < 0)
+	if(am->size < A2_MSIZE(b.common.argc))
+		e->b.common.argc = 0;
+	if(a2_TSDiff(e->b.common.timestamp, st->now_frames) < 0)
 	{
 #ifdef DEBUG
 		fprintf(stderr, "Audiality 2: API message deliverad "
 				"%f frames late!\n", (st->now_frames -
-				e->b.timestamp) / 256.0f);
+				e->b.common.timestamp) / 256.0f);
 #endif
 		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_forwardevent()[3]");
-		e->b.timestamp = st->now_frames;
+		e->b.common.timestamp = st->now_frames;
 	}
 	MSGTRACK(e->source = "a2r_em_forwardevent()";)
 	a2_SendEvent(eq, e);
@@ -393,7 +393,7 @@ void a2r_PumpEngineMessages(A2_state *st)
 						"Engine side FIFO read error");
 				return;
 			}
-		switch(am.b.action)
+		switch(am.b.common.action)
 		{
 		  case A2MT_PLAY:
 		  case A2MT_START:
@@ -412,7 +412,7 @@ void a2r_PumpEngineMessages(A2_state *st)
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unknown API message "
-					"%d!\n", am.b.action);
+					"%d!\n", am.b.common.action);
 			break;
 #endif
 		}
@@ -461,16 +461,16 @@ void a2_PumpAPIMessages(A2_state *st)
 						" read error! (28)\n");
 				return;
 			}
-		if(am.size < A2_MSIZE(b.argc))
-			am.b.argc = 0;
-		switch(am.b.action)
+		if(am.size < A2_MSIZE(b.common.argc))
+			am.b.common.argc = 0;
+		switch(am.b.common.action)
 		{
 		  case A2MT_DETACH:
 			a2_detach_or_free_handle(st, am.target);
 			break;
 		  case A2MT_XICREMOVED:
 		  {
-			A2_xinsert_client *c = *(A2_xinsert_client **)&am.b.a1;
+			A2_xinsert_client *c = am.b.xic.client;
 			a2_detach_or_free_handle(st, c->handle);
 			if(c->stream)
 				a2_DetachStream(st, c->stream);
@@ -480,15 +480,13 @@ void a2_PumpAPIMessages(A2_state *st)
 			break;
 		  }
 		  case A2MT_ERROR:
-		  {
-			const char *s = *(const char **)&am.b.a2;
 			fprintf(stderr, "Audiality 2: [RT] %s (%s)\n",
-					a2_ErrorString(am.b.a1), s);
+					a2_ErrorString(am.b.error.code),
+					am.b.error.info);
 			break;
-		  }
 		  case A2MT_WAHP:
 		  {
-			A2_wahp_entry *we = *((A2_wahp_entry **)&am.b.a1);
+			A2_wahp_entry *we = am.b.wahp.entry;
 			if(!--we->count)
 			{
 				/* Last response! Let's make the callback. */
@@ -522,23 +520,22 @@ void a2r_ProcessEOCEvents(A2_state *st, unsigned frames)
 	while(st->eocevents)
 	{
 		A2_event *e = st->eocevents;
-		switch(e->b.action)
+		switch(e->b.common.action)
 		{
 		  case A2MT_WAHP:
 		  {
 		  	/* Just send it back as is to the API context! */
 		  	A2_apimessage am;
-		  	int msize = A2_MSIZE(b.a1) + sizeof(void *);
-			memcpy(&am.b, &e->b,
-					msize - offsetof(A2_apimessage, b));
-			a2_writemsg(st->toapi, &am, msize);
+		  	int ms = A2_MSIZE(b.wahp);
+			memcpy(&am.b, &e->b, ms - offsetof(A2_apimessage, b));
+			a2_writemsg(st->toapi, &am, ms);
 			break;
 		  }
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unexpected message "
 					"%d in a2r_ProcessEOCEvents()!\n",
-					e->b.action);
+					e->b.common.action);
 			break;
 #endif
 		}
@@ -552,7 +549,6 @@ A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
 		void *userdata)
 {
 	A2_apimessage am;
-	A2_wahp_entry **d = (A2_wahp_entry **)&am.b.a1;
 	A2_state *pstate = st->parent ? st->parent : st;
 	A2_wahp_entry *we = (A2_wahp_entry *)malloc(sizeof(A2_wahp_entry));
 	if(!we)
@@ -566,15 +562,12 @@ A2_errors a2_WhenAllHaveProcessed(A2_state *st, A2_generic_cb cb,
 			++we->count;
 	if(we->count)
 	{
-		am.b.action = A2MT_WAHP;
-		/* NOTE: Overwrites a2 on platforms with 64 bit pointers! */
-		*d = we;
+		am.b.common.action = A2MT_WAHP;
+		am.b.wahp.entry = we;
 		for(st = pstate; st; st = st->next)
 			if(st->fromapi)
 				a2_writemsg(st->fromapi, &am,
-						A2_MSIZE(b.a1) -
-						sizeof(am.b.a1) +
-						sizeof(void *));
+						A2_MSIZE(b.wahp));
 	}
 	else
 	{
@@ -595,15 +588,11 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 	if(st->config->flags & A2_REALTIME)
 	{
 		A2_apimessage am;
-		const char **d = (const char **)&am.b.a2;
-		am.b.action = A2MT_ERROR;
-		am.b.timestamp = st->now_ticks;
-		am.b.a1 = e;
-		/* NOTE: Overwrites a[0] on platforms with 64 bit pointers! */
-		*d = info;
-		return a2_writemsg(st->toapi, &am,
-				A2_MSIZE(b.a2) - sizeof(am.b.a2) +
-				sizeof(void *));
+		am.b.common.action = A2MT_ERROR;
+		am.b.common.timestamp = st->now_ticks;
+		am.b.error.code = e;
+		am.b.error.info = info;
+		return a2_writemsg(st->toapi, &am, A2_MSIZE(b.error));
 	}
 	else
 	{
@@ -630,9 +619,10 @@ void a2r_DetachHandle(A2_state *st, A2_handle h)
 	if(!st->toapi)
 		return;
 	/* Respond back to the API: "Clear to free the handle!" */
-	am.b.action = A2MT_DETACH;
+	am.b.common.action = A2MT_DETACH;
 	am.target = h;
-	a2_writemsg(st->toapi, &am, A2_MSIZE(b.action));
+	/* NOTE: No timestamp on this one, so we stop at the 'action' field! */
+	a2_writemsg(st->toapi, &am, A2_MSIZE(b.common.action));
 }
 
 
@@ -659,13 +649,13 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 				a2_Now(st);
 			else
 				a2_poll_api(st);
-			am.b.timestamp = st->timestamp;
+			am.b.common.timestamp = st->timestamp;
 			am.target = handle;
 			if(hi->typecode == A2_TXICLIENT)
-				am.b.action = A2MT_REMOVEXIC;
+				am.b.common.action = A2MT_REMOVEXIC;
 			else
-				am.b.action = A2MT_RELEASE;
-			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
+				am.b.common.action = A2MT_RELEASE;
+			a2_writemsg(st->fromapi, &am, A2_MSIZE(b.common));
 			break;
 		  }
 		  case A2_TBANK:
@@ -749,14 +739,15 @@ A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
 	else
 		a2_poll_api(st);
 	am.target = parent;
-	am.b.action = A2MT_START;
-	am.b.timestamp = st->timestamp;
-	am.b.a1 = program;
-	if((am.b.a2 = rchm_New(&st->ss->hm, NULL, A2_TNEWVOICE)) < 0)
-		return am.b.a2;
-	if((res = a2_writemsgargs(st->fromapi, &am, argc, argv)))
+	am.b.common.action = A2MT_START;
+	am.b.common.timestamp = st->timestamp;
+	am.b.start.program = program;
+	if((am.b.start.voice = rchm_New(&st->ss->hm, NULL, A2_TNEWVOICE)) < 0)
+		return am.b.start.voice;
+	if((res = a2_writemsgargs(st->fromapi, &am, argc, argv,
+			offsetof(A2_apimessage, b.start.a))))
 		return res;
-	return am.b.a2;
+	return am.b.start.voice;
 }
 
 
@@ -769,13 +760,14 @@ A2_errors a2_Playa(A2_state *st, A2_handle parent, A2_handle program,
 	else
 		a2_poll_api(st);
 	am.target = parent;
-	am.b.action = A2MT_PLAY;
-	am.b.timestamp = st->timestamp;
-	am.b.a1 = program;
+	am.b.common.action = A2MT_PLAY;
+	am.b.common.timestamp = st->timestamp;
+	am.b.play.program = program;
 	if(argc)
-		return a2_writemsgargs(st->fromapi, &am, argc, argv);
+		return a2_writemsgargs(st->fromapi, &am, argc, argv,
+				offsetof(A2_apimessage, b.play.a));
 	else
-		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.a1));
+		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.play.program));
 }
 
 
@@ -790,13 +782,14 @@ A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
 	else
 		a2_poll_api(st);
 	am.target = voice;
-	am.b.action = A2MT_SEND;
-	am.b.timestamp = st->timestamp;
-	am.b.a1 = ep;
+	am.b.common.action = A2MT_SEND;
+	am.b.common.timestamp = st->timestamp;
+	am.b.play.program = ep;
 	if(argc)
-		return a2_writemsgargs(st->fromapi, &am, argc, argv);
+		return a2_writemsgargs(st->fromapi, &am, argc, argv,
+				offsetof(A2_apimessage, b.play.a));
 	else
-		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.a1));
+		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.play.program));
 }
 
 
@@ -811,13 +804,14 @@ A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
 	else
 		a2_poll_api(st);
 	am.target = voice;
-	am.b.action = A2MT_SENDSUB;
-	am.b.timestamp = st->timestamp;
-	am.b.a1 = ep;
+	am.b.common.action = A2MT_SENDSUB;
+	am.b.common.timestamp = st->timestamp;
+	am.b.play.program = ep;
 	if(argc)
-		return a2_writemsgargs(st->fromapi, &am, argc, argv);
+		return a2_writemsgargs(st->fromapi, &am, argc, argv,
+				offsetof(A2_apimessage, b.play.a));
 	else
-		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.a1));
+		return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.play.program));
 }
 
 
@@ -829,9 +823,9 @@ A2_errors a2_Kill(A2_state *st, A2_handle voice)
 	else
 		a2_poll_api(st);
 	am.target = voice;
-	am.b.action = A2MT_KILL;
-	am.b.timestamp = st->timestamp;
-	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
+	am.b.common.action = A2MT_KILL;
+	am.b.common.timestamp = st->timestamp;
+	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.common));
 }
 
 
@@ -843,9 +837,9 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice)
 	else
 		a2_poll_api(st);
 	am.target = voice;
-	am.b.action = A2MT_KILLSUB;
-	am.b.timestamp = st->timestamp;
-	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.timestamp));
+	am.b.common.action = A2MT_KILLSUB;
+	am.b.common.timestamp = st->timestamp;
+	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.common));
 }
 
 

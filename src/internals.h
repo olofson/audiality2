@@ -49,6 +49,7 @@ typedef struct A2_voice A2_voice;
 typedef struct A2_compiler A2_compiler;
 typedef struct A2_sharedstate A2_sharedstate;
 typedef struct A2_stream A2_stream;
+typedef struct A2_wahp_entry A2_wahp_entry;
 
 
 /*
@@ -426,15 +427,48 @@ typedef enum A2_evactions
 	A2MT_WAHP,	/* When-All-Have-Processed callback */
 } A2_evactions;
 
-typedef struct A2_eventbody
+/* Fields common to all event actions */
+#define	A2_EVENT_COMMON							\
+	uint16_t	action;		/* Message action code */	\
+	uint16_t	argc;		/* Argument count */		\
+	unsigned	timestamp;	/* When to apply (frames, 24:8 fixp) */
+
+typedef union A2_eventbody
 {
-	/* WARNING: Check api.c after reordering these in any way! */
-	uint16_t	action;		/* Message action code */
-	uint16_t	argc;		/* Argument count */
-	unsigned	timestamp;	/* When to process (frames, 24:8 fixp) */
-	int		a1;		/* Handle, index etc */
-	int		a2;		/* Second handle, index etc */
-	int		a[A2_MAXARGS];	/* Arguments (16:16 fixp) */
+	struct
+	{
+		A2_EVENT_COMMON
+	} common;
+	struct
+	{
+		A2_EVENT_COMMON
+		A2_handle	program;	/* Program handle */
+		A2_handle	voice;		/* New voice handle */
+		int		a[A2_MAXARGS];	/* Arguments (16:16 fixp) */
+	} start;
+	struct
+	{
+		A2_EVENT_COMMON
+		/* Fields for PLAY, SEND and SENDSUB actions */
+		A2_handle	program;	/* Handle or entry point */
+		int		a[A2_MAXARGS];	/* Arguments (16:16 fixp) */
+	} play;
+	struct
+	{
+		A2_EVENT_COMMON
+		A2_wahp_entry	*entry;
+	} wahp;
+	struct
+	{
+		A2_EVENT_COMMON
+		A2_errors	code;
+		const char	*info;
+	} error;
+	struct
+	{
+		A2_EVENT_COMMON
+		A2_xinsert_client	*client;
+	} xic;
 } A2_eventbody;
 
 struct A2_event
@@ -777,15 +811,16 @@ static inline A2_event **a2_GetEventQueue(A2_state *st, A2_handle handle)
 static inline void a2_SendEvent(A2_event **q, A2_event *e)
 {
 	A2_event *pe = *q;
-	if(!pe || (a2_TSDiff(pe->b.timestamp, e->b.timestamp) > 0))
+	if(!pe || (a2_TSDiff(pe->b.common.timestamp,
+			e->b.common.timestamp) > 0))
 	{
 		e->next = pe;
 		*q = e;
 	}
 	else
 	{
-		while(pe->next && (a2_TSDiff(pe->next->b.timestamp,
-				e->b.timestamp) <= 0))
+		while(pe->next && (a2_TSDiff(pe->next->b.common.timestamp,
+				e->b.common.timestamp) <= 0))
 			pe = pe->next;
 		e->next = pe->next;
 		pe->next = e;
@@ -894,7 +929,7 @@ typedef struct A2_apimessage
 		sizeof(((A2_apimessage *)NULL)->x))
 
 /* Minimum message size - we always read this number of bytes first! */
-#define	A2_APIREADSIZE	(A2_MSIZE(b.action))
+#define	A2_APIREADSIZE	(A2_MSIZE(b.common.action))
 
 
 /* Set the size field of 'm' to 'size', and write it to 'f'. */
@@ -908,7 +943,7 @@ static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
 	if(sfifo_Space(f) < size)
 		return A2_OVERFLOW;
 	m->size = size;
-	m->b.argc = 0;
+	m->b.common.argc = 0;
 	if(sfifo_Write(f, m, size) != size)
 		return A2_INTERNAL + 21;
 	return A2_OK;
@@ -917,19 +952,21 @@ static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
 /*
  * Copy arguments into 'm', setting the argument count and size of the message,
  * and then write it to 'f'.
+ *
+ * NOTE: This is for events using the 'start' and 'play' fields only!
  */
 static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
-		unsigned argc, int *argv)
+		unsigned argc, int *argv, unsigned argoffs)
 {
 	unsigned argsize = sizeof(int) * argc;
-	unsigned size = offsetof(A2_apimessage, b.a) + argsize;
+	unsigned size = argoffs + argsize;
 	if(argc > A2_MAXARGS)
 		return A2_MANYARGS;
 	if(sfifo_Space(f) < size)
 		return A2_OVERFLOW;
 	m->size = size;
-	m->b.argc = argc;
-	memcpy(&m->b.a, argv, argsize);
+	m->b.common.argc = argc;
+	memcpy((char *)m + argoffs, argv, argsize);
 	if(sfifo_Write(f, m, size) != size)
 		return A2_INTERNAL + 22;
 	return A2_OK;
@@ -944,13 +981,13 @@ static inline void a2_poll_api(A2_state *st)
 
 typedef void (*A2_generic_cb)(A2_state *st, void *userdata);
 
-typedef struct A2_wahp_entry
+struct A2_wahp_entry
 {
 	A2_state	*state;
 	A2_generic_cb	callback;
 	void		*userdata;
 	int		count;	/* Number of states we're still waiting for. */
-} A2_wahp_entry;
+};
 
 /*
  * Set up 'cb' to be called with 'userdata' after 'st' and any related states
