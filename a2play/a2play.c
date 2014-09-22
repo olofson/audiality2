@@ -60,8 +60,8 @@ static unsigned lastpeak = 0;	/* Frames since last peak > abs(silencelevel) */
 -------------------------------------------------------------------*/
 
 /* Callback for automatic stop logic */
-static A2_errors tap_process(int **buffers, unsigned nbuffers, unsigned frames,
-		void *userdata)
+static A2_errors sink_process(int **buffers, unsigned nbuffers,
+		unsigned frames, void *userdata)
 {
 	int i, j;
 
@@ -489,7 +489,7 @@ int main(int argc, const char *argv[])
 
 	/* Start playing! */
 	a2_Now(state);
-	tcb = a2_SendCallback(state, a2_RootVoice(state), tap_process, NULL);
+	tcb = a2_SinkCallback(state, a2_RootVoice(state), sink_process, NULL);
 	if(tcb < 0)
 		fail(-tcb);
 	if(play_sounds(argc, argv) != 1)

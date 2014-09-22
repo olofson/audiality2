@@ -58,7 +58,7 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 	Callback xinsert interface
 ---------------------------------------------------------*/
 
-A2_handle a2_SendCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SinkCallback(A2_state *st, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata)
 {
 	A2_handle h;
@@ -75,7 +75,7 @@ A2_handle a2_SendCallback(A2_state *st, A2_handle voice,
 }
 
 
-A2_handle a2_ReturnCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SourceCallback(A2_state *st, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata)
 {
 	A2_handle h;
@@ -144,7 +144,7 @@ static A2_handle a2_open_xic_stream(A2_state *st, A2_handle voice,
 }
 
 
-static A2_errors a2_sendstream_process(int **buffers, unsigned nbuffers,
+static A2_errors a2_sinkstream_process(int **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;
@@ -177,15 +177,15 @@ static A2_errors a2_sendstream_process(int **buffers, unsigned nbuffers,
 	return A2_OK;
 }
 
-A2_handle a2_OpenSend(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSink(A2_state *st, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
 	return a2_open_xic_stream(st, voice, channel, size, flags,
-			a2_sendstream_process, A2_XI_READ);
+			a2_sinkstream_process, A2_XI_READ);
 }
 
 
-static A2_errors a2_returnstream_process(int **buffers, unsigned nbuffers,
+static A2_errors a2_sourcestream_process(int **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;
@@ -219,11 +219,11 @@ static A2_errors a2_returnstream_process(int **buffers, unsigned nbuffers,
 	return A2_OK;
 }
 
-A2_handle a2_OpenReturn(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSource(A2_state *st, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
 	return a2_open_xic_stream(st, voice, channel, size, flags,
-			a2_returnstream_process, A2_XI_WRITE);
+			a2_sourcestream_process, A2_XI_WRITE);
 }
 
 

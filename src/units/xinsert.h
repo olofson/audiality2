@@ -2,8 +2,8 @@
  * xinsert.h - Audiality 2 External Insert unit
  *
  *	This unit implements the realtime side of the callback and stream
- *	send/return/insert APIs; a2_SendCallback(), a2_ReturnCallback(),
- *	a2_InsertCallback(), a2_OpenSend() and a2_OpenReturn().
+ *	sink/source/insert APIs; a2_SinkCallback(), a2_SourceCallback(),
+ *	a2_InsertCallback(), a2_OpenSink() and a2_OpenSource().
  *
  * Copyright 2012-2014 David Olofson <david@olofson.net>
  *

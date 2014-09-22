@@ -71,7 +71,7 @@ static A2_errors so_Start(A2_state *st, STREAMOSC *so)
 			200.0f + a2_Rand(st, 2000.0f));	/* duration */
 	if(vh < 0)
 		return vh;
-	so->stream = a2_OpenReturn(st, vh, 0,
+	so->stream = a2_OpenSource(st, vh, 0,
 			samplerate * STREAMBUFFER / 1000, 0);
 	if(so->stream < 0)
 		return so->stream;
