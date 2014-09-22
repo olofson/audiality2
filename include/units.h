@@ -67,7 +67,8 @@ typedef enum A2_unitflags
 	A2_PROCADD =		0x00000001,	/* Adding Process() */
 
 	/* A2_unitdesc flags */
-	A2_MATCHIO =		0x00010000	/* ninputs == noutputs */
+	A2_MATCHIO =		0x00010000,	/* ninputs == noutputs */
+	A2_XINSERT =		0x00020000	/* Supports xinsert APIs */
 } A2_unitflags;
 
 /*

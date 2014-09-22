@@ -217,23 +217,23 @@ static const A2_crdesc regs[] =
 
 const A2_unitdesc a2_xinsert_unitdesc =
 {
-	"xinsert",		/* name */
+	"xinsert",			/* name */
 
-	A2_MATCHIO,		/* flags */
+	A2_MATCHIO | A2_XINSERT,	/* flags */
 
-	regs,			/* registers */
+	regs,				/* registers */
 
-	1, A2_MAXCHANNELS,	/* [min,max]inputs */
-	1, A2_MAXCHANNELS,	/* [min,max]outputs */
+	1, A2_MAXCHANNELS,		/* [min,max]inputs */
+	1, A2_MAXCHANNELS,		/* [min,max]outputs */
 
-	sizeof(A2_xinsert),	/* instancesize */
-	xi_Initialize,		/* Initialize */
-	xi_Deinitialize		/* Deinitialize */
+	sizeof(A2_xinsert),		/* instancesize */
+	xi_Initialize,			/* Initialize */
+	xi_Deinitialize			/* Deinitialize */
 };
 
 
 /*---------------------------------------------------------
-	External insert API
+	Low level API for xinsert
 ---------------------------------------------------------*/
 
 /* NOTE: These run in engine context, as responses to A2MT_* messages! */
@@ -245,12 +245,12 @@ A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
 	A2_xinsert *xi;
 	A2_xinsert_client *c;
 
-	/* Find first 'xinsert' unit */
+	/* Find first 'XINSERT' enabled unit */
 	if(!(u = v->units))
 		return A2_NOUNITS;	/* Voice has no units! --> */
-	while(u->descriptor != &a2_xinsert_unitdesc)
+	while(!(u->descriptor->flags & A2_XINSERT))
 		if(!(u = u->next))
-			return A2_NOXINSERT; /* No 'xinsert' unit found! --> */
+			return A2_NOXINSERT; /* No suitable unit found! --> */
 
 	/* Add client last in list! */
 	xi = a2_xinsert_cast(u);
