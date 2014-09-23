@@ -54,9 +54,7 @@ if(SDL_FOUND)
 endif(SDL_FOUND)
 
 CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
-if(HAVE_JACK_H)
-	add_definitions(-DA2_HAVE_JACK)
-endif(HAVE_JACK_H)
+find_package(Threads)
 
 #find_package(ALSA)
 #if(ALSA_FOUND)
@@ -79,6 +77,12 @@ endif(UNIX)
 if(SDL_FOUND)
 	target_link_libraries(audiality2 ${SDL_LIBRARY})
 endif(SDL_FOUND)
+
+if(HAVE_JACK_H AND CMAKE_DL_LIBS AND Threads_FOUND)
+	add_definitions(-DA2_HAVE_JACK)
+	target_link_libraries(audiality2 ${CMAKE_DL_LIBS})
+	target_link_libraries(audiality2 ${CMAKE_THREAD_LIBS_INIT})
+endif()
 
 if(WIN32)
 	target_link_libraries(audiality2 -lwinmm -ldxguid)
