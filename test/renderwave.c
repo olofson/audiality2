@@ -3,7 +3,7 @@
  *
  *	This test sets up a realtime state with an off-line substate, uses the
  *	latter to render sound into a wave, and then plays that on the realtime
- *	state.
+ *	context.
  *
  * Copyright 2013-2014 David Olofson <david@olofson.net>
  *

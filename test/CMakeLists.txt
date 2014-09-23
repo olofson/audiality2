@@ -32,9 +32,6 @@ target_link_libraries(wavestress2 ${AUDIALITY2_LIBRARY})
 add_executable(voicestress WIN32 MACOSX_BUNDLE voicestress.c)
 target_link_libraries(voicestress ${AUDIALITY2_LIBRARY})
 
-add_executable(streamtest WIN32 MACOSX_BUNDLE streamtest.c)
-target_link_libraries(streamtest ${AUDIALITY2_LIBRARY})
-
 add_executable(streamstress WIN32 MACOSX_BUNDLE streamstress.c)
 target_link_libraries(streamstress ${AUDIALITY2_LIBRARY})
 

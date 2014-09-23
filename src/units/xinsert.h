@@ -1,5 +1,5 @@
 /*
- * xinsert.h - Audiality 2 External Sink/Source/Insert unit set
+ * xinsert.h - Audiality 2 External Insert unit
  *
  *	This unit implements the realtime side of the callback and stream
  *	sink/source/insert APIs; a2_SinkCallback(), a2_SourceCallback(),
@@ -60,7 +60,6 @@ struct A2_xinsert
 	A2_unit			header;
 	A2_state		*state;
 	A2_xinsert_client	*clients;
-	void (*SetProcess)(A2_unit *u);
 	A2_handle		voice;
 	unsigned		flags;		/* A2_unitflags */
 };
@@ -70,8 +69,6 @@ static inline A2_xinsert *a2_xinsert_cast(A2_unit *u)
 	return (A2_xinsert *)u;
 }
 
-extern const A2_unitdesc a2_xsink_unitdesc;
-extern const A2_unitdesc a2_xsource_unitdesc;
 extern const A2_unitdesc a2_xinsert_unitdesc;
 
 #endif /* A2_XINSERT_H */
