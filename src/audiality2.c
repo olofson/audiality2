@@ -172,6 +172,8 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_inline_unitdesc,
 	&a2_wtosc_unitdesc,
 	&a2_panmix_unitdesc,
+	&a2_xsink_unitdesc,
+	&a2_xsource_unitdesc,
 	&a2_xinsert_unitdesc,
 	&a2_dbgunit_unitdesc,
 	&a2_limiter_unitdesc,

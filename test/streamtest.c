@@ -1,5 +1,5 @@
 /*
- * streamstress.c - Stress test of asynchronous streaming via xinsert
+ * streamtest.c - Test of asynchronous streaming via xsink and xsource
  *
  * Copyright 2014 David Olofson <david@olofson.net>
  *
@@ -32,14 +32,14 @@
 /* Fragment size for wave rendering/uploading */
 #define	FRAGSIZE	256
 
-/* Number of simultaneous independent streams */
-#define	STREAMS		8
-
 /* Stream poll/write period (ms) */
 #define	POLLPERIOD	100
 
 /* Stream buffer size (ms) */
-#define	STREAMBUFFER	1000
+#define	STREAMBUFFER	500
+
+/* Capture buffer size (ms) */
+#define	CAPTUREBUFFER	5000
 
 /* Configuration */
 const char *audiodriver = "default";
@@ -48,75 +48,6 @@ int channels = 2;
 int audiobuf = 4096;
 
 static int do_exit = 0;
-
-/* Streaming voice program handle */
-A2_handle streamprogram;
-
-/* Stream oscillator */
-typedef struct STREAMOSC
-{
-	A2_handle	stream;		/* Send stream handle */
-	float		ph1, dph1;	/* Operator 1 */
-	float		ph2, dph2;	/* Operator 2 */
-	float		depth;		/* Modulation depth */
-} STREAMOSC;
-
-
-/* Create and start streaming oscillator. Returns 0 (A2_OK) on success. */
-static A2_errors so_Start(A2_state *st, STREAMOSC *so)
-{
-	A2_handle vh = a2_Start(st, a2_RootVoice(st), streamprogram,
-			1.0f,				/* velocity */
-			a2_Rand(st, 2.0f) - 1.0f,	/* pan */
-			200.0f + a2_Rand(st, 2000.0f));	/* duration */
-	if(vh < 0)
-		return vh;
-	so->stream = a2_OpenSource(st, vh, 0,
-			samplerate * STREAMBUFFER / 1000, 0);
-	if(so->stream < 0)
-		return so->stream;
-	so->ph1 = so->ph2 = 0.0f;
-	so->dph1 = 2.0f * M_PI * (.5f + a2_Rand(st, 1.0f)) / samplerate;
-	so->dph2 = 2.0f * M_PI * (.5f + a2_Rand(st, 1.0f)) / samplerate;
-	so->depth = a2_Rand(st, 10.0f);
-	a2_Release(st, vh);
-	return A2_OK;
-}
-
-
-/*
- * Run streaming oscillator, generating FRAGSIZE sample frames at a time.
- * Returns 0 (A2_OK) on success. If the voice has terminated and closed the
- * stream on the engine side, a new voice is started, and a new stream set up.
- */
-static A2_errors so_Run(A2_state *st, STREAMOSC *so)
-{
-	A2_errors res;
-	int n;
-	if((so->stream <= 0) || ((n = a2_Available(st, so->stream)) < 0))
-	{
-		if(so->stream >= 0)
-			a2_Release(st, so->stream);
-		if((res = so_Start(st, so)))
-			return res;
-		n = a2_Available(st, so->stream);
-	}
-	while(n >= FRAGSIZE)
-	{
-		int i;
-		int32_t buf[FRAGSIZE];
-		for(i = 0; i < FRAGSIZE; ++i)
-		{
-			buf[i] = sin(so->ph1 + sin(so->ph2) * so->depth) *
-					32767.0f * 256.0f;
-			so->ph1 += so->dph1;
-			so->ph2 += so->dph2;
-		}
-		if((res = a2_Write(st, so->stream, A2_I24, buf, sizeof(buf))))
-			return -res;
-	}
-	return A2_OK;
-}
 
 
 static void usage(const char *exename)
@@ -179,21 +110,26 @@ static void breakhandler(int a)
 }
 
 
-static void fail(A2_errors err)
+static void fail(unsigned where, A2_errors err)
 {
-	fprintf(stderr, "ERROR, Audiality 2 result: %s\n", a2_ErrorString(err));
+	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
 	exit(100);
 }
 
 
 int main(int argc, const char *argv[])
 {
-	A2_handle h;
+	A2_errors res;
+	A2_handle h, songh, streamh;
+	A2_handle captureprogram;
+	A2_handle streamprogram;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
-	STREAMOSC streams[STREAMS];
-	memset(streams, 0, sizeof(streams));
+	A2_state *st;
+	int32_t *buffer;
+	unsigned length, position;
+	int n;
+
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -202,42 +138,112 @@ int main(int argc, const char *argv[])
 
 	/* Configure and open master state */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
-		fail(a2_LastError());
+		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
-		fail(a2_LastError());
+		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
-		fail(a2_LastError());
-	if(!(state = a2_Open(cfg)))
-		fail(a2_LastError());
+		fail(3, a2_LastError());
+	if(!(st = a2_Open(cfg)))
+		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
-	/* Load streaming voice program */
-	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
-		fail(-h);
-	if((streamprogram = a2_Get(state, h, "StreamStressVoice")) < 0)
-		fail(-streamprogram);
+	/* Load jingle */
+	if((h = a2_Load(st, "data/a2jingle.a2s")) < 0)
+		fail(5, -h);
+	if((songh = a2_Get(st, h, "Song")) < 0)
+		fail(6, -songh);
 
-	/* Start playing! */
-	fprintf(stderr, "Playing...\n");
+	/* Load test programs */
+	if((h = a2_Load(st, "data/testprograms.a2s")) < 0)
+		fail(7, -h);
+	if((captureprogram = a2_Get(st, h, "CaptureVoice")) < 0)
+		fail(8, -captureprogram);
+	if((streamprogram = a2_Get(st, h, "StreamVoice")) < 0)
+		fail(9, -streamprogram);
 
-	/* Wait for completion or abort */
-	while(!do_exit)
+	/* Allocate capture buffer */
+	length = samplerate * CAPTUREBUFFER / 1000;
+	buffer = malloc(length * sizeof(int32_t));
+	if(!buffer)
+		fail(10, A2_OOMEMORY);
+
+	/* Record some audio from a CaptureVoice */
+	fprintf(stderr, "Capturing %d sample frames...\n", length);
+	position = 0;
+	if((h = a2_Start(st, a2_RootVoice(st), captureprogram)) < 0)
+		fail(11, -h);
+	if((streamh = a2_OpenSink(st, h, 0, samplerate * STREAMBUFFER / 1000,
+			0)) < 0)
+		fail(12, -streamh);
+	a2_Play(st, h, songh);
+	while(!do_exit && (position < length))
 	{
-		int i;
-		a2_Now(state);
-		for(i = 0; i < STREAMS; ++i)
-			so_Run(state, &streams[i]);
+		a2_Now(st);
+		while((n = a2_Available(st, streamh)) > 0)
+		{
+			if(n > length - position)
+			{
+				n = length - position;
+				if(!n)
+					break;
+			}
+			if((res = a2_Read(st, streamh, A2_I24,
+					buffer + position,
+					n * sizeof(int32_t))))
+				fail(13, res);
+			position += n;
+		}
+		if(n < 0)
+			fail(14, -n);
+		fprintf(stderr, "[%d]\n", position);
+		a2_Sleep(POLLPERIOD);
+	}
+	a2_Kill(st, h);
+
+	/* Play back through a StreamVoice */
+	fprintf(stderr, "Playing...\n");
+	position = 0;
+	if((h = a2_Start(st, a2_RootVoice(st), streamprogram)) < 0)
+		fail(15, -h);
+	if((streamh = a2_OpenSource(st, h, 0, samplerate * STREAMBUFFER / 1000,
+			0)) < 0)
+		fail(16, -streamh);
+	while(!do_exit && (position < length))
+	{
+		a2_Now(st);
+		while((n = a2_Space(st, streamh)) > 0)
+		{
+			if(n > length - position)
+			{
+				n = length - position;
+				if(!n)
+					break;
+			}
+			if((res = a2_Write(st, streamh, A2_I24,
+					buffer + position,
+					n * sizeof(int32_t))))
+				fail(17, res);
+			position += n;
+		}
+		if(n < 0)
+			fail(18, -n);
+		fprintf(stderr, "[%d]\n", position);
 		a2_Sleep(POLLPERIOD);
 	}
 
-	/* Fade root voice down to 0. (It will do a 100 ms ramp!) */
-	a2_Now(state);
-	a2_Send(state, a2_RootVoice(state), 2, 0.0f);
-	a2_Sleep(200);
+	fprintf(stderr, "Waiting for stream buffer to drain...\n");
+	while((n = a2_Available(st, streamh)))
+	{
+		fprintf(stderr, "[%d]\n", n);
+		a2_Sleep(POLLPERIOD);
+	}
 
-	a2_Close(state);
+	fprintf(stderr, "Done!\n");
+
+	free(buffer);
+	a2_Close(st);
 	return 0;
 }
