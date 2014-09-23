@@ -30,6 +30,8 @@ set(sources ${sources}
 	units/wtosc.c
 	units/panmix.c
 	units/inline.c
+	units/xsink.c
+	units/xsource.c
 	units/xinsert.c
 	units/dbgunit.c
 	units/limiter.c

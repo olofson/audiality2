@@ -217,7 +217,7 @@ int main(int argc, const char *argv[])
 	/* Load streaming voice program */
 	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
 		fail(-h);
-	if((streamprogram = a2_Get(state, h, "StreamVoice")) < 0)
+	if((streamprogram = a2_Get(state, h, "StreamStressVoice")) < 0)
 		fail(-streamprogram);
 
 	/* Start playing! */

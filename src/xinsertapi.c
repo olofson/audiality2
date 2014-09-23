@@ -55,6 +55,95 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 
 
 /*---------------------------------------------------------
+	Low level API for xsink/xsource/xinsert
+---------------------------------------------------------*/
+
+/* NOTE: These run in engine context, as responses to A2MT_* messages! */
+
+A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
+		A2_xinsert_client *xic)
+{
+	A2_unit *u;
+	A2_xinsert *xi;
+	A2_xinsert_client *c;
+
+	/* Find first 'XINSERT' enabled unit with compatible I/O setup */
+	if(!(u = v->units))
+		return A2_NOUNITS;	/* Voice has no units! --> */
+	for( ; u; u = u->next)
+	{
+		if(!(u->descriptor->flags & A2_XINSERT))
+			continue;
+		if((xic->flags & A2_XI_READ) && !u->ninputs)
+			continue;
+		if((xic->flags & A2_XI_WRITE) && !u->noutputs)
+			continue;
+		break;
+	}
+	if(!u)
+		return A2_NOXINSERT; /* No suitable unit found! --> */
+
+	/* Add client last in list! */
+	xi = a2_xinsert_cast(u);
+	c = xi->clients;
+	if(c)
+	{
+		while(c->next)
+			c = c->next;
+		c->next = xic;
+	}
+	else
+		xi->clients = xic;
+	xic->unit = xi;
+
+	xi->SetProcess(u);
+
+	return A2_OK;
+}
+
+
+A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
+{
+	A2_errors res;
+
+	if(xic->unit)
+	{
+		/* Detach from the list */
+		A2_xinsert_client *c = xic->unit->clients;
+		if(c != xic)
+		{
+			while(c->next && (c->next != xic))
+				c = c->next;
+			c->next = c->next->next;
+		}
+		else
+			xic->unit->clients = xic->next;
+
+		xic->unit->SetProcess(&xic->unit->header);
+	}
+
+	/* Notify client that it's being removed */
+	if((res = xic->callback(NULL, 0, 0, xic->userdata)))
+		a2r_Error(st, res, "xinsert client; removal notification");
+
+	/* Destroy entry in a suitable fashion for the engine context */
+	if(st->config->flags & A2_REALTIME)
+	{
+		A2_apimessage am;
+		am.b.common.action = A2MT_XICREMOVED;
+		am.b.common.timestamp = st->now_ticks;
+		am.b.xic.client = xic;
+		return a2_writemsg(st->toapi, &am, A2_MSIZE(b.xic));
+	}
+	else
+	{
+		free(xic);
+		return A2_OK;
+	}
+}
+
+
+/*---------------------------------------------------------
 	Callback xinsert interface
 ---------------------------------------------------------*/
 
@@ -249,7 +338,7 @@ static A2_errors xi_stream_read(A2_stream *str,
 		else
 			return A2_INTERNAL + 502;
 	}
-	return A2_NOTIMPLEMENTED;
+	return A2_OK;
 }
 
 static A2_errors xi_stream_write(A2_stream *str,
@@ -270,7 +359,7 @@ static A2_errors xi_stream_write(A2_stream *str,
 		else
 			return A2_INTERNAL + 512;
 	}
-	return A2_NOTIMPLEMENTED;
+	return A2_OK;
 }
 
 

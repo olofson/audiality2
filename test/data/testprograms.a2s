@@ -53,12 +53,22 @@ PlayTestNote(P V=1)
 }
 
 // Streaming voice program for streamstress.c
-StreamVoice(V=1 Pan Dur)
+StreamStressVoice(V=1 Pan Dur)
 {
-//	struct { xinsert; panmix }
-	struct { wtosc; xinsert; panmix }
-//	w triangle; a .1; set a
+	struct { xsource; panmix }
 	pan Pan
 	vol V; d (Dur / 2)
 	vol 0; d (Dur / 2)
+}
+
+// Streaming voice program for streamtest.c
+StreamVoice()
+{
+	struct { xsource; panmix }
+}
+
+// Capture voice program for streamtest.c
+CaptureVoice()
+{
+	struct { inline 0 1; xsink 1 0 }
 }
