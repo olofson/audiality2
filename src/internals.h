@@ -845,7 +845,6 @@ A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 		A2_program *p, int argc, int *argv);
 A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 		int argc, int *argv, int interrupt);
-void a2_VoiceKill(A2_state *st, A2_voice *v, unsigned when);
 void a2_VoiceFree(A2_state *st, A2_voice **head);
 
 static inline void a2_VoiceDetach(A2_voice *v, unsigned when)
