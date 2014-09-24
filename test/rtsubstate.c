@@ -138,6 +138,8 @@ static void breakhandler(int a)
 static void fail(A2_errors err)
 {
 	fprintf(stderr, "ERROR: %s\n", a2_ErrorString(err));
+	if(state)
+		a2_Close(state);
 	exit(100);
 }
 

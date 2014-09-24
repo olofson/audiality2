@@ -546,7 +546,7 @@ void a2_Close(A2_state *st)
 	}
 
 	/* Master state? */
-	if(!st->parent)
+	if(!(st->config->flags & A2_SUBSTATE) && st->ss)
 	{
 		/* Unload the root bank and any other A2_LOCKed objects! */
 		a2_unlock_all(st);
@@ -599,8 +599,11 @@ void a2_Close(A2_state *st)
 		st->sys->RTFree(st->sys, b);
 	}
 
-	if(!st->parent)
+	if(!(st->config->flags & A2_SUBSTATE))
+	{
 		a2_CloseSharedState(st);
+		a2_remove_api_user();
+	}
 
 	/* Close the A2_config, if we created it! */
 	if(st->config)
@@ -638,8 +641,6 @@ void a2_Close(A2_state *st)
 			s = s->next;
 		}
 	}
-	else
-		a2_remove_api_user();
 
 	free(st);
 }
