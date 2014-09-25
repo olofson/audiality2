@@ -354,8 +354,33 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i);
 ---------------------------------------------------------*/
 
 /*
- * Schedule subsequent commands to be executed as soon as possible with constant
- * latency.
+ * Background processing
+ *
+ *	Due to the lock-free nature of Audiality 2, there are asynchronous jobs
+ *	that need to be performed in the API context. As of now, there are no
+ *	dedicated background threads for this purpose, so it is handled by
+ *	running the API message pump inside API calls that typically deal with
+ *	timestamped messages, namely:
+ *		a2_Now()
+ *		a2_Start*()
+ *		a2_Play*()
+ *		a2_Send*()
+ *		a2_SendSub*()
+ *		a2_Kill()
+ *		a2_KillSub()
+ *
+ *	a2_Release(), a2_*Callback(), a2_OpenSink(), a2_OpenSource() and other
+ *	calls may pump API messages as well in certain situations, but that is
+ *	not to be relied upon in any way.
+ */
+
+/*
+ * Schedule subsequent commands to be executed as soon as possible with
+ * constant latency.
+ *
+ * NOTE: It is recommended that a2_Now() is called regularly (for example, once
+ *       per frame in a video game), even when not using A2_TIMESTAMP. (See
+ *       "Background processing" above.)
  */
 void a2_Now(A2_state *st);
 
