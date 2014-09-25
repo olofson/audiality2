@@ -19,7 +19,9 @@ set(f "${f} -Wbad-function-cast -Waggregate-return")
 set(f "${f} -Wstrict-prototypes -fno-builtin -Wshadow")
 set(f "${f} -Wdeclaration-after-statement -Wmissing-prototypes")
 set(f "${f} -Wmissing-declarations -Wdisabled-optimization")
-set(f "${f} -Wincompatible-pointer-types")
+if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+	set(f "${f} -Wincompatible-pointer-types")
+endif()
 
 # Debug build: No optimizations, extra debug features, don't fail on warnings
 set(CMAKE_C_FLAGS_DEBUG "${f} -O0 -g -DDEBUG")
