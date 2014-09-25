@@ -470,17 +470,13 @@ static void fail(A2_errors err)
 }
 
 
-#ifdef _WIN32
 int main(int argc, char *argv[])
-#else
-int main(int argc, const char *argv[])
-#endif
 {
 	A2_config *cfg;
 	int lasttick;
 	A2_handle tcb;
 
-	parse_args(argc, argv);
+	parse_args(argc, (const char **)argv);
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
 		exit(1);
 	atexit(SDL_Quit);
@@ -528,7 +524,7 @@ int main(int argc, const char *argv[])
 	gui_draw_screen();
 
 	/* Load sounds - example songs, or specified file */
-	load_sounds(argc, argv);
+	load_sounds(argc, (const char **)argv);
 
 	/* GUI main loop */
 	lastreset = lasttick = SDL_GetTicks();
@@ -538,7 +534,7 @@ int main(int argc, const char *argv[])
 		int dt = tick - lasttick;
 		now += dt;
 		lasttick = tick;
-		handle_events(argc, argv);
+		handle_events(argc, (const char **)argv);
 		update_main(dt);
 		gui_refresh();
 		/*
