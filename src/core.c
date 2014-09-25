@@ -290,7 +290,7 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 {
 	A2_structitem *si;
 	A2_unit *lastu = NULL;
-	int32_t **scratch;
+	int32_t **scratch = NULL;
 
 	/* The 'inline' unit changes these! */
 	unsigned noutputs = v->noutputs;
@@ -690,14 +690,13 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 	}
 #endif
 	a2_SendEvent(&sv->events, e);
-	if(sv->next)
-	{
-		if(e->b.common.argc)
-			esize = offsetof(A2_eventbody, play.a) +
-					sizeof(int) * (e->b.common.argc);
-		else
-			esize = offsetof(A2_eventbody, play.program);
-	}
+	if(!sv->next)
+		return;
+	if(e->b.common.argc)
+		esize = offsetof(A2_eventbody, play.a) +
+				sizeof(int) * (e->b.common.argc);
+	else
+		esize = offsetof(A2_eventbody, play.program);
 	while(sv->next)
 	{
 		A2_event *ne = a2_AllocEvent(st);
