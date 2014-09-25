@@ -677,6 +677,7 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 	{
 	  case A2MT_SEND:
 	  case A2MT_KILL:
+	  	break;
 	  default:
 		fprintf(stderr, "a2_event_subforward() used on unsupported "
 				"action %d!\n", e->b.common.action);
