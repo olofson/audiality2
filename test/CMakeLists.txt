@@ -50,15 +50,15 @@ endif(SDL_FOUND)
 # Release build: full optimization, no debug features, no debug info
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-set(f "-O1 -g -DDEBUG -Wall -Werror -Wwrite-strings -Wcast-align")
+set(f "-Wall -Wwrite-strings -Wcast-align")
 set(f "${f} -Wbad-function-cast -Waggregate-return")
 set(f "${f} -Wstrict-prototypes -fno-builtin -Wshadow")
 set(f "${f} -Wdeclaration-after-statement -Wmissing-prototypes")
 set(f "${f} -Wmissing-declarations -Wdisabled-optimization")
 set(f "${f} -Wincompatible-pointer-types")
 
-# Debug build: Maintainer + extra debug features, don't fail on warnings
-set(CMAKE_C_FLAGS_DEBUG "${f} -DDEBUG")
+# Debug build: No optimizations, extra debug features, don't fail on warnings
+set(CMAKE_C_FLAGS_DEBUG "${f} -O0 -g -DDEBUG")
 
-# Maintainer build: No optimizations, lots of warnings, fail on warnings
-set(CMAKE_C_FLAGS_MAINTAINER "${f} -g -Werror")
+# Maintainer build: Few optimizations, lots of warnings, fail on warnings
+set(CMAKE_C_FLAGS_MAINTAINER "${f} -O1 -g -Werror")
