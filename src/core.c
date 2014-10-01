@@ -1610,7 +1610,13 @@ static inline A2_errors a2_VoiceProcess(A2_state *st, A2_voice *v,
 		int res = a2_VoiceProcessVMEv(st, v, now);
 		if(res < 0)
 		{
+#if 0
+			/*
+			 * FIXME: This is what *should* happen, theoretically,
+			 *        but it causes clicks in some situations. Why?
+			 */
 			*frames = s - offset;	/* Cut fragment short! */
+#endif
 			return -res;
 		}
 		DBG(if(!res)
