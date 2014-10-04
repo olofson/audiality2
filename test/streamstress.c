@@ -1,5 +1,5 @@
 /*
- * streamstress.c - Stress test of asynchronous streaming via xinsert
+ * streamstress.c - Stress test of asynchronous streaming via xsource
  *
  * Copyright 2014 David Olofson <david@olofson.net>
  *
@@ -65,10 +65,12 @@ typedef struct STREAMOSC
 /* Create and start streaming oscillator. Returns 0 (A2_OK) on success. */
 static A2_errors so_Start(A2_state *st, STREAMOSC *so)
 {
+	float f1, f2;
+	float dur = 200.0f + a2_Rand(st, 2000.0f);
 	A2_handle vh = a2_Start(st, a2_RootVoice(st), streamprogram,
-			1.0f,				/* velocity */
+			0.1f,				/* velocity */
 			a2_Rand(st, 2.0f) - 1.0f,	/* pan */
-			200.0f + a2_Rand(st, 2000.0f));	/* duration */
+			dur);				/* duration */
 	if(vh < 0)
 		return vh;
 	so->stream = a2_OpenSource(st, vh, 0,
@@ -76,10 +78,14 @@ static A2_errors so_Start(A2_state *st, STREAMOSC *so)
 	if(so->stream < 0)
 		return so->stream;
 	so->ph1 = so->ph2 = 0.0f;
-	so->dph1 = 2.0f * M_PI * (.5f + a2_Rand(st, 1.0f)) / samplerate;
-	so->dph2 = 2.0f * M_PI * (.5f + a2_Rand(st, 1.0f)) / samplerate;
-	so->depth = a2_Rand(st, 10.0f);
+	f1 = 100.0f + a2_Rand(st, 500.0f);
+	f2 = 100.0f + a2_Rand(st, 1000.0f);
+	so->dph1 = 2.0f * M_PI * f1 / samplerate;
+	so->dph2 = 2.0f * M_PI * f2 / samplerate;
+	so->depth = a2_Rand(st, 7.0f);
 	a2_Release(st, vh);
+	printf("f1: %f\tf2: %f\tdepth: %f\tduration: %f\n",
+			f1, f2, so->depth, dur);
 	return A2_OK;
 }
 
@@ -93,13 +99,13 @@ static A2_errors so_Run(A2_state *st, STREAMOSC *so)
 {
 	A2_errors res;
 	int n;
-	if((so->stream <= 0) || ((n = a2_Available(st, so->stream)) < 0))
+	if((so->stream <= 0) || ((n = a2_Space(st, so->stream)) < 0))
 	{
 		if(so->stream >= 0)
 			a2_Release(st, so->stream);
 		if((res = so_Start(st, so)))
 			return res;
-		n = a2_Available(st, so->stream);
+		n = a2_Space(st, so->stream);
 	}
 	while(n >= FRAGSIZE)
 	{
@@ -114,6 +120,7 @@ static A2_errors so_Run(A2_state *st, STREAMOSC *so)
 		}
 		if((res = a2_Write(st, so->stream, A2_I24, buf, sizeof(buf))))
 			return -res;
+		n -= FRAGSIZE;
 	}
 	return A2_OK;
 }

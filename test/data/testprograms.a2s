@@ -53,12 +53,13 @@ PlayTestNote(P V=1)
 }
 
 // Streaming voice program for streamstress.c
-StreamStressVoice(V=1 Pan Dur)
+StreamStressVoice(V=1 P D)
 {
 	struct { xsource; panmix }
-	pan Pan
-	vol V; d (Dur / 2)
-	vol 0; d (Dur / 2)
+	pan P; set pan
+	vol 0; set vol
+	vol V; d (D / 2)
+	vol 0; d (D / 2)
 }
 
 // Streaming voice program for streamtest.c
