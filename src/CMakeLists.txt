@@ -37,6 +37,7 @@ set(sources ${sources}
 	units/limiter.c
 	units/fbdelay.c
 	units/filter12.c
+	units/dcblock.c
 )
 
 # Drivers

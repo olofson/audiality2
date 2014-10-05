@@ -32,6 +32,7 @@
 #include "limiter.h"
 #include "fbdelay.h"
 #include "filter12.h"
+#include "dcblock.h"
 
 
 /*---------------------------------------------------------
@@ -179,6 +180,7 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_limiter_unitdesc,
 	&a2_fbdelay_unitdesc,
 	&a2_filter12_unitdesc,
+	&a2_dcblock_unitdesc,
 	NULL
 };
 
