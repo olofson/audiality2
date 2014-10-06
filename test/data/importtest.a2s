@@ -1,0 +1,159 @@
+def title	"ImportTest"
+def version	"1.0"
+def description	"Test of importing instruments from a module"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import "test.a2s"
+
+.ChorusMelo(P)
+{
+	+tr P
+	def I MusicBox2
+
+	1:I 7n;			td 1	//
+	1<1; 1:I 12n;		td 1
+	1<1;			td 1
+	1:I 14n;		td 4
+	1<1 .7;			td 4
+	1<1;			td 1
+				td 2
+	1:I 12n;		td 1
+	1<1; 1:I 7n;		td 1
+
+	1<1; 1:I 5n;		td 1	//
+	1<1; 1:I 12n;		td 1
+	1<1;			td 1
+	1:I 14n;		td 4
+	1<1;			td 1
+	1:I 14n;		td 1
+	1<1; 1:I 12n;		td 1
+	1<1; 1:I 7n;		td 1
+	1<1; 1:I 12n;		td 2
+	1<1; 1:I 14n;		td 3
+
+	1<1; 1:I 17n;		td 7	//
+	1<1;			td 1
+	1:I 16n;		td 6
+	1<1;			td 1
+	1:I 12n;		td 1
+
+	1<1; 1:I 14n;		td 8	//
+	1<1;			td 8
+
+	1:I 16n;		td 1	//
+	1<1; 1:I 14n;		td 2
+	1<1; 1:I 8n;		td 4
+	1<1 .7;			td 4
+	1<1;			td 1
+
+	1:I 17n;		td 2
+	1<1; 1:I 16n;		td 4
+	1<1;			td 2
+
+	1:I 19n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 17n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 8n;		td 1
+	1<1;			td 1
+
+	1:I 17n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 8n;		td 1
+	1<1;			td 3
+
+	1:I 17n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 7n;		td 1.5
+	1<1;			td 1.5
+
+	1:I 16n;		td 1
+	1<1; 1:I 17n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 10n;		td 2
+	1<1 .7;			td 2
+	1<1;			td 1
+
+	1:I 16n;		td 1
+	1<1; 1:I 17n;		td 1
+	1<1; 1:I 16n;		td 1
+	1<1; 1:I 9n;		td 8
+	1<1
+}
+
+.bl1(n1 n2 n3 n4)
+{
+	def I Pig
+		1:I n1;		td 1
+	1<1;	1:I n3;		td 1
+	1<1;			td 1
+		1:I n3;		td 1
+	1<1;			td 1
+		1:I n2;		td 1
+	1<1;	1:I n3;		td 1
+	1<1;			td 1
+		1:I n4;		td 2
+	1<1;			td 6
+}
+.bl2(n1 n2 n3)
+{
+	def I Pig
+		1:I n2;		td 1
+	1<1;	1:I n3;		td 1
+	1<1;			td 1
+		1:I n1;		td 1
+	1<1;			td 1
+		1:I n3;		td 3
+	1<1;			td 8
+}
+.bl3(n1 n2 n3)
+{
+	def I Pig
+		1:I n1;		td 1
+	1<1;	1:I n3;		td 1
+	1<1;			td 1
+		1:I n3;		td 1
+	1<1;			td 1
+		1:I n2;		td 1
+	1<1;	1:I n3;		td 2
+	1<1;			td 8
+}
+.Bassline()
+{
+	-tr 2
+
+	bl1 -10n -7n -5n -5n;	td 16
+	bl2 0 -7n -5n;		td 16
+	bl1 -10n -7n -5n -5n;	td 16
+	bl3 -10n -7n -5n;	td 16
+
+	bl1 -10n -10n -8n -8n;	td 16
+	bl2 -4n -10n -8n;	td 16
+	bl1 -9n -9n -8n -8n;	td 16
+	bl3 -5n -10n -8n;	td 16
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay * *
+		panmix * >
+	}
+	fbdelay 750; fbgain .2
+	ldelay 240; lgain .2
+	rdelay 570; rgain .2
+	vol 1; set vol
+	tempo 120 4
+	for {
+		ChorusMelo 1;	Bassline;	td 128
+	}
+	end
+.stop	10 { *vol .7; d 100 }
+	vol 0; d 100
+	kill *
+	1() { force stop }
+}

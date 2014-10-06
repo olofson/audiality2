@@ -8,7 +8,7 @@ uuid: f064a4ef-4149-4676-8762-c77e4c85fcab
 patterns:
 - comment: Compiler directives
   name: storage.type
-  match: \b(def|struct|wire|tempo|wave)\b
+  match: \b(import|def|struct|wire|tempo|wave)\b
 
 - comment: Keywords and instructions
   name: keyword.control

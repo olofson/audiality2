@@ -1,7 +1,7 @@
 /*
  * compiler.h - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -71,6 +71,7 @@ typedef enum A2_tokens
 	TK_LABEL,	/* sym->v.i = code position */
 	TK_REGISTER,	/* i = register index */
 	TK_INSTRUCTION,	/* i = pseudo opcode */
+	KW_IMPORT,	/* 'import' directive */
 	KW_DEF,		/* 'def' directive */
 	KW_STRUCT,	/* 'struct' keyword */
 	KW_WIRE,	/* 'wire' keyword */
@@ -215,7 +216,7 @@ struct A2_compiler
 	unsigned	lexbufsize;
 	unsigned	lexbufpos;
 	char		*lexbuf;	/* Buffer for string parsing */
-	A2_lexvalue	l[A2_LEXDEPTH];	/* Lexer value buffer; [0] is current */
+	A2_lexvalue	l[A2_LEXDEPTH];	/* Lex value buffer; [0] is current */
 	A2_regmap	regmap;		/* Current register allocation map */
 	int		exportall;	/* Export everything from banks! */
 	int		tabsize;	/* Script tab size for messages */
@@ -236,7 +237,7 @@ struct A2_compiler
 A2_compiler *a2_OpenCompiler(A2_state *st, int flags);
 void a2_CloseCompiler(A2_compiler *c);
 
-/* Compile Audiality 2 Language source code into VM code. */
+/* Compile Audiality 2 Script source code into VM code. */
 A2_errors a2_CompileString(A2_compiler *c, A2_handle bank, const char *code,
 		const char *source);
 A2_errors a2_CompileFile(A2_compiler *c, A2_handle bank, const char *fn);

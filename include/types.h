@@ -165,6 +165,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPVALUE,	"Expected value")\
   A2_DEFERR(A2_EXPVALUEHANDLE,	"Expected value or handle")\
   A2_DEFERR(A2_EXPINTEGER,	"Expected integer value")\
+  A2_DEFERR(A2_EXPSTRING,	"Expected string literal")\
   A2_DEFERR(A2_EXPVARIABLE,	"Expected variable")\
   A2_DEFERR(A2_EXPLABEL,	"Expected label")\
   A2_DEFERR(A2_EXPPROGRAM,	"Expected program")\

@@ -2104,6 +2104,30 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 }
 
 
+static void a2c_Import(A2_compiler *c, int export)
+{
+	int h, res;
+	const char *name;
+	a2c_Expect(c, TK_STRING, A2_EXPSTRING);
+	name = a2_String(c->state, c->l[0].v.i);
+	h = a2_Load(c->state, name);
+	if(h < 0)
+	{
+		fprintf(stderr, "Could not import \"%s\"! (%s)\n",
+				name, a2_ErrorString(-h));
+		a2_Release(c->state, c->l[0].v.i);
+		a2c_Throw(c, -h);
+	}
+	a2_Release(c->state, c->l[0].v.i);
+	if(((res = a2ht_AddItem(&c->target->deps, h)) < 0) ||
+			((res = a2ht_AddItem(&c->imports, h)) < 0))
+	{
+		a2_Release(c->state, h);
+		a2c_Throw(c, -res);
+	}
+}
+
+
 static void a2c_Def(A2_compiler *c, int export)
 {
 	A2_symbol *s;
@@ -3115,6 +3139,9 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Code(c, OP_DIVR, R_TICK, r);
 		a2c_FreeReg(c, r);
 		break;
+	  case KW_IMPORT:
+		a2c_Import(c, c->canexport);
+		return 1;
 	  case KW_DEF:
 		a2c_Def(c, c->canexport);
 		return 1;
@@ -3204,6 +3231,7 @@ static struct
 	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 
 	/* Directives, macros, keywords... */
+	{ "import",	KW_IMPORT,	0		},
 	{ "def",	KW_DEF,		0		},
 	{ "struct",	KW_STRUCT,	0		},
 	{ "wire",	KW_WIRE,	0		},
