@@ -143,14 +143,22 @@ A2_handle a2_NewBank(A2_state *st, const char *name, int flags)
 A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
 {
 	int res;
-	A2_handle h = a2_NewBank(st, name, A2_APIOWNED);
-	if(h < 0)
-		return h;
-	if((res = a2_CompileString(st->ss->c, h, code, name)) != A2_OK)
+	A2_handle h;
+	A2_compiler *c;
+	if(!(c = a2_OpenCompiler(st, 0)))
+		return -A2_OOMEMORY;
+	if((h = a2_NewBank(st, name, A2_APIOWNED)) < 0)
 	{
+		a2_CloseCompiler(c);
+		return h;
+	}
+	if((res = a2_CompileString(c, h, code, name)) != A2_OK)
+	{
+		a2_CloseCompiler(c);
 		a2_Release(st, h);
 		return -res;
 	}
+	a2_CloseCompiler(c);
 	return h;
 }
 
@@ -158,14 +166,22 @@ A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
 A2_handle a2_Load(A2_state *st, const char *fn)
 {
 	int res;
-	A2_handle h = a2_NewBank(st, fn, A2_APIOWNED);
-	if(h < 0)
-		return h;
-	if((res = a2_CompileFile(st->ss->c, h, fn)) != A2_OK)
+	A2_handle h;
+	A2_compiler *c;
+	if(!(c = a2_OpenCompiler(st, 0)))
+		return -A2_OOMEMORY;
+	if((h = a2_NewBank(st, fn, A2_APIOWNED)) < 0)
 	{
+		a2_CloseCompiler(c);
+		return h;
+	}
+	if((res = a2_CompileFile(c, h, fn)) != A2_OK)
+	{
+		a2_CloseCompiler(c);
 		a2_Release(st, h);
 		return -res;
 	}
+	a2_CloseCompiler(c);
 	return h;
 }
 

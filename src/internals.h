@@ -538,7 +538,6 @@ struct A2_sharedstate
 {
 	RCHM_manager	hm;		/* Handle manager */
 	A2_program	*terminator;	/* Dummy program for killed voices */
-	A2_compiler	*c;		/* A2S compiler */
 	char		strbuf[A2_TMPSTRINGSIZE]; /* For API return strings */
 
 	unsigned	offlinebuffer;	/* A2_POFFLINEBUFFER */
@@ -546,6 +545,8 @@ struct A2_sharedstate
 	unsigned	silencelevel;	/* A2_PSILENCELEVEL */
 	unsigned	silencewindow;	/* A2_PSILENCEWINDOW */
 	unsigned	silencegrace;	/* A2_PSILENCEGRACE */
+
+	int		tabsize;	/* A2S tab size for error formatting */
 };
 
 /* Audiality 2 state */

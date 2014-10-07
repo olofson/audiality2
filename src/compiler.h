@@ -1,5 +1,5 @@
 /*
- * compiler.h - Audiality 2 Script (a2s) compiler
+ * compiler.h - Audiality 2 Script (A2S) compiler
  *
  * Copyright 2010-2013 David Olofson <david@olofson.net>
  *
@@ -233,7 +233,7 @@ struct A2_compiler
 ---------------------------------------------------------*/
 
 /* Compiler open/close */
-A2_errors a2_OpenCompiler(A2_state *st, int flags);
+A2_compiler *a2_OpenCompiler(A2_state *st, int flags);
 void a2_CloseCompiler(A2_compiler *c);
 
 /* Compile Audiality 2 Language source code into VM code. */

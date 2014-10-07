@@ -3234,28 +3234,34 @@ static struct
 };
 
 
-A2_errors a2_OpenCompiler(A2_state *st, int flags)
+A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 {
 	int i;
 	A2_compiler *c = (A2_compiler *)calloc(1, sizeof(A2_compiler));
 	if(!c)
-		return A2_OOMEMORY;
+		return NULL;
+	flags |= st->config->flags & A2_INITFLAGS;
 	c->lexbufpos = 0;
 	c->lexbufsize = 64;
 	if(!(c->lexbuf = (char *)malloc(c->lexbufsize)))
-		return A2_OOMEMORY;
+	{
+		a2_CloseCompiler(c);
+		return NULL;
+	}
 	c->state = st;
-	st->ss->c = c;
 	for(i = 0; i < A2_CREGISTERS; ++i)
 		c->regmap[i] = 1;
 	c->exportall = (flags & A2_EXPORTALL) == A2_EXPORTALL;
-	c->tabsize = 8;
+	c->tabsize = st->ss->tabsize;
 	for(i = 0; a2c_rootsyms[i].n; ++i)
 	{
 		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[i].n,
 				a2c_rootsyms[i].tk);
 		if(!s)
-			return A2_OOMEMORY;
+		{
+			a2_CloseCompiler(c);
+			return NULL;
+		}
 		if(a2_IsValue(a2c_rootsyms[i].tk))
 			s->v.f = a2c_rootsyms[i].v;
 		else
@@ -3263,8 +3269,11 @@ A2_errors a2_OpenCompiler(A2_state *st, int flags)
 		a2_PushSymbol(&c->symbols, s);
 	}
 	if(a2ht_AddItem(&c->imports, A2_ROOTBANK) < 0)
-		return A2_OOMEMORY;
-	return A2_OK;
+	{
+		a2_CloseCompiler(c);
+		return NULL;
+	}
+	return c;
 }
 
 

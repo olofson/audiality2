@@ -188,9 +188,19 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 {
 	A2_errors res;
 	int i;
+	A2_compiler *c;
 	st->ss = (A2_sharedstate *)calloc(1, sizeof(A2_sharedstate));
 	if(!st->ss)
 		return A2_OOMEMORY;
+
+	/* Set up state property defaults */
+	st->ss->offlinebuffer = 256;
+
+	st->ss->silencelevel = 256;
+	st->ss->silencewindow = 256;
+	st->ss->silencegrace = 1024;
+
+	st->ss->tabsize = 8;
 
 	/* Init handle manager */
 	if((res = (A2_errors)rchm_Init(&st->ss->hm, A2_INITHANDLES)))
@@ -217,10 +227,6 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 	if((res = a2_InitWaves(st, A2_ROOTBANK)))
 		return res;
 
-	/* Initialize the A2S compiler */
-	if((res = a2_OpenCompiler(st, st->config->flags & A2_INITFLAGS)))
-		return res;
-
 	/* Register the builtin voice units */
 	for(i = 0; a2_core_units[i]; ++i)
 	{
@@ -232,7 +238,9 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 	}
 
 	/* Compile builtin programs */
-	if((res = a2_CompileString(st->ss->c, A2_ROOTBANK,
+	if(!(c = a2_OpenCompiler(st, 0)))
+		return A2_OOMEMORY;
+	if((res = a2_CompileString(c, A2_ROOTBANK,
 			"def square pulse50\n"
 			"\n"
 			"a2_rootdriver()\n"
@@ -276,18 +284,12 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			"\n"
 			"a2_terminator() {}\n", "rootbank")))
 		return res;
+	a2_CloseCompiler(c);
 
 	/* Grab frequently used objects, so we don't have to do that "live" */
 	if(!(st->ss->terminator = a2_GetProgram(st,
 			a2_Get(st, A2_ROOTBANK, "a2_terminator"))))
 		return A2_INTERNAL + 5;
-
-	/* Set up state property defaults */
-	st->ss->offlinebuffer = 256;
-
-	st->ss->silencelevel = 256;
-	st->ss->silencewindow = 256;
-	st->ss->silencegrace = 1024;
 
 	return A2_OK;
 }
@@ -298,8 +300,6 @@ static void a2_CloseSharedState(A2_state *st)
 		return;
 	type_registry_cleanup(st);
 	rchm_Cleanup(&st->ss->hm);
-	if(st->ss->c)
-		a2_CloseCompiler(st->ss->c);
 	free(st->ss);
 	st->ss = NULL;
 }

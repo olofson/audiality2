@@ -83,10 +83,10 @@ A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
 		*v = st->instructions;
 	  	return A2_OK;
 	  case A2_PEXPORTALL:
-		*v = st->ss->c->exportall;
+		*v = (st->config->flags & A2_EXPORTALL) == A2_EXPORTALL;
 	  	return A2_OK;
 	  case A2_PTABSIZE:
-		*v = st->ss->c->tabsize;
+		*v = st->ss->tabsize;
 	  	return A2_OK;
 	  case A2_POFFLINEBUFFER:
 		*v = st->ss->offlinebuffer;
@@ -142,12 +142,15 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 		st->instructions = v;
 		return A2_OK;
 	  case A2_PEXPORTALL:
-		st->ss->c->exportall = v;
+		if(v)
+			st->config->flags |= A2_EXPORTALL;
+		else
+			st->config->flags &= ~A2_EXPORTALL;
 		return A2_OK;
 	  case A2_PTABSIZE:
 		if(v < 1)
 			v = 8;
-		st->ss->c->tabsize = v;
+		st->ss->tabsize = v;
 		return A2_OK;
 	  case A2_POFFLINEBUFFER:
 		st->ss->offlinebuffer = v;
