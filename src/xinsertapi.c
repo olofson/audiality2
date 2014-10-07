@@ -32,6 +32,13 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 	A2_errors res;
 	A2_apimessage am;
 
+	/*
+	 * We need this here in case we have to destroy the XIC again before
+	 * the A2MT_ADDXIC has been processed, because xic->unit will be NULL
+	 * until then!
+	 */
+	xic->voice = voice;
+
 	/* Create a handle for the client (both streams and callbacks!) */
 	xic->handle = rchm_NewEx(&st->ss->hm, xic, A2_TXICLIENT, 0, 1);
 	if(xic->handle < 0)
@@ -436,7 +443,7 @@ static RCHM_errors xi_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 	A2_state *st = ((A2_typeinfo *)ti)->state;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_Now(st);
-	am.target = xic->unit->voice;
+	am.target = xic->voice;
 	am.b.common.action = A2MT_REMOVEXIC;
 	am.b.common.timestamp = st->timestamp;
 	am.b.xic.client = xic;

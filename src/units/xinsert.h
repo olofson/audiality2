@@ -44,11 +44,12 @@ typedef enum A2_xiflags
 struct A2_xinsert_client
 {
 	A2_xinsert_client	*next;
-	A2_xinsert		*unit;		/* Owner */
+	A2_xinsert		*unit;		/* Owner unit */
 	A2_xinsert_cb		callback;
 	void			*userdata;
 	SFIFO			*fifo;
 	int			channel;
+	A2_handle		voice;		/* Owner voice handle */
 	A2_handle		handle;		/* Client handle */
 	A2_handle		stream;		/* Stream handle, or 0 */
 	unsigned		flags;		/* A2_xiflags */
