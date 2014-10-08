@@ -1,7 +1,7 @@
 /*
  * drivers.c - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -275,7 +275,6 @@ static A2_regdriver a2_builtin_drivers[] = {
 	{ NULL, 0, 1, NULL, NULL }
 };
 
-
 static A2_mutex a2_driver_registry_mtx;
 
 /*
@@ -327,12 +326,12 @@ static void a2_register_builtin_drivers(void)
 	a2_builtins_registered = 1;
 }
 
-
 A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 		A2_newdriver_cb create)
 {
 	A2_regdriver *rd;
 
+	a2_add_api_user();
 	a2_MutexLock(&a2_driver_registry_mtx);
 
 	/*
@@ -347,6 +346,7 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 	if(!rd)
 	{
 		a2_MutexUnlock(&a2_driver_registry_mtx);
+		a2_remove_api_user();
 		return A2_OOMEMORY;
 	}
 
@@ -355,13 +355,13 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 	if(!rd->name)
 	{
 		a2_MutexUnlock(&a2_driver_registry_mtx);
+		a2_remove_api_user();
 		free(rd);
 		return A2_OOMEMORY;
 	}
 	rd->create = create;
 	rd->next = a2_driver_registry;
 	a2_driver_registry = rd;
-	a2_add_api_user();
 	a2_MutexUnlock(&a2_driver_registry_mtx);
 	return A2_OK;
 }
@@ -522,6 +522,7 @@ A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts)
 	const char *optstart;
 	A2_regdriver *rd;
 	A2_driver *drv = NULL;
+	a2_add_api_user();
 	a2_MutexLock(&a2_driver_registry_mtx);
 	a2_last_error = A2_OK;
 	a2_register_builtin_drivers();
@@ -555,4 +556,5 @@ void a2_DestroyDriver(A2_driver *driver)
 		driver->Destroy(driver);
 	else
 		free(driver);
+	a2_remove_api_user();
 }
