@@ -212,6 +212,7 @@ struct A2_compiler
 	A2_symbol	*symbols;	/* Symbol stack */
 	A2_handletab	imports;	/* Imported objects (root namespace) */
 	A2_bank		*target;	/* Target bank for exports */
+	char		*path;		/* Directory path of current file */
 	const char	*source;	/* Source code buffer */
 	unsigned	lexbufsize;
 	unsigned	lexbufpos;

@@ -2110,7 +2110,37 @@ static void a2c_Import(A2_compiler *c, int export)
 	const char *name;
 	a2c_Expect(c, TK_STRING, A2_EXPSTRING);
 	name = a2_String(c->state, c->l[0].v.i);
-	h = a2_Load(c->state, name);
+	if(c->path)
+	{
+		/* Try the directory of the current file first! */
+		int bufsize = strlen(c->path) + 1 + strlen(name) + 1;
+		char *buf = malloc(bufsize);
+		if(!buf)
+		{
+			a2_Release(c->state, c->l[0].v.i);
+			a2c_Throw(c, -A2_OOMEMORY);
+		}
+		snprintf(buf, bufsize, "%s/%s", c->path, name);
+		buf[bufsize - 1] = 0;
+		h = a2_Load(c->state, buf);
+		free(buf);
+		switch(-h)
+		{
+		  case A2_OPEN:
+		  case A2_READ:
+			h = a2_Load(c->state, name);
+			break;
+		  default:
+			/*
+			 * If we get here, we most likely got the right file,
+			 * but it failed to compile, so we're not going to try
+			 * another location!
+			 */
+			break;
+		}
+	}
+	else
+		h = a2_Load(c->state, name);
 	if(h < 0)
 	{
 		fprintf(stderr, "Could not import \"%s\"! (%s)\n",
@@ -3321,6 +3351,8 @@ void a2_CloseCompiler(A2_compiler *c)
 		a2c_PopCoder(c);
 	a2ht_Cleanup(&c->imports);
 	free(c->lexbuf);
+	if(c->path)
+		free(c->path);
 	free(c);
 }
 
@@ -3415,8 +3447,8 @@ A2_errors a2_CompileFile(A2_compiler *c, A2_handle bank, const char *fn)
 	char *code;
 	FILE *f;
 	size_t fsize;
-	f = fopen(fn, "rb");
-	if(!f)
+	const char *slashpos;
+	if(!(f = fopen(fn, "rb")))
 		return A2_OPEN;
 	fseek(f, 0, SEEK_END);
 	fsize = ftell(f);
@@ -3435,6 +3467,15 @@ A2_errors a2_CompileFile(A2_compiler *c, A2_handle bank, const char *fn)
 		return A2_READ;
 	}
 	fclose(f);
+	if((slashpos = strrchr(fn, '/')))
+	{
+		/* Grab directory path of 'fn' for local imports */
+		int bufsize = slashpos - fn;
+		if(!(c->path = malloc(bufsize + 1)))
+			return A2_OOMEMORY;
+		memcpy(c->path, fn, bufsize);
+		c->path[bufsize] = 0;
+	}
 	res = a2_CompileString(c, bank, code, fn);
 	free(code);
 #ifdef A2_OUT_A2B
