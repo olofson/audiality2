@@ -7,11 +7,16 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include <signal.h>
 #include <math.h>
 #include "audiality2.h"
 #include "SDL.h"
 #include "gui.h"
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#include <unistd.h>
+#endif
 
 /* Display */
 static SDL_Surface *screen = NULL;
@@ -29,6 +34,7 @@ static Sint32 *osc_right = NULL;	/* Right audio grab buffer */
 /* Load info */
 static Uint32 now = 0;
 static Uint32 lastreset;
+static int lasttick;
 
 /* "System" */
 static char *audiodriver = NULL;
@@ -54,6 +60,9 @@ static A2_handle selected;	/* Handle of selected export */
 static int oct = 0;
 static float mod = 0;
 static int legato = 0;
+
+static int main_argc;
+static const char **main_argv;
 
 static int demo = 0;
 static const char *demofiles[] = {
@@ -469,12 +478,33 @@ static void fail(A2_errors err)
 	exit(100);
 }
 
+static void do_frame(void)
+{
+	int tick = SDL_GetTicks();
+	int dt = tick - lasttick;
+	now += dt;
+	lasttick = tick;
+	handle_events(main_argc, main_argv);
+	update_main(dt);
+	gui_refresh();
+	/*
+	 * We're not explicitly timestamping messages, but we're still
+	 * calling this regularly, as it has the side effect of dealing
+	 * with stuff that the engine needs to do in the API context.
+	 *    We don't HAVE to do this, as it's also done by other
+	 * calls as well, but it's kind of annoying if realtime error
+	 * messages aren't printed until the next time the user
+	 * interacts with the application...
+	 */
+	a2_Now(state);
+}
 
 int main(int argc, char *argv[])
 {
 	A2_config *cfg;
-	int lasttick;
 	A2_handle tcb;
+	main_argc = argc;
+	main_argv = (const char **)argv;
 
 	parse_args(argc, (const char **)argv);
 	if(SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -528,27 +558,16 @@ int main(int argc, char *argv[])
 
 	/* GUI main loop */
 	lastreset = lasttick = SDL_GetTicks();
+
+#ifdef EMSCRIPTEN
+	emscripten_set_main_loop(do_frame, -1, 1);
+#else
 	while(!do_exit)
 	{
-		int tick = SDL_GetTicks();
-		int dt = tick - lasttick;
-		now += dt;
-		lasttick = tick;
-		handle_events(argc, (const char **)argv);
-		update_main(dt);
-		gui_refresh();
-		/*
-		 * We're not explicitly timestamping message, but we're still
-		 * calling this regularly, as it has the side effect of dealing
-		 * with stuff that the engine needs to do in the API context.
-		 *    We don't HAVE to do this, as it's also done by other
-		 * calls as well, but it's kind of annoying if realtime error
-		 * messages aren't printed until the next time the user
-		 * interacts with the application...
-		 */
-		a2_Now(state);
+		do_frame();
 		SDL_Delay(10);
 	}
+#endif
 
 	a2_Release(state, tcb);
 	a2_Release(state, songbank);

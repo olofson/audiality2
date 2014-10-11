@@ -20,6 +20,7 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "gui.h"
@@ -183,8 +184,12 @@ SDL_Surface *gui_load_image(const char *fn)
 	SDL_Surface *img = SDL_LoadBMP(fn);
 	if(!img)
 		return NULL;
+#ifndef EMSCRIPTEN
 	cvt = SDL_DisplayFormat(img);
 	SDL_FreeSurface(img);
+#else
+	cvt = img;
+#endif
 	return cvt;
 }
 
