@@ -26,7 +26,7 @@ LIBSOURCES="$LIBSOURCES src/units/inline.c src/units/xsink.c"
 LIBSOURCES="$LIBSOURCES src/units/xsource.c src/units/xinsert.c"
 LIBSOURCES="$LIBSOURCES src/units/dbgunit.c src/units/limiter.c"
 LIBSOURCES="$LIBSOURCES src/units/fbdelay.c src/units/filter12.c"
-LIBSOURCES="$LIBSOURCES src/units/dcblock.c"
+LIBSOURCES="$LIBSOURCES src/units/dcblock.c src/units/waveshaper.c"
 
 LIBSOURCES="$LIBSOURCES src/drivers/sdldrv.c src/drivers/jackdrv.c"
 LIBSOURCES="$LIBSOURCES src/drivers/bufferdrv.c src/drivers/dummydrv.c"

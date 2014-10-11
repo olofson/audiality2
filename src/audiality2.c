@@ -33,6 +33,7 @@
 #include "fbdelay.h"
 #include "filter12.h"
 #include "dcblock.h"
+#include "waveshaper.h"
 
 
 /*---------------------------------------------------------
@@ -181,6 +182,7 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_fbdelay_unitdesc,
 	&a2_filter12_unitdesc,
 	&a2_dcblock_unitdesc,
+	&a2_waveshaper_unitdesc,
 	NULL
 };
 

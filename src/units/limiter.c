@@ -155,8 +155,8 @@ static void limiter_Process22(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
-		unsigned flags)
+static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms,
+		A2_config *cfg, unsigned flags)
 {
 	A2_limiter *lim = limiter_cast(u);
 	int *ur = u->registers;

@@ -1,0 +1,425 @@
+def title	"WaveshaperTest"
+def version	"1.0"
+def description	"Test of the simple 'waveshaper' unit"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+.Pig(P V=1)
+{
+	struct { wtosc; filter12; panmix }
+	w saw; a V; set a; p P
+	lp 1; bp 1; hp 0; q 1; set q; cutoff (P + 4); set cutoff
+	*a .7;	cutoff (P + 2); q .03;	d 20
+	*a .7;	cutoff (P + 1); q .01;	d 30
+	*a .7;	cutoff (P + .5); q 0;	d 60
+	a 0;				d 100
+	end
+.rel	a 0; cutoff P; q 0; d 30
+	d 100
+	1() { force rel }
+}
+
+.SineBass(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; a V; set a; p P
+	*a .7;	d 20
+	*a .7;	d 30
+	*a .7;	d 60
+	a 0;	d 100
+	end
+.rel	a 0;	d 30
+	d 100
+	1() { force rel }
+}
+
+.SineBass2(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; a (V * 2); set a; p P
+	8 {
+		*a .75;	d 5
+	}
+	a 0;	d 200
+	1() { }
+}
+
+.Sine(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; p P
+	a (V * .5); d 10
+	end
+.rel	a 0; d 10
+	1() { force rel }
+}
+
+.bl1(I n1 n2 n3 n4)
+{
+	1:I n1;		td 1;		1<1;
+	1:I n2;		td .5;		1<1;	td .5
+	1:I n2;		td 1;		1<1;
+	1:I n1;		td .75;		1<1;	td .25
+	1:I n2;		td .5;		1<1;	td .5
+	1:I n1;		td .25;		1<1;	td .75
+	1:I n1;		td 1;		1<1;
+	1:I n4;		td 1;		1<1;
+
+	1:I n1;		td 1;		1<1;
+	1:I n2;		td .5;		1<1;	td .5
+	1:I n2;		td 1;		1<1;
+	1:I n1;		td .75;		1<1;	td .25
+	1:I n1;		td .5;		1<1;	td .5
+	1:I n3;		td .25;		1<1;	td .75
+	1:I n3;		td 1;		1<1;
+	1:I n4;		td 1;		1<1;
+}
+.Bassline(I=Pig)
+{
+	-tr 2
+	bl1 I -12n 0n 1n 0n;	td 16
+	bl1 I -12n 0n 24n 12n;	td 16
+	bl1 I -12n 0n 1n 0n;	td 16
+	bl1 I 0n 12n 25n 24n;	td 16
+}
+
+.sdn(V)
+{
+	struct { wtosc }
+	w noise; p 5; a V; set a; d 2
+	p 5; *a .4; d 20
+	*a .2; d 50
+	while a > .01 {
+		!D (rand 7 + 3)
+		p 4; *a .87; d D
+		p 5; d D
+	}
+	a 0; d 100
+}
+.SDrum(P V=1)
+{
+	struct { wtosc }
+	sdn (V * .5)
+	w square; p (P + 1.5); a (V * .7); set a
+	10 {	-p .2; d 1 }
+	d 5
+	-p .2; d 5
+	5 {
+		!D (rand 2 + 3)
+		w saw; -p .51; d D
+		w square; +p .5; *a .7; d D
+	}
+	*a .5; !p0 (p - .8)
+	while a > .01 {
+		p (rand 1.5 + p0); *a .9; d 1
+	}
+	a 0; d 1
+}
+
+.BDrum(P V=1)
+{
+	struct { wtosc }
+	w sine; p (P + 4); a V; set a
+	5 {	-p .9; d 1 }
+	d 20
+	5 {	-p .15; d 1 }
+	d 20
+	20 {	-p .1; d 5 }
+	d 30
+	a 0; d 20
+}
+
+.HHClosed(P V=1)
+{
+	struct { wtosc }
+	!decay .98
+	w square; a (V * .7); set a; p 5
+	4 {
+		d 1; -p .6; *a .6
+	}
+	while (a > .01) {
+		p (rand 1 + 4.4); *a decay; d .5
+	}
+	a 0; d 1
+}
+
+.HHOpen(P V=1)
+{
+	struct { wtosc }
+	!decay .995
+	w square; a (V * .7); set a; p 5
+	4 {
+		d 1; -p .6; *a .6
+	}
+	while (a > .01) {
+		p (rand 1 + 4.4); *a decay; d .5
+	}
+	a 0; d 1
+	1() { decay .95 }
+}
+
+.Drop(P V=1)
+{
+	struct { wtosc; panmix }
+	-P 3; !D 3
+	w sine; p (P + 4); a (V * 1.5)
+	100 {
+		+p (P - p * .04); *a .99; d D; +D .2
+	}
+	50 {
+		-p .01; *a .93; d 50
+	}
+	a 0; d 1000
+}
+
+.Roll()
+{
+	struct { inline; panmix }
+	!v .1
+	16 {
+		SDrum 0 v;	td 1
+		*v 1.1;
+	}
+}
+
+.Beat()
+{
+	struct { inline; panmix }
+	b1() {
+		BDrum;			td 2
+			1:HHOpen;	td 2;	1<1
+		BDrum;		SDrum;	td 2
+			1:HHOpen;	td 2;	1<1
+	}
+	b2() {
+		BDrum;			td 2
+			1:HHOpen;	td 2;	1<1
+		BDrum;		SDrum;	td 2
+			1:HHOpen;	td 1;
+		BDrum;			td 1;	1<1
+	}
+	b3() {
+		BDrum;			td 2
+			1:HHOpen;	td 2;	1<1
+		BDrum;		SDrum;	td 2
+			1:HHOpen;	td 1;
+				SDrum;	td 1;	1<1
+	}
+	2 {
+		b1
+		b2
+		b1
+		b3
+	}
+}
+
+.Beat2()
+{
+	struct { inline; panmix }
+	b1() {
+		2 {
+			BDrum;	HHClosed;		td 1
+				HHClosed;		td 1;
+				1:HHOpen;		td 1;	1<1
+				1:HHOpen 0 .6;		td .5;	1<1;	td .5
+		}
+	}
+	b2() {
+		BDrum;	HHClosed;		td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;	1<1
+			1:HHOpen 0 .6;		td .5;	1<1;	td .5
+		BDrum;	HHClosed;		td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;
+		BDrum;	1:HHOpen 0 .6;		td .5;	1<1;	td .5
+	}
+	2 {
+		b1
+		b1
+		b1
+		b2
+	}
+}
+
+.Beat3()
+{
+	struct { inline; panmix }
+	b1() {
+		BDrum;	HHClosed;		td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;	1<1
+			1:HHOpen 0 .6;		td .5;	1<1;	td .5
+		BDrum;	HHClosed;	SDrum;	td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;	1<1
+			1:HHOpen 0 .6;		td .5;	1<1;	td .5
+	}
+	b2() {
+		BDrum;	HHClosed;		td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;	1<1
+			1:HHOpen 0 .6;		td .5;	1<1;	td .5
+		BDrum;	HHClosed;	SDrum;	td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;
+		BDrum;	HHClosed;		td 1;	1<1
+	}
+	b3() {
+		BDrum;	HHClosed;		td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;	1<1
+			1:HHOpen 0 .6;		td .5;	1<1;	td .5
+		BDrum;	HHClosed;	SDrum;	td 1
+			HHClosed;		td 1;
+			1:HHOpen;		td 1;
+			1:HHOpen 0 .6;	SDrum;	td .5;	1<1;	td .5
+	}
+	2 {
+		b1
+		b2
+		b1
+		b3
+	}
+}
+
+.WSTrack()
+{
+	struct {
+		inline 0 *
+		waveshaper WS * *
+		fbdelay D * *
+		fbdelay D2 * *
+		panmix PM * >
+	}
+
+	// Waveshaper setup
+	WS.amount 0;	set WS.amount;
+
+	// Feedback delay setup
+	D.fbdelay (tick * 5.05);	D.fbgain .15
+	D.ldelay (tick * 6.05);		D.lgain .05
+	D.rdelay (tick * 8.03);		D.rgain .05
+	D2.fbdelay (tick * 6.95);	D2.fbgain .15
+	D2.ldelay (tick * 9.01);	D2.lgain .05
+	D2.rdelay (tick * 11.03);	D2.rgain .05
+
+	// Panmixer setup
+	PM.vol .5;	set PM.vol
+
+	tr 0n
+	1:Sine -3;		WS.amount 20;	td 16
+				WS.amount 0;	td 16
+	1<1
+
+	Bassline SineBass;	WS.amount 2;	td 64
+	Bassline SineBass;	WS.amount 0;	td 64
+	Bassline SineBass;	WS.amount 10;	td 64
+	Bassline SineBass;	WS.amount 0;	td 64
+
+	1:Sine -21n;		WS.amount 20;	td 16
+	1<1
+	1:Sine -33n;		WS.amount 0;	td 16
+	1<1
+
+	tr 3n
+	Bassline;		WS.amount 1;	td 64
+	Bassline;		WS.amount 5;	td 64
+	Bassline;		WS.amount 2;	td 64
+	Bassline;		WS.amount 0;	td 64
+
+	tr 0n
+	Bassline;		WS.amount 10;	td 64
+	Bassline;		WS.amount 0;	td 64
+	Bassline;		WS.amount 10;	td 64
+	Bassline;		WS.amount 0;	td 64
+
+				WS.amount 1; set WS.amount
+	tr 0n
+	Bassline SineBass2;	WS.amount 20;	td 64
+	Bassline SineBass2;	WS.amount 2;	td 64
+	tr 12n
+	Bassline SineBass2;	WS.amount 20;	td 64
+	Bassline SineBass2;	WS.amount 0;	td 64
+	tr 17n
+	Bassline SineBass2;	WS.amount 20;	td 64
+	Bassline SineBass2;	WS.amount 0;	td 64
+	tr 5n
+	Bassline SineBass2;	WS.amount 20;	td 64
+	tr 10n
+	Bassline SineBass2;	WS.amount 2;	td 64
+
+						td 32
+}
+
+Song(P V=1 L=0)
+{
+	// Master voice structure
+	struct {
+		inline 0 *
+		fbdelay D * *
+		panmix PM * >
+	}
+
+	tempo 140 4
+
+	// Feedback delay setup
+	D.fbdelay 119;	D.fbgain .03
+	D.ldelay 67;	D.lgain .02
+	D.rdelay 97;	D.rgain .01
+
+	// Panmixer setup
+	PM.vol .6;	set PM.vol
+
+	for {
+		WSTrack;	td 16
+				td 16
+
+				td 64
+				td 64
+				td 64
+				td 64
+
+				td 16
+			Roll;	td 16
+
+			Beat;	td 64
+			Beat;	td 64
+			Beat;	td 64
+			Drop;	td 48
+			Roll;	td 16
+
+			Beat;	td 64
+			Beat;	td 64
+			Beat;	td 64
+			Drop;	td 48
+			Roll;	td 16
+
+			Drop;	td 64
+				td 64
+			Beat2;	td 64
+			Beat2;	td 64
+
+			Beat3;	td 64
+			Beat3;	td 64
+			Beat3;	td 64
+			Drop;	td 64
+
+				td 32
+	}
+
+	end
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill *
+
+	1() {
+		force stop
+	}
+}

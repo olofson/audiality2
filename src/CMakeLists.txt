@@ -38,6 +38,7 @@ set(sources ${sources}
 	units/fbdelay.c
 	units/filter12.c
 	units/dcblock.c
+	units/waveshaper.c
 )
 
 # Drivers
