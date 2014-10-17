@@ -50,14 +50,6 @@ TODO: -------------------------------------------------------------------------
 		* Multiply
 		* Ring modulate
 
-* More built-in waveforms...? Just a few lines of tiny, fast C code.
-	* Simple library of built-in waveforms (possibly parametric) that are
-	  rendered on demand at compile time? (Could be extended to render CSL
-	  scripts later.)
-
-* On-demand waveform rendering! Just put them in the namespace as they're
-  imported, and render them when actual programs using them are compiled.
-
 * Logic somewhere (API, core...?) that uses a suitable builtin program when
   someone attempts to play a wave like an instrument!
 
