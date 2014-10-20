@@ -50,7 +50,9 @@ import "test.a2s"
 	1<1;			td 1
 
 	1:I 17n;		td 2
-	1<1; 1:I 16n;		td 4
+	1<1; 1:I 16n;		td 2	//
+
+				td 2
 	1<1;			td 2
 
 	1:I 19n;		td 1
@@ -65,7 +67,8 @@ import "test.a2s"
 	1<1; 1:I 8n;		td 1
 	1<1;			td 3
 
-	1:I 17n;		td 1
+	1:I 17n;		td 1	//
+
 	1<1; 1:I 16n;		td 1
 	1<1; 1:I 7n;		td 1.5
 	1<1;			td 1.5
@@ -80,7 +83,8 @@ import "test.a2s"
 	1:I 16n;		td 1
 	1<1; 1:I 17n;		td 1
 	1<1; 1:I 16n;		td 1
-	1<1; 1:I 9n;		td 8
+
+	1<1; 1:I 9n;		td 8	//
 	1<1
 }
 
@@ -125,15 +129,15 @@ import "test.a2s"
 {
 	-tr 2
 
-	bl1 -10n -7n -5n -5n;	td 16
-	bl2 0 -7n -5n;		td 16
-	bl1 -10n -7n -5n -5n;	td 16
-	bl3 -10n -7n -5n;	td 16
+	bl1 -10n -7n -5n -5n;		td 16
+	bl2 0 -7n -5n;			td 16
+	bl1 -10n -7n -5n -5n;		td 16
+	bl3 -10n -7n -5n;		td 16
 
-	bl1 -10n -10n -8n -8n;	td 16
-	bl2 -4n -10n -8n;	td 16
-	bl1 -9n -9n -8n -8n;	td 16
-	bl3 -5n -10n -8n;	td 16
+	bl1 -10n -10n -8n -8n;		td 16
+	bl2 -4n -10n -8n;		td 16
+	bl1 -12n -12n -10n -10n;	td 16
+	bl3 -3n -5n -3n;		td 16
 }
 
 Song(P V=1 L=0)
