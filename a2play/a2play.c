@@ -452,7 +452,6 @@ int main(int argc, const char *argv[])
 {
 	A2_driver *drv = NULL;
 	A2_config *cfg;
-	float a;
 	A2_handle tcb;
 
 	signal(SIGTERM, breakhandler);
@@ -506,23 +505,16 @@ int main(int argc, const char *argv[])
 		while(!do_exit)
 		{
 			a2_Now(state);
-			a2_Sleep(100);
+			a2_Sleep(10);
 		}
 
 		fprintf(stderr, "a2play: Stopping...\n");
 
 		/* Fade out */
 		a2_Now(state);
-		/* FIXME: Send stop messages and detach all voices here! */
-		a = 1.0f;
-		while(a > 0.01f)
-		{
-			a2_Send(state, a2_RootVoice(state), 2, a);
-			a2_Wait(state, 100.0f);
-			a *= 0.5f;
-		}
 		a2_Send(state, a2_RootVoice(state), 2, 0.0f);
-		a2_Sleep(1000);
+		/* FIXME: Account for actual output latency! */
+		a2_Sleep(200);
 	}
 	else
 	{
