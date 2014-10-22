@@ -264,6 +264,7 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case TK_LABEL:	return "TK_LABEL";
 	  case TK_REGISTER:	return "TK_REGISTER";
 	  case TK_INSTRUCTION:	return "TK_INSTRUCTION";
+	  case KW_IMPORT:	return "KW_IMPORT";
 	  case KW_DEF:		return "KW_DEF";
 	  case KW_STRUCT:	return "KW_STRUCT";
 	  case KW_WIRE:		return "KW_WIRE";
@@ -281,6 +282,7 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case KW_OR:		return "KW_OR";
 	  case KW_XOR:		return "KW_XOR";
 	  case KW_NOT:		return "KW_NOT";
+
 	  case AT_WAVETYPE:	return "AT_WAVETYPE";
 	  case TK_WAVETYPE:	return "TK_WAVETYPE";
 	  case AT_PERIOD:	return "AT_PERIOD";
@@ -288,6 +290,8 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case AT_LENGTH:	return "AT_LENGTH";
 	  case AT_DURATION:	return "AT_DURATION";
 	  case AT_FLAG:		return "AT_FLAG";
+	  case AT_RANDSEED:	return "AT_RANDSEED";
+	  case AT_NOISESEED:	return "AT_NOISESEED";
 	}
 	return "<unknown>";
 }
