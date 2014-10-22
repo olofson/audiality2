@@ -41,7 +41,7 @@ extern "C" {
 /* Current version */
 #define	A2_VERSION	A2_MAKE_VERSION(@VERSION_MAJOR@, @VERSION_MINOR@, @VERSION_PATCH@, @VERSION_BUILD@)
 
-/* Default reference frequence for linear pitch 0.0; "middle C" */
+/* Default reference frequency for linear pitch 0.0; "middle C" */
 #define	A2_MIDDLEC	261.626f
 
 /* Number of VM registers */
@@ -114,10 +114,10 @@ unsigned a2_LinkedVersion(void);
  * specified, a default configuration is created.
  * 
  * If a driver in a provided configuration is already open, the 'samplerate',
- * 'buffer', 'channels' and 'flags' arguments are ignored, and the corresponding
- * values are instead retrieved from the driver. In this case, the driver will
- * NOT be closed with the state, unless the application sets the A2_STATECLOSE
- * flag in the driver's 'flag' field.
+ * 'buffer', 'channels' and 'flags' arguments are ignored, and the
+ * corresponding values are instead retrieved from the driver. In this case,
+ * the driver will NOT be closed with the state, unless the application sets
+ * the A2_STATECLOSE flag in the driver's 'flag' field.
  *
  * A driver provided by the application will NOT be destroyed by Audiality as
  * the state is closed, unless the application sets the A2_STATEDESTROY flag in
@@ -280,7 +280,8 @@ A2_handle a2_NewString(A2_state *st, const char *string);
  * Decreases the reference count of all objects that have been created as
  * direct results of API calls.
  *
- * Returns the number of objects released, not including recursive side effects.
+ * Returns the number of objects released, not including recursive side
+ * effects.
  *
  * NOTE:
  *	This call should generally NOT be used by applications that manage
