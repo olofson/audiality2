@@ -57,24 +57,28 @@ import "a2jingle.a2s" as A2Jingle
 Song(P V=1 L=0)
 {
 	struct {
-		inline 0 *
-		dcblock DCB * *
-		filter12 LPF * *
-		filter12 APF * *
-		waveshaper WS * *
-		panmix PM * >
+		inline 0 1
+		dcblock DCB 1 1
+		filter12 LPF 1 1
+		filter12 APF 1 1
+		waveshaper WS 1 1
+		fbdelay FBD 1 2
+		panmix PM 2 >
 	}
 
 	DCB.cutoff 1000f
 	LPF.cutoff 5000f; LPF.q .01
 	APF.cutoff 1500f; APF.q .015; APF.lp 1; APF.bp 1; APF.hp .5;
 	WS.amount 2
-	PM.vol .4
+	FBD.fbdelay 67; FBD.fbgain .1
+	FBD.ldelay 70; FBD.lgain .1
+	FBD.rdelay 83; FBD.rgain .1
+	PM.vol .4; PM.pan 0
 	setall
 
 	1:Tuning;		d 2500
-	A2Jingle.Song P V L;	d 9000
-	1<1
+	2:A2Jingle.Song P V L;	d 8000
+	1<1; kill 2;		d 100
 	end
 
 .stop	10 {
