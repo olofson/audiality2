@@ -3388,6 +3388,10 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 			sline = eline;
 			scol = ecol;
 		}
+#ifdef THROWSOURCE
+		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
+				c->throw_file, c->throw_line);
+#endif
 		fprintf(stderr, "Audiality 2: %s ", a2_ErrorString(c->error));
 		if((sline == eline) && (scol == ecol))
 			fprintf(stderr, "at line %d, column %d", sline, scol);
@@ -3419,6 +3423,10 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	}
 	a2c_Except
 	{
+#ifdef THROWSOURCE
+		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
+				c->throw_file, c->throw_line);
+#endif
 		fprintf(stderr, "Audiality 2: Emergency finalization 1: %s\n",
 				a2_ErrorString(c->error));
 	}
@@ -3428,6 +3436,10 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	}
 	a2c_Except
 	{
+#ifdef THROWSOURCE
+		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
+				c->throw_file, c->throw_line);
+#endif
 		fprintf(stderr, "Audiality 2: Emergency finalization 2: %s\n",
 				a2_ErrorString(c->error));
 	}

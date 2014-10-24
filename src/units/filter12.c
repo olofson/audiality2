@@ -64,7 +64,6 @@ static inline A2_filter12 *f12_cast(A2_unit *u)
 }
 
 
-#include <stdio.h>
 static inline int f12_pitch2coeff(A2_filter12 *f12)
 {
 /*FIXME: Fast fixed point approximation for this... */

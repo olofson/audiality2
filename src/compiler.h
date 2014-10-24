@@ -38,14 +38,36 @@ typedef struct A2_coder A2_coder;
 #define	A2_jumpbuf	jmp_buf
 #define	a2c_Try(c)	if(((c)->error = A2_OK), !setjmp((c)->jumpbuf))
 #define a2c_Except	else
-#ifdef CERRDIE
+
+#ifdef THROWSOURCE
+
+# ifdef CERRDIE
+#	define	a2c_Throw(c, x)	({					\
+			printf("THROW %s [%s:%d]\n", a2_ErrorString(x),	\
+					__FILE__, __LINE__);\
+			assert(0);					\
+		})
+# else
+#	define	a2c_Throw(c, x)	({					\
+			(c)->error = (x);				\
+			(c)->throw_file = __FILE__;			\
+			(c)->throw_line = __LINE__;			\
+			longjmp((c)->jumpbuf, (x));			\
+		})
+# endif
+
+#else /* THROWSOURCE */
+
+# ifdef CERRDIE
 #	define	a2c_Throw(c, x)	({					\
 			printf("THROW %s\n", a2_ErrorString(x));	\
 			assert(0);					\
 		})
-#else
+# else
 #	define	a2c_Throw(c, x)	longjmp((c)->jumpbuf, ((c)->error = (x)))
-#endif
+# endif
+
+#endif /* THROWSOURCE */
 
 
 /*---------------------------------------------------------
@@ -227,6 +249,10 @@ struct A2_compiler
 	int		commawarned;	/* Deprecated comma warning issued */
 	A2_jumpbuf	jumpbuf;	/* Buffer for a2c_Try()/a2c_Throw() */
 	A2_errors	error;		/* Error from a2c_Throw() */
+#ifdef THROWSOURCE
+	const char	*throw_file;	/* Source file of last a2c_Throw() */
+	int		throw_line;	/* Source line of last a2c_Throw() */
+#endif
 };
 
 
