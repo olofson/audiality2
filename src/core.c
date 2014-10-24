@@ -905,6 +905,15 @@ static inline void a2_RTApply(A2_regtracker *rt, A2_state *st, A2_voice *v,
 		a2_VoiceControl(st, v, rt->regs[i], start, duration);
 }
 
+static inline void a2_RTSetAll(A2_regtracker *rt, A2_state *st, A2_voice *v,
+		unsigned start)
+{
+	int i;
+	for(i = 0; i < rt->position; ++i)
+		a2_VoiceControl(st, v, rt->regs[i], start, 0);
+	a2_RTInit(rt);
+}
+
 
 /* Convert musical tick duration to audio frame delta time */
 static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
@@ -1234,6 +1243,10 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_SET:
 			a2_VoiceControl(st, v, ins->a1, v->s.waketime, 0);
 			a2_RTUnmark(&rt, ins->a1);
+			break;
+
+		  case OP_SETALL:
+			a2_RTSetAll(&rt, st, v, v->s.waketime);
 			break;
 #if 0
 		  case OP_RAMP:

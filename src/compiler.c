@@ -145,6 +145,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SLEEP:
 	  case OP_KILLA:
 	  case OP_INITV:
+	  case OP_SETALL:
 	  case A2_OPCODES:	/* (Warning eliminator) */
 		break;
 	  /* <integer(a2)> */
@@ -2058,6 +2059,9 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_SET:
 		a2c_Code(c, OP_SET, a2c_Variable(c), 0);
 		break;
+	  case OP_SETALL:
+		a2c_Code(c, OP_SETALL, 0, 0);
+		break;
 	  case OP_DELAY:
 	  case OP_TDELAY:
 		if(c->inhandler)
@@ -3261,6 +3265,7 @@ static struct
 	{ "p2d",	TK_INSTRUCTION,	OP_P2DR		},
 	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
 	{ "set",	TK_INSTRUCTION,	OP_SET		},
+	{ "setall",	TK_INSTRUCTION,	OP_SETALL	},
 	{ "sizeof",	TK_INSTRUCTION,	OP_SIZEOF	},
 	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 

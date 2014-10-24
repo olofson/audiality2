@@ -3,9 +3,12 @@
 <language name="Audiality 2" version="1.0" kateversion="2.1" section="Other" extensions="*.a2s" mimetype="text/x-audiality2script">
 	<highlighting>
 		<list name="directives">
+			<item> import </item>
+			<item> as </item>
 			<item> def </item>
 			<item> struct </item>
 			<item> wire </item>
+			<item> tempo </item>
 			<item> wave </item>
 		</list>
 		<list name="instructions">
@@ -40,13 +43,13 @@
 			<item> wge </item>
 			<item> kill </item>
 			<item> d </item>
-			<item> tempo </item>
 			<item> td </item>
 			<item> quant </item>
 			<item> rand </item>
 			<item> p2d </item>
 			<item> neg </item>
 			<item> set </item>
+			<item> setall </item>
 			<item> debug </item>
 			<item> sizeof </item>
 		</list>
