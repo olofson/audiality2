@@ -94,6 +94,7 @@ typedef enum A2_tokens
 	TK_REGISTER,	/* i = register index */
 	TK_INSTRUCTION,	/* i = pseudo opcode */
 	KW_IMPORT,	/* 'import' directive */
+	KW_AS,		/* 'as' keyword */
 	KW_DEF,		/* 'def' directive */
 	KW_STRUCT,	/* 'struct' keyword */
 	KW_WIRE,	/* 'wire' keyword */
@@ -209,6 +210,13 @@ struct A2_coder
 
 /* Number of lexer states to keep */
 #define	A2_LEXDEPTH	3
+
+/* Flags for a2_Lex() and a2c_SkipWhite() */
+typedef enum A2_lexflags
+{
+	A2_LEX_WHITENEWLINE =	0x00000001,	/* Newline is whitespace */
+	A2_LEX_NAMESPACE =	0x00000002	/* Consider symbols only */
+} A2_lexflags;
 
 /* Lexer state */
 typedef struct A2_lexvalue

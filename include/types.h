@@ -176,6 +176,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPBINOP,	"Expected binary operator")\
   A2_DEFERR(A2_EXPCONSTANT,	"Expected constant")\
   A2_DEFERR(A2_EXPWAVETYPE,	"Expected wave type identifier")\
+  A2_DEFERR(A2_EXPEXPRESSION,	"Expected expression")\
   \
   A2_DEFERR(A2_NEXPEOF,		"Unexpected end of file")\
   A2_DEFERR(A2_NEXPNAME,	"Undefined symbol")\

@@ -1,0 +1,90 @@
+def title	"ImportTest2"
+def version	"1.0"
+def description	"Test of importing a song into a namespace"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import "a2jingle.a2s" as A2Jingle
+
+.Tuning()
+{
+	struct {
+		wtosc
+		wtosc N
+		panmix 1 >
+	}
+	vol .05
+
+	N.w noise
+	10 {
+		N.a (rand 2)
+		N.p (rand 3)
+		d (rand 10)
+	}
+	N.a 0; N.p 5; d 20
+
+	N.a .2; d 500
+
+	w sine; a 1
+	!reps 20
+	15 {
+		!tp (rand 8 - 3)
+		!Nta (rand .4 + .1)
+		reps {
+			+p (tp - p * .03)
+			+N.a (Nta - N.a * .03)
+			d 1
+		}
+		+reps 10
+	}
+	N.a .05; a 0; d 100
+	end
+
+.click	10 {
+		N.a (rand 2)
+		N.p (rand 3)
+		d (rand 10)
+	}
+	N.a 0; a 0; d 10
+
+	1() {
+		force click
+	}
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		dcblock DCB * *
+		filter12 LPF * *
+		filter12 APF * *
+		waveshaper WS * *
+		panmix PM * >
+	}
+
+	DCB.cutoff 1000f
+	LPF.cutoff 5000f; LPF.q .01
+	APF.cutoff 1500f; APF.q .015; APF.lp 1; APF.bp 1; APF.hp .5;
+	WS.amount 2
+	PM.vol .4
+	setall
+
+	1:Tuning;		d 2500
+	A2Jingle.Song P V L;	d 9000
+	1<1
+	end
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill *
+
+	1() {
+		force stop
+	}
+}
