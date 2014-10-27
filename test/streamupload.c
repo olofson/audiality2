@@ -172,7 +172,7 @@ int main(int argc, const char *argv[])
 				cfg->samplerate, samplerate);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
+	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
 		fail(-h);
 	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
 		fail(-ph);

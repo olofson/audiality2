@@ -163,24 +163,48 @@ A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
 }
 
 
-A2_handle a2_Load(A2_state *st, const char *fn)
+A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 {
 	int res;
 	A2_handle h;
 	A2_compiler *c;
+	char *fnx = NULL;
+	/* If there's no extension, add ".a2s" */
+	if(!strchr(fn, '.'))
+	{
+		fnx = malloc(strlen(fn) + 4);
+		strcpy(fnx, fn);
+		strcpy(fnx + strlen(fn), ".a2s");
+		fn = fnx;
+	}
+#if 0
+	/* TODO: */
+	flags |= st->config->flags & A2_INITFLAGS;
+	if(!(flags & A2_NOSHARED))
+	{
+		/* Try to find previously loaded bank first! */
+
+	}
+#endif
 	if(!(c = a2_OpenCompiler(st, 0)))
+	{
+		free(fnx);
 		return -A2_OOMEMORY;
+	}
 	if((h = a2_NewBank(st, fn, A2_APIOWNED)) < 0)
 	{
+		free(fnx);
 		a2_CloseCompiler(c);
 		return h;
 	}
 	if((res = a2_CompileFile(c, h, fn)) != A2_OK)
 	{
+		free(fnx);
 		a2_CloseCompiler(c);
 		a2_Release(st, h);
 		return -res;
 	}
+	free(fnx);
 	a2_CloseCompiler(c);
 	return h;
 }

@@ -265,13 +265,13 @@ int main(int argc, const char *argv[])
 	fprintf(stderr, "Loading...\n");
 	
 	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s")) < 0)
+	if((h = a2_Load(state, "data/a2jingle.a2s", 0)) < 0)
 		fail(5, -h);
 	if((songh = a2_Get(state, h, "Song")) < 0)
 		fail(6, -songh);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s")) < 0)
+	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
 		fail(7, -h);
 	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
 		fail(8, -ph);

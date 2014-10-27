@@ -166,6 +166,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_EXPVALUEHANDLE,	"Expected value or handle")\
   A2_DEFERR(A2_EXPINTEGER,	"Expected integer value")\
   A2_DEFERR(A2_EXPSTRING,	"Expected string literal")\
+  A2_DEFERR(A2_EXPSTRINGORNAME,	"Expected string literal or name")\
   A2_DEFERR(A2_EXPVARIABLE,	"Expected variable")\
   A2_DEFERR(A2_EXPLABEL,	"Expected label")\
   A2_DEFERR(A2_EXPPROGRAM,	"Expected program")\
@@ -250,13 +251,14 @@ typedef enum A2_initflags
 	A2_REALTIME =	0x00000800,	/* Configure for realtime operation */
 	A2_SILENT =	0x00001000,	/* No API context stderr errors */
 	A2_RTSILENT =	0x00002000,	/* No engine context stderr errors */
+	A2_NOSHARED =	0x00004000,	/* No bank sharing (also a2_Load().)*/
 
-	A2_INITFLAGS =	0x0000ff00,	/* Mask for the flags above */
+	A2_INITFLAGS =	0x000fff00,	/* Mask for the flags above */
 
 
 	/* NOTE: Application code should NEVER set any of the flags below! */
 
-	A2_SUBSTATE =	0x00010000,	/* State is a substate */
+	A2_SUBSTATE =	0x00100000,	/* State is a substate */
 
 	/* Flags for drivers and configurations */
 	A2_ISOPEN =	0x10000000,	/* Object is open/in use */

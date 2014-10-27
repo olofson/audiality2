@@ -264,11 +264,15 @@ A2_handle a2_NewBank(A2_state *st, const char *name, int flags);
 /*
  * Load .a2s file 'fn' or null terminated string 'code' as a bank.
  *
+ * a2_Load() will normally try to find an already loaded bank with the
+ * specified name, before attempting to locate, load and compile it. To always
+ * load a new instance of the specified bank, use the A2_NOSHARED flag.
+ *
  * Returns the handle of the resulting bank, or if the operation fails, a
  * negative error code. (Use (-result) to get the A2_errors code.)
  */
 A2_handle a2_LoadString(A2_state *st, const char *code, const char *name);
-A2_handle a2_Load(A2_state *st, const char *fn);
+A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags);
 
 /*
  * Create a string object from the null terminated 'string'. Returns the handle

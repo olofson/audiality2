@@ -185,7 +185,7 @@ int main(int argc, const char *argv[])
 				cfg->samplerate, settings[1].samplerate);
 
 	/* Load sounds */
-	h = a2_Load(state, "data/k2intro.a2s");
+	h = a2_Load(state, "data/k2intro.a2s", 0);
 	songh = a2_Get(state, h, "Song");
 
 	/* Start playing! */

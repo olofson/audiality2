@@ -2178,8 +2178,19 @@ static void a2c_Import(A2_compiler *c, int export)
 {
 	int h, res;
 	const char *name;
-	a2c_Expect(c, TK_STRING, A2_EXPSTRING);
-	name = a2_String(c->state, c->l[0].v.i);
+	int nameh = 0;
+	switch(a2c_Lex(c, 0))
+	{
+	  case TK_STRING:
+		nameh = c->l[0].v.i;
+		name = a2_String(c->state, nameh);
+		break;
+	  case TK_NAME:
+		name = c->l[0].v.sym->name;
+		break;
+	  default:
+		a2c_Throw(c, A2_EXPSTRINGORNAME);
+	}
 	if(c->path)
 	{
 		/* Try the directory of the current file first! */
@@ -2187,18 +2198,19 @@ static void a2c_Import(A2_compiler *c, int export)
 		char *buf = malloc(bufsize);
 		if(!buf)
 		{
-			a2_Release(c->state, c->l[0].v.i);
+			if(nameh)
+				a2_Release(c->state, nameh);
 			a2c_Throw(c, -A2_OOMEMORY);
 		}
 		snprintf(buf, bufsize, "%s/%s", c->path, name);
 		buf[bufsize - 1] = 0;
-		h = a2_Load(c->state, buf);
+		h = a2_Load(c->state, buf, 0);
 		free(buf);
 		switch(-h)
 		{
 		  case A2_OPEN:
 		  case A2_READ:
-			h = a2_Load(c->state, name);
+			h = a2_Load(c->state, name, 0);
 			break;
 		  default:
 			/*
@@ -2210,15 +2222,17 @@ static void a2c_Import(A2_compiler *c, int export)
 		}
 	}
 	else
-		h = a2_Load(c->state, name);
+		h = a2_Load(c->state, name, 0);
 	if(h < 0)
 	{
 		fprintf(stderr, "Could not import \"%s\"! (%s)\n",
 				name, a2_ErrorString(-h));
-		a2_Release(c->state, c->l[0].v.i);
+		if(nameh)
+			a2_Release(c->state, nameh);
 		a2c_Throw(c, -h);
 	}
-	a2_Release(c->state, c->l[0].v.i);
+	if(nameh)
+		a2_Release(c->state, nameh);
 
 	if((res = a2ht_AddItem(&c->target->deps, h)) < 0)
 	{

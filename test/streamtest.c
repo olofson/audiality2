@@ -151,13 +151,13 @@ int main(int argc, const char *argv[])
 				cfg->samplerate, samplerate);
 
 	/* Load jingle */
-	if((h = a2_Load(st, "data/a2jingle.a2s")) < 0)
+	if((h = a2_Load(st, "data/a2jingle.a2s", 0)) < 0)
 		fail(5, -h);
 	if((songh = a2_Get(st, h, "Song")) < 0)
 		fail(6, -songh);
 
 	/* Load test programs */
-	if((h = a2_Load(st, "data/testprograms.a2s")) < 0)
+	if((h = a2_Load(st, "data/testprograms.a2s", 0)) < 0)
 		fail(7, -h);
 	if((captureprogram = a2_Get(st, h, "CaptureVoice")) < 0)
 		fail(8, -captureprogram);

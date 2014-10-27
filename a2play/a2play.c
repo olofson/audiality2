@@ -230,7 +230,7 @@ static void load_sounds(int argc, const char *argv[])
 		A2_handle h;
 		if(argv[i][0] == '-')
 			continue;
-		if((h = a2_Load(state, argv[i])) < 0)
+		if((h = a2_Load(state, argv[i], 0)) < 0)
 		{
 			fprintf(stderr, "Could not load \"%s\"! (%s)\n",
 					argv[i], a2_ErrorString(-h));
