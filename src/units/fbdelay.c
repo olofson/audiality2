@@ -67,7 +67,7 @@ static inline A2_fbdelay *fbdelay_cast(A2_unit *u)
 
 
 #define	WI(x)	((fbd->bufpos - (x)) & (A2FBD_BUFSIZE - 1))
-static inline void fbdelay_process22(A2_unit *u, unsigned offset,
+static inline void fbdelay_process(A2_unit *u, unsigned offset,
 		unsigned frames, int add, int stereoin, int stereoout)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
@@ -129,42 +129,42 @@ static inline void fbdelay_process22(A2_unit *u, unsigned offset,
 
 static void fbdelay_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 1, 1, 1);
+	fbdelay_process(u, offset, frames, 1, 1, 1);
 }
 
 static void fbdelay_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 0, 1, 1);
+	fbdelay_process(u, offset, frames, 0, 1, 1);
 }
 
 static void fbdelay_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 1, 0, 1);
+	fbdelay_process(u, offset, frames, 1, 0, 1);
 }
 
 static void fbdelay_Process12(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 0, 0, 1);
+	fbdelay_process(u, offset, frames, 0, 0, 1);
 }
 
 static void fbdelay_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 1, 1, 0);
+	fbdelay_process(u, offset, frames, 1, 1, 0);
 }
 
 static void fbdelay_Process21(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 0, 1, 0);
+	fbdelay_process(u, offset, frames, 0, 1, 0);
 }
 
 static void fbdelay_Process11Add(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 1, 0, 0);
+	fbdelay_process(u, offset, frames, 1, 0, 0);
 }
 
 static void fbdelay_Process11(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fbdelay_process22(u, offset, frames, 0, 0, 0);
+	fbdelay_process(u, offset, frames, 0, 0, 0);
 }
 
 
