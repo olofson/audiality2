@@ -93,6 +93,7 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
 		int v0 = pm->vol.value - vp;
 		int v1 = pm->vol.value + vp;
+		int ins = in[s];
 		if(clamp)
 		{
 			if(v0 > pm->vol.value << 1)
@@ -102,13 +103,13 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 		}
 		if(add)
 		{
-			out0[s] += (int64_t)in[s] * v0 >> 24;
-			out1[s] += (int64_t)in[s] * v1 >> 24;
+			out0[s] += (int64_t)ins * v0 >> 24;
+			out1[s] += (int64_t)ins * v1 >> 24;
 		}
 		else
 		{
-			out0[s] = (int64_t)in[s] * v0 >> 24;
-			out1[s] = (int64_t)in[s] * v1 >> 24;
+			out0[s] = (int64_t)ins * v0 >> 24;
+			out1[s] = (int64_t)ins * v1 >> 24;
 		}
 		a2_RamperRun(&pm->vol, 1);
 		a2_RamperRun(&pm->pan, 1);
@@ -205,6 +206,8 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
 		int v0 = pm->vol.value - vp;
 		int v1 = pm->vol.value + vp;
+		int in0s = in0[s];
+		int in1s = in1[s];
 		if(clamp)
 		{
 			if(v0 > pm->vol.value << 1)
@@ -214,13 +217,13 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 		}
 		if(add)
 		{
-			out0[s] += (int64_t)in0[s] * v0 >> 24;
-			out1[s] += (int64_t)in1[s] * v1 >> 24;
+			out0[s] += (int64_t)in0s * v0 >> 24;
+			out1[s] += (int64_t)in1s * v1 >> 24;
 		}
 		else
 		{
-			out0[s] = (int64_t)in0[s] * v0 >> 24;
-			out1[s] = (int64_t)in1[s] * v1 >> 24;
+			out0[s] = (int64_t)in0s * v0 >> 24;
+			out1[s] = (int64_t)in1s * v1 >> 24;
 		}
 		a2_RamperRun(&pm->vol, 1);
 		a2_RamperRun(&pm->pan, 1);
@@ -264,7 +267,7 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 
 	/* Install Process callback */
 	if(flags & A2_PROCADD)
-		switch((u->ninputs << 1) + u->noutputs - 3)
+		switch(((u->ninputs - 1) << 1) + (u->noutputs - 1))
 		{
 		  case 0: u->Process = panmix_Process11Add; break;
 		  case 1: u->Process = panmix_Process12Add; break;
@@ -272,7 +275,7 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		  case 3: u->Process = panmix_Process22Add; break;
 		}
 	else
-		switch((u->ninputs << 1) + u->noutputs - 3)
+		switch(((u->ninputs - 1) << 1) + (u->noutputs - 1))
 		{
 		  case 0: u->Process = panmix_Process11; break;
 		  case 1: u->Process = panmix_Process12; break;
