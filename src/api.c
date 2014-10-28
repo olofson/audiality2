@@ -35,37 +35,35 @@
 	Global API resource management
 ---------------------------------------------------------*/
 
-/* FIXME: This should be atomic. */
 static A2_atomic a2_api_users = 0;
 
 
 void a2_add_api_user(void)
 {
-	if(!a2_api_users)
+	if(!a2_AtomicAdd(&a2_api_users, 1))
 	{
 		a2_time_open();
 		a2_drivers_open();
 		a2_units_open();
 	}
-	++a2_api_users;
 }
 
 
 void a2_remove_api_user(void)
 {
-	if(!a2_api_users)
-	{
-		fprintf(stderr, "Audiality 2 INTERNAL ERROR: "
-				"a2_remove_api_user() called while "
-				"a2_api_users = 0!\n");
-		return;
-	}
-	--a2_api_users;
-	if(!a2_api_users)
+	int users = a2_AtomicAdd(&a2_api_users, -1);
+	if(users == 1)
 	{
 		a2_units_close();
 		a2_drivers_close();
 		a2_time_close();
+	}
+	else if(!users)
+	{
+		a2_AtomicAdd(&a2_api_users, 1);
+		fprintf(stderr, "Audiality 2 INTERNAL ERROR: "
+				"a2_remove_api_user() called while "
+				"a2_api_users = 0!\n");
 	}
 }
 
