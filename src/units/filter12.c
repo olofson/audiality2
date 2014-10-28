@@ -1,7 +1,7 @@
 /*
  * filter12.c - Audiality 2 12 dB/oct resonant filter unit
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -181,9 +181,10 @@ static void f12_HP(A2_unit *u, int v, unsigned start, unsigned dur)
 }
 
 
-static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
+	A2_config *cfg = (A2_config *)statedata;
 	A2_filter12 *f12 = f12_cast(u);
 	int *ur = u->registers;
 	int c;
@@ -224,6 +225,13 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
+static A2_errors f12_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ "cutoff",	f12_CutOff	},	/* A2F12_CutOff */
@@ -247,5 +255,8 @@ const A2_unitdesc a2_filter12_unitdesc =
 
 	sizeof(A2_filter12),	/* instancesize */
 	f12_Initialize,		/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	f12_OpenState,		/* OpenState */
+	NULL			/* CloseState */
 };

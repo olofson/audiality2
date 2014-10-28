@@ -1,7 +1,7 @@
 /*
  * inline.c - Audiality 2 inline subvoice processing unit
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,11 +23,11 @@
 #include "inline.h"
 
 
-static A2_errors a2i_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors a2i_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
 	A2_inline *il = a2_inline_cast(u);
-	il->state = cfg->state;
+	il->state = (A2_state *)statedata;
 	il->voice = a2_voice_from_vms(vms);
 	il->voice->noutputs = u->noutputs;
 	il->voice->outputs = u->outputs;
@@ -35,6 +35,13 @@ static A2_errors a2i_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 		u->Process = a2_inline_ProcessAdd;
 	else
 		u->Process = a2_inline_Process;
+	return A2_OK;
+}
+
+
+static A2_errors a2i_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg->state;
 	return A2_OK;
 }
 
@@ -57,5 +64,8 @@ const A2_unitdesc a2_inline_unitdesc =
 
 	sizeof(A2_inline),	/* instancesize */
 	a2i_Initialize,		/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	a2i_OpenState,		/* OpenState */
+	NULL			/* CloseState */
 };

@@ -211,6 +211,8 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 	/* Register handle types */
 	if((res = a2_RegisterBankTypes(st)))
 		return res;
+	if((res = a2_RegisterUnitTypes(st)))
+		return res;
 	if((res = a2_RegisterWaveTypes(st)))
 		return res;
 	if((res = a2_RegisterAPITypes(st)))
@@ -302,6 +304,7 @@ static void a2_CloseSharedState(A2_state *st)
 		return;
 	type_registry_cleanup(st);
 	rchm_Cleanup(&st->ss->hm);
+	free(st->ss->units);
 	free(st->ss);
 	st->ss = NULL;
 }
@@ -380,7 +383,15 @@ static A2_errors a2_Open2(A2_state *st)
 			return res;
 	}
 	else
+	{
 		st->ss = st->parent->ss;
+		/* Close any shared unit state for this engine state */
+		st->unitstate = malloc(sizeof(A2_unitstate) * st->ss->nunits);
+		if(!st->unitstate)
+			return A2_OOMEMORY;
+		for(i = 0; i < st->ss->nunits; ++i)
+			a2_UnitOpenState(st, i);
+	}
 
 	/* Set up master audio bus */
 	if(!(st->master = a2_AllocBus(st, st->config->channels)))
@@ -601,6 +612,14 @@ void a2_Close(A2_state *st)
 		A2_block *b = st->blockpool;
 		st->blockpool = b->next;
 		st->sys->RTFree(st->sys, b);
+	}
+
+	/* Close any unit shared state for this engine state */
+	if(st->unitstate)
+	{
+		for(i = 0; i < st->ss->nunits; ++i)
+			a2_UnitCloseState(st, i);
+		free(st->unitstate);
 	}
 
 	if(!(st->config->flags & A2_SUBSTATE))

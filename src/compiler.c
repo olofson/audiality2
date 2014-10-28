@@ -2344,16 +2344,17 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 }
 
 
-static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace,
-		const A2_unitdesc *ud, unsigned inputs, unsigned outputs)
+static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
+		unsigned inputs, unsigned outputs)
 {
 	int i, ind;
+	const A2_unitdesc *ud = c->state->ss->units[uindex];
 	A2_structitem *ni = (A2_structitem *)calloc(1, sizeof(A2_structitem));
 	if(!ni)
 		a2c_Throw(c, A2_OOMEMORY);
 
 	/* Add unit to program */
-	ni->unitdesc = ud;
+	ni->uindex = uindex;
 	ni->ninputs = inputs;
 	ni->noutputs = outputs;
 	if(c->coder->program->structure)
@@ -2425,8 +2426,9 @@ static void a2c_UnitSpec(A2_compiler *c)
 	int inputs, outputs;
 	A2_symbol **namespace = NULL;
 	A2_handle uh = a2c_GetHandle(c, &c->l[0]);
-	const A2_unitdesc *ud = a2_GetUnit(c->state, uh);
-	if(!ud)
+	unsigned uindex = a2_GetUnit(c->state, uh);
+	const A2_unitdesc *ud = c->state->ss->units[uindex];
+	if(!ud || (uindex < 0))
 		a2c_Throw(c, A2_INTERNAL + 107); /* Object missing!? */
 	switch(a2c_Lex(c, 0))
 	{
@@ -2441,7 +2443,7 @@ static void a2c_UnitSpec(A2_compiler *c)
 	}
 	inputs = a2c_IOSpec(c, ud->mininputs, ud->maxinputs, 0);
 	outputs = a2c_IOSpec(c, ud->minoutputs, ud->maxoutputs, 1);
-	a2c_AddUnit(c, namespace, ud, inputs, outputs);
+	a2c_AddUnit(c, namespace, uindex, inputs, outputs);
 }
 
 /* 'wire' statement (for a2c_StructStatement) */
@@ -2514,11 +2516,12 @@ static void a2c_StructDef(A2_compiler *c)
 	DUMPSTRUCT(fprintf(stderr, "Wiring...");)
 	for(si = p->structure; si; si = si->next)
 	{
+		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
 		DUMPSTRUCT(fprintf(stderr, " (chain %d)", chainchannels);)
 		DUMPSTRUCT(fprintf(stderr, " [%s ", si->unitdesc->name);)
 
 		/* Is this the 'inline' unit? */
-		if(si->unitdesc == &a2_inline_unitdesc)
+		if(c->state->ss->units[si->uindex] == &a2_inline_unitdesc)
 		{
 			if(p->vflags & A2_SUBINLINE)
 				a2c_Throw(c, A2_MULTIINLINE);
@@ -2537,7 +2540,7 @@ static void a2c_StructDef(A2_compiler *c)
 				si->flags |= A2_PROCADD;
 			break;
 		  case A2_IO_DEFAULT:
-			si->ninputs = si->unitdesc->mininputs;
+			si->ninputs = ud->mininputs;
 			break;
 		  case A2_IO_MATCHOUT:
 			matchout = 1;
@@ -2575,7 +2578,7 @@ static void a2c_StructDef(A2_compiler *c)
 					!downstream_inputs(si->next)))
 				si->noutputs = A2_IO_WIREOUT;
 			else
-				si->noutputs = si->unitdesc->minoutputs;
+				si->noutputs = ud->minoutputs;
 			break;
 		  case A2_IO_MATCHOUT:
 			matchout = 1;

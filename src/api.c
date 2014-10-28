@@ -45,6 +45,7 @@ void a2_add_api_user(void)
 	{
 		a2_time_open();
 		a2_drivers_open();
+		a2_units_open();
 	}
 	++a2_api_users;
 }
@@ -62,6 +63,7 @@ void a2_remove_api_user(void)
 	--a2_api_users;
 	if(!a2_api_users)
 	{
+		a2_units_close();
 		a2_drivers_close();
 		a2_time_close();
 	}
@@ -119,7 +121,7 @@ const char *a2_String(A2_state *st, A2_handle handle)
 	  }
 	  case A2_TUNIT:
 	  {
-		A2_unitdesc *ud = (A2_unitdesc *)hi->d.data;
+		const A2_unitdesc *ud = a2_GetUnitDescriptor(st, handle);
 		snprintf(sb, A2_TMPSTRINGSIZE, "<unit '%s' %p>", ud->name, ud);
 		return sb;
 	  }
@@ -176,7 +178,12 @@ const char *a2_Name(A2_state *st, A2_handle handle)
 	  case A2_TBANK:
 		return ((A2_bank *)hi->d.data)->name;
 	  case A2_TUNIT:
-		return ((A2_unitdesc *)hi->d.data)->name;
+	  {
+		const A2_unitdesc *ud = a2_GetUnitDescriptor(st, handle);
+		if(!ud)
+			return NULL;
+		return ud->name;
+	  }
 	  case A2_TWAVE:
 	  case A2_TPROGRAM:
 	  case A2_TSTRING:

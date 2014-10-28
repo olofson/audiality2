@@ -133,7 +133,7 @@ static void waveshaper_Process22(A2_unit *u, unsigned offset, unsigned frames)
 
 
 static A2_errors waveshaper_Initialize(A2_unit *u, A2_vmstate *vms,
-		A2_config *cfg, unsigned flags)
+		void *statedata, unsigned flags)
 {
 	A2_waveshaper *ws = waveshaper_cast(u);
 	int *ur = u->registers;
@@ -164,6 +164,7 @@ static void waveshaper_Amount(A2_unit *u, int v, unsigned start, unsigned dur)
 	a2_RamperSet(&waveshaper_cast(u)->amount, v, start, dur);
 }
 
+
 static const A2_crdesc regs[] =
 {
 	{ "amount",	waveshaper_Amount	},	/* A2WSR_AMOUNT */
@@ -184,5 +185,8 @@ const A2_unitdesc a2_waveshaper_unitdesc =
 
 	sizeof(A2_waveshaper),	/* instancesize */
 	waveshaper_Initialize,	/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	NULL,			/* OpenState */
+	NULL			/* CloseState */
 };

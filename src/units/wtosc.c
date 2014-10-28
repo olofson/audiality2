@@ -302,7 +302,7 @@ static void wtosc_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static inline void a2_OscFrequency(A2_wtosc *o, float f)
+static inline void wtosc_set_frequency(A2_wtosc *o, float f)
 {
 	o->dphase = f * 16777216.0f / o->samplerate + 0.5f;
 }
@@ -312,7 +312,7 @@ static inline void a2_OscFrequency(A2_wtosc *o, float f)
  *	ph	desired phase, [0, 1], (16):16 fixp
  *	sst	SubSample Time, [0, 1], (24):8 fixp
  */
-static inline void a2_OscPhase(A2_wtosc *o, int ph, unsigned sst)
+static inline void wtosc_set_phase(A2_wtosc *o, int ph, unsigned sst)
 {
 	if(!o->wave)
 	{
@@ -324,9 +324,10 @@ static inline void a2_OscPhase(A2_wtosc *o, int ph, unsigned sst)
 }
 
 
-static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
+	A2_config *cfg = (A2_config *)statedata;
 	A2_wtosc *o = wtosc_cast(u);
 	int *ur = u->registers;
 
@@ -337,9 +338,9 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 	o->noise = 0;
 	o->wave = NULL;
 	a2_RamperInit(&o->a, 0);
-	a2_OscFrequency(o, powf(2.0f, (*o->transpose) * (1.0f / 65536.0f)) *
-			A2_MIDDLEC);
-	a2_OscPhase(o, 0, vms->waketime & 0xff);
+	wtosc_set_frequency(o, powf(2.0f,
+			(*o->transpose) * (1.0f / 65536.0f)) * A2_MIDDLEC);
+	wtosc_set_phase(o, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
 	ur[A2OR_WAVE] = 0;
@@ -356,6 +357,14 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 
 	return A2_OK;
 }
+
+
+static A2_errors wtosc_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg;
+	return A2_OK;
+}
+
 
 static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 {
@@ -412,8 +421,8 @@ static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 static void wtosc_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
-	a2_OscFrequency(o, powf(2.0f, (v + *o->transpose) *
-			(1.0f / 65536.0f)) * A2_MIDDLEC);
+	wtosc_set_frequency(o, powf(2.0f,
+			(v + *o->transpose) * (1.0f / 65536.0f)) * A2_MIDDLEC);
 }
 
 static void wtosc_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
@@ -423,7 +432,7 @@ static void wtosc_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void wtosc_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_OscPhase(wtosc_cast(u), v, start);
+	wtosc_set_phase(wtosc_cast(u), v, start);
 }
 
 
@@ -449,5 +458,8 @@ const A2_unitdesc a2_wtosc_unitdesc =
 
 	sizeof(A2_wtosc),	/* instancesize */
 	wtosc_Initialize,	/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	wtosc_OpenState,	/* OpenState */
+	NULL			/* CloseState */
 };

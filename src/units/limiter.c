@@ -1,7 +1,7 @@
 /*
  * limiter.c - Audiality 2 compressor/limiter unit
  *
- * Copyright 2001-2002, 2009, 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2001-2002, 2009, 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -156,8 +156,9 @@ static void limiter_Process22(A2_unit *u, unsigned offset, unsigned frames)
 
 
 static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms,
-		A2_config *cfg, unsigned flags)
+		void *statedata, unsigned flags)
 {
+	A2_config *cfg = (A2_config *)statedata;
 	A2_limiter *lim = limiter_cast(u);
 	int *ur = u->registers;
 
@@ -200,13 +201,20 @@ static void limiter_Threshold(A2_unit *u, int v, unsigned start, unsigned dur)
 		lim->threshold = 256;
 }
 
+
+static A2_errors limiter_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ "release",	limiter_Release		},	/* A2LR_RELEASE */
 	{ "threshold",	limiter_Threshold	},	/* A2LR_THRESHOLD */
 	{ NULL,	NULL				}
 };
-
 
 const A2_unitdesc a2_limiter_unitdesc =
 {
@@ -221,5 +229,8 @@ const A2_unitdesc a2_limiter_unitdesc =
 
 	sizeof(A2_limiter),	/* instancesize */
 	limiter_Initialize,	/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	limiter_OpenState,	/* OpenState */
+	NULL			/* CloseState */
 };

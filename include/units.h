@@ -125,7 +125,7 @@ typedef void (*A2_write_cb)(A2_unit *u, int value, unsigned start,
  *	and this happens on they fly, in the realtime audio context. Keep it
  *	fast and deterministic!
  */
-typedef A2_errors (*A2_uinit_cb)(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+typedef A2_errors (*A2_uinit_cb)(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags);
 
 /*
@@ -136,6 +136,24 @@ typedef A2_errors (*A2_uinit_cb)(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
  *	by Audiality 2.) This normally happens whenever a voice terminates.
  */
 typedef void (*A2_udeinit_cb)(A2_unit *u, A2_state *st);
+
+/*
+ * Shared state management
+ *
+ *	These OPTIONAL callbacks can be used to initialize and destroy process
+ *	and/or engine state wide data to be shared by unit instances. These
+ *	calls are guaranteed to be serialized, to eliminate the need for
+ *	synchronization on the unit implementation side.
+ *
+ *	If the OpenState() call fails (non-zero return), it will not be
+ *	possible to instantiate the unit in the affected state.
+ *
+ * NOTE:
+ *	These will be called per (sub)state - not just once for the master
+ *	state!
+ */
+typedef A2_errors (*A2_udopen_cb)(A2_config *cfg, void **statedata);
+typedef void (*A2_udclose_cb)(void *statedata);
 
 /*
  * Process callback for A2_unit
@@ -194,10 +212,14 @@ struct A2_unitdesc
 	uint8_t		minoutputs;	/* Minimum number of outputs */
 	uint8_t		maxoutputs;	/* Maximum number of outputs */
 
-	/* Instantiation */
+	/* Unit instantiation */
 	unsigned	instancesize;	/* Size of A2_unit instances (bytes) */
 	A2_uinit_cb	Initialize;
 	A2_udeinit_cb	Deinitialize;
+
+	/* Shared state management */
+	A2_udopen_cb	OpenState;
+	A2_udclose_cb	CloseState;
 };
 
 
@@ -249,7 +271,7 @@ struct A2_unit
  *
  * NOTE:
  *	The unit is not exported or tied to any bank! This needs to be done
- *	explictly by other means for the unit to actually be made available to
+ *	explicitly by other means for the unit to actually be made available to
  *	scripts.
  *
  * NOTE:

@@ -168,9 +168,10 @@ static void fbdelay_Process11(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
-		unsigned flags)
+static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms,
+		void *statedata, unsigned flags)
 {
+	A2_config *cfg = (A2_config *)statedata;
 	A2_fbdelay *fbd = fbdelay_cast(u);
 	int *ur = u->registers;
 
@@ -267,6 +268,13 @@ static void fbdelay_RGain(A2_unit *u, int v, unsigned start, unsigned dur)
 }
 
 
+static A2_errors fbdelay_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ "fbdelay",	fbdelay_FBDelay		},	/* A2FBDR_FBDELAY */
@@ -292,5 +300,8 @@ const A2_unitdesc a2_fbdelay_unitdesc =
 
 	sizeof(A2_fbdelay),	/* instancesize */
 	fbdelay_Initialize,	/* Initialize */
-	fbdelay_Deinitialize	/* Deinitialize */
+	fbdelay_Deinitialize,	/* Deinitialize */
+
+	fbdelay_OpenState,	/* OpenState */
+	NULL			/* CloseState */
 };

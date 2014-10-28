@@ -316,6 +316,23 @@ A2_errors a2_RegisterType(A2_state *st, A2_otypes otype, const char *name,
 
 
 /*---------------------------------------------------------
+	Units
+---------------------------------------------------------*/
+
+typedef struct A2_unitstate
+{
+	void		*statedata;
+	A2_errors	status;
+} A2_unitstate;
+
+/* Open/close unit state data for unit 'uindex' on 'st' */
+A2_errors a2_UnitOpenState(A2_state *st, unsigned uindex);
+void a2_UnitCloseState(A2_state *st, unsigned uindex);
+
+A2_errors a2_RegisterUnitTypes(A2_state *st);
+
+
+/*---------------------------------------------------------
 	Engine structures
 ---------------------------------------------------------*/
 
@@ -354,7 +371,7 @@ typedef struct A2_structitem A2_structitem;
 struct A2_structitem
 {
 	A2_structitem		*next;
-	const A2_unitdesc	*unitdesc;
+	unsigned		uindex;		/* Unit index */
 	unsigned		flags;		/* A2_unitflags */
 	int16_t			ninputs;	/* Count or A2_iocodes! */
 	int16_t			noutputs;	/* Count or A2_iocodes! */
@@ -547,6 +564,9 @@ struct A2_sharedstate
 	unsigned	silencegrace;	/* A2_PSILENCEGRACE */
 
 	int		tabsize;	/* A2S tab size for error formatting */
+
+	unsigned	nunits;		/* Number of registered units */
+	const A2_unitdesc **units;	/* All registered units */
 };
 
 /* Audiality 2 state */
@@ -555,6 +575,9 @@ struct A2_state
 	A2_state	*parent;	/* Parent state, if substate */
 	A2_state	*next;		/* First or next substate */
 	A2_sharedstate	*ss;		/* Objects, banks etc */
+
+	A2_unitstate	*unitstate;	/* Shared state data for all units */
+
 	A2_handle	rootvoice;	/* Root voice of this (sub)state */
 
 	A2_config	*config;	/* Current state configuration */
@@ -630,14 +653,16 @@ static inline A2_program *a2_GetProgram(A2_state *st, A2_handle handle)
 	return (A2_program *)hi->d.data;
 }
 
-static inline A2_unitdesc *a2_GetUnit(A2_state *st, A2_handle handle)
+static inline int a2_GetUnit(A2_state *st, A2_handle handle)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
-	if(!hi || (hi->typecode != A2_TUNIT))
-		return NULL;
+	if(!hi)
+		return -A2_INVALIDHANDLE;
+	if(hi->typecode != A2_TUNIT)
+		return -A2_WRONGTYPE;
 	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
-		return NULL;
-	return (A2_unitdesc *)hi->d.data;
+		return -A2_DEADHANDLE;
+	return (int)((char *)hi->d.data - (char *)NULL);
 }
 
 static inline A2_errors a2_GetStream(A2_state *st, A2_handle handle,
@@ -1048,5 +1073,8 @@ void a2_remove_api_user(void);
 
 void a2_drivers_open(void);
 void a2_drivers_close(void);
+
+void a2_units_open(void);
+void a2_units_close(void);
 
 #endif /* A2_INTERNALS_H */

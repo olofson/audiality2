@@ -132,14 +132,14 @@ static void xsrc_SetProcess(A2_unit *u)
 }
 
 
-static A2_errors xsrc_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors xsrc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	A2_voice *v = a2_voice_from_vms(vms);
 
 	/* Initialize private fields */
-	xi->state = cfg->state;
+	xi->state = (A2_state *)statedata;
 	xi->flags = flags;
 	xi->clients = NULL;
 	xi->voice = v->handle;
@@ -161,6 +161,13 @@ static void xsrc_Deinitialize(A2_unit *u, A2_state *st)
 }
 
 
+static A2_errors xsrc_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg->state;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ NULL, NULL }
@@ -179,5 +186,8 @@ const A2_unitdesc a2_xsource_unitdesc =
 
 	sizeof(A2_xinsert),		/* instancesize */
 	xsrc_Initialize,		/* Initialize */
-	xsrc_Deinitialize		/* Deinitialize */
+	xsrc_Deinitialize,		/* Deinitialize */
+
+	xsrc_OpenState,			/* OpenState */
+	NULL				/* CloseState */
 };

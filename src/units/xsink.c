@@ -53,14 +53,14 @@ static void xsink_SetProcess(A2_unit *u)
 }
 
 
-static A2_errors xsink_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors xsink_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	A2_voice *v = a2_voice_from_vms(vms);
 
 	/* Initialize private fields */
-	xi->state = cfg->state;
+	xi->state = (A2_state *)statedata;
 	xi->flags = flags;
 	xi->clients = NULL;
 	xi->voice = v->handle;
@@ -78,6 +78,13 @@ static void xsink_Deinitialize(A2_unit *u, A2_state *st)
 	/* Remove all clients! */
 	while(xi->clients)
 		a2_XinsertRemoveClient(st, xi->clients);
+}
+
+
+static A2_errors xsink_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg->state;
+	return A2_OK;
 }
 
 
@@ -99,5 +106,8 @@ const A2_unitdesc a2_xsink_unitdesc =
 
 	sizeof(A2_xinsert),		/* instancesize */
 	xsink_Initialize,		/* Initialize */
-	xsink_Deinitialize		/* Deinitialize */
+	xsink_Deinitialize,		/* Deinitialize */
+
+	xsink_OpenState,		/* OpenState */
+	NULL				/* CloseState */
 };

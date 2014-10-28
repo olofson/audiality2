@@ -11,6 +11,7 @@ set(sources
 	audiality2.c
 	platform.c
 	core.c
+	units.c
 	stream.c
 	waves.c
 	bank.c

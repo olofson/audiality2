@@ -1,7 +1,7 @@
 /*
  * dbgunit.c - Audiality 2 debug unit
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -104,14 +104,14 @@ static void dbgunit_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
-		unsigned flags)
+static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms,
+		void *statedata, unsigned flags)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
 	if(u->ninputs && (u->ninputs != u->noutputs))
 		return A2_IODONTMATCH;
 	du->instance = ++dbgunit_instance_count;
-	du->state = cfg->state;
+	du->state = (A2_state *)statedata;
 	du->voice = a2_voice_from_vms(vms);
 	if(u->ninputs)
 	{
@@ -140,6 +140,13 @@ static void dbgunit_Deinitialize(A2_unit *u, A2_state *st)
 }
 
 
+static A2_errors dbgunit_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg->state;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ NULL, NULL }
@@ -163,5 +170,8 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 
 	sizeof(A2_dbgunit),	/* instancesize */
 	dbgunit_Initialize,	/* Initialize */
-	dbgunit_Deinitialize	/* Deinitialize */
+	dbgunit_Deinitialize,	/* Deinitialize */
+
+	dbgunit_OpenState,	/* OpenState */
+	NULL			/* CloseState */
 };

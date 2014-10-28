@@ -157,9 +157,18 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	unsigned i;
 	A2_errors res;
 	int minoutputs, maxoutputs, ninputs;
-	const A2_unitdesc *ud = si->unitdesc;
-	A2_unit *u = &a2_AllocBlock(st)->unit;
-	if(!u)
+	A2_unit *u;
+	const A2_unitdesc *ud = st->ss->units[si->uindex];
+	A2_unitstate *us = st->unitstate + si->uindex;
+
+	if(us->status)
+	{
+		/* This module failed in shared state init. We can't use it! */
+		a2r_Error(st, us->status, "a2_AddUnit()");
+		return NULL;
+	}
+
+	if(!(u = &a2_AllocBlock(st)->unit))
 		return NULL;
 
 	DUMPSTRUCTRT(fprintf(stderr, "Wiring %s... ", ud->name);)
@@ -245,7 +254,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	}
 
 	/* Initialize the unit instance itself! */
-	if((res = ud->Initialize(u, &v->s, st->config, si->flags)))
+	if((res = ud->Initialize(u, &v->s, us->statedata, si->flags)))
 	{
 		a2_FreeBlock(st, u);
 		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed to "

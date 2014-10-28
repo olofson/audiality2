@@ -69,14 +69,6 @@ static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_hand
 	return RCHM_OK;
 }
 
-static RCHM_errors a2_UnitDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
-{
-	if(hi->userbits & A2_LOCKED)
-		return RCHM_REFUSE;
-	/* Unit descriptors are typically constant data, so don't touch them! */
-	return RCHM_OK;
-}
-
 static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
 	A2_string *s = (A2_string *)hi->d.data;
@@ -94,9 +86,6 @@ A2_errors a2_RegisterBankTypes(A2_state *st)
 	if(!res)
 		res = a2_RegisterType(st, A2_TPROGRAM, "program",
 				a2_ProgramDestructor, NULL);
-	if(!res)
-		res = a2_RegisterType(st, A2_TUNIT, "unit",
-				a2_UnitDestructor, NULL);
 	if(!res)
 		res = a2_RegisterType(st, A2_TSTRING, "string",
 				a2_StringDestructor, NULL);
@@ -207,43 +196,6 @@ A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 	free(fnx);
 	a2_CloseCompiler(c);
 	return h;
-}
-
-
-/*---------------------------------------------------------
-	Unit management
----------------------------------------------------------*/
-
-A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
-{
-	A2_handle h;
-
-	/* Some sanity checks, to detect broken units early */
-	if(ud->flags & A2_MATCHIO)
-	{
-		if((ud->mininputs != ud->minoutputs) ||
-				(ud->maxinputs != ud->maxoutputs))
-		{
-			fprintf(stderr, "Audiality 2: Unit '%s' has the "
-					"A2_MATCHIO flag set, but mismatched "
-					"mininputs/minoutputs fields!\n",
-					ud->name);
-			return -A2_IODONTMATCH;
-		}
-	}
-
-	/* Constant data - just register it as is! */
-	if((h = rchm_NewEx(&st->ss->hm, (void *)ud, A2_TUNIT, A2_LOCKED, 1)) < 0)
-		return -h;
-
-	DBG(printf("registered unit \"%s\", handle %d\n", ud->name, h);)
-	return h;
-}
-
-
-const A2_unitdesc *a2_GetUnitDescriptor(A2_state *st, A2_handle handle)
-{
-	return a2_GetUnit(st, handle);
 }
 
 

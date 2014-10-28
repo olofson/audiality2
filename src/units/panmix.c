@@ -1,7 +1,7 @@
 /*
  * panmix.c - Audiality 2 PanMix unit
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -251,8 +251,8 @@ static void panmix_Process22(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
-		unsigned flags)
+static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms,
+		void *statedata, unsigned flags)
 {
 	A2_panmix *pm = panmix_cast(u);
 	int *ur = u->registers;
@@ -317,5 +317,8 @@ const A2_unitdesc a2_panmix_unitdesc =
 
 	sizeof(A2_panmix),	/* instancesize */
 	panmix_Initialize,	/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+	NULL,			/* OpenState */
+	NULL			/* CloseState */
 };

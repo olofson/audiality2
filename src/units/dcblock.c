@@ -122,9 +122,10 @@ static void dcb_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
 	dcb->f1 = dcb_pitch2coeff(dcb);
 }
 
-static A2_errors dcb_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
+static A2_errors dcb_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		unsigned flags)
 {
+	A2_config *cfg = (A2_config *)statedata;
 	A2_dcblock *dcb = dcb_cast(u);
 	int *ur = u->registers;
 	int c;
@@ -154,6 +155,13 @@ static A2_errors dcb_Initialize(A2_unit *u, A2_vmstate *vms, A2_config *cfg,
 }
 
 
+static A2_errors dcb_OpenState(A2_config *cfg, void **statedata)
+{
+	*statedata = cfg;
+	return A2_OK;
+}
+
+
 static const A2_crdesc regs[] =
 {
 	{ "cutoff",	dcb_CutOff	},	/* A2DCB_CutOff */
@@ -173,5 +181,9 @@ const A2_unitdesc a2_dcblock_unitdesc =
 
 	sizeof(A2_dcblock),	/* instancesize */
 	dcb_Initialize,		/* Initialize */
-	NULL			/* Deinitialize */
+	NULL,			/* Deinitialize */
+
+
+	dcb_OpenState,		/* OpenState */
+	NULL			/* CloseState */
 };
