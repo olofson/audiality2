@@ -172,7 +172,7 @@ A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 	/* If there's no extension, add ".a2s" */
 	if(!strchr(fn, '.'))
 	{
-		fnx = malloc(strlen(fn) + 4);
+		fnx = malloc(strlen(fn) + 4 + 1);
 		strcpy(fnx, fn);
 		strcpy(fnx + strlen(fn), ".a2s");
 		fn = fnx;
