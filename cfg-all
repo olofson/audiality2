@@ -45,7 +45,7 @@ create_build_dir_cross() {
 		mkdir $BUILDDIR/$dname
 	fi
 	cd $BUILDDIR/$dname
-	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake
+	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=OFF
 	if [ ! -e $BUILDDIR/$dname/test/data ]; then
 		ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
 	fi

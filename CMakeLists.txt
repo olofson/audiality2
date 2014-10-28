@@ -10,6 +10,8 @@ set(VERSION_BUILD 0)
 set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 set(PACKAGE "audiality2-${VERSION_STRING}")
 
+option(BUILD_SHARED_LIBS "Build shared libraries." ON)
+
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(a2play)

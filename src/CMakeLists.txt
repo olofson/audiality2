@@ -67,13 +67,7 @@ find_package(Threads)
 #endif(ALSA_FOUND)
 
 
-# FIXME: We don't build DLLs at this point...
-
-if(WIN32)
-	add_library(audiality2 STATIC ${sources})
-else(WIN32)
-	add_library(audiality2 SHARED ${sources})
-endif(WIN32)
+add_library(audiality2 ${sources})
 
 if(UNIX)
 	target_link_libraries(audiality2 m)
