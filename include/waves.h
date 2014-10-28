@@ -61,6 +61,13 @@ extern "C" {
 #define	A2_WAVEPOST	\
 		(A2_INTERPOST + ((A2_MAXFRAG * A2_MAXPHINC + 255) >> 8) + 1)
 
+/*
+ * Waveform period for full bandwidth down to 20 Hz fundamental. (The built-in
+ * geometric waves are hardcoded to this period, and thus, this is the size
+ * of their "mip level 0" waves, excluding padding.)
+ */
+#define	A2_WAVEPERIOD	2048
+
 
 /*---------------------------------------------------------
 	Wave data structure

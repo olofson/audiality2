@@ -103,9 +103,6 @@
 /* Default tick duration; corresponds to 'tempo 120 4' */
 #define	A2_DEFAULTTICK		(125 << 16)
 
-/* Waveform period for full bandwidth down to 20 Hz fundamental */
-#define	SC_WPER			2048
-
 /*
  * Max number of VM instructions a voice VM is allowed to run without
  * processing samples. If exceeded, the voice will be killed, to avoid freezing

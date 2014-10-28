@@ -624,7 +624,7 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 {
 	int i, s, h;
-	int16_t buf[SC_WPER];
+	int16_t buf[A2_WAVEPERIOD];
 
 	/* "off" wave - dummy oscillator */
 	h = a2_upload_export(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
@@ -635,61 +635,61 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	for(i = 1; i <= 50; i += i < 10 ? 1 : 5)
 	{
 		char name[16];
-		int s1 = (SC_WPER * i + 50) / 100;
+		int s1 = (A2_WAVEPERIOD * i + 50) / 100;
 		for(s = 0; s < s1; ++s)
 			buf[s] = 32767;
-		for(++s; s < SC_WPER; ++s)
+		for(++s; s < A2_WAVEPERIOD; ++s)
 			buf[s] = -32767;
 		snprintf(name, sizeof(name), "pulse%d", i);
-		h = a2_upload_export(st, bank, name, A2_WMIPWAVE, SC_WPER,
+		h = a2_upload_export(st, bank, name, A2_WMIPWAVE, A2_WAVEPERIOD,
 				A2_LOOPED, A2_I16, buf, sizeof(buf));
 		if(h < 0)
 			return -h;
 	}
 
 	/* Sawtooth wave */
-	for(s = 0; s < SC_WPER; ++s)
-		buf[s] = s * 65534 / SC_WPER - 32767;
-	h = a2_upload_export(st, bank, "saw", A2_WMIPWAVE, SC_WPER,
+	for(s = 0; s < A2_WAVEPERIOD; ++s)
+		buf[s] = s * 65534 / A2_WAVEPERIOD - 32767;
+	h = a2_upload_export(st, bank, "saw", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	/* Triangle wave */
-	for(s = 0; s < SC_WPER / 2; ++s)
-		buf[(5 * SC_WPER / 4 - s - 1) % SC_WPER] =
-				buf[s + SC_WPER / 4] =
-				s * 65534 * 2 / SC_WPER - 32767;
-	h = a2_upload_export(st, bank, "triangle", A2_WMIPWAVE, SC_WPER,
+	for(s = 0; s < A2_WAVEPERIOD / 2; ++s)
+		buf[(5 * A2_WAVEPERIOD / 4 - s - 1) % A2_WAVEPERIOD] =
+				buf[s + A2_WAVEPERIOD / 4] =
+				s * 65534 * 2 / A2_WAVEPERIOD - 32767;
+	h = a2_upload_export(st, bank, "triangle", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	/* Sine wave, absolute sine, half sine and quarter sine */
-	for(s = 0; s < SC_WPER; ++s)
-		buf[s] = sin(s * 2.0f * M_PI / SC_WPER) * 32767.0f;
-	h = a2_upload_export(st, bank, "sine", A2_WMIPWAVE, SC_WPER,
+	for(s = 0; s < A2_WAVEPERIOD; ++s)
+		buf[s] = sin(s * 2.0f * M_PI / A2_WAVEPERIOD) * 32767.0f;
+	h = a2_upload_export(st, bank, "sine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
-	for(s = SC_WPER / 2; s < SC_WPER; ++s)
+	for(s = A2_WAVEPERIOD / 2; s < A2_WAVEPERIOD; ++s)
 		buf[s] = -buf[s];
-	h = a2_upload_export(st, bank, "asine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "asine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
-	for(s = SC_WPER / 2; s < SC_WPER; ++s)
+	for(s = A2_WAVEPERIOD / 2; s < A2_WAVEPERIOD; ++s)
 		buf[s] = 0;
-	h = a2_upload_export(st, bank, "hsine", A2_WMIPWAVE, SC_WPER,
+	h = a2_upload_export(st, bank, "hsine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
-	for(s = 0; s < SC_WPER / 4; ++s)
-		buf[s + SC_WPER / 2] = buf[s];
-	h = a2_upload_export(st, bank, "qsine", A2_WMIPWAVE, SC_WPER,
+	for(s = 0; s < A2_WAVEPERIOD / 4; ++s)
+		buf[s + A2_WAVEPERIOD / 2] = buf[s];
+	h = a2_upload_export(st, bank, "qsine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
