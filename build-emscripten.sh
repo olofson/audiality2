@@ -16,10 +16,10 @@ BUILDDIR=$BUILDDIR/emscripten
 # Build the Audiality 2 library
 LIBSOURCES="src/audiality2.c src/platform.c src/core.c src/stream.c"
 LIBSOURCES="$LIBSOURCES src/audiality2.c src/platform.c src/core.c"
-LIBSOURCES="$LIBSOURCES src/stream.c src/waves.c src/bank.c src/api.c"
-LIBSOURCES="$LIBSOURCES src/xinsertapi.c src/properties.c src/compiler.c"
-LIBSOURCES="$LIBSOURCES src/drivers.c src/utilities.c src/render.c"
-LIBSOURCES="$LIBSOURCES src/rchm.c src/sfifo.c"
+LIBSOURCES="$LIBSOURCES src/units.c src/stream.c src/waves.c src/bank.c"
+LIBSOURCES="$LIBSOURCES src/api.c src/xinsertapi.c src/properties.c"
+LIBSOURCES="$LIBSOURCES src/compiler.c src/drivers.c src/utilities.c"
+LIBSOURCES="$LIBSOURCES src/render.c src/rchm.c src/sfifo.c"
 
 LIBSOURCES="$LIBSOURCES src/units/wtosc.c src/units/panmix.c"
 LIBSOURCES="$LIBSOURCES src/units/inline.c src/units/xsink.c"
@@ -27,6 +27,7 @@ LIBSOURCES="$LIBSOURCES src/units/xsource.c src/units/xinsert.c"
 LIBSOURCES="$LIBSOURCES src/units/dbgunit.c src/units/limiter.c"
 LIBSOURCES="$LIBSOURCES src/units/fbdelay.c src/units/filter12.c"
 LIBSOURCES="$LIBSOURCES src/units/dcblock.c src/units/waveshaper.c"
+LIBSOURCES="$LIBSOURCES src/units/fm.c"
 
 LIBSOURCES="$LIBSOURCES src/drivers/sdldrv.c src/drivers/jackdrv.c"
 LIBSOURCES="$LIBSOURCES src/drivers/bufferdrv.c src/drivers/dummydrv.c"

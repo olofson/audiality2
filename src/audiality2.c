@@ -34,6 +34,7 @@
 #include "filter12.h"
 #include "dcblock.h"
 #include "waveshaper.h"
+#include "fm.h"
 
 
 /*---------------------------------------------------------
@@ -183,6 +184,10 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_filter12_unitdesc,
 	&a2_dcblock_unitdesc,
 	&a2_waveshaper_unitdesc,
+	&a2_fm1_unitdesc,
+	&a2_fm2_unitdesc,
+	&a2_fm3_unitdesc,
+	&a2_fm4_unitdesc,
 	NULL
 };
 

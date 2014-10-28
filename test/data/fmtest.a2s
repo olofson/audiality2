@@ -1,0 +1,261 @@
+def title	"FMTest"
+def version	"1.0"
+def description	"Test of the 'fm1' through 'fm4' oscillator units"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+// Reference
+.SineBass(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; a V; set a; p P
+	*a .7;	d 20
+	*a .7;	d 30
+	*a .7;	d 60
+	a 0;	d 100
+	end
+.rel	a 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+// Unity test. Should sound exactly like SineBass!
+.FMBass0(P V=1)
+{
+	struct { fm1; panmix }
+	a V; set a; p P
+	*a .7;	d 20
+	*a .7;	d 30
+	*a .7;	d 60
+	a 0;	d 100
+	end
+.rel	a 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+
+// Various FM bass sounds
+
+.FMBass1(P V=1 M=1)
+{
+	struct { fm2; panmix }
+	a V; set a; p P
+	p1 0; a1 (M * 4); set a1
+	*a .7;	*a1 .4;	d 10
+	*a .7;	*a1 .7;	d 40
+	*a .7;	*a1 .8;	d 70
+	a 0;	*a1 .9;	d 100
+	end
+.rel	a 0;	a1 .7;	d 50
+	d 100
+	1() { force rel }
+}
+
+.FMBass2(P V=1 M=1)
+{
+	struct { fm2; panmix }
+	a (V * .8); set a
+	p (P - .05); p1 .05
+	a1 (M * 4); set a1
+	fb .5; set fb
+	fb1 .3; set fb1
+	*a .7;	*a1 .7;	d 20
+	*a .7;	*a1 .8;	d 30
+	*a .7;	*a1 .85;d 60
+	a 0;	*a1 .9;	d 100
+	end
+.rel	a 0;	a1 .7;	d 50
+	d 100
+	1() { force rel }
+}
+
+.FMBass3(P V=1 M=1)
+{
+	struct { fm2; panmix }
+	a (V * .7); set a
+	p (P - .05); p1 (1 + 7n + .05)
+	a1 (M * 7); set a1
+	*a .7;	*a1 .4;	d 10
+	*a .7;	*a1 .7;	d 40
+	*a .7;	*a1 .8;	d 70
+	a 0;	*a1 .9;	d 100
+	end
+.rel	a 0;	a1 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+.FMBass4(P V=1 M=1)
+{
+	struct { fm2; panmix }
+	a (V * .6); set a
+	p (P + 1); p1 3
+	a1 (M * 3); set a1
+	fb .9; set fb
+	fb1 (M * .4); set fb1
+	30 {
+		*a .99
+		*a1 .99
+		*p1 .95
+		d 1
+	}
+	50 {
+		*a .995
+		*a1 .99
+		*p1 .85
+		d 2
+	}
+	a 0; *a1 .8; d 100
+	end
+.rel	a 0;	a1 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+.bl1(I n1 n2 n3 n4 m0 m1)
+{
+	!dm (m1 - m0 / 12)
+	1:I n1 1 m0; +m0 dm;	td 2;		1<1;
+	//
+	1:I n2 1 m0; +m0 dm;	td 1;		1<1;
+	1:I n1 1 m0; +m0 dm;	td .75;		1<1;	td .25
+	1:I n2 1 m0; +m0 dm;	td 1.5;		1<1;	td .5
+	//
+	1:I n1 1 m0; +m0 dm;	td 1;		1<1;
+	1:I n4 1 m0; +m0 dm;	td 2;		1<1;
+
+	//
+	1:I n2 1 m0; +m0 dm;	td 1.5;		1<1;	td .5
+	//
+	1:I n2 1 m0; +m0 dm;	td 1;		1<1;
+	1:I n1 1 m0; +m0 dm;	td .5;		1<1;	td .5
+	1:I n3 1 m0; +m0 dm;	td 1;		1<1;
+	1:I n3 1 m0; +m0 dm;	td .25;		1<1;	td .75
+	1:I n4 1 m0; +m0 dm;	td 1;		1<1;
+}
+.Bassline(I)
+{
+	-tr 2
+	bl1 I -12n 0n 1n 0n	0 2;	td 16
+	bl1 I 0n 12n 25n 24n	2 0;	td 16
+}
+
+
+// Some FM pads
+
+.FMPad1(P V=1)
+{
+	struct { fm3; panmix }
+	p P; p1 1.001; p2 1.999
+	fb .5; fb2 .4
+	setall
+	
+	a V;		a2 .1;	fb .1; fb1 .1; fb2 .2;	d 300
+		a1 .2; 	a2 .2;	fb .3; fb1 .2; fb2 .1;	d 700
+							d 500
+	*fb .7;	*fb1 .7; *fb2 .7;			d 2000
+	end
+.rel	a 0; fb 0;					d 2000
+	d 10
+	1() { force rel }
+}
+
+.FMPad2(P V=1)
+{
+	struct { fm4; panmix }
+	p P; fb .5
+	p1 1.001
+	p2 1.997; fb2 .3
+	p3 3.005; a3 .3
+	setall
+	
+	a V; a1 .2; a2 .3; fb .3; fb1 .4; fb2 .5;	d 500
+	*fb .7;	*fb1 .7; *fb2 .7; *a3 .3;		d 2000
+	end
+.rel	a 0; fb 0;					d 2000
+	d 10
+	1() { force rel }
+}
+
+.Chords(I)
+{
+	def v .3
+	1:I 0 v;	2:I 3n v;	3:I 7n v;	td 12
+	*<1;						td 4
+	1:I -2n v;	2:I 0 v;	3:I 5n v;	td 12
+	*<1;						td 4
+	1:I -4n v;	2:I -2n v;	3:I 3n v;	td 12
+	*<1;						td 4
+	1:I -1n v;	2:I 2n v;	3:I 7n v;	td 12
+	*<1;						td 4
+}
+
+.Track()
+{
+	struct {
+		inline 0 *
+		fbdelay D * *
+		fbdelay D2 * >
+	}
+
+	D.fbdelay (tick * 5.05);	D.fbgain .05
+	D.ldelay (tick * 6.05);		D.lgain .05
+	D.rdelay (tick * 8.03);		D.rgain .05
+	D2.fbdelay (tick * 6.95);	D2.fbgain .05
+	D2.ldelay (tick * 9.01);	D2.lgain .05
+	D2.rdelay (tick * 11.03);	D2.rgain .05
+	setall
+
+	// Sine - should sound perfectly clean
+//	Bassline SineBass;	td 64
+
+	// Sine - should sound exactly like the above
+//	Bassline FMBass0;	td 64
+
+	Bassline FMBass1;	td 32
+	Bassline FMBass2;	td 32
+	Chords FMPad1;		td 64
+	Bassline FMBass3;	td 32
+	Bassline FMBass4;	td 32
+	Chords FMPad2;		td 64
+
+	d 5000
+}
+
+Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay D * *
+		panmix PM * >
+	}
+
+	tempo 120 4
+	D.fbdelay 119;	D.fbgain .03
+	D.ldelay 67;	D.lgain .02
+	D.rdelay 97;	D.rgain .01
+	PM.vol .6
+	setall
+
+	for {
+		Track;		td (32 * 4)
+				td (64 * 2)
+				td 16
+	}
+
+	end
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill *
+
+	1() {
+		force stop
+	}
+}
