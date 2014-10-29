@@ -1,0 +1,51 @@
+def title	"Microtonal"
+def version	"1.0"
+def description	"Test of microtonal pitch"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+.I(P)
+{
+	struct { wtosc; panmix }
+	w triangle
+	p P
+	a .3; set a
+	a 0; d 1000
+}
+
+Song(P V=1 L=0)
+{
+	tempo 120 4
+	for {
+		I 12n;			td 4
+		I 12.25n;		td 4
+		I 12.5n;		td 4
+		I 12.75n;		td 4
+
+		// Shorthand syntax
+		I 13n;			td 4
+		I 13n25;		td 4
+		I 13n5;			td 4
+		I 13n75;		td 4
+
+		td 8
+
+		// Awful 12tET chords
+		I 0n; I 4n; I 7n;	td 8
+		I 4n; I 8n; I 11n;	td 8
+		I 7n; I 9n; I 14n; 	td 8
+
+		td 8
+
+		// Hand tuned chords
+		I 0n; I 3n85; I 7n;	td 8
+		I 3n85; I 7n9; I 11n1;	td 8
+		I 7n; I 9n1; I 14n1;	td 8
+
+		td 8
+	}
+.stop
+	1() { force stop }
+}

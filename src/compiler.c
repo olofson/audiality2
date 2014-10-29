@@ -725,19 +725,18 @@ static void a2_LexBufAdd(A2_compiler *c, int ch)
 
 /*
  * Attempt to parse a decimal value and return it as double precision floating
- * point through *v. Returns A2_OK if the operation is successful.
- *
- * If 'required' is true, an exception will be thrown if a valid number cannot
- * be parsed. If 'required' is false, failure to parse a valid number is
- * indicated through the return code.
+ * point through *v. Returns A2_OK if the operation is successful. If to valid
+ * number could be parsed, the read position is restored, and the return code
+ * indicates why the parsing failed.
  */
-static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v, int required)
+static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v)
 {
 	int startpos = c->l[0].pos;
+	int figures = 0;
 	int sign = 1;
 	double val = 0.0f;
 	unsigned xp = 0;
-	int valid = 0;	/* At least one figure, or this is not a number! */
+	char modifier = 0;
 	if(ch == '-')
 	{
 		sign = -1;
@@ -750,37 +749,59 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v, int required)
 			xp *= 10;
 			val *= 10.0f;
 			val += ch - '0';
-			valid = 1;
+			++figures;
 		}
 		else if(ch == '.')
 		{
 			if(xp)
-				break;
+			{
+				/* We already got one, or a modifier! */
+				c->l[0].pos = startpos;
+				return A2_NEXPDECPOINT;
+			}
 			xp = 1;
+		}
+		else if((ch == 'n') || (ch == 'f'))
+		{
+			if(!figures || modifier)
+			{
+				c->l[0].pos = startpos;
+				return A2_NEXPMODIFIER;
+			}
+			modifier = ch;
+			/*
+			 * A modifier can also double as decimal point, but if
+			 * it doesn't, it needs to be last!
+			 */
+			if(xp)
+				break;
+			else
+				xp = 1;
+		}
+		else if(!figures)
+		{
+			c->l[0].pos = startpos;
+			return A2_BADVALUE;
 		}
 		else
 		{
-			if(!valid)
-				break;
-			val *= sign;
-			if(xp)
-				val /= xp;
-			if(ch == 'n')
-				val /= 12.0f;
-			else if(ch == 'f')
-				val = a2_F2P(val);
-			else
-				a2_UngetChar(c);
-			*v = val;
-			return A2_OK;
+			/* Done! */
+			a2_UngetChar(c);
+			break;
 		}
 		ch = a2_GetChar(c);
 	}
-	c->l[0].pos = startpos;
-	if(required)
-		a2c_Throw(c, A2_BADVALUE);
-	else
-		return A2_BADVALUE;
+
+	/* Calculate and modify the value as intended! */
+	val *= sign;
+	if(xp)
+		val /= xp;
+	if(modifier == 'n')
+		val /= 12.0f;
+	else if(modifier == 'f')
+		val = a2_F2P(val);
+	*v = val;
+	return A2_OK;
 }
 
 
@@ -1148,14 +1169,13 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 	}
 
 	/* Numeric literals */
-	if(((ch >= '0') && (ch <= '9')) || (ch == '-') || (ch == '.'))
-	{
-		A2_errors res = a2_GetNum(c, ch, &c->l[0].v.f, 0);
-		if(res == A2_OK)
-			return (c->l[0].token = TK_VALUE);
-		else if(res != A2_BADVALUE)
-			a2c_Throw(c, res);
-	}
+	if(a2_GetNum(c, ch, &c->l[0].v.f) == A2_OK)
+		return (c->l[0].token = TK_VALUE);
+
+	/*
+	 * TODO: Use the return code from a2_GetNum() to clarify, in case we
+	 * can't make sense of things below...?
+	 */
 
 	/* Check for valid identifiers */
 	nstart = c->l[0].pos - 1;

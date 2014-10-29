@@ -111,7 +111,8 @@ typedef enum A2_sampleformats
 /* ========================================================= */\
   A2_DEFERR(A2_DEADHANDLE,	"Released (not locked) handle used by API")\
   A2_DEFERR(A2_END,		"VM program ended normally")\
-  A2_DEFERR(A2_OVERLOAD,	"VM overload; too many instructions back-to-back")\
+  A2_DEFERR(A2_OVERLOAD,	"VM overload; too many instructions "\
+  						"back-to-back")\
   A2_DEFERR(A2_ILLEGALOP,	"Illegal VM opcode")\
   A2_DEFERR(A2_LATEMESSAGE,	"API message arrived late to engine context")\
   A2_DEFERR(A2_MANYARGS,	"Too many arguments to VM program")\
@@ -132,7 +133,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_DRIVERNOTFOUND,	"Specified driver not found")\
   A2_DEFERR(A2_DEVICEOPEN,	"Error opening device")\
   A2_DEFERR(A2_ALREADYOPEN,	"Device is already open")\
-  A2_DEFERR(A2_ISASSIGNED,	"Object is already assigned to this container")\
+  A2_DEFERR(A2_ISASSIGNED,	"Object is already assigned to this bank")\
   A2_DEFERR(A2_READ,		"Error reading file or stream")\
   A2_DEFERR(A2_WRITE,		"Error writing file or stream")\
   A2_DEFERR(A2_READONLY,	"Object is read-only")\
@@ -150,7 +151,8 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NOOBJECT,	"Handle is not attached to an object")\
   A2_DEFERR(A2_NOXINSERT,	"No 'xinsert' unit found in voice structure")\
   A2_DEFERR(A2_NOSTREAMCLIENT,	"'xinsert' client not set up for streaming")\
-  A2_DEFERR(A2_NOREPLACE,	"Unit does not implement replacing output mode")\
+  A2_DEFERR(A2_NOREPLACE,	"Unit does not implement replacing output"\
+  						" mode")\
   A2_DEFERR(A2_NOTOUTPUT,	"Tried to wire inputs to voice output bus")\
   A2_DEFERR(A2_EXPORTDECL,	"Export already declared")\
   A2_DEFERR(A2_SYMBOLDEF,	"Symbol already defined")\
@@ -186,6 +188,8 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NEXPTOKEN,	"Unexpected token")\
   A2_DEFERR(A2_NEXPELSE,	"'else' not applicable here")\
   A2_DEFERR(A2_NEXPLABEL,	"Label not expected here")\
+  A2_DEFERR(A2_NEXPMODIFIER,	"Value modifier not expected here")\
+  A2_DEFERR(A2_NEXPDECPOINT,	"Decimal point not expected here")\
   \
   A2_DEFERR(A2_BADFORMAT,	"Bad file or device I/O format")\
   A2_DEFERR(A2_BADTYPE,		"Invalid type ID")\
@@ -220,11 +224,11 @@ typedef enum A2_sampleformats
   A2_DEFERR(A2_NOEXPORT,	"Cannot export this kind of symbol")\
   A2_DEFERR(A2_NOWAKEFORCE,	"'wake' and 'force' not applicable here")\
   A2_DEFERR(A2_NOPORT,		"Port is unavailable or does not exist")\
-  A2_DEFERR(A2_NOINPUT,		"Unit with inputs where no audio is available")\
+  A2_DEFERR(A2_NOINPUT,		"Unit with inputs where there is no audio")\
   A2_DEFERR(A2_NONAME,		"Object has no name")\
   A2_DEFERR(A2_NOUNITS,		"Voice has no units")\
   A2_DEFERR(A2_MULTIINLINE,	"Voice cannot have multiple inline units")\
-  A2_DEFERR(A2_CHAINMISMATCH,	"Unit input channel count does not match chain")\
+  A2_DEFERR(A2_CHAINMISMATCH,	"Unit input count does not match chain")\
   A2_DEFERR(A2_NOOUTPUT,	"Final unit must send to voice output")\
   \
   A2_DEFERR(A2_INTERNAL,	"INTERNAL ERROR")
