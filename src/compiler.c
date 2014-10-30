@@ -1170,7 +1170,20 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 
 	/* Numeric literals */
 	if(a2_GetNum(c, ch, &c->l[0].v.f) == A2_OK)
+	{
+		/*
+		 * We're done parsing! At this point, we're just going to check
+		 * that the next character isn't one that's most likely a typo.
+		 */
+		ch = a2_GetChar(c);
+		if(((ch >= '0') && (ch <= '9')) ||
+				((ch >= 'a') && (ch <= 'z')) ||
+				((ch >= 'A') && (ch <= 'Z')) ||
+				(ch == '.'))
+			a2c_Throw(c, A2_NEXPTOKEN);
+		a2_UngetChar(c);
 		return (c->l[0].token = TK_VALUE);
+	}
 
 	/*
 	 * TODO: Use the return code from a2_GetNum() to clarify, in case we
