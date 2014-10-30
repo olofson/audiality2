@@ -35,13 +35,21 @@
 #define	A2FM_WAVEPAD		1
 
 #ifdef A2_HIFI
-#  define	A2FM_OVERSAMPLE_BITS	3
+#  define	A2FM1_OVERSAMPLE_BITS	1
+#  define	A2FM2_OVERSAMPLE_BITS	2
+#  define	A2FM3_OVERSAMPLE_BITS	3
+#  define	A2FM4_OVERSAMPLE_BITS	4
 #elif (defined A2_LOFI)
-#  define	A2FM_OVERSAMPLE_BITS	0
+#  define	A2FM1_OVERSAMPLE_BITS	0
+#  define	A2FM2_OVERSAMPLE_BITS	0
+#  define	A2FM3_OVERSAMPLE_BITS	0
+#  define	A2FM4_OVERSAMPLE_BITS	0
 #else
-#  define	A2FM_OVERSAMPLE_BITS	1
+#  define	A2FM1_OVERSAMPLE_BITS	0
+#  define	A2FM2_OVERSAMPLE_BITS	1
+#  define	A2FM3_OVERSAMPLE_BITS	2
+#  define	A2FM4_OVERSAMPLE_BITS	2
 #endif
-#define		A2FM_OVERSAMPLE		(1 << A2FM_OVERSAMPLE_BITS)
 
 /* Control register frame enumeration */
 typedef enum A2FM_cregisters
@@ -127,11 +135,12 @@ static inline int fm_f2dphase(A2_fm *fm, float f)
 
 
 static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
-		int operators, int add)
+		int osbits, int operators, int add)
 {
 	A2_fm *fm = fm_cast(u);
 	int i;
 	unsigned s;
+	unsigned oversample = 1 << osbits;
 	unsigned end = offset + frames;
 	int32_t *out = u->outputs[0];
 	for(i = 0; i < operators; ++i)
@@ -141,17 +150,15 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 	}
 	for(s = offset; s < end; ++s)
 	{
-#if (A2FM_OVERSAMPLE > 1)
 		int os;
 		int vsum = 0;
-		for(os = 0; os < A2FM_OVERSAMPLE; ++os)
+		for(os = 0; os < oversample; ++os)
 		{
 			int v = 0;
 			for(i = operators - 1; i >= 0; --i)
 			{
 				v = fm_osc(&fm->op[i], v);
-				fm->op[i].phase += fm->op[i].dphase >>
-						A2FM_OVERSAMPLE_BITS;
+				fm->op[i].phase += fm->op[i].dphase >> osbits;
 			}
 			vsum += v;
 		}
@@ -160,68 +167,53 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 			a2_RamperRun(&fm->op[i].a, 1);
 			a2_RamperRun(&fm->op[i].fb, 1);
 			/* Fix the rounding error buildup! */
-			fm->op[i].phase += fm->op[i].dphase &
-					(A2FM_OVERSAMPLE- 1);
+			fm->op[i].phase += fm->op[i].dphase & (oversample - 1);
 		}
 		if(add)
-			out[s] += vsum >> A2FM_OVERSAMPLE_BITS;
+			out[s] += vsum >> osbits;
 		else
-			out[s] = vsum >> A2FM_OVERSAMPLE_BITS;
-#else
-		int v = 0;
-		for(i = operators - 1; i >= 0; --i)
-		{
-			v = fm_osc(&fm->op[i], v);
-			fm->op[i].phase += fm->op[i].dphase;
-			a2_RamperRun(&fm->op[i].a, 1);
-			a2_RamperRun(&fm->op[i].fb, 1);
-		}
-		if(add)
-			out[s] += v;
-		else
-			out[s] = v;
-#endif
+			out[s] = vsum >> osbits;
 	}
 }
 
 static void fm1_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 1, 1);
+	fm_process(u, offset, frames, A2FM1_OVERSAMPLE_BITS, 1, 1);
 }
 
 static void fm1_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 1, 0);
+	fm_process(u, offset, frames, A2FM1_OVERSAMPLE_BITS, 1, 0);
 }
 
 static void fm2_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 2, 1);
+	fm_process(u, offset, frames, A2FM2_OVERSAMPLE_BITS, 2, 1);
 }
 
 static void fm2_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 2, 0);
+	fm_process(u, offset, frames, A2FM2_OVERSAMPLE_BITS, 2, 0);
 }
 
 static void fm3_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 3, 1);
+	fm_process(u, offset, frames, A2FM3_OVERSAMPLE_BITS, 3, 1);
 }
 
 static void fm3_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 3, 0);
+	fm_process(u, offset, frames, A2FM3_OVERSAMPLE_BITS, 3, 0);
 }
 
 static void fm4_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 4, 1);
+	fm_process(u, offset, frames, A2FM4_OVERSAMPLE_BITS, 4, 1);
 }
 
 static void fm4_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
-	fm_process(u, offset, frames, 4, 0);
+	fm_process(u, offset, frames, A2FM4_OVERSAMPLE_BITS, 4, 0);
 }
 
 
