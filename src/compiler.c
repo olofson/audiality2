@@ -600,6 +600,10 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_DEBUG:
 		longins = 1;
 		break;
+	  case OP_SET:
+		if(c->regmap[reg] != A2RT_CONTROL)
+			a2c_Throw(c, A2_EXPCTRLREGISTER);
+		break;
 	  default:
 		break;
 	}
@@ -1313,14 +1317,14 @@ static void a2c_DropToken(A2_compiler *c)
 	VM register allocation
 ---------------------------------------------------------*/
 
-static unsigned a2c_AllocReg(A2_compiler *c)
+static unsigned a2c_AllocReg(A2_compiler *c, A2_regtypes rt)
 {
 	int r;
 	for(r = 0; r < A2_REGISTERS; ++r)
-		if(!c->regmap[r])
+		if(c->regmap[r] == A2RT_FREE)
 		{
-			c->regmap[r] = 1;
-			REGDBG(fprintf(stderr, "[AllocReg %d]\n", r);)
+			c->regmap[r] = rt;
+			REGDBG(fprintf(stderr, "[AllocReg %d (%d)]\n", r, rt);)
 			return r;
 		}
 	a2c_Throw(c, A2_OUTOFREGS);
@@ -1331,14 +1335,14 @@ static void a2c_FreeReg(A2_compiler *c, unsigned r)
 {
 	REGDBG(fprintf(stderr, "[FreeReg %d]\n", r);)
 #ifdef DEBUG
-	if(!c->regmap[r])
+	if(c->regmap[r] == A2RT_FREE)
 	{
 		fprintf(stderr, "Audiality 2 INTERNAL ERROR: Tried to free "
 				"unused VM register R%d!\n", r);
 		a2c_Throw(c, A2_INTERNAL + 100);
 	}
 #endif
-	c->regmap[r] = 0;
+	c->regmap[r] = A2RT_FREE;
 }
 
 
@@ -1474,7 +1478,7 @@ static void a2c_Branch(A2_compiler *c, A2_opcodes op, unsigned to, int *fixpos)
 		 *	These are no conditionals! They should be evaluated
 		 *	at compile time instead.
 		 */
-		r = a2c_AllocReg(c);
+		r = a2c_AllocReg(c, A2RT_TEMPORARY);
 		a2c_Codef(c, OP_LOAD, r, a2c_GetValue(c, &c->l[0]));
 		if(fixpos)
 			*fixpos = c->coder->pos;
@@ -1498,7 +1502,7 @@ static void a2c_Branch(A2_compiler *c, A2_opcodes op, unsigned to, int *fixpos)
 static void a2c_VarDecl(A2_compiler *c, A2_symbol *s)
 {
 	s->token = TK_REGISTER;
-	s->v.i = a2c_AllocReg(c);
+	s->v.i = a2c_AllocReg(c, A2RT_VARIABLE);
 	a2_PushSymbol(&c->symbols, s);
 }
 
@@ -1646,7 +1650,7 @@ static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 		  case OP_NOTR:
 			break;
 		  default:
-			tmpr = a2c_AllocReg(c);
+			tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
 			break;
 		}
 		a2c_Codef(c, OP_LOAD, tmpr, v);
@@ -1813,7 +1817,7 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 			if(lopr.token == TK_TEMPREG)
 				r = a2c_GetIndex(c, &lopr);
 			else
-				r = a2c_AllocReg(c);
+				r = a2c_AllocReg(c, A2RT_TEMPORARY);
 			res_tk = TK_TEMPREG;
 		}
 
@@ -1971,7 +1975,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 			}
 		}
 		if((r < 0) && (c->l[0].token != TK_TEMPREG))
-			tmpr = a2c_AllocReg(c);
+			tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
 		a2c_CodeOpL(c, op, tmpr, &c->l[0]);
 		a2c_SetToken(c, r < 0 ? TK_TEMPREG : TK_REGISTER, tmpr);
 		return;
@@ -2346,7 +2350,7 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 	A2_symbol *s;
 	int nextr;
 	uint8_t *argc = &fn->argc;
-	fn->argv = nextr = a2c_AllocReg(c);
+	fn->argv = nextr = a2c_AllocReg(c, A2RT_ARGUMENT);
 	a2c_FreeReg(c, nextr);
 	for(*argc = 0; a2c_Lex(c, A2_LEX_WHITENEWLINE) != ')'; ++*argc)
 	{
@@ -2416,7 +2420,7 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 			a2c_Throw(c, A2_SYMBOLDEF);
 		if(!(s = a2_NewSymbol(ud->registers[i].name, TK_REGISTER)))
 			a2c_Throw(c, A2_OOMEMORY);
-		s->v.i = a2c_AllocReg(c);
+		s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
 		a2_PushSymbol(namespace, s);
 		DUMPSTRUCT(fprintf(stderr, " %s:R%d", s->name, s->v.i);)
 	}
@@ -3064,7 +3068,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
  */
 static void a2c_TimesL(A2_compiler *c)
 {
-	int loopto, r = a2c_AllocReg(c);
+	int loopto, r = a2c_AllocReg(c, A2RT_TEMPORARY);
 	a2c_CodeOpL(c, OP_LOAD, r, &c->l[0]);
 	loopto = c->coder->pos;
 	a2c_SkipWhite(c, 1);
@@ -3087,8 +3091,14 @@ static void a2c_For(A2_compiler *c)
 
 static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 {
+	int setprefix = 0;
 	int r;
 	a2c_Lex(c, 0);
+	if(c->l[0].token == '@')
+	{
+		setprefix = 1;
+		a2c_Lex(c, 0);
+	}
 	if(a2c_Namespace(c))
 		switch(c->l[0].token)
 		{
@@ -3102,6 +3112,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		  default:
 			a2c_Throw(c, A2_NEXPTOKEN);
 		}
+	if(setprefix && (c->l[0].token != TK_REGISTER))
+		a2c_Throw(c, A2_EXPCTRLREGISTER);
 	switch((int)c->l[0].token)
 	{
 	  case TK_VALUE:
@@ -3129,6 +3141,9 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		break;
 	  case TK_REGISTER:
 		r = a2c_GetIndex(c, &c->l[0]);
+		if(setprefix)
+			if(c->regmap[r] != A2RT_CONTROL)
+				a2c_Throw(c, A2_EXPCTRLREGISTER);
 		switch(a2c_Lex(c, 0))
 		{
 		  case '{':
@@ -3147,6 +3162,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 			a2c_Unlex(c);
 			a2c_SimplExp(c, r);
 			a2c_CodeOpL(c, OP_LOAD, r, &c->l[0]);
+			if(setprefix)
+				a2c_Code(c, OP_SET, r, 0);
 			break;
 		}
 		break;
@@ -3306,7 +3323,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		break;
 	  case KW_TEMPO:
 		/* Calculate (1000 / (<tempo> / 60 * <tbp>)) */
-		r = a2c_AllocReg(c);
+		r = a2c_AllocReg(c, A2RT_TEMPORARY);
 		a2c_SimplExp(c, r);
 		a2c_CodeOpL(c, OP_LOAD, r, &c->l[0]);
 		a2c_Codef(c, OP_MUL, r, 1.0f / 60.0f);
@@ -3457,7 +3474,7 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 	}
 	c->state = st;
 	for(i = 0; i < A2_CREGISTERS; ++i)
-		c->regmap[i] = 1;
+		c->regmap[i] = A2RT_CONTROL;
 	c->exportall = (flags & A2_EXPORTALL) == A2_EXPORTALL;
 	c->tabsize = st->ss->tabsize;
 	for(i = 0; a2c_rootsyms[i].n; ++i)

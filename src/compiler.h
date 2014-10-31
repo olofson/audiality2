@@ -193,6 +193,15 @@ struct A2_fixup
 
 typedef char A2_regmap[A2_REGISTERS];
 
+typedef enum A2_regtypes
+{
+	A2RT_FREE = 0,		/* Unused; available for allocation */
+	A2RT_TEMPORARY,		/* Allocated as temporary storage */
+	A2RT_VARIABLE,		/* Allocated as variable */
+	A2RT_ARGUMENT,		/* Allocated as argument */
+	A2RT_CONTROL		/* Mapped to unit control register */
+} A2_regtypes;
+
 struct A2_coder
 {
 	A2_coder	*prev;		/* Previously active coder, if any */
