@@ -78,7 +78,7 @@ typedef struct A2_wtosc
 	A2_wave		*wave;		/* Current waveform */
 	A2_state	*state;		/* Needed when switching waveforms */
 	int		*transpose;	/* Needed for pitch calculations */
-	int		samplerate;	/* Needed for pitch calculations */
+	float		onedivfs;	/* Sample rate conversion factor */
 } A2_wtosc;
 
 
@@ -302,9 +302,9 @@ static void wtosc_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 }
 
 
-static inline void wtosc_set_frequency(A2_wtosc *o, float f)
+static inline int wtosc_f2dphase(A2_wtosc *o, float f)
 {
-	o->dphase = f * 16777216.0f / o->samplerate + 0.5f;
+	return f * o->onedivfs + 0.5f;
 }
 
 
@@ -334,11 +334,11 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	/* Internal state initialization */
 	o->state = cfg->state;
 	o->transpose = vms->r + R_TRANSPOSE;
-	o->samplerate = cfg->samplerate;
+	o->onedivfs = 16777216.0f / cfg->samplerate;
 	o->noise = 0;
 	o->wave = NULL;
 	a2_RamperInit(&o->a, 0);
-	wtosc_set_frequency(o, powf(2.0f,
+	o->dphase = wtosc_f2dphase(o, powf(2.0f,
 			(*o->transpose) * (1.0f / 65536.0f)) * A2_MIDDLEC);
 	wtosc_set_phase(o, 0, vms->waketime & 0xff);
 
@@ -421,7 +421,7 @@ static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 static void wtosc_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
-	wtosc_set_frequency(o, powf(2.0f,
+	o->dphase = wtosc_f2dphase(o, powf(2.0f,
 			(v + *o->transpose) * (1.0f / 65536.0f)) * A2_MIDDLEC);
 }
 
