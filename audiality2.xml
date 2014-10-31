@@ -99,7 +99,7 @@
 				<Detect2Chars char="/"  char1="/" attribute="Comment" context="Single Line Comment"/>
 				<Detect2Chars char="/"  char1="*" attribute="Comment" context="Multi Line Comment"/>
 				<AnyChar String = "-+&lt;&gt;=;" attribute = "Operator" context = "#stay"/>
-				<AnyChar attribute="Operator" context="#stay" String=":!%&amp;()+,-/.*&lt;=&gt;?[]|~^&#59;"/>
+				<AnyChar attribute="Operator" context="#stay" String=":!%&amp;()+,-/.*&lt;=&gt;?[]|~^&#59;@"/>
 			</context>
 			<context name="Single Line Comment" attribute="Comment" lineEndContext="#pop"/>
 			<context name="Multi Line Comment" attribute="Comment" lineEndContext="#stay">

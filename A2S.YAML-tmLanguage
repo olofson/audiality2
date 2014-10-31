@@ -23,11 +23,11 @@ patterns:
   match: \b(off|pulse1|pulse2|pulse3|pulse4|pulse5|pulse10|pulse15|pulse20|pulse25|pulse30|pulse35|pulse40|pulse45|pulse50|square|saw|triangle|sine|hsine|asine|qsine|noise)\b
 
 - comment: Numeric literal
-  match: \b((([0-9]+\.?[0-9]*)|(\.[0-9]+))((e|E)(\+|-)?[0-9]+)?)(n|f)?\b
+  match: \b((([0-9]+\.?[0-9]*)|(\.[0-9]+))(n|f)?|([0-9]+(n|f)[0-9]*))?\b
   name: constant.numeric
 
 - comment: Operator
-  match: ([-*=+!;:])
+  match: ([-*=+!;:@])
   name: keyword.operator
 
 - comment: Braces, brackets, parentheses...
