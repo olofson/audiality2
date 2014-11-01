@@ -30,4 +30,10 @@ extern const A2_unitdesc a2_fm2_unitdesc;
 extern const A2_unitdesc a2_fm3_unitdesc;
 extern const A2_unitdesc a2_fm4_unitdesc;
 
+extern const A2_unitdesc a2_fm3p_unitdesc;
+extern const A2_unitdesc a2_fm4p_unitdesc;
+
+extern const A2_unitdesc a2_fm2r_unitdesc;
+extern const A2_unitdesc a2_fm4r_unitdesc;
+
 #endif /* A2_FM_H */

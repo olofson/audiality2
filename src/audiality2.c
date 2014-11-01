@@ -188,6 +188,10 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_fm2_unitdesc,
 	&a2_fm3_unitdesc,
 	&a2_fm4_unitdesc,
+	&a2_fm3p_unitdesc,
+	&a2_fm4p_unitdesc,
+	&a2_fm2r_unitdesc,
+	&a2_fm4r_unitdesc,
 	NULL
 };
 

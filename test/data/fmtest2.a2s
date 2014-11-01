@@ -1,0 +1,53 @@
+def title	"FMTest2"
+def version	"1.0"
+def description	"Comparison of pure sine from 'fm1' and 'wtosc'"
+def author	"David Olofson"
+def copyright	"Copyright 2014 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import bassline;
+
+// Reference
+.SineBass(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; @a V; p P
+	*a .7;	d 20
+	*a .7;	d 30
+	*a .7;	d 60
+	a 0;	d 100
+	end
+.rel	a 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+// Unity test. Should sound exactly like SineBass!
+.FMBass0(P V=1)
+{
+	struct { fm1; panmix }
+	@a V; p P
+	*a .7;	d 20
+	*a .7;	d 30
+	*a .7;	d 60
+	a 0;	d 100
+	end
+.rel	a 0;	d 50
+	d 100
+	1() { force rel }
+}
+
+Song(P V=1 L=0)
+{
+	tempo 120 4
+	for {
+		// Sine - should sound perfectly clean
+		Bassline SineBass .7;	td 32
+
+		// Sine - should sound exactly like the above
+		Bassline FMBass0 .7;	td 32
+
+					td 8
+	}
+}
