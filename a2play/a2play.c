@@ -32,6 +32,11 @@
 /* Silence detection window size (seconds) */
 #define	SILENCEWINDOW	0.25f
 
+/* Read chunk size for reading form stdin */
+#define	READ_CHUNK_SIZE	256
+
+static int readstdin = 0;
+
 /* Configuration */
 static const char *audiodriver = "default";
 static int samplerate = 44100;
@@ -350,6 +355,7 @@ static void usage(const char *exename)
 			"           -b<n>       Audio buffer size (frames)\n"
 			"           -r<n>       Audio sample rate (Hz)\n"
 			"           -c<n>       Number of audio channels\n"
+			"           -s          Read input from stdin\n"
 			"           -p<name>[,arg[,arg[,...]]]\n"
 			"                       Run program <name> with the "
 			"specified arguments\n"
@@ -392,6 +398,11 @@ static void parse_args(int argc, const char *argv[])
 		}
 		else if(strncmp(argv[i], "-p", 2) == 0)
 			continue;
+		else if(strncmp(argv[i], "-s", 2) == 0)
+		{
+			readstdin = 1;
+			printf("[Reading stdin]\n");
+		}
 		else if(strncmp(argv[i], "-st", 3) == 0)
 		{
 			stoptime = atof(&argv[i][3]);
@@ -422,7 +433,8 @@ static void parse_args(int argc, const char *argv[])
 		}
 		else
 		{
-			fprintf(stderr, "Unknown switch '%s'!\n", argv[i]);
+			fprintf(stderr, "a2play: Unknown switch '%s'!\n",
+					argv[i]);
 			usage(argv[0]);
 			exit(1);
 		}
@@ -439,8 +451,44 @@ static void breakhandler(int a)
 
 static void fail(A2_errors err)
 {
-	fprintf(stderr, "ERROR: %s\n", a2_ErrorString(err));
+	fprintf(stderr, "a2play: ERROR: %s\n", a2_ErrorString(err));
 	exit(100);
+}
+
+
+/*
+ * Read from 'f' until EOF, returning the buffer pointer and size through
+ * 'buf' and 'len'. Returns 1 on success, 0 on failure.
+ */
+static int read_until_eof(FILE *f, char **buf, size_t *len)
+{
+	*len = 0;
+	*buf = NULL;
+	while(1)
+	{
+		size_t count;
+		char *nb = realloc(*buf, *len + READ_CHUNK_SIZE + 1);
+		if(!nb)
+			break;
+		*buf = nb;
+		count = fread(*buf + *len, 1, READ_CHUNK_SIZE, f);
+		*len += count;
+		if(count < READ_CHUNK_SIZE)
+		{
+			if(feof(f))
+			{
+				(*buf)[*len] = 0;
+				return 1;
+			}
+			break;
+		}
+	}
+	/* Failure! */
+	fprintf(stderr, "a2play: Could not read input!\n");
+	free(*buf);
+	*len = 0;
+	*buf = NULL;
+	return 0;
 }
 
 
@@ -460,7 +508,7 @@ int main(int argc, const char *argv[])
 	/* Command line switches */
 	if(argc <= 1)
 	{
-		fprintf(stderr, "No arguments specified!\n");
+		fprintf(stderr, "a2play: No arguments specified!\n");
 		usage(argv[0]);
 		exit(1);
 	}
@@ -485,6 +533,27 @@ int main(int argc, const char *argv[])
 
 	/* Load sounds */
 	load_sounds(argc, argv);
+	if(readstdin)
+	{
+		A2_handle h;
+		char *buf;
+		size_t len;
+		if(!read_until_eof(stdin, &buf, &len))
+		{
+			a2_Close(state);
+			return 1;
+		}
+		if((h = a2_LoadString(state, buf, "stdin")) < 0)
+		{
+			fprintf(stderr, "Could not compile A2S from stdin!"
+					" (%s)\n", a2_ErrorString(-h));
+			a2_Close(state);
+			return 1;
+		}
+		a2_Export(state, A2_ROOTBANK, h, NULL);
+		module = h;
+		free(buf);
+	}
 
 	/* Start playing! */
 	a2_Now(state);
