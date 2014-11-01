@@ -95,11 +95,16 @@ Song(P V=1 L=0)
 	D2.rdelay (tick * 11.03);	D2.rgain .05
 	setall
 
+	tr P
 	for {
 		Bassline FMBass3 .5;	td 32
 		Bassline FMBass3P .5;	td 32
 		Bassline FMBass2R .5;	td 32
 		Bassline FMBass4R .5;	td 32
-		tr (rand 1 quant 1n - 6n)
+		tr (rand 1 quant 1n - 6n + P)
+		ifz L {
+			d 5000
+			end
+		}
 	}
 }

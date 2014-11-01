@@ -75,7 +75,7 @@ Song(P V=1 L=0)
 	PM.vol .5
 	setall
 
-	tr -5n
+	tr (P - 5n)
 	for {
 		1:PadFM4 -3 .6;		td 12
 		1<1;			td 4
@@ -97,9 +97,12 @@ Song(P V=1 L=0)
 		1<1;			td 4
 		Chords PadFM4R .25;	td 64
 					td 16
-	}
 
-	end
+		ifz L {
+			d 5000
+			end
+		}
+	}
 
 .stop	10 {
 		*PM.vol .7

@@ -41,6 +41,7 @@ import bassline;
 Song(P V=1 L=0)
 {
 	tempo 120 4
+	tr P
 	for {
 		// Sine - should sound perfectly clean
 		Bassline SineBass .7;	td 32
@@ -48,6 +49,9 @@ Song(P V=1 L=0)
 		// Sine - should sound exactly like the above
 		Bassline FMBass0 .7;	td 32
 
-					td 8
+		ifz L {
+			d 100
+			end
+		}
 	}
 }

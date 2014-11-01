@@ -161,10 +161,14 @@ Song(P V=1 L=0)
 	PM.vol .6
 	setall
 
+	tr P
 	for {
 		Track;		td (32 * 4)
 				td (64 * 2)
-				td 16
+		ifz L {
+			d 5000
+			end
+		}
 	}
 
 	end
