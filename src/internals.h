@@ -585,6 +585,7 @@ struct A2_state
 	A2_sysdriver	*sys;		/* System interfaces */
 
 	A2_errors	last_rt_error;	/* Last error posted via a2r_Error() */
+	int		is_api_user;	/* 1 if this state owns an API ref */
 
 /*FIXME: These should really be used with read/write barriers to be safe... */
 	volatile unsigned now_frames;	/* Audio time of last cb (frames, 24:8) */
@@ -1068,13 +1069,13 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info);
 ---------------------------------------------------------*/
 
 /* Init/deinit API backend resources as needed */
-void a2_add_api_user(void);
+A2_errors a2_add_api_user(void);
 void a2_remove_api_user(void);
 
-void a2_drivers_open(void);
+A2_errors a2_drivers_open(void);
 void a2_drivers_close(void);
 
-void a2_units_open(void);
+A2_errors a2_units_open(void);
 void a2_units_close(void);
 
 #endif /* A2_INTERNALS_H */

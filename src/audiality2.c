@@ -343,7 +343,14 @@ static A2_state *a2_Open0(A2_config *config)
 	config->state = st;
 
 	if(!(st->config->flags & A2_SUBSTATE))
-		a2_add_api_user();
+	{
+		if(a2_add_api_user() != A2_OK)
+		{
+			a2_Close(st);
+			return NULL;
+		}
+		st->is_api_user = 1;
+	}
 
 	/* Get required drivers */
 	st->sys = (A2_sysdriver *)a2_GetDriver(config, A2_SYSDRIVER);
@@ -632,10 +639,10 @@ void a2_Close(A2_state *st)
 	}
 
 	if(!(st->config->flags & A2_SUBSTATE))
-	{
 		a2_CloseSharedState(st);
+
+	if(st->is_api_user)
 		a2_remove_api_user();
-	}
 
 	/* Close the A2_config, if we created it! */
 	if(st->config)

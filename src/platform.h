@@ -187,7 +187,7 @@ static inline void a2_Yield(void)
 	Timing
 ---------------------------------------------------------*/
 
-void a2_time_open(void);
+A2_errors a2_time_open(void);
 void a2_time_close(void);
 
 uint64_t a2_GetMicros(void);

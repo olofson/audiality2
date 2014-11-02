@@ -46,6 +46,8 @@
 # define A2_DEFAULT_AUDIODRIVER	a2_dummy_audiodriver
 #endif
 
+static void a2_reset_driver_registry(void);
+
 
 /*---------------------------------------------------------
 	Configuration
@@ -291,15 +293,15 @@ static int a2_builtins_registered = 0;
 static A2_regdriver *a2_driver_registry = NULL;
 
 
-void a2_drivers_open(void)
+A2_errors a2_drivers_open(void)
 {
-	a2_MutexOpen(&a2_driver_registry_mtx);
+	return a2_MutexOpen(&a2_driver_registry_mtx);
 }
 
 
 void a2_drivers_close(void)
 {
-	a2_ResetDriverRegistry();
+	a2_reset_driver_registry();
 	a2_MutexClose(&a2_driver_registry_mtx);
 }
 
@@ -330,8 +332,10 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 		A2_newdriver_cb create)
 {
 	A2_regdriver *rd;
+	A2_errors res = a2_add_api_user();
+	if(res != A2_OK)
+		return res;
 
-	a2_add_api_user();
 	a2_MutexLock(&a2_driver_registry_mtx);
 
 	/*
@@ -363,6 +367,10 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
 	rd->next = a2_driver_registry;
 	a2_driver_registry = rd;
 	a2_MutexUnlock(&a2_driver_registry_mtx);
+	/*
+	 * NOTE: If you register a driver, you're considered an API user until
+	 *       that driver is unregistered. Thus, no a2_remove_api_user().
+	 */
 	return A2_OK;
 }
 
@@ -443,20 +451,31 @@ static A2_errors a2_unregister_driver(const char *name)
 
 A2_errors a2_UnregisterDriver(const char *name)
 {
-	A2_errors res;
+	A2_errors res = a2_add_api_user();
+	if(res != A2_OK)
+		return res;
 	a2_MutexLock(&a2_driver_registry_mtx);
 	res = a2_unregister_driver(name);
 	a2_MutexUnlock(&a2_driver_registry_mtx);
+	a2_remove_api_user();
 	return res;
 }
 
 
-void a2_ResetDriverRegistry(void)
+static void a2_reset_driver_registry(void)
 {
-	a2_MutexLock(&a2_driver_registry_mtx);
 	a2_unregister_driver(NULL);
 	a2_builtins_registered = 0;
+}
+
+void a2_ResetDriverRegistry(void)
+{
+	if(a2_add_api_user() != A2_OK)
+		return;
+	a2_MutexLock(&a2_driver_registry_mtx);
+	a2_reset_driver_registry();
 	a2_MutexUnlock(&a2_driver_registry_mtx);
+	a2_remove_api_user();
 }
 
 
@@ -522,7 +541,8 @@ A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts)
 	const char *optstart;
 	A2_regdriver *rd;
 	A2_driver *drv = NULL;
-	a2_add_api_user();
+	if(a2_add_api_user() != A2_OK)
+		return NULL;
 	a2_MutexLock(&a2_driver_registry_mtx);
 	a2_last_error = A2_OK;
 	a2_register_builtin_drivers();

@@ -54,7 +54,7 @@ struct timeval a2_start_time;
 #endif
 
 
-void a2_time_open(void)
+A2_errors a2_time_open(void)
 {
 #ifdef _WIN32
 	timeBeginPeriod(1);
@@ -64,6 +64,7 @@ void a2_time_open(void)
 #else
 	gettimeofday(&a2_start_time, NULL);
 #endif
+	return A2_OK;
 }
 
 

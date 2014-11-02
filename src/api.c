@@ -37,26 +37,47 @@
 
 static A2_atomic a2_api_users = 0;
 static A2_atomic a2_api_up = 0;
+static A2_errors a2_api_error = A2_OK;
 
 
-void a2_add_api_user(void)
+A2_errors a2_add_api_user(void)
 {
 	if(a2_AtomicAdd(&a2_api_users, 1) == 0)
 	{
+		A2_errors e;
 		/* We could arrive here right when the API is being closed! */
 		while(a2_AtomicAdd(&a2_api_up, 0))
 			a2_Yield();
-		a2_time_open();
-		a2_drivers_open();
-		a2_units_open();
+		a2_api_error = A2_OK;
+		if((e = a2_time_open()) ||
+				(e = a2_drivers_open()) ||
+				(e = a2_units_open()))
+		{
+			a2_api_error = e;
+			a2_AtomicAdd(&a2_api_users, -1);
+			return e;
+		}
 		a2_AtomicAdd(&a2_api_up, 1);
 	}
 	else
 	{
 		/* Someone beat us to it. Wait until the API is actually up! */
 		while(!a2_AtomicAdd(&a2_api_up, 0))
+		{
+			if(a2_api_error)
+			{
+				/*
+				 * Oh... The thread opening the API failed.
+				 * We're not likely going to succeed either,
+				 * so we return the same error code.
+				 */
+				a2_AtomicAdd(&a2_api_users, -1);
+				return a2_api_error;
+			}
 			a2_Yield();
+		}
 	}
+	return A2_OK;
 }
 
 

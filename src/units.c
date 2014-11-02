@@ -28,9 +28,9 @@
 static A2_mutex a2_unit_registry_mtx;
 
 
-void a2_units_open(void)
+A2_errors a2_units_open(void)
 {
-	a2_MutexOpen(&a2_unit_registry_mtx);
+	return a2_MutexOpen(&a2_unit_registry_mtx);
 }
 
 
