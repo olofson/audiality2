@@ -498,7 +498,7 @@ static A2_errors fm_OpenState(A2_config *cfg, void **statedata)
 
 static void fm_CloseState(void *statedata)
 {
-	if(--sinerc)
+	if(!--sinerc)
 	{
 		free(sine);
 		sine = NULL;
