@@ -88,7 +88,11 @@ A2_errors a2_LastError(void);
 A2_errors a2_LastRTError(A2_state *st);
 
 /* Return textual explanation of a Audiality 2 error code */
-const char *a2_ErrorString(unsigned errorcode);
+const char *a2_ErrorString(A2_errors errorcode);
+
+/* Return the name or description of the specified error code */
+const char *a2_ErrorName(A2_errors errorcode);
+const char *a2_ErrorDescription(A2_errors errorcode);
 
 
 /*---------------------------------------------------------

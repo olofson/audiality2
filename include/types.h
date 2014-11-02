@@ -103,138 +103,138 @@ typedef enum A2_sampleformats
 
 #define A2_ALLERRORS	\
 /* === NOTE: These first codes should match RCHM_errors! === */\
-  A2_DEFERR(A2_REFUSE,		"Destruction refused")\
-  A2_DEFERR(A2_OOMEMORY,	"Out of memory")\
-  A2_DEFERR(A2_OOHANDLES,	"Out of handles")\
-  A2_DEFERR(A2_INVALIDHANDLE,	"Invalid handle")\
-  A2_DEFERR(A2_FREEHANDLE,	"Handle already returned to the free pool")\
+  A2_DEFERR(REFUSE,		"Destruction refused")\
+  A2_DEFERR(OOMEMORY,		"Out of memory")\
+  A2_DEFERR(OOHANDLES,		"Out of handles")\
+  A2_DEFERR(INVALIDHANDLE,	"Invalid handle")\
+  A2_DEFERR(FREEHANDLE,		"Handle already returned to the free pool")\
 /* ========================================================= */\
-  A2_DEFERR(A2_DEADHANDLE,	"Released (not locked) handle used by API")\
-  A2_DEFERR(A2_END,		"VM program ended normally")\
-  A2_DEFERR(A2_OVERLOAD,	"VM overload; too many instructions "\
+  A2_DEFERR(DEADHANDLE,		"Released (not locked) handle used by API")\
+  A2_DEFERR(END,		"VM program ended normally")\
+  A2_DEFERR(OVERLOAD,		"VM overload; too many instructions "\
   						"back-to-back")\
-  A2_DEFERR(A2_ILLEGALOP,	"Illegal VM opcode")\
-  A2_DEFERR(A2_LATEMESSAGE,	"API message arrived late to engine context")\
-  A2_DEFERR(A2_MANYARGS,	"Too many arguments to VM program")\
+  A2_DEFERR(ILLEGALOP,		"Illegal VM opcode")\
+  A2_DEFERR(LATEMESSAGE,	"API message arrived late to engine context")\
+  A2_DEFERR(MANYARGS,		"Too many arguments to VM program")\
   \
-  A2_DEFERR(A2_BUFOVERFLOW,	"Buffer overflow")\
-  A2_DEFERR(A2_BUFUNDERFLOW,	"Buffer underflow")\
-  A2_DEFERR(A2_DIVBYZERO,	"Division by zero")\
-  A2_DEFERR(A2_INFLOOP,		"Jump would cause infinite loop")\
-  A2_DEFERR(A2_OVERFLOW,	"Value does not fit in numeric type")\
-  A2_DEFERR(A2_UNDERFLOW,	"Value too small; would truncate to zero")\
-  A2_DEFERR(A2_VALUERANGE,	"Value out of range")\
-  A2_DEFERR(A2_INDEXRANGE,	"Index out of range")\
-  A2_DEFERR(A2_OUTOFREGS,	"Out of VM registers")\
+  A2_DEFERR(BUFOVERFLOW,	"Buffer overflow")\
+  A2_DEFERR(BUFUNDERFLOW,	"Buffer underflow")\
+  A2_DEFERR(DIVBYZERO,		"Division by zero")\
+  A2_DEFERR(INFLOOP,		"Jump would cause infinite loop")\
+  A2_DEFERR(OVERFLOW,		"Value does not fit in numeric type")\
+  A2_DEFERR(UNDERFLOW,		"Value too small; would truncate to zero")\
+  A2_DEFERR(VALUERANGE,		"Value out of range")\
+  A2_DEFERR(INDEXRANGE,		"Index out of range")\
+  A2_DEFERR(OUTOFREGS,		"Out of VM registers")\
   \
-  A2_DEFERR(A2_NOTIMPLEMENTED,	"Operation or feature not implemented")\
-  A2_DEFERR(A2_OPEN,		"Error opening file")\
-  A2_DEFERR(A2_NODRIVER,	"No driver of the required type available")\
-  A2_DEFERR(A2_DRIVERNOTFOUND,	"Specified driver not found")\
-  A2_DEFERR(A2_DEVICEOPEN,	"Error opening device")\
-  A2_DEFERR(A2_ALREADYOPEN,	"Device is already open")\
-  A2_DEFERR(A2_ISASSIGNED,	"Object is already assigned to this bank")\
-  A2_DEFERR(A2_READ,		"Error reading file or stream")\
-  A2_DEFERR(A2_WRITE,		"Error writing file or stream")\
-  A2_DEFERR(A2_READONLY,	"Object is read-only")\
-  A2_DEFERR(A2_WRITEONLY,	"Object is write-only")\
-  A2_DEFERR(A2_STREAMCLOSED,	"Stream closed by the other party")\
-  A2_DEFERR(A2_WRONGTYPE,	"Wrong type of data or object")\
-  A2_DEFERR(A2_WRONGFORMAT,	"Wrong stream data format")\
-  A2_DEFERR(A2_VOICEALLOC,	"Could not allocate voice")\
-  A2_DEFERR(A2_VOICEINIT,	"Could not initialize voice")\
-  A2_DEFERR(A2_VOICENEST,	"Subvoice nesting depth exceeded")\
-  A2_DEFERR(A2_IODONTMATCH,	"Input and output counts don't match")\
-  A2_DEFERR(A2_FEWCHANNELS,	"Voice has to few channels for unit")\
-  A2_DEFERR(A2_UNITINIT,	"Could not initialize unit instance")\
-  A2_DEFERR(A2_NOTFOUND,	"Object not found")\
-  A2_DEFERR(A2_NOOBJECT,	"Handle is not attached to an object")\
-  A2_DEFERR(A2_NOXINSERT,	"No 'xinsert' unit found in voice structure")\
-  A2_DEFERR(A2_NOSTREAMCLIENT,	"'xinsert' client not set up for streaming")\
-  A2_DEFERR(A2_NOREPLACE,	"Unit does not implement replacing output"\
+  A2_DEFERR(NOTIMPLEMENTED,	"Operation or feature not implemented")\
+  A2_DEFERR(OPEN,		"Error opening file")\
+  A2_DEFERR(NODRIVER,		"No driver of the required type available")\
+  A2_DEFERR(DRIVERNOTFOUND,	"Specified driver not found")\
+  A2_DEFERR(DEVICEOPEN,		"Error opening device")\
+  A2_DEFERR(ALREADYOPEN,	"Device is already open")\
+  A2_DEFERR(ISASSIGNED,		"Object is already assigned to this bank")\
+  A2_DEFERR(READ,		"Error reading file or stream")\
+  A2_DEFERR(WRITE,		"Error writing file or stream")\
+  A2_DEFERR(READONLY,		"Object is read-only")\
+  A2_DEFERR(WRITEONLY,		"Object is write-only")\
+  A2_DEFERR(STREAMCLOSED,	"Stream closed by the other party")\
+  A2_DEFERR(WRONGTYPE,		"Wrong type of data or object")\
+  A2_DEFERR(WRONGFORMAT,	"Wrong stream data format")\
+  A2_DEFERR(VOICEALLOC,		"Could not allocate voice")\
+  A2_DEFERR(VOICEINIT,		"Could not initialize voice")\
+  A2_DEFERR(VOICENEST,		"Subvoice nesting depth exceeded")\
+  A2_DEFERR(IODONTMATCH,	"Input and output counts don't match")\
+  A2_DEFERR(FEWCHANNELS,	"Voice has to few channels for unit")\
+  A2_DEFERR(UNITINIT,		"Could not initialize unit instance")\
+  A2_DEFERR(NOTFOUND,		"Object not found")\
+  A2_DEFERR(NOOBJECT,		"Handle is not attached to an object")\
+  A2_DEFERR(NOXINSERT,		"No 'xinsert' unit found in voice structure")\
+  A2_DEFERR(NOSTREAMCLIENT,	"'xinsert' client not set up for streaming")\
+  A2_DEFERR(NOREPLACE,		"Unit does not implement replacing output"\
   						" mode")\
-  A2_DEFERR(A2_NOTOUTPUT,	"Tried to wire inputs to voice output bus")\
-  A2_DEFERR(A2_EXPORTDECL,	"Export already declared")\
-  A2_DEFERR(A2_SYMBOLDEF,	"Symbol already defined")\
-  A2_DEFERR(A2_UNDEFSYM,	"Undefined symbols in program")\
-  A2_DEFERR(A2_MESSAGEDEF,	"Handler for this message already defined")\
-  A2_DEFERR(A2_ONLYLOCAL,	"Symbols can only be local in this scope")\
-  A2_DEFERR(A2_DECLNOINIT,	"Declared variable not initialized")\
+  A2_DEFERR(NOTOUTPUT,		"Tried to wire inputs to voice output bus")\
+  A2_DEFERR(EXPORTDECL,		"Export already declared")\
+  A2_DEFERR(SYMBOLDEF,		"Symbol already defined")\
+  A2_DEFERR(UNDEFSYM,		"Undefined symbols in program")\
+  A2_DEFERR(MESSAGEDEF,		"Handler for this message already defined")\
+  A2_DEFERR(ONLYLOCAL,		"Symbols can only be local in this scope")\
+  A2_DEFERR(DECLNOINIT,		"Declared variable not initialized")\
   \
-  A2_DEFERR(A2_EXPEOS,		"Expected end of statement")\
-  A2_DEFERR(A2_EXPCLOSE,	"Expected closing brace")\
-  A2_DEFERR(A2_EXPNAME,		"Expected name")\
-  A2_DEFERR(A2_EXPVALUE,	"Expected value")\
-  A2_DEFERR(A2_EXPVALUEHANDLE,	"Expected value or handle")\
-  A2_DEFERR(A2_EXPINTEGER,	"Expected integer value")\
-  A2_DEFERR(A2_EXPSTRING,	"Expected string literal")\
-  A2_DEFERR(A2_EXPSTRINGORNAME,	"Expected string literal or name")\
-  A2_DEFERR(A2_EXPVARIABLE,	"Expected variable")\
-  A2_DEFERR(A2_EXPCTRLREGISTER,	"Expected control register")\
-  A2_DEFERR(A2_EXPLABEL,	"Expected label")\
-  A2_DEFERR(A2_EXPPROGRAM,	"Expected program")\
-  A2_DEFERR(A2_EXPFUNCTION,	"Expected function declaration")\
-  A2_DEFERR(A2_EXPUNIT,		"Expected unit")\
-  A2_DEFERR(A2_EXPBODY,		"Expected body")\
-  A2_DEFERR(A2_EXPOP,		"Expected operator")\
-  A2_DEFERR(A2_EXPBINOP,	"Expected binary operator")\
-  A2_DEFERR(A2_EXPCONSTANT,	"Expected constant")\
-  A2_DEFERR(A2_EXPWAVETYPE,	"Expected wave type identifier")\
-  A2_DEFERR(A2_EXPEXPRESSION,	"Expected expression")\
+  A2_DEFERR(EXPEOS,		"Expected end of statement")\
+  A2_DEFERR(EXPCLOSE,		"Expected closing brace")\
+  A2_DEFERR(EXPNAME,		"Expected name")\
+  A2_DEFERR(EXPVALUE,		"Expected value")\
+  A2_DEFERR(EXPVALUEHANDLE,	"Expected value or handle")\
+  A2_DEFERR(EXPINTEGER,		"Expected integer value")\
+  A2_DEFERR(EXPSTRING,		"Expected string literal")\
+  A2_DEFERR(EXPSTRINGORNAME,	"Expected string literal or name")\
+  A2_DEFERR(EXPVARIABLE,	"Expected variable")\
+  A2_DEFERR(EXPCTRLREGISTER,	"Expected control register")\
+  A2_DEFERR(EXPLABEL,		"Expected label")\
+  A2_DEFERR(EXPPROGRAM,		"Expected program")\
+  A2_DEFERR(EXPFUNCTION,	"Expected function declaration")\
+  A2_DEFERR(EXPUNIT,		"Expected unit")\
+  A2_DEFERR(EXPBODY,		"Expected body")\
+  A2_DEFERR(EXPOP,		"Expected operator")\
+  A2_DEFERR(EXPBINOP,		"Expected binary operator")\
+  A2_DEFERR(EXPCONSTANT,	"Expected constant")\
+  A2_DEFERR(EXPWAVETYPE,	"Expected wave type identifier")\
+  A2_DEFERR(EXPEXPRESSION,	"Expected expression")\
   \
-  A2_DEFERR(A2_NEXPEOF,		"Unexpected end of file")\
-  A2_DEFERR(A2_NEXPNAME,	"Undefined symbol")\
-  A2_DEFERR(A2_NEXPVALUE,	"Value not expected here")\
-  A2_DEFERR(A2_NEXPHANDLE,	"Handle not expected here")\
-  A2_DEFERR(A2_NEXPTOKEN,	"Unexpected token")\
-  A2_DEFERR(A2_NEXPELSE,	"'else' not applicable here")\
-  A2_DEFERR(A2_NEXPLABEL,	"Label not expected here")\
-  A2_DEFERR(A2_NEXPMODIFIER,	"Value modifier not expected here")\
-  A2_DEFERR(A2_NEXPDECPOINT,	"Decimal point not expected here")\
+  A2_DEFERR(NEXPEOF,		"Unexpected end of file")\
+  A2_DEFERR(NEXPNAME,		"Undefined symbol")\
+  A2_DEFERR(NEXPVALUE,		"Value not expected here")\
+  A2_DEFERR(NEXPHANDLE,		"Handle not expected here")\
+  A2_DEFERR(NEXPTOKEN,		"Unexpected token")\
+  A2_DEFERR(NEXPELSE,		"'else' not applicable here")\
+  A2_DEFERR(NEXPLABEL,		"Label not expected here")\
+  A2_DEFERR(NEXPMODIFIER,	"Value modifier not expected here")\
+  A2_DEFERR(NEXPDECPOINT,	"Decimal point not expected here")\
   \
-  A2_DEFERR(A2_BADFORMAT,	"Bad file or device I/O format")\
-  A2_DEFERR(A2_BADTYPE,		"Invalid type ID")\
-  A2_DEFERR(A2_BADBANK,		"Invalid bank handle")\
-  A2_DEFERR(A2_BADWAVE,		"Invalid waveform handle")\
-  A2_DEFERR(A2_BADPROGRAM,	"Invalid program handle")\
-  A2_DEFERR(A2_BADENTRY,	"Invalid program entry point")\
-  A2_DEFERR(A2_BADVOICE,	"Voice does not exist, or bad voice id")\
-  A2_DEFERR(A2_BADLABEL,	"Bad label name")\
-  A2_DEFERR(A2_BADVALUE,	"Bad value")\
-  A2_DEFERR(A2_BADJUMP,		"Illegal jump target position")\
-  A2_DEFERR(A2_BADOPCODE,	"Invalid VM opcode")\
-  A2_DEFERR(A2_BADREGISTER,	"Invalid VM register index")\
-  A2_DEFERR(A2_BADREG2,		"Invalid VM register index, second argument")\
-  A2_DEFERR(A2_BADIMMARG,	"Immediate argument out of range")\
-  A2_DEFERR(A2_BADVARDECL,	"Variable cannot be declared here")\
-  A2_DEFERR(A2_BADOCTESCAPE,	"Bad octal escape format in string literal")\
-  A2_DEFERR(A2_BADDECESCAPE,	"Bad decimal escape format in string literal")\
-  A2_DEFERR(A2_BADHEXESCAPE,	"Bad hex escape format in string literal")\
+  A2_DEFERR(BADFORMAT,		"Bad file or device I/O format")\
+  A2_DEFERR(BADTYPE,		"Invalid type ID")\
+  A2_DEFERR(BADBANK,		"Invalid bank handle")\
+  A2_DEFERR(BADWAVE,		"Invalid waveform handle")\
+  A2_DEFERR(BADPROGRAM,		"Invalid program handle")\
+  A2_DEFERR(BADENTRY,		"Invalid program entry point")\
+  A2_DEFERR(BADVOICE,		"Voice does not exist, or bad voice id")\
+  A2_DEFERR(BADLABEL,		"Bad label name")\
+  A2_DEFERR(BADVALUE,		"Bad value")\
+  A2_DEFERR(BADJUMP,		"Illegal jump target position")\
+  A2_DEFERR(BADOPCODE,		"Invalid VM opcode")\
+  A2_DEFERR(BADREGISTER,	"Invalid VM register index")\
+  A2_DEFERR(BADREG2,		"Invalid VM register index, second argument")\
+  A2_DEFERR(BADIMMARG,		"Immediate argument out of range")\
+  A2_DEFERR(BADVARDECL,		"Variable cannot be declared here")\
+  A2_DEFERR(BADOCTESCAPE,	"Bad octal escape format in string literal")\
+  A2_DEFERR(BADDECESCAPE,	"Bad decimal escape format in string literal")\
+  A2_DEFERR(BADHEXESCAPE,	"Bad hex escape format in string literal")\
   \
-  A2_DEFERR(A2_CANTEXPORT,	"Cannot export from this scope")\
-  A2_DEFERR(A2_CANTINPUT,	"Unit cannot have inputs")\
-  A2_DEFERR(A2_CANTOUTPUT,	"Unit cannot have outputs")\
-  A2_DEFERR(A2_NOPROGHERE,	"Program cannot be declared here")\
-  A2_DEFERR(A2_NOMSGHERE,	"Message cannot be declared here")\
-  A2_DEFERR(A2_NOFUNCHERE,	"Function cannot be declared here")\
-  A2_DEFERR(A2_NOTUNARY,	"Not a unary operator")\
-  A2_DEFERR(A2_NOCODE,		"Code not allowed here")\
-  A2_DEFERR(A2_NOTIMING,	"Timing instructions not allowed here")\
-  A2_DEFERR(A2_NORUN,		"Cannot run program from here")\
-  A2_DEFERR(A2_NORETURN,	"'return' not allowed in this context")\
-  A2_DEFERR(A2_NOEXPORT,	"Cannot export this kind of symbol")\
-  A2_DEFERR(A2_NOWAKEFORCE,	"'wake' and 'force' not applicable here")\
-  A2_DEFERR(A2_NOPORT,		"Port is unavailable or does not exist")\
-  A2_DEFERR(A2_NOINPUT,		"Unit with inputs where there is no audio")\
-  A2_DEFERR(A2_NONAME,		"Object has no name")\
-  A2_DEFERR(A2_NOUNITS,		"Voice has no units")\
-  A2_DEFERR(A2_MULTIINLINE,	"Voice cannot have multiple inline units")\
-  A2_DEFERR(A2_CHAINMISMATCH,	"Unit input count does not match chain")\
-  A2_DEFERR(A2_NOOUTPUT,	"Final unit must send to voice output")\
+  A2_DEFERR(CANTEXPORT,		"Cannot export from this scope")\
+  A2_DEFERR(CANTINPUT,		"Unit cannot have inputs")\
+  A2_DEFERR(CANTOUTPUT,		"Unit cannot have outputs")\
+  A2_DEFERR(NOPROGHERE,		"Program cannot be declared here")\
+  A2_DEFERR(NOMSGHERE,		"Message cannot be declared here")\
+  A2_DEFERR(NOFUNCHERE,		"Function cannot be declared here")\
+  A2_DEFERR(NOTUNARY,		"Not a unary operator")\
+  A2_DEFERR(NOCODE,		"Code not allowed here")\
+  A2_DEFERR(NOTIMING,		"Timing instructions not allowed here")\
+  A2_DEFERR(NORUN,		"Cannot run program from here")\
+  A2_DEFERR(NORETURN,		"'return' not allowed in this context")\
+  A2_DEFERR(NOEXPORT,		"Cannot export this kind of symbol")\
+  A2_DEFERR(NOWAKEFORCE,	"'wake' and 'force' not applicable here")\
+  A2_DEFERR(NOPORT,		"Port is unavailable or does not exist")\
+  A2_DEFERR(NOINPUT,		"Unit with inputs where there is no audio")\
+  A2_DEFERR(NONAME,		"Object has no name")\
+  A2_DEFERR(NOUNITS,		"Voice has no units")\
+  A2_DEFERR(MULTIINLINE,	"Voice cannot have multiple inline units")\
+  A2_DEFERR(CHAINMISMATCH,	"Unit input count does not match chain")\
+  A2_DEFERR(NOOUTPUT,		"Final unit must send to voice output")\
   \
-  A2_DEFERR(A2_INTERNAL,	"INTERNAL ERROR")
+  A2_DEFERR(INTERNAL,		"INTERNAL ERROR")	/* Must be last! */
 
-#define	A2_DEFERR(x, y)	x,
+#define	A2_DEFERR(x, y)	A2_##x,
 typedef enum A2_errors
 {
 	A2_OK = 0,

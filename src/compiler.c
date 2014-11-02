@@ -36,12 +36,8 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2_Try()!
 #include "units/inline.h"
 
 
-/*---------------------------------------------------------
-	Debug tools
----------------------------------------------------------*/
-
 /* Calculate current position in source code. */
-static void a2c_CalculatePos(A2_compiler *c, int pos, int *line, int *col)
+static void a2_CalculatePos(A2_compiler *c, int pos, int *line, int *col)
 {
 	int i;
 	*line = 1;
@@ -65,11 +61,11 @@ static void a2c_CalculatePos(A2_compiler *c, int pos, int *line, int *col)
 
 
 /* Print source code line containing position 'pos' to 'f'. */
-static void a2c_DumpLine(A2_compiler *c, int pos, int mark, FILE *f)
+static void a2_DumpLine(A2_compiler *c, int pos, int mark, FILE *f)
 {
 	int line, col;
 	int cnt;
-	a2c_CalculatePos(c, pos, &line, &col);
+	a2_CalculatePos(c, pos, &line, &col);
 	while(pos && (c->source[pos - 1] != '\n'))
 		--pos;
 	cnt = pos;
@@ -89,29 +85,6 @@ static void a2c_DumpLine(A2_compiler *c, int pos, int mark, FILE *f)
 	}
 }
 
-
-#define	A2_DEFERR(x, y)	y,
-static const char *a2_errnames[] = {
-	"Ok - no error!",
-	A2_ALLERRORS
-};
-#undef	A2_DEFERR
-
-static char a2_errbuf[128];
-
-const char *a2_ErrorString(unsigned errorcode)
-{
-	if(errorcode < A2_INTERNAL)
-		return a2_errnames[errorcode];
-	else
-	{
-		a2_errbuf[sizeof(a2_errbuf) - 1] = 0;
-		snprintf(a2_errbuf, sizeof(a2_errbuf) - 1,
-				"INTERNAL ERROR #%d; please report to "
-				"<david@olofson.net>", errorcode - A2_INTERNAL);
-		return a2_errbuf;
-	}
-}
 
 #define	A2_DI(x)	#x,
 static const char *a2_insnames[A2_OPCODES] = {
@@ -696,7 +669,7 @@ static inline int a2_GetChar(A2_compiler *c)
 		if((ch == '\n') && (c->l[0].pos != last_printed_pos))
 		{
 			fputs("\n", stderr);
-			a2c_DumpLine(c, c->l[0].pos + 1, 0, stderr);
+			a2_DumpLine(c, c->l[0].pos + 1, 0, stderr);
 			last_printed_pos = c->l[0].pos;
 		}
 	)
@@ -3537,9 +3510,9 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	a2c_Except
 	{
 		int sline, scol, eline, ecol;
-		a2c_CalculatePos(c, c->l[0].pos, &eline, &ecol);
+		a2_CalculatePos(c, c->l[0].pos, &eline, &ecol);
 		if(c->l[1].token)
-			a2c_CalculatePos(c, c->l[1].pos, &sline, &scol);
+			a2_CalculatePos(c, c->l[1].pos, &sline, &scol);
 		else
 		{
 			sline = eline;
@@ -3561,15 +3534,15 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 					sline, scol, eline, ecol);
 		fprintf(stderr, " in \"%s\"\n", source);
 		if((sline == eline) && (scol == ecol))
-			a2c_DumpLine(c, c->l[0].pos, 1, stderr);
+			a2_DumpLine(c, c->l[0].pos, 1, stderr);
 		else if(sline == eline)
 			/* FIXME: Underline range with markers! */
-			a2c_DumpLine(c, c->l[1].pos, 1, stderr);
+			a2_DumpLine(c, c->l[1].pos, 1, stderr);
 		else
 		{
-			a2c_DumpLine(c, c->l[1].pos, 1, stderr);
+			a2_DumpLine(c, c->l[1].pos, 1, stderr);
 			/* FIXME: This could span more than two lines... */
-			a2c_DumpLine(c, c->l[0].pos, 1, stderr);
+			a2_DumpLine(c, c->l[0].pos, 1, stderr);
 		}
 	}
 	/* Try to avoid dangling wires and stuff... */

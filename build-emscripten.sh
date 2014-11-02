@@ -19,7 +19,7 @@ LIBSOURCES="$LIBSOURCES src/audiality2.c src/platform.c src/core.c"
 LIBSOURCES="$LIBSOURCES src/units.c src/stream.c src/waves.c src/bank.c"
 LIBSOURCES="$LIBSOURCES src/api.c src/xinsertapi.c src/properties.c"
 LIBSOURCES="$LIBSOURCES src/compiler.c src/drivers.c src/utilities.c"
-LIBSOURCES="$LIBSOURCES src/render.c src/rchm.c src/sfifo.c"
+LIBSOURCES="$LIBSOURCES src/render.c src/rchm.c src/sfifo.c src/error.c"
 
 LIBSOURCES="$LIBSOURCES src/units/wtosc.c src/units/panmix.c"
 LIBSOURCES="$LIBSOURCES src/units/inline.c src/units/xsink.c"

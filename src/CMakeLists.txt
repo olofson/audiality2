@@ -24,6 +24,7 @@ set(sources
 	render.c
 	rchm.c
 	sfifo.c
+	error.c
 )
 
 # Voice units
