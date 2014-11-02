@@ -607,7 +607,7 @@ struct A2_state
 	NUMMSGS(unsigned msgnum;)
 	EVLEAKTRACK(unsigned numevents;)
 
-	unsigned	msdur;		/* One millisecond in samples (16:16) */
+	unsigned	msdur;		/* One ms in sample frames (16:16) */
 	uint32_t	randstate;	/* RAND* instruction RNG state */
 	uint32_t	noisestate;	/* 'wtosc' noise generator state */
 
