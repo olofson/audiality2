@@ -41,8 +41,12 @@ target_link_libraries(streamstress ${AUDIALITY2_LIBRARY})
 find_package(SDL)
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
+
 	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
 	target_link_libraries(a2test ${AUDIALITY2_LIBRARY} SDLmain)
+
+	add_executable(apistress WIN32 MACOSX_BUNDLE apistress.c)
+	target_link_libraries(apistress ${AUDIALITY2_LIBRARY} SDLmain)
 endif(SDL_FOUND)
 
 # Release build: full optimization, no debug features, no debug info

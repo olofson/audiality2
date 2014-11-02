@@ -36,15 +36,26 @@
 ---------------------------------------------------------*/
 
 static A2_atomic a2_api_users = 0;
+static A2_atomic a2_api_up = 0;
 
 
 void a2_add_api_user(void)
 {
-	if(!a2_AtomicAdd(&a2_api_users, 1))
+	if(a2_AtomicAdd(&a2_api_users, 1) == 0)
 	{
+		/* We could arrive here right when the API is being closed! */
+		while(a2_AtomicAdd(&a2_api_up, 0))
+			a2_Yield();
 		a2_time_open();
 		a2_drivers_open();
 		a2_units_open();
+		a2_AtomicAdd(&a2_api_up, 1);
+	}
+	else
+	{
+		/* Someone beat us to it. Wait until the API is actually up! */
+		while(!a2_AtomicAdd(&a2_api_up, 0))
+			a2_Yield();
 	}
 }
 
@@ -54,16 +65,21 @@ void a2_remove_api_user(void)
 	int users = a2_AtomicAdd(&a2_api_users, -1);
 	if(users == 1)
 	{
+		/*
+		 * If someone tries to reopen now, a2_add_api_user() will wait
+		 * until we're done closing, before opening again.
+		 */
 		a2_units_close();
 		a2_drivers_close();
 		a2_time_close();
+		a2_AtomicAdd(&a2_api_up, -1);
 	}
 	else if(!users)
 	{
 		a2_AtomicAdd(&a2_api_users, 1);
 		fprintf(stderr, "Audiality 2 INTERNAL ERROR: "
 				"a2_remove_api_user() called while "
-				"a2_api_users = 0!\n");
+				"a2_api_users == 0!\n");
 	}
 }
 

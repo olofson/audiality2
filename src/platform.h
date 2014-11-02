@@ -36,6 +36,7 @@
 # include <mmsystem.h>
 #elif defined(__MACOSX__)
 # include <libkern/OSAtomic.h>
+# include <sched.h>
 #else
 # include <sched.h>
 # include <sys/time.h>
@@ -162,6 +163,24 @@ static inline void a2_MutexClose(A2_mutex *mtx)
 	pthread_mutex_destroy(&mtx->mutex);
 }
 #endif	/* _WIN32 */
+
+
+/*---------------------------------------------------------
+	CPU yield
+---------------------------------------------------------*/
+
+static inline void a2_Yield(void)
+{
+#ifdef _WIN32
+	/*
+	 * NOTE: Windows XP and older actually only yield if other threads of
+	 *       EQUAL PRIORITY is ready to run! Should we care...?
+	 */
+	Sleep(0);
+#else
+	sched_yield();
+#endif
+}
 
 
 /*---------------------------------------------------------
