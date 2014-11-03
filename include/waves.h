@@ -116,8 +116,8 @@ typedef enum A2_waveflags
 } A2_waveflags;
 
 /*
- * Upload a waveform for use by wavetable oscillators. Returns the handle of the
- * waveform, or a negative error code.
+ * Upload a waveform for use by wavetable oscillators. Returns the handle of
+ * the waveform, or a negative error code.
  *
  * 'wt' is the type of wave to create, as defined by A2_wavetypes.
  *
@@ -131,17 +131,17 @@ typedef enum A2_waveflags
  *	A2_REVMIX	Mix wave with a reversed version of itself.
  *	A2_CLEAR	Ignore 'data' (if any) and generate a silent waveform.
  *
- * A2_XFADE and A2_REVMIX are intended for looped waves, although they (sort of)
- * work on one-shot waves as well.
+ * A2_XFADE and A2_REVMIX are intended for looped waves, although they (sort
+ * of) work on one-shot waves as well.
  *
  * 'fmt', 'data' and 'size': See a2_Write() in audiality2/stream.h.
  *
  * Returns the handle of the wave, or a negated A2_errors error code.
  *
  * NOTE:
- *	The returned handle can be opened with a2_StreamOpen() and used with the
- *	stream API (see a2_WaveNew()), but as the wave has been automatically
- *	prepared, it's not possible to change the length of it.
+ *	The returned handle can be opened with a2_StreamOpen() and used with
+ *	the stream API (see a2_WaveNew()), but as the wave has been
+ *	automatically prepared, it's not possible to change the length of it.
  */
 A2_handle a2_WaveUpload(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
@@ -171,7 +171,8 @@ A2_handle a2_WaveUpload(A2_state *st,
  *
  * Returns the handle of the wave, or a negated A2_errors error code.
  */
-A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags);
+A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period,
+		int flags);
 
 /*
  * Get A2_wave struct from handle. Returns NULL if the handle is invalid, or if

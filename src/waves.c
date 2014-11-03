@@ -609,6 +609,8 @@ A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 	  case A2_WMIPWAVE:
 		w->flags |= A2_UNPREPARED;
 		break;
+	  default:
+	  	return -A2_EXPWAVETYPE;
 	}
 	h = rchm_NewEx(&st->ss->hm, w, A2_TWAVE, flags | A2_APIOWNED, 1);
 	if(h < 0)
