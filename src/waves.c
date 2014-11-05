@@ -543,7 +543,7 @@ static A2_handle a2_upload_export(A2_state *st, A2_handle bank,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	A2_errors res;
-	A2_handle h = a2_WaveUpload(st, wt, period, flags | A2_LOCKED,
+	A2_handle h = a2_UploadWave(st, wt, period, flags | A2_LOCKED,
 			fmt, data, size);
 	if(h < 0)
 		return h;
@@ -556,7 +556,7 @@ static A2_handle a2_upload_export(A2_state *st, A2_handle bank,
 }
 
 
-A2_handle a2_WaveUpload(A2_state *st,
+A2_handle a2_UploadWave(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
@@ -568,7 +568,7 @@ A2_handle a2_WaveUpload(A2_state *st,
 	if(!ss)
 		return -A2_BADFORMAT;
 	size /= ss;
-	if((h = a2_WaveNew(st, wt, period, flags)) < 0)
+	if((h = a2_NewWave(st, wt, period, flags)) < 0)
 		return h;
 	if(!(w = a2_GetWave(st, h)))
 		return A2_INTERNAL + 300; /* Wut!? We just created it...! */
@@ -591,7 +591,7 @@ A2_handle a2_WaveUpload(A2_state *st,
 }
 
 
-A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
+A2_handle a2_NewWave(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 {
 	A2_handle h;
 	A2_wave *w = (A2_wave *)calloc(1, sizeof(A2_wave));

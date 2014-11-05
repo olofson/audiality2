@@ -190,8 +190,8 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 	int32_t *out = u->outputs[0];
 	for(i = 0; i < operators; ++i)
 	{
-		a2_RamperPrepare(&fm->op[i].a, frames);
-		a2_RamperPrepare(&fm->op[i].fb, frames);
+		a2_PrepareRamper(&fm->op[i].a, frames);
+		a2_PrepareRamper(&fm->op[i].fb, frames);
 	}
 	for(s = offset; s < end; ++s)
 	{
@@ -205,8 +205,8 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 						parallel);
 		for(i = 0; i < operators; ++i)
 		{
-			a2_RamperRun(&fm->op[i].a, 1);
-			a2_RamperRun(&fm->op[i].fb, 1);
+			a2_RunRamper(&fm->op[i].a, 1);
+			a2_RunRamper(&fm->op[i].fb, 1);
 			/* Fix the rounding error buildup! */
 			fm->op[i].phase += fm->op[i].dphase & (oversample - 1);
 		}
@@ -342,8 +342,8 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 
 	for(i = 0; i < fm->nops; ++i)
 	{
-		a2_RamperInit(&fm->op[i].a, 0);
-		a2_RamperInit(&fm->op[i].fb, 0);
+		a2_InitRamper(&fm->op[i].a, 0);
+		a2_InitRamper(&fm->op[i].fb, 0);
 		fm->op[i].last = 0;
 	}
 
@@ -416,12 +416,12 @@ static void fm_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void fm_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[0].a, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[0].a, v, start, dur);
 }
 
 static void fm_Feedback(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[0].fb, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[0].fb, v, start, dur);
 }
 
 
@@ -434,12 +434,12 @@ static void fm_Pitch1(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void fm_Amplitude1(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[1].a, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[1].a, v, start, dur);
 }
 
 static void fm_Feedback1(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[1].fb, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[1].fb, v, start, dur);
 }
 
 
@@ -452,12 +452,12 @@ static void fm_Pitch2(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void fm_Amplitude2(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[2].a, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[2].a, v, start, dur);
 }
 
 static void fm_Feedback2(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[2].fb, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[2].fb, v, start, dur);
 }
 
 
@@ -470,12 +470,12 @@ static void fm_Pitch3(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void fm_Amplitude3(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[3].a, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[3].a, v, start, dur);
 }
 
 static void fm_Feedback3(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&fm_cast(u)->op[3].fb, v, start, dur);
+	a2_SetRamper(&fm_cast(u)->op[3].fb, v, start, dur);
 }
 
 

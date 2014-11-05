@@ -173,7 +173,7 @@ int main(int argc, const char *argv[])
 	}
 
 	fprintf(stderr, "Uploading...\n");
-	wh = a2_WaveUpload(state, A2_WWAVE, WAVEPER, 0,
+	wh = a2_UploadWave(state, A2_WWAVE, WAVEPER, 0,
 			A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
 	if(wh < 0)
 		fail(8, -wh);

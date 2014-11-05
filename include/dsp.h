@@ -1,7 +1,7 @@
 /*
  * dsp.h - Handy DSP tools for Audiality 2 internals and units
  *
- * Copyright 2010-2013 David Olofson <david@olofson.net>
+ * Copyright 2010-2014 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -118,14 +118,14 @@ typedef struct A2_ramper
  */
 
 /* Initialize an A2_ramper to a constant value of 'v' */
-static inline void a2_RamperInit(A2_ramper *rr, int v)
+static inline void a2_InitRamper(A2_ramper *rr, int v)
 {
 	rr->value = rr->target = v << 8;
 	rr->delta = rr->timer = 0;
 }
 
 /* Prepare ramper for some processing */
-static inline void a2_RamperPrepare(A2_ramper *rr, int frames)
+static inline void a2_PrepareRamper(A2_ramper *rr, int frames)
 {
 	if(!rr->timer)
 	{
@@ -149,7 +149,7 @@ static inline void a2_RamperPrepare(A2_ramper *rr, int frames)
 }
 
 /* Advance ramper by 'frames' */
-static inline void a2_RamperRun(A2_ramper *rr, int frames)
+static inline void a2_RunRamper(A2_ramper *rr, int frames)
 {
 	rr->value += rr->delta * frames;
 }
@@ -158,7 +158,7 @@ static inline void a2_RamperRun(A2_ramper *rr, int frames)
  * Set up subsample accurate ramp starting at 'start' (24:8), ramping to
  * 'target' (16:16) over 'duration' (24:8) sample frames.
  */
-static inline void a2_RamperSet(A2_ramper *rr, int target, int start,
+static inline void a2_SetRamper(A2_ramper *rr, int target, int start,
 		int duration)
 {
 	rr->target = target << 8;

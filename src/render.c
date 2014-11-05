@@ -152,7 +152,7 @@ A2_handle a2_RenderWave(A2_state *st,
 	A2_handle wh, sh;
 	if(!period)
 		period = samplerate / A2_MIDDLEC;
-	if((wh = a2_WaveNew(st, wt, period, flags)) < 0)
+	if((wh = a2_NewWave(st, wt, period, flags)) < 0)
 		return wh;
 	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
 	{

@@ -143,7 +143,7 @@ typedef enum A2_waveflags
  *	the stream API (see a2_WaveNew()), but as the wave has been
  *	automatically prepared, it's not possible to change the length of it.
  */
-A2_handle a2_WaveUpload(A2_state *st,
+A2_handle a2_UploadWave(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
@@ -171,7 +171,7 @@ A2_handle a2_WaveUpload(A2_state *st,
  *
  * Returns the handle of the wave, or a negated A2_errors error code.
  */
-A2_handle a2_WaveNew(A2_state *st, A2_wavetypes wt, unsigned period,
+A2_handle a2_NewWave(A2_state *st, A2_wavetypes wt, unsigned period,
 		int flags);
 
 /*

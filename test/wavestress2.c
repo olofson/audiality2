@@ -212,7 +212,7 @@ int main(int argc, const char *argv[])
 			fmd *= FMDECAY;
 		}
 
-		wh[whi] = a2_WaveUpload(state, A2_WWAVE, WAVEPER, 0,
+		wh[whi] = a2_UploadWave(state, A2_WWAVE, WAVEPER, 0,
 				A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
 		if(wh[whi] < 0)
 			fail(8, -wh[whi]);

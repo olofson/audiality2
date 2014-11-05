@@ -88,11 +88,11 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 		in[c] = u->inputs[c];
 		out[c] = u->outputs[c];
 	}
-	a2_RamperPrepare(&f12->q, frames);
-	a2_RamperPrepare(&f12->cutoff, frames);
+	a2_PrepareRamper(&f12->q, frames);
+	a2_PrepareRamper(&f12->cutoff, frames);
 	if(f12->cutoff.delta)
 	{
-		a2_RamperRun(&f12->cutoff, frames);
+		a2_RunRamper(&f12->cutoff, frames);
 		f12->f1 = f12_pitch2coeff(f12);
 		df = (f12->f1 - f0 + ((int)frames >> 1)) / (int)frames;
 	}
@@ -118,7 +118,7 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 			f12->d2[c] = l;
 		}
 		f0 += df;
-		a2_RamperRun(&f12->q, 1);
+		a2_RunRamper(&f12->q, 1);
 	}
 }
 
@@ -145,7 +145,7 @@ static void f12_Process22(A2_unit *u, unsigned offset, unsigned frames)
 static void f12_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_filter12 *f12 = f12_cast(u);
-	a2_RamperSet(&f12->cutoff, v + *f12->transpose, start, dur);
+	a2_SetRamper(&f12->cutoff, v + *f12->transpose, start, dur);
 	if(dur < 256)
 		f12->f1 = f12_pitch2coeff(f12);
 }
@@ -156,13 +156,13 @@ static void f12_Q(A2_unit *u, int v, unsigned start, unsigned dur)
 #if 1
 	/* FIXME: The filter explodes at high cutoffs with the 256 limit! */
 	if(v < 512)
-		a2_RamperSet(&f12->q, 32768, start, dur);
+		a2_SetRamper(&f12->q, 32768, start, dur);
 #else
 	if(v < 256)
-		a2_RamperSet(&f12->q, 65536, start, dur);
+		a2_SetRamper(&f12->q, 65536, start, dur);
 #endif
 	else
-		a2_RamperSet(&f12->q, (65536 << 8) / v, start, dur);
+		a2_SetRamper(&f12->q, (65536 << 8) / v, start, dur);
 }
 
 static void f12_LP(A2_unit *u, int v, unsigned start, unsigned dur)
@@ -198,8 +198,8 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	ur[A2F12R_BP] = 0;
 	ur[A2F12R_HP] = 0;
 
-	a2_RamperInit(&f12->cutoff, 0);
-	a2_RamperInit(&f12->q, 0);
+	a2_InitRamper(&f12->cutoff, 0);
+	a2_InitRamper(&f12->q, 0);
 	f12_CutOff(u, ur[A2F12R_CUTOFF], 0, 0);
 	f12_Q(u, ur[A2F12R_Q], 0, 0);
 	f12->lp = ur[A2F12R_LP] >> 8;

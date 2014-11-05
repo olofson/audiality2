@@ -122,7 +122,7 @@ static void parse_args(int argc, const char *argv[])
 
 static void breakhandler(int a)
 {
-	fprintf(stderr, "Stopping...\n");
+	printf("Stopping...\n");
 	do_exit = 1;
 }
 
@@ -158,11 +158,8 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 				cfg->samplerate, settings[1].samplerate);
 
 	/* Create target wave */
-	/*
-	 * FIXME: Waves probably need a finetune property, or fractional period,
-	 * FIXME: so we can specify more accurately what pitch 0.0 means...
-	 */
-	if((wh = a2_WaveNew(st, A2_WWAVE, cfg->samplerate / A2_MIDDLEC, 0)) < 0)
+	wh = a2_NewWave(st, A2_WWAVE, cfg->samplerate / A2_MIDDLEC, 0);
+	if(wh < 0)
 	{
 		fprintf(stderr, "a2_WaveNew() failed!\n");
 		a2_Close(ss);
@@ -262,7 +259,7 @@ int main(int argc, const char *argv[])
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[0].samplerate);
 
-	fprintf(stderr, "Loading...\n");
+	printf("Loading...\n");
 	
 	/* Load jingle */
 	if((h = a2_Load(state, "data/a2jingle.a2s", 0)) < 0)
@@ -277,18 +274,18 @@ int main(int argc, const char *argv[])
 		fail(8, -ph);
 
 	/* Render */
-	fprintf(stderr, "Rendering...\n");
+	printf("Rendering...\n");
 	if((h = render_wave(state, songh)) < 0)
 		fail(9, -h);
 
 	/* Start playing! */
-	fprintf(stderr, "Playing...\n");
+	printf("Playing...\n");
 	a2_Now(state);
 	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
 		fail(10, -vh);
 
-	/* Wait for completion or abort */
+	/* Wait for abort */
 	while(!do_exit)
 	{
 		a2_Now(state);

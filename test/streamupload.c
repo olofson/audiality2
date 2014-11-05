@@ -49,7 +49,7 @@ static A2_handle upload_wave(A2_state *st, unsigned len)
 	int i;
 	int s = 0;
 	int16_t buf[FRAGSIZE];
-	if((wh = a2_WaveNew(st, A2_WMIPWAVE, 128, 0)) < 0)
+	if((wh = a2_NewWave(st, A2_WMIPWAVE, 128, 0)) < 0)
 		return wh;
 	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
 	{

@@ -615,12 +615,12 @@ unsigned a2_Sleep(unsigned milliseconds);
 
 /*TODO*/
 /* Calculate size of converted data */
-int a2_AudioConvertSize(A2_state *st, A2_sampleformats infmt,
+int a2_ConvertSize(A2_state *st, A2_sampleformats infmt,
 		A2_sampleformats outfmt, unsigned size);
 
 /*TODO*/
 /* Convert audio data from one format to another */
-A2_errors a2_AudioConvert(A2_state *st,
+A2_errors a2_Convert(A2_state *st,
 		A2_sampleformats infmt, const void *indata, unsigned insize,
 		A2_sampleformats outfmt, void *outdata, unsigned flags);
 

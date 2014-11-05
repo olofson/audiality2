@@ -60,7 +60,7 @@ static inline void waveshaper_process(A2_unit *u, unsigned offset,
 	A2_waveshaper *ws = waveshaper_cast(u);
 	unsigned s, c, end = offset + frames;
 	int32_t *in[A2WS_MAXCHANNELS], *out[A2WS_MAXCHANNELS];
-	a2_RamperPrepare(&ws->amount, frames);
+	a2_PrepareRamper(&ws->amount, frames);
 	for(c = 0; c < channels; ++c)
 	{
 		in[c] = u->inputs[c];
@@ -105,7 +105,7 @@ static inline void waveshaper_process(A2_unit *u, unsigned offset,
 				out[c][s] = vout;
 		}
 #endif
-		a2_RamperRun(&ws->amount, 1);
+		a2_RunRamper(&ws->amount, 1);
 	}
 }
 
@@ -138,7 +138,7 @@ static A2_errors waveshaper_Initialize(A2_unit *u, A2_vmstate *vms,
 	A2_waveshaper *ws = waveshaper_cast(u);
 	int *ur = u->registers;
 
-	a2_RamperInit(&ws->amount, 0);
+	a2_InitRamper(&ws->amount, 0);
 
 	ur[A2WSR_AMOUNT] = 0;
 
@@ -161,7 +161,7 @@ static A2_errors waveshaper_Initialize(A2_unit *u, A2_vmstate *vms,
 
 static void waveshaper_Amount(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	a2_RamperSet(&waveshaper_cast(u)->amount, v, start, dur);
+	a2_SetRamper(&waveshaper_cast(u)->amount, v, start, dur);
 }
 
 
