@@ -2811,8 +2811,8 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 	)
 	if((wd->symbol->v.i = a2_RenderWave(c->state,
 			wd->type, wd->period, wd->flags,
-			wd->samplerate, wd->length,
-			wd->program, wd->argc, wd->argv, props)) < 0)
+			wd->samplerate, wd->length, props,
+			wd->program, wd->argc, wd->argv)) < 0)
 		a2c_Throw(c, -wd->symbol->v.i);
 	if(wd->symbol->v.i < 0)
 		a2c_Throw(c, -wd->symbol->v.i);

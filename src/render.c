@@ -144,9 +144,8 @@ int a2_Render(A2_state *st,
  */
 A2_handle a2_RenderWave(A2_state *st,
 		A2_wavetypes wt, unsigned period, int flags,
-		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv,
-		A2_property *props)
+		unsigned samplerate, unsigned length, A2_property *props,
+		A2_handle program, unsigned argc, int *argv)
 {
 	int res;
 	A2_handle wh, sh;
