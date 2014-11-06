@@ -325,9 +325,8 @@ int a2_Run(A2_state *st, unsigned frames);
  */
 int a2_Render(A2_state *st,
 		A2_handle handle,
-		unsigned samplerate, unsigned length,
-		A2_handle program, unsigned argc, int *argv,
-		A2_property *props);
+		unsigned samplerate, unsigned length, A2_property *props,
+		A2_handle program, unsigned argc, int *argv);
 
 
 /*---------------------------------------------------------
