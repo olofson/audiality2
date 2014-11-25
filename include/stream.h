@@ -46,8 +46,12 @@ A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
  */
 A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset);
 
-/* Read the current read/write position of 'stream'. */
-unsigned a2_GetPosition(A2_state *st, A2_handle stream);
+/*
+ * Read the current read/write position of 'stream'.
+ *
+ * Returns the current offset, or a negated error code.
+ */
+int a2_GetPosition(A2_state *st, A2_handle stream);
 
 /*
  * Returns number of sample frames currently available for reading from

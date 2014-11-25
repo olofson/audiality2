@@ -100,7 +100,7 @@ A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset)
 }
 
 
-unsigned a2_GetPosition(A2_state *st, A2_handle stream)
+int a2_GetPosition(A2_state *st, A2_handle stream)
 {
 	A2_stream *str;
 	A2_errors res = a2_GetStream(st, stream, &str);
