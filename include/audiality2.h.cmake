@@ -324,7 +324,7 @@ int a2_Run(A2_state *st, unsigned frames);
  * Returns number of sample frames rendered, or a negated A2_errors error code.
  */
 int a2_Render(A2_state *st,
-		A2_handle handle,
+		A2_handle stream,
 		unsigned samplerate, unsigned length, A2_property *props,
 		A2_handle program, unsigned argc, int *argv);
 
