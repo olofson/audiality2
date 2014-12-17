@@ -436,9 +436,9 @@ static void parse_args(int argc, const char *argv[])
 			screenh = atoi(&argv[i][2]);
 			printf("[Display height: %d]\n", screenh);
 		}
-		else if(strncmp(argv[i], "-b", 2) == 0)
+		else if(strncmp(argv[i], "-bpp", 4) == 0)
 		{
-			screenbpp = atoi(&argv[i][2]);
+			screenbpp = atoi(&argv[i][4]);
 			printf("[Display bpp: %d]\n", screenbpp);
 		}
 		else if(strncmp(argv[i], "-d", 2) == 0)
@@ -447,7 +447,7 @@ static void parse_args(int argc, const char *argv[])
 			audiodriver = strdup(&argv[i][2]);
 			printf("[Audio driver: %s]\n", audiodriver);
 		}
-		else if(strncmp(argv[i], "-a", 2) == 0)
+		else if(strncmp(argv[i], "-b", 2) == 0)
 		{
 			audiobuf = atoi(&argv[i][2]);
 			printf("[Audio buffer: %d]\n", audiobuf);

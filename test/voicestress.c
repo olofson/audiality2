@@ -76,7 +76,7 @@ static void parse_args(int argc, const char *argv[])
 			audiodriver = &argv[i][2];
 			printf("[Driver: %s]\n", audiodriver);
 		}
-		else if(strncmp(argv[i], "-a", 2) == 0)
+		else if(strncmp(argv[i], "-b", 2) == 0)
 		{
 			audiobuf = atoi(&argv[i][2]);
 			printf("[Buffer: %d]\n", audiobuf);
