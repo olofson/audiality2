@@ -191,6 +191,7 @@ int main(int argc, const char *argv[])
 	/* Start playing! */
 	a2_Now(state);
 	a2_Play(state, a2_RootVoice(state), songh);
+	a2_Now(substate);
 	a2_Play(substate, a2_RootVoice(substate), songh);
 
 	/* Wait for completion or abort */
