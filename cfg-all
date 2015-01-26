@@ -45,7 +45,7 @@ create_build_dir_cross() {
 		mkdir $BUILDDIR/$dname
 	fi
 	cd $BUILDDIR/$dname
-	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=OFF
+	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=ON
 	if [ ! -e $BUILDDIR/$dname/test/data ]; then
 		ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
 	fi
@@ -61,8 +61,8 @@ create_build_dir debug Debug "host native" /usr
 echo -n "Looking for MXE in '$MXEPATH'... "
 if [ -e $MXEPATH ]; then
 	echo "Found!"
-	create_build_dir_cross mingw-release Release "MXE cross" i686-pc-mingw32
-	create_build_dir_cross mingw-debug Debug "MXE cross" i686-pc-mingw32
+	create_build_dir_cross mingw-release Release "MXE cross" i686-w64-mingw32.shared
+	create_build_dir_cross mingw-debug Debug "MXE cross" i686-w64-mingw32.shared
 else
 	echo "Not found!"
 	echo "(Please install MXE and set MXEPATH to cross-compile!)"
