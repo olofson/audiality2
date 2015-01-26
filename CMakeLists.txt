@@ -12,9 +12,12 @@ set(PACKAGE "audiality2-${VERSION_STRING}")
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 
+# For some reason, we can't do this more than once in one project with MXE...
+find_package(SDL)
+
 add_subdirectory(src)
-add_subdirectory(test)
 add_subdirectory(a2play)
+add_subdirectory(test)
 
 configure_file(include/audiality2.h.cmake
 	${CMAKE_SOURCE_DIR}/include/audiality2.h @ONLY)

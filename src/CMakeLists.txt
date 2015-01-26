@@ -53,8 +53,6 @@ set(sources ${sources}
 	drivers/mallocdrv.c
 )
 
-
-find_package(SDL)
 if(SDL_FOUND)
 	add_definitions(-DA2_HAVE_SDL)
 	include_directories(${SDL_INCLUDE_DIR})

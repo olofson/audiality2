@@ -38,7 +38,6 @@ target_link_libraries(streamtest ${AUDIALITY2_LIBRARY})
 add_executable(streamstress WIN32 MACOSX_BUNDLE streamstress.c)
 target_link_libraries(streamstress ${AUDIALITY2_LIBRARY})
 
-find_package(SDL)
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
 

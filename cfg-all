@@ -58,6 +58,7 @@ create_build_dir maintainer Maintainer "host native" /usr
 create_build_dir debug Debug "host native" /usr
 
 # MinGW32 cross build using MXE (http://mxe.cc/)
+echo
 echo -n "Looking for MXE in '$MXEPATH'... "
 if [ -e $MXEPATH ]; then
 	echo "Found!"
