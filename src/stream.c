@@ -1,7 +1,7 @@
 /*
  * stream.c - Audiality 2 stream interface
  *
- * Copyright 2013-2014 David Olofson <david@olofson.net>
+ * Copyright 2013-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -21,7 +21,7 @@
  */
 
 #include <stdlib.h>
-#include "stream.h"
+#include "a2_stream.h"
 #include "internals.h"
 
 

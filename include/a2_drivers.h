@@ -1,7 +1,7 @@
 /*
- * drivers.h - Audiality 2 device driver and configuration interfaces
+ * a2_drivers.h - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,7 +24,7 @@
 #define A2_DRIVERS_H
 
 #include <stdint.h>
-#include "types.h"
+#include "a2_types.h"
 
 #ifdef __cplusplus
 extern "C" {

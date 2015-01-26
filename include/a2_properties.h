@@ -1,7 +1,7 @@
 /*
- * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
+ * a2_properties.h - Audiality 2 property interface
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,7 +23,7 @@
 #ifndef A2_PROPERTIES_H
 #define A2_PROPERTIES_H
 
-#include "types.h"
+#include "a2_types.h"
 
 #ifdef __cplusplus
 extern "C" {

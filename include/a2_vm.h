@@ -1,7 +1,7 @@
 /*
- * vm.h - Public Audiality 2 VM declarations
+ * a2_vm.h - Public Audiality 2 VM declarations
  *
- * Copyright 2010-2012 David Olofson <david@olofson.net>
+ * Copyright 2010-2012, 2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,6 +28,15 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Number of VM registers */
+#define	A2_REGISTERS	32
+
+/* Maximum number of arguments to a VM program or function */
+#define	A2_MAXARGS	8
+
+/* Maximum number of entry points a VM program can have. (EP 0 is "main()".) */
+#define	A2_MAXEPS	8
 
 /* Voice and messages */
 typedef enum A2_vstates

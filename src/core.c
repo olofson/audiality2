@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,7 +24,6 @@
 #include <stdlib.h>
 #include <math.h>
 #include "internals.h"
-#include "dsp.h"
 #include "inline.h"
 #include "xinsert.h"
 

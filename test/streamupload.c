@@ -1,7 +1,7 @@
 /*
  * streamupload.c - Audiality 2 wave upload via the stream API
  *
- * Copyright 2013-2014 David Olofson <david@olofson.net>
+ * Copyright 2013-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <math.h>
 #include "audiality2.h"
-#include "waves.h"
 
 /* Fragment size for wave rendering/uploading */
 #define	FRAGSIZE	2048

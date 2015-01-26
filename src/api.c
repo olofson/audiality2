@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -25,7 +25,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <math.h>
-#include "dsp.h"
 #include "internals.h"
 #include "compiler.h"
 #include "xinsert.h"

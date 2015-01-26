@@ -1,7 +1,7 @@
 /*
  * limiter.h - Audiality 2 compressor/limiter unit
  *
- * Copyright 2013 David Olofson <david@olofson.net>
+ * Copyright 2013, 2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,7 +23,7 @@
 #ifndef A2_LIMITER_H
 #define A2_LIMITER_H
 
-#include "units.h"
+#include "a2_units.h"
 
 extern const A2_unitdesc a2_limiter_unitdesc;
 

@@ -5,7 +5,7 @@
  *	a2_Send() and a2_Detach(), to stress attached voice management along
  *	with wave management.
  *
- * Copyright 2014 David Olofson <david@olofson.net>
+ * Copyright 2014-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -31,7 +31,6 @@
 #include <unistd.h>
 #include <math.h>
 #include "audiality2.h"
-#include "waves.h"
 
 
 /* Length of waveform (samples) */

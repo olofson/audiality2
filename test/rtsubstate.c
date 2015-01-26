@@ -8,7 +8,7 @@
  *	NOTE:	This test needs a driver/API that supports multiple opens
  *		or multiple soundcards, or the substate will fail to open!
  *
- * Copyright 2013-2014 David Olofson <david@olofson.net>
+ * Copyright 2013-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -33,8 +33,6 @@
 #include <signal.h>
 #include <unistd.h>
 #include "audiality2.h"
-#include "waves.h"
-#include "units.h"
 
 /* Configuration */
 typedef struct TEST_settings {

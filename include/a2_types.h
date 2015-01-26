@@ -1,7 +1,7 @@
 /*
- * types.h - Audiality 2 basic data types
+ * a2_types.h - Audiality 2 basic data types
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

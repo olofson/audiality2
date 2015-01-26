@@ -5,7 +5,7 @@
  *	sink/source/insert APIs; a2_SinkCallback(), a2_SourceCallback(),
  *	a2_InsertCallback(), a2_OpenSink() and a2_OpenSource().
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,7 +27,7 @@
 #ifndef A2_XINSERT_H
 #define A2_XINSERT_H
 
-#include "units.h"
+#include "a2_units.h"
 #include "sfifo.h"
 
 typedef struct A2_xinsert A2_xinsert;

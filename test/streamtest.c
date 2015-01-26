@@ -1,7 +1,7 @@
 /*
  * streamtest.c - Test of asynchronous streaming via xsink and xsource
  *
- * Copyright 2014 David Olofson <david@olofson.net>
+ * Copyright 2014-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,7 +27,6 @@
 #include <unistd.h>
 #include <math.h>
 #include "audiality2.h"
-#include "waves.h"
 
 /* Fragment size for wave rendering/uploading */
 #define	FRAGSIZE	256

@@ -1,7 +1,7 @@
 /*
  * panmix.c - Audiality 2 PanMix unit
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -21,7 +21,6 @@
  */
 
 #include "panmix.h"
-#include "dsp.h"
 
 #define	A2PM_MAXINPUTS	2
 #define	A2PM_MAXOUTPUTS	2

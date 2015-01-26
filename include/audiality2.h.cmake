@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,8 +23,9 @@
 #ifndef AUDIALITY2_H
 #define AUDIALITY2_H
 
-#include "drivers.h"
-#include "properties.h"
+#include "a2_drivers.h"
+#include "a2_properties.h"
+#include "a2_waves.h"
 
 #ifdef __cplusplus
 extern "C" {

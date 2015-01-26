@@ -1,7 +1,7 @@
 /*
- * waves.h - Audiality 2 waveform API and unit programming interface
+ * a2_waves.h - Audiality 2 waveform API and unit programming interface
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,12 +23,18 @@
 #ifndef A2_WAVES_H
 #define A2_WAVES_H
 
-#include "audiality2.h"
-#include "stream.h"
+#include "a2_stream.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/* Default reference frequency for linear pitch 0.0; "middle C" */
+#define	A2_MIDDLEC	261.626f
+
+/* Number of waveform mipmap levels */
+#define	A2_MIPLEVELS	10
+
 
 /*
  * The definitions below define how the engine pads waves when preparing them.

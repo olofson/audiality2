@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,9 +28,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 
 #include <string.h>
 #include <stddef.h>
-#include "units.h"
-#include "drivers.h"
-#include "waves.h"
+#include "a2_units.h"
 #include "rchm.h"
 #include "sfifo.h"
 #include "platform.h"

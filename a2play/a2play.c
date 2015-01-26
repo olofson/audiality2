@@ -1,7 +1,7 @@
 /*
  * a2play.c - Audiality 2 command line player
  *
- * Copyright 2013-2014 David Olofson <david@olofson.net>
+ * Copyright 2013-2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -26,8 +26,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include "audiality2.h"
-#include "waves.h"
-#include "units.h"
+#include "a2_units.h"
 
 /* Silence detection window size (seconds) */
 #define	SILENCEWINDOW	0.25f

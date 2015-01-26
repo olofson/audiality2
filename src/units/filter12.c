@@ -22,7 +22,6 @@
 
 #include <math.h>
 #include "filter12.h"
-#include "dsp.h"
 
 #define	A2F12_MAXCHANNELS	2
 
