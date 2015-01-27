@@ -60,7 +60,7 @@ echo "Setting up build directories for native targets..."
 echo "=========================================================="
 
 setup_native release Release "host native" /usr
-§setup_native maintainer Maintainer "host native" /usr
+setup_native maintainer Maintainer "host native" /usr
 setup_native debug Debug "host native" /usr
 
 echo
