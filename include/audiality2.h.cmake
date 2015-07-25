@@ -421,7 +421,7 @@ A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
 	({								\
 		float fa[] = { args };					\
 		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < sizeof(ia) / sizeof(int); ++i)		\
+		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
 			ia[i] = fa[i] * 65536.0f;			\
 		a2_Starta(st, p, prg, sizeof(ia) / sizeof(int), ia);	\
 	})
@@ -440,7 +440,7 @@ A2_errors a2_Playa(A2_state *st, A2_handle parent, A2_handle program,
 	({								\
 		float fa[] = { args };					\
 		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < sizeof(ia) / sizeof(int); ++i)		\
+		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
 			ia[i] = fa[i] * 65536.0f;			\
 		a2_Playa(st, p, prg, sizeof(ia) / sizeof(int), ia);	\
 	})
@@ -452,7 +452,7 @@ A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
 	({								\
 		float fa[] = { args };					\
 		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < sizeof(ia) / sizeof(int); ++i)		\
+		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
 			ia[i] = fa[i] * 65536.0f;			\
 		a2_Senda(st, v, ep, sizeof(ia) / sizeof(int), ia);	\
 	})
@@ -464,7 +464,7 @@ A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
 	({								\
 		float fa[] = { args };					\
 		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < sizeof(ia) / sizeof(int); ++i)		\
+		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
 			ia[i] = fa[i] * 65536.0f;			\
 		a2_SendSuba(st, v, ep, sizeof(ia) / sizeof(int), ia);	\
 	})
