@@ -786,6 +786,14 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 				a2r_Error(st, res, "A2MT_START[2]");
 				a2_FlushEventQueue(st,
 						(A2_event **)&hi->d.data, -1);
+#ifdef DEBUG
+				/*
+				 * Eliminate sanity check warning! Releasing an
+				 * A2_TNEWVOICE handle is normally unsafe, but
+				 * this one's dead; RT context won't touch it.
+				 */
+				hi->typecode = A2_TVOICE;
+#endif
 				a2r_DetachHandle(st, e->b.start.voice);
 			}
 			break;
