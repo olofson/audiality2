@@ -20,10 +20,13 @@ add_subdirectory(a2play)
 add_subdirectory(test)
 
 configure_file(include/audiality2.h.cmake
-	${CMAKE_SOURCE_DIR}/include/audiality2.h @ONLY)
+	${AUDIALITY2_BINARY_DIR}/include/audiality2.h @ONLY)
+install(FILES ${AUDIALITY2_BINARY_DIR}/include/audiality2.h
+	DESTINATION include/Audiality2)
 install(DIRECTORY include/ DESTINATION include/Audiality2
 	FILES_MATCHING PATTERN "*.h")
 
-configure_file(audiality2.pc.cmake ${CMAKE_SOURCE_DIR}/audiality2.pc @ONLY)
-install(FILES ${CMAKE_SOURCE_DIR}/audiality2.pc
+configure_file(audiality2.pc.cmake ${AUDIALITY2_BINARY_DIR}/audiality2.pc
+	@ONLY)
+install(FILES ${AUDIALITY2_BINARY_DIR}/audiality2.pc
 	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")

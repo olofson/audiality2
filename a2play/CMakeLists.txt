@@ -3,6 +3,7 @@
 #include_directories(${AUDIALITY2_INCLUDE_DIR})
 
 # For local build, not relying on an installed library
+include_directories(${AUDIALITY2_BINARY_DIR}/include)
 include_directories(${AUDIALITY2_SOURCE_DIR}/include)
 link_directories(${AUDIALITY2_BINARY_DIR})
 

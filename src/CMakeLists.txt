@@ -1,5 +1,6 @@
 include(CheckIncludeFiles)
 
+include_directories(${AUDIALITY2_BINARY_DIR}/include)
 include_directories(${AUDIALITY2_SOURCE_DIR}/include)
 include_directories(${AUDIALITY2_SOURCE_DIR}/src)
 include_directories(${AUDIALITY2_SOURCE_DIR}/src/units)
