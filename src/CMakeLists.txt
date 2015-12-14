@@ -52,6 +52,7 @@ set(sources ${sources}
 	drivers/bufferdrv.c
 	drivers/dummydrv.c
 	drivers/mallocdrv.c
+	drivers/coreaudiodrv.c
 )
 
 if(SDL_FOUND)
@@ -69,6 +70,13 @@ find_package(Threads)
 
 
 add_library(audiality2 ${sources})
+
+if(APPLE)
+	find_library(CORE_AUDIO CoreAudio)
+	find_library(AUDIO_TOOLBOX AudioToolbox)
+
+	target_link_libraries(audiality2 ${CORE_AUDIO} ${AUDIO_TOOLBOX})
+endif(APPLE)
 
 if(UNIX)
 	target_link_libraries(audiality2 m)
