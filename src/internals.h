@@ -122,21 +122,6 @@ int a2ht_FindItem(A2_handletab *ht, A2_handle h);
 void a2ht_Cleanup(A2_handletab *ht);
 
 
-/*
- * Compare two timestamps. Returns (a - b) with correct handling of timestamp
- * wrapping.
- *
- * NOTE:
- *	This will assume that b is BEFORE a if the difference is more than half
- *	of the "wrap period"! This is to allow proper handling of messages that
- *	arrive late.
- */
-static inline int a2_TSDiff(unsigned a, unsigned b)
-{
-	return (int)(a - b);
-}
-
-
 /*---------------------------------------------------------
 	Configuration and drivers
 ---------------------------------------------------------*/
@@ -591,6 +576,7 @@ struct A2_state
 	volatile unsigned now_guard;	/* Guard, matching now_frames */
 
 	unsigned	timestamp;	/* Current timestamp for async API */
+	int		nudge_adjust;	/* TS nudge from a2_TimestampNudge() */
 	SFIFO		*fromapi;	/* Messages from async. API calls */
 	SFIFO		*toapi;		/* Responses to the API context */
 	A2_event	*eocevents;	/* To be sent to API at end of cycle */
@@ -921,7 +907,7 @@ A2_errors a2_RegisterWaveTypes(A2_state *st);
 
 A2_errors a2_OpenAPI(A2_state *st);
 A2_errors a2_RegisterAPITypes(A2_state *st);
-void a2r_PumpEngineMessages(A2_state *st);
+void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit);
 void a2r_ProcessEOCEvents(A2_state *st, unsigned frames);
 void a2_PumpAPIMessages(A2_state *st);
 void a2_CloseAPI(A2_state *st);

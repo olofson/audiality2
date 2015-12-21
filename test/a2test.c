@@ -3,7 +3,7 @@
  *
  * This code is in the public domain. Do what you like with it. NO WARRANTY!
  *
- * 2011-2014 David Olofson
+ * 2011-2015 David Olofson
  */
 
 #include <stdlib.h>
@@ -484,19 +484,10 @@ static void do_frame(void)
 	int dt = tick - lasttick;
 	now += dt;
 	lasttick = tick;
+	a2_PumpMessages(state);
 	handle_events(main_argc, main_argv);
 	update_main(dt);
 	gui_refresh();
-	/*
-	 * We're not explicitly timestamping messages, but we're still
-	 * calling this regularly, as it has the side effect of dealing
-	 * with stuff that the engine needs to do in the API context.
-	 *    We don't HAVE to do this, as it's also done by other
-	 * calls as well, but it's kind of annoying if realtime error
-	 * messages aren't printed until the next time the user
-	 * interacts with the application...
-	 */
-	a2_Now(state);
 }
 
 int main(int argc, char *argv[])

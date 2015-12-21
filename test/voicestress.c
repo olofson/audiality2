@@ -3,6 +3,9 @@
  *
  *	This test starts, communicates with, and releases voices at an extreme
  *	rate, in order to stress test the engine voice management logic.
+ *	  The expected result is a rapid stream of random notes, with a clearly
+ *	audible buzz at the 200 Hz rate at which the notes are played. The
+ *	printed "nudge" corrections are supposed to remain close to zero.
  *
  * Copyright 2014-2015 David Olofson <david@olofson.net>
  *
@@ -33,10 +36,13 @@
 
 
 /* Number of voices hold on to at any one time */
-#define	VOICES	10
+#define	VOICES	50
 
 /* Delay between notes (ms) */
-#define	DELAY	10
+#define	DELAY	5
+
+/* Timestamp nudge correction coefficient [0, 1] */
+#define	CORRECTION	0.01f
 
 
 /* Configuration */
@@ -165,8 +171,8 @@ int main(int argc, const char *argv[])
 	memset(vh, 0, sizeof(vh));
 	vhi = 0;
 	t = a2_GetTicks();
-	a2_Now(state);
 	fprintf(stderr, "Starting!\n");
+	a2_TimestampReset(state);
 	while(!do_exit)
 	{
 		/* Stop and detach! */
@@ -182,18 +188,18 @@ int main(int argc, const char *argv[])
 		if(vh[vhi] < 0)
 			fail(10, -vh[vhi]);
 
-		a2_Wait(state, DELAY);
-
-		vhi = (vhi + 1) % VOICES;
-
 		/* Timing... */
+		a2_TimestampBump(state, a2_ms2Timestamp(state, DELAY));
+		vhi = (vhi + 1) % VOICES;
 		if(vhi == 0)
 		{
+			int corr;
 			t += DELAY * VOICES;
 			while((t - (int)a2_GetTicks() > 0) && !do_exit)
 				a2_Sleep(1);
-			fprintf(stderr, "(batch)\n");
-			a2_Now(state);
+			corr = a2_TimestampNudge(state, 0, CORRECTION);
+			fprintf(stderr, "(nudge %f)\n", corr / 256.0f);
+			a2_PumpMessages(state);
 		}
 	}
 

@@ -142,6 +142,10 @@ static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
 	A2_wtosc *o = wtosc_cast(u);
 	if(w->d.wave.size[0])
 		return 0;
+#if DEBUG
+	fprintf(stderr, "Audiality 2: wtosc: Wave %d unloaded while "
+			"playing!\n", u->registers[A2OR_WAVE] >> 16);
+#endif
 	o->wave = NULL;
 	if(o->flags & A2_PROCADD)
 		u->Process = wtosc_OffAdd;

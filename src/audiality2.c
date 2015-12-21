@@ -460,6 +460,7 @@ A2_state *a2_Open(A2_config *config)
 		printf("A2_string:\t%d\n", sizeof(A2_string));
 		printf("A2_stackentry:\t%d\n", sizeof(A2_stackentry));
 		printf("A2_event:\t%d\n", sizeof(A2_event));
+		printf("A2_apimessage:\t%d\n", sizeof(A2_apimessage));
 		printf("A2_voice:\t%d\n", sizeof(A2_voice));
 		printf("A2_block:\t%d\n", sizeof(A2_block));
 		printf("A2_unit:\t%d\n", sizeof(A2_unit));
@@ -492,7 +493,8 @@ A2_state *a2_Open(A2_config *config)
 	a2_DumpConfig(st->config);
 	printf("------\n");
 #endif
-	a2_Now(st);
+	a2_poll_api(st);
+	a2_TimestampReset(st);
 	return st;
 }
 
@@ -593,7 +595,7 @@ void a2_Close(A2_state *st)
 
 	/* Handle engine/RT error messages, handle release notifications etc */
 	if(st->fromapi)
-		a2r_PumpEngineMessages(st);
+		a2r_PumpEngineMessages(st, st->now_frames);
 	/*
 	 * We lie about the frame count here, so that events will actually be
 	 * processed. Otherwise, we'll leak deleted shared objects that use

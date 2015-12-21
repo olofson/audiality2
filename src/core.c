@@ -1695,12 +1695,17 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	A2_voice *rootvoice = (A2_voice *)hi->d.data;
 	unsigned offset = 0;
 	unsigned remain = frames;
-	unsigned t1 = a2_GetTicks();	/* Event timing reference */
+	unsigned latelimit = st->now_frames;
 	uint64_t t1u = a2_GetMicros();	/* Monitoring: pre DSP timestamp */
 	uint64_t dur;
 
+	/* Update API message timestamping time reference */
+	st->now_frames = st->now_fragstart + (frames << 8);
+	st->now_ticks = a2_GetTicks();	/* Event timing reference */
+	st->now_guard = st->now_frames;
+
 	/* API message processing */
-	a2r_PumpEngineMessages(st);
+	a2r_PumpEngineMessages(st, latelimit);
 
 	/* Audio processing */
 	while(remain)
@@ -1725,8 +1730,8 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 		unsigned ld = dur * 100 / (t1u - st->now_micros);
 		if(ld > st->cpuloadmax)
 			st->cpuloadmax = ld;
+		st->now_micros = t1u;
 	}
-	st->now_micros = t1u;
 	if(st->cputimecount)
 	{
 		st->cputimeavg = st->cputimesum / st->cputimecount;
@@ -1740,11 +1745,6 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 		st->cputimesum = st->cputimecount = 0;
 		st->avgstart = t1u;
 	}
-
-	/* Update API message timestamping time reference */
-	st->now_frames = st->now_fragstart;
-	st->now_ticks = t1;
-	st->now_guard = st->now_frames;
 
 	/* Process end-of-cycle messages */
 	a2r_ProcessEOCEvents(st, frames);

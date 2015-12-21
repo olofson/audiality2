@@ -42,14 +42,25 @@ PlayTestWave3(P V=1 W=sine)
 PlayTestNote(P V=1)
 {
 	struct { wtosc; panmix }
-	w triangle; p P
-	a V; set a
+	w triangle; p (P + 1)
+	a V; d 1
+	p P
 	while a > 0.01 {
-		*a .8; d 10
+		*a .97; d 1
 	}
 	end
 .rel	a 0; d 10
 	1() { force rel }
+}
+
+// Short "blip" for timingtest.c
+PlayBlip(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine
+	p P
+	a V; set a
+	a 0; d 1
 }
 
 // Streaming voice program for streamstress.c

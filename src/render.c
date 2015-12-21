@@ -113,7 +113,7 @@ int a2_Render(A2_state *st,
 
 	res = a2_LastRTError(ss);
 
-	a2_Now(ss);
+	a2_TimestampReset(ss);
 	a2_Send(ss, h, 1);
 	a2_Release(ss, h);
 

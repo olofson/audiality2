@@ -233,14 +233,15 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		int i;
-		a2_Now(state);
+		a2_TimestampReset(state);
 		for(i = 0; i < STREAMS; ++i)
 			so_Run(state, &streams[i]);
 		a2_Sleep(POLLPERIOD);
+		a2_PumpMessages(state);
 	}
 
 	/* Fade root voice down to 0. (It will do a 100 ms ramp!) */
-	a2_Now(state);
+	a2_TimestampReset(state);
 	a2_Send(state, a2_RootVoice(state), 2, 0.0f);
 	a2_Sleep(200);
 

@@ -46,7 +46,7 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 
 	/* Tell engine context to install the client! */
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	am.target = voice;
 	am.b.common.action = A2MT_ADDXIC;
 	am.b.common.timestamp = st->timestamp;
@@ -442,7 +442,7 @@ static RCHM_errors xi_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 	A2_xinsert_client *xic = (A2_xinsert_client *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	am.target = xic->voice;
 	am.b.common.action = A2MT_REMOVEXIC;
 	am.b.common.timestamp = st->timestamp;

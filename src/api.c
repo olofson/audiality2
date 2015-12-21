@@ -368,7 +368,8 @@ void a2_CloseAPI(A2_state *st)
  * Engine side message pump
  */
 
-static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am)
+static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
+		unsigned latelimit)
 {
 	A2_event *e;
 	A2_event **eq = a2_GetEventQueue(st, am->target);
@@ -385,15 +386,15 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am)
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
 	if(am->size < A2_MSIZE(b.common.argc))
 		e->b.common.argc = 0;
-	if(a2_TSDiff(e->b.common.timestamp, st->now_frames) < 0)
+	if(a2_TSDiff(e->b.common.timestamp, latelimit) < 0)
 	{
 #ifdef DEBUG
 		fprintf(stderr, "Audiality 2: API message deliverad "
-				"%f frames late!\n", (st->now_frames -
-				e->b.common.timestamp) / 256.0f);
+				"%f frames late!\n",
+				(latelimit - e->b.common.timestamp) / 256.0f);
 #endif
 		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_forwardevent()[3]");
-		e->b.common.timestamp = st->now_frames;
+		e->b.common.timestamp = latelimit;
 	}
 	MSGTRACK(e->source = "a2r_em_forwardevent()";)
 	a2_SendEvent(eq, e);
@@ -414,7 +415,7 @@ static inline void a2r_em_eocevent(A2_state *st, A2_apimessage *am)
 	st->eocevents = e;
 }
 
-void a2r_PumpEngineMessages(A2_state *st)
+void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit)
 {
 	while(sfifo_Used(st->fromapi) >= A2_APIREADSIZE)
 	{
@@ -445,7 +446,7 @@ void a2r_PumpEngineMessages(A2_state *st)
 		  case A2MT_ADDXIC:
 		  case A2MT_REMOVEXIC:
 		  case A2MT_RELEASE:
-			a2r_em_forwardevent(st, &am);
+			a2r_em_forwardevent(st, &am, latelimit);
 			break;
 		  case A2MT_WAHP:
 			a2r_em_eocevent(st, &am);
@@ -517,7 +518,7 @@ void a2_PumpAPIMessages(A2_state *st)
 				a2_DetachStream(st, c->stream);
 			if(c->fifo)
 				sfifo_Close(c->fifo);
-		  	free(c);
+			free(c);
 			break;
 		  }
 		  case A2MT_ERROR:
@@ -686,10 +687,9 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 		  case A2_TXICLIENT:
 		  {
 			A2_apimessage am;
+			a2_poll_api(st);
 			if(!(st->config->flags & A2_TIMESTAMP))
-				a2_Now(st);
-			else
-				a2_poll_api(st);
+				a2_TimestampReset(st);
 			am.b.common.timestamp = st->timestamp;
 			am.target = handle;
 			if(hi->typecode == A2_TXICLIENT)
@@ -730,36 +730,107 @@ float a2_Rand(A2_state *st, float max)
 
 
 /*---------------------------------------------------------
-	Playing and controlling
+	Timestamping
 ---------------------------------------------------------*/
 
-void a2_Now(A2_state *st)
+A2_timestamp a2_TimestampNow(A2_state *st)
 {
-	unsigned nt;
-	a2_poll_api(st);
-	if(st->config->flags & A2_REALTIME)
-	{
-		unsigned nf;
-		int dt;
-		do {
-			nf = st->now_frames;
-			nt = nf + (st->config->buffer << 8);
-			dt = a2_GetTicks() - st->now_ticks;
-		} while(nf != st->now_guard);
-		if(dt < 0)
-			dt = 0;	/* Audio has been off for a looooong time... */
-		nt += (int64_t)st->msdur * dt >> 8;
-	}
-	else
-		nt = st->now_frames;
-	if(a2_TSDiff(nt, st->timestamp) >= 0)
-		st->timestamp = nt;
+	unsigned nf;
+	int dt;
+	if(!(st->config->flags & A2_REALTIME))
+		return st->now_frames;
+
+	do {
+		nf = st->now_frames;
+		dt = st->now_ticks;
+	} while(nf != st->now_guard);
+	dt = a2_GetTicks() - dt;
+	if(dt < 0)
+		dt = 0;	/* Audio has been off for a looooong time... */
+	return nf + (st->config->buffer << 8) + ((int64_t)st->msdur * dt >> 8);
 }
 
 
-void a2_Wait(A2_state *st, float dt)
+A2_timestamp a2_TimestampGet(A2_state *st)
 {
-	st->timestamp += (unsigned)(st->msdur * dt / 256.0f);
+	return st->timestamp;
+}
+
+
+A2_timestamp a2_TimestampSet(A2_state *st, A2_timestamp ts)
+{
+	A2_timestamp oldts = st->timestamp;
+#if DEBUG
+	if(a2_TSDiff(ts, st->timestamp) < 0)
+		fprintf(stderr, "Audiality 2: API timestamp moved %f frames "
+				"backwards by a2_TimestampSet()!\n",
+				a2_TSDiff(ts, st->timestamp) / -256.0f);
+#endif
+	st->timestamp = ts;
+	return oldts;
+}
+
+
+int a2_ms2Timestamp(A2_state *st, double t)
+{
+	return (unsigned)(st->msdur * t / 256.0f);
+}
+
+
+double a2_Timestamp2ms(A2_state *st, int ts)
+{
+	return ts * 256.0f / st->msdur;
+}
+
+
+A2_timestamp a2_TimestampReset(A2_state *st)
+{
+	return a2_TimestampSet(st, a2_TimestampNow(st));
+}
+
+
+A2_timestamp a2_TimestampBump(A2_state *st, int dt)
+{
+	A2_timestamp oldts = st->timestamp;
+	dt += st->nudge_adjust;
+	if(dt < 0)
+	{
+		st->nudge_adjust = dt;
+		dt = 0;
+	}
+	else
+		st->nudge_adjust = 0;
+	st->timestamp += dt;
+#if DEBUG
+	if(a2_TSDiff(st->timestamp, oldts) < 0)
+		fprintf(stderr, "Audiality 2: API timestamp moved %f frames "
+				"backwards by a2_TimestampBump()!\n",
+				a2_TSDiff(st->timestamp, oldts) / -256.0f);
+#endif
+	return oldts;
+}
+
+
+int a2_TimestampNudge(A2_state *st, int offset, float amount)
+{
+	A2_timestamp intended = a2_TimestampNow(st) - offset;
+#if DEBUG
+	if((amount < 0.0f) || (amount > 1.0f))
+		fprintf(stderr, "Audiality 2: a2_TimestampNudge() 'amount' is "
+				"%f, but should be in [0, 1]!\n", amount);
+#endif
+	st->nudge_adjust = a2_TSDiff(intended, st->timestamp) * amount;
+	return st->nudge_adjust;
+}
+
+
+/*---------------------------------------------------------
+	Playing and controlling
+---------------------------------------------------------*/
+
+void a2_PumpMessages(A2_state *st)
+{
+	a2_poll_api(st);
 }
 
 
@@ -776,7 +847,7 @@ A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
 	A2_errors res;
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = parent;
@@ -797,7 +868,7 @@ A2_errors a2_Playa(A2_state *st, A2_handle parent, A2_handle program,
 {
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = parent;
@@ -819,7 +890,7 @@ A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
 	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = voice;
@@ -841,7 +912,7 @@ A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
 	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = voice;
@@ -860,7 +931,7 @@ A2_errors a2_Kill(A2_state *st, A2_handle voice)
 {
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = voice;
@@ -874,7 +945,7 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice)
 {
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_Now(st);
+		a2_TimestampReset(st);
 	else
 		a2_poll_api(st);
 	am.target = voice;

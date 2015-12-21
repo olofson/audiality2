@@ -183,7 +183,7 @@ int main(int argc, const char *argv[])
 
 	/* Start playing! */
 	fprintf(stderr, "Playing...\n");
-	a2_Now(state);
+	a2_TimestampReset(state);
 	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
 		fail(-vh);
@@ -191,11 +191,11 @@ int main(int argc, const char *argv[])
 	/* Wait for completion or abort */
 	while(!do_exit)
 	{
-		a2_Now(state);
 		a2_Sleep(100);
+		a2_PumpMessages(state);
 	}
 
-	a2_Now(state);
+	a2_TimestampReset(state);
 	a2_Send(state, vh, 1);
 	a2_Sleep(1000);
 

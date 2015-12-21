@@ -1,7 +1,33 @@
 /*
- * waveupload.c - Audiality 2 wave upload via a2_WaveUpload()
+ * timingtest.c - Audiality 2 timestamping stability test
  *
- * Copyright 2014-2015 David Olofson <david@olofson.net>
+ * OVERVIEW
+ *
+ *	This test starts short "notes" at very close intervals, in order to
+ *	verify that timestamping is working correctly, and that the "nudge"
+ *	logic keeps API and engine time bases in sync, without introducing too
+ *	audible artifacts.
+ *	  The expected result is a 1000 Hz "tone," consisting of short notes
+ *	played at 1 ms intervals. Ideally, there should be no variations, such
+ *	as pitch variations, phasing or other artifacts in the sound generated.
+ *
+ * KNOWN ISSUES
+ *
+ *   Aliasing distortion
+ *	There is a known problem with artifacts when starting wtosc oscillators
+ *	at varying subsample times during a sample frame. Thus, at this point,
+ *	this test can only generate a perfectly clean result if the output
+ *	sample rate is a multiple of 1 kHz.
+ *
+ *   Timing issues with API/driver/hardware resampling
+ *	There is also a problem with some APIs, drivers and sound cards that
+ *	can resample on the fly. Some of them cause uneven callback timing, as
+ *	they insert or drop calls to regulate their internal buffer level.
+ *	  It may or may not be possible to have Audiality 2 detect and handle
+ *	this situation, but as it is, all we can do is recommend that users try
+ *	different sample rates to avoid this issue.
+ *
+ * Copyright 2015 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -28,11 +54,16 @@
 #include <math.h>
 #include "audiality2.h"
 
-#define	WAVELEN	20000
-#define	WAVEPER	128
-#define	DECAY	0.9997f
-#define	FMDEPTH	10.0f
-#define	FMDECAY	0.9995f
+
+/* Number of blips to play between each timestamp nudge */
+#define	BATCH		100
+
+/* Delay between notes (ms) */
+#define	DELAY		1
+
+/* Timestamp nudge correction coefficient [0, 1] */
+#define	CORRECTION	0.01f
+
 
 /* Configuration */
 const char *audiodriver = "default";
@@ -42,8 +73,6 @@ int audiobuf = 4096;
 int waverate = 0;
 
 static int do_exit = 0;
-
-int16_t *wbuf = NULL;
 
 
 static void usage(const char *exename)
@@ -116,16 +145,18 @@ static void breakhandler(int a)
 static void fail(unsigned where, A2_errors err)
 {
 	fprintf(stderr, "ERROR at %d: %s\n", where, a2_ErrorString(err));
-	free(wbuf);
 	exit(100);
 }
 
 
+#ifdef _WIN32
+int main(int argc, char *argv[])
+#else
 int main(int argc, const char *argv[])
+#endif
 {
-	int s;
-	float a, fmd;
-	A2_handle h, ph, wh, vh;
+	int b, t;
+	A2_handle h, ph;
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
@@ -153,50 +184,33 @@ int main(int argc, const char *argv[])
 	/* Load wave player program */
 	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
 		fail(5, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave2")) < 0)
+	if((ph = a2_Get(state, h, "PlayBlip")) < 0)
 		fail(6, -ph);
 
-	/* Render! */
-	fprintf(stderr, "Rendering...\n");
-	if(!(wbuf = malloc(sizeof(int16_t) * WAVELEN)))
-		fail(7, A2_OOMEMORY);
-	a = 32767.0f;
-	fmd = FMDEPTH;
-	for(s = 0; s < WAVELEN; ++s)
-	{
-		float phase = s * 2.0f * M_PI / WAVEPER;
-		float poffs = sin(phase) * fmd;
-		wbuf[s] = sin(phase + poffs) * a;
-		a *= DECAY;
-		fmd *= FMDECAY;
-	}
-
-	fprintf(stderr, "Uploading...\n");
-	wh = a2_UploadWave(state, A2_WWAVE, WAVEPER, 0,
-			A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
-	if(wh < 0)
-		fail(8, -wh);
-
-	/* Start playing! */
-	fprintf(stderr, "Playing...\n");
+	b = 0;
+	t = a2_GetTicks();
+	fprintf(stderr, "Starting!\n");
 	a2_TimestampReset(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, -2.0f, 0.5f, wh);
-	if(vh < 0)
-		fail(10, -vh);
-
-	/* Wait for completion or abort */
 	while(!do_exit)
 	{
-		a2_Sleep(100);
-		a2_PumpMessages(state);
+		/* Play! */
+		a2_Play(state, a2_RootVoice(state), ph, 1.0f, 0.5f);
+
+		/* Timing... */
+		a2_TimestampBump(state, a2_ms2Timestamp(state, DELAY));
+		b = (b + 1) % BATCH;
+		if(b == 0)
+		{
+			int corr;
+			t += DELAY * BATCH;
+			while((t - (int)a2_GetTicks() > 0) && !do_exit)
+				a2_Sleep(1);
+			corr = a2_TimestampNudge(state, 0, CORRECTION);
+			fprintf(stderr, "(nudge %f)\n", corr / 256.0f);
+			a2_PumpMessages(state);
+		}
 	}
 
-	a2_TimestampReset(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
-	a2_Sleep(1000);
-
 	a2_Close(state);
-	free(wbuf);
 	return 0;
 }

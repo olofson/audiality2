@@ -33,6 +33,7 @@ extern "C" {
 ---------------------------------------------------------*/
 
 typedef	int A2_handle;
+typedef	unsigned A2_timestamp;
 typedef struct A2_driver A2_driver;
 typedef struct A2_config A2_config;
 typedef struct A2_state A2_state;
@@ -251,7 +252,7 @@ typedef enum A2_initflags
 {
 	/* Flags for A2_config */
 	A2_EXPORTALL =	0x00000100,	/* Export all programs! (Debug/tool) */
-	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Now()/a2_Wait() API */
+	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Timestamp*() API */
 	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect (JACK etc) */
 	A2_REALTIME =	0x00000800,	/* Configure for realtime operation */
 	A2_SILENT =	0x00001000,	/* No API context stderr errors */

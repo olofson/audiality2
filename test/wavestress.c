@@ -47,11 +47,21 @@
 /* Modulation depth decay coefficient */
 #define	FMDECAY	0.995f
 
-/* Number of waves to buffer */
+/*
+ * Number of waves to buffer
+ *
+ * NOTE:
+ *	We actually have twice as many handles, because when rendering a new
+ *	batch of waves, we need to keep the old batch of waves around until
+ *	they've stopped playing.
+ */
 #define	WAVES	100
 
 /* Delay between notes (ms) */
 #define	DELAY	10
+
+/* Timestamp nudge correction coefficient [0, 1] */
+#define	CORRECTION	0.01f
 
 
 /* Configuration */
@@ -148,7 +158,7 @@ int main(int argc, const char *argv[])
 #endif
 {
 	int s, whi, t;
-	A2_handle h, ph, wh[WAVES];
+	A2_handle h, ph, wh[WAVES * 2];
 	A2_driver *drv;
 	A2_config *cfg;
 	A2_state *state;
@@ -187,8 +197,8 @@ int main(int argc, const char *argv[])
 	memset(wh, 0, sizeof(wh));
 	whi = 0;
 	t = a2_GetTicks();
-	a2_Now(state);
 	fprintf(stderr, "Starting!\n");
+	a2_TimestampReset(state);
 	while(!do_exit)
 	{
 		A2_errors res;
@@ -221,18 +231,18 @@ int main(int argc, const char *argv[])
 		if(res)
 			fail(10, res);
 
-		a2_Wait(state, DELAY);
-
-		whi = (whi + 1) % WAVES;
-
 		/* Timing... */
-		if(whi == 0)
+		a2_TimestampBump(state, a2_ms2Timestamp(state, DELAY));
+		whi = (whi + 1) % (WAVES * 2);
+		if((whi % WAVES) == 0)
 		{
+			int corr;
 			t += DELAY * WAVES;
 			while((t - (int)a2_GetTicks() > 0) && !do_exit)
 				a2_Sleep(1);
-			fprintf(stderr, "(batch)\n");
-			a2_Now(state);
+			corr = a2_TimestampNudge(state, 0, CORRECTION);
+			fprintf(stderr, "(nudge %f)\n", corr / 256.0f);
+			a2_PumpMessages(state);
 		}
 	}
 

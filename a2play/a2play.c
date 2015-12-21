@@ -555,7 +555,7 @@ int main(int argc, const char *argv[])
 	}
 
 	/* Start playing! */
-	a2_Now(state);
+	a2_TimestampReset(state);
 	tcb = a2_SinkCallback(state, a2_RootVoice(state), sink_process, NULL);
 	if(tcb < 0)
 		fail(-tcb);
@@ -572,14 +572,14 @@ int main(int argc, const char *argv[])
 		/* Wait for completion or abort */
 		while(!do_exit)
 		{
-			a2_Now(state);
+			a2_PumpMessages(state);
 			a2_Sleep(10);
 		}
 
 		fprintf(stderr, "a2play: Stopping...\n");
 
 		/* Fade out */
-		a2_Now(state);
+		a2_TimestampReset(state);
 		a2_Send(state, a2_RootVoice(state), 2, 0.0f);
 		/* FIXME: Account for actual output latency! */
 		a2_Sleep(200);
@@ -590,7 +590,7 @@ int main(int argc, const char *argv[])
 		while(!do_exit)
 		{
 			a2_Run(state, cfg->buffer);
-			a2_Now(state);
+			a2_PumpMessages(state);
 		}
 	}
 	fprintf(stderr, "a2play: Stopped. %d sample frames played.\n", 

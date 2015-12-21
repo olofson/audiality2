@@ -172,6 +172,7 @@ int main(int argc, const char *argv[])
 	/* Record some audio from a CaptureVoice */
 	fprintf(stderr, "Capturing %d sample frames...\n", length);
 	position = 0;
+	a2_TimestampReset(st);
 	if((h = a2_Start(st, a2_RootVoice(st), captureprogram)) < 0)
 		fail(11, -h);
 	if((streamh = a2_OpenSink(st, h, 0, samplerate * STREAMBUFFER / 1000,
@@ -180,7 +181,7 @@ int main(int argc, const char *argv[])
 	a2_Play(st, h, songh);
 	while(!do_exit && (position < length))
 	{
-		a2_Now(st);
+		a2_TimestampReset(st);
 		while((n = a2_Available(st, streamh)) > 0)
 		{
 			if(n > length - position)
@@ -199,12 +200,15 @@ int main(int argc, const char *argv[])
 			fail(14, -n);
 		fprintf(stderr, "[%d]\n", position);
 		a2_Sleep(POLLPERIOD);
+		a2_PumpMessages(st);
 	}
+	a2_TimestampReset(st);
 	a2_Kill(st, h);
 
 	/* Play back through a StreamVoice */
 	fprintf(stderr, "Playing...\n");
 	position = 0;
+	a2_TimestampReset(st);
 	if((h = a2_Start(st, a2_RootVoice(st), streamprogram)) < 0)
 		fail(15, -h);
 	if((streamh = a2_OpenSource(st, h, 0, samplerate * STREAMBUFFER / 1000,
@@ -212,7 +216,7 @@ int main(int argc, const char *argv[])
 		fail(16, -streamh);
 	while(!do_exit && (position < length))
 	{
-		a2_Now(st);
+		a2_TimestampReset(st);
 		while((n = a2_Space(st, streamh)) > 0)
 		{
 			if(n > length - position)
@@ -231,6 +235,7 @@ int main(int argc, const char *argv[])
 			fail(18, -n);
 		fprintf(stderr, "[%d]\n", position);
 		a2_Sleep(POLLPERIOD);
+		a2_PumpMessages(st);
 	}
 
 	fprintf(stderr, "Waiting for stream buffer to drain...\n");
@@ -238,6 +243,7 @@ int main(int argc, const char *argv[])
 	{
 		fprintf(stderr, "[%d]\n", n);
 		a2_Sleep(POLLPERIOD);
+		a2_PumpMessages(st);
 	}
 
 	fprintf(stderr, "Done!\n");

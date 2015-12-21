@@ -187,16 +187,16 @@ int main(int argc, const char *argv[])
 	songh = a2_Get(state, h, "Song");
 
 	/* Start playing! */
-	a2_Now(state);
+	a2_TimestampReset(state);
+	a2_TimestampReset(substate);
 	a2_Play(state, a2_RootVoice(state), songh);
-	a2_Now(substate);
 	a2_Play(substate, a2_RootVoice(substate), songh);
 
 	/* Wait for completion or abort */
 	while(!do_exit)
 	{
-		a2_Now(state);
 		a2_Sleep(100);
+		a2_PumpMessages(state);
 	}
 
 	/*

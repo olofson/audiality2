@@ -148,9 +148,6 @@ A2_state *a2_Open(A2_config *config);
  * context, allowing the substate to perform realtime or offline processing
  * independent of the master state.
  *
-TODO: What about a2_Now()? Should we add an offline version that just sets the
-TODO: current time in terms of audio samples at the state's sample rate?
- *
  * NOTE:
  *	Substates are NOT reentrant/thread safe in relation to each other, or
  *	their master states! To safely perform background rendering in another
@@ -310,6 +307,11 @@ int a2_UnloadAll(A2_state *st);
  * the "buffer" driver is used for this, and this is the default driver for
  * states created with a2_SubState().
  *
+ * NOTE:
+ *	With an A2_REALTIME state, this call does not need to be made from the
+ *	API context! It essentially replaces the realtime callback of a normal
+ *	audio API driver.
+ *
  * Returns the number of sample frames (not bytes!) actually rendered, or a
  * negated A2_errors error code.
  */
@@ -359,6 +361,84 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i);
 
 
 /*---------------------------------------------------------
+	Timestamping
+---------------------------------------------------------*/
+
+/*
+ * Compare two timestamps. Returns (a - b) with correct handling of timestamp
+ * wrapping.
+ *
+ * NOTE:
+ *	This will assume that b is BEFORE a if the difference is more than half
+ *	of the "wrap period"! This is to allow proper handling of messages that
+ *	arrive late.
+ */
+static inline int a2_TSDiff(A2_timestamp a, A2_timestamp b)
+{
+	return (int)(a - b);
+}
+
+/*
+ * Calculates a timestamp that would have commands sent right away applied as
+ * soon as possible with constant latency.
+ */
+A2_timestamp a2_TimestampNow(A2_state *st);
+
+/*
+ * Get the current API timestamp.
+ */
+A2_timestamp a2_TimestampGet(A2_state *st);
+
+/*
+ * Set new API timestamp for subsequent commands. Returns the previous
+ * timestamp.
+ */
+A2_timestamp a2_TimestampSet(A2_state *st, A2_timestamp ts);
+
+/*
+ * Convert from milliseconds to engine timestamp (fixed point fractional audio
+ * frames).
+ */
+int a2_ms2Timestamp(A2_state *st, double t);
+
+/*
+ * Convert from engine timestamp (fixed point fractional audio frames) to
+ * milliseconds.
+ */
+double a2_Timestamp2ms(A2_state *st, int ts);
+
+/*
+ * Set the API timestamp so that subsequent commands are executed as soon as
+ * possible with constant latency. Returns the previous value of the API
+ * timestamp.
+ */
+A2_timestamp a2_TimestampReset(A2_state *st);
+
+/*
+ * Bump the timestamp for subsequent commands by the specified amount, adjusted
+ * by any nudge amount calculated by the last a2_TimestampNudge() call. The
+ * nudge amount is clamped so that the API timestamp is never moved backwards,
+ * and any remainder is pushed to the next a2_TimestampBump() call.
+ *
+ * Returns the previous timestamp.
+ */
+A2_timestamp a2_TimestampBump(A2_state *st, int dt);
+
+/*
+ * Calculate a full ('amount' == 1.0f) or partial ('amount' < 1.0f) adjustment
+ * that would bring the API timestamp towards (a2_TimestampNow() - offset).
+ *
+ * Returns the calculated value, which is also stored internally, and applied
+ * by the next call to, or next few calls to, a2_TimestampBump().
+ *
+ * NOTE:
+ *	This call does NOT change the API timestamp. Any necessary adjustments
+ *	are handled by subsequent a2_TimestampBump() calls.
+ */
+int a2_TimestampNudge(A2_state *st, int offset, float amount);
+
+
+/*---------------------------------------------------------
 	Playing and controlling
 ---------------------------------------------------------*/
 
@@ -366,11 +446,9 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i);
  * Background processing
  *
  *	Due to the lock-free nature of Audiality 2, there are asynchronous jobs
- *	that need to be performed in the API context. As of now, there are no
- *	dedicated background threads for this purpose, so it is handled by
- *	running the API message pump inside API calls that typically deal with
+ *	that need to be performed in the API context. This is done by running
+ *	the API message pump inside API calls that typically deal with
  *	timestamped messages, namely:
- *		a2_Now()
  *		a2_Start*()
  *		a2_Play*()
  *		a2_Send*()
@@ -378,25 +456,14 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i);
  *		a2_Kill()
  *		a2_KillSub()
  *
+ *	If none of the above are called regularly, the application should call
+ *	a2_PumpMessages(), to explicitly process API messages.
+ *
  *	a2_Release(), a2_*Callback(), a2_OpenSink(), a2_OpenSource() and other
  *	calls may pump API messages as well in certain situations, but that is
  *	not to be relied upon in any way.
  */
-
-/*
- * Schedule subsequent commands to be executed as soon as possible with
- * constant latency.
- *
- * NOTE: It is recommended that a2_Now() is called regularly (for example, once
- *       per frame in a video game), even when not using A2_TIMESTAMP. (See
- *       "Background processing" above.)
- */
-void a2_Now(A2_state *st);
-
-/*
- * Bump the timestamp for subsequent commands. (milliseconds)
- */
-void a2_Wait(A2_state *st, float dt);
+void a2_PumpMessages(A2_state *st);
 
 /*
  * Create a new voice under voice 'parent', running the default group program,
