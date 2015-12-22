@@ -484,7 +484,7 @@ static inline void a2_detach_or_free_handle(A2_state *st, A2_handle h)
  * API side message pump
  */
 
-void a2_PumpAPIMessages(A2_state *st)
+void a2_PumpMessages(A2_state *st)
 {
 	while(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
 	{
@@ -687,7 +687,7 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 		  case A2_TXICLIENT:
 		  {
 			A2_apimessage am;
-			a2_poll_api(st);
+			a2_PumpMessages(st);
 			if(!(st->config->flags & A2_TIMESTAMP))
 				a2_TimestampReset(st);
 			am.b.common.timestamp = st->timestamp;
@@ -828,12 +828,6 @@ int a2_TimestampNudge(A2_state *st, int offset, float amount)
 	Playing and controlling
 ---------------------------------------------------------*/
 
-void a2_PumpMessages(A2_state *st)
-{
-	a2_poll_api(st);
-}
-
-
 A2_handle a2_NewGroup(A2_state *st, A2_handle parent)
 {
 	return a2_Starta(st, parent, a2_Get(st, A2_ROOTBANK, "a2_groupdriver"),
@@ -848,8 +842,6 @@ A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = parent;
 	am.b.common.action = A2MT_START;
 	am.b.common.timestamp = st->timestamp;
@@ -869,8 +861,6 @@ A2_errors a2_Playa(A2_state *st, A2_handle parent, A2_handle program,
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = parent;
 	am.b.common.action = A2MT_PLAY;
 	am.b.common.timestamp = st->timestamp;
@@ -891,8 +881,6 @@ A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = voice;
 	am.b.common.action = A2MT_SEND;
 	am.b.common.timestamp = st->timestamp;
@@ -913,8 +901,6 @@ A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
 		return A2_INDEXRANGE;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = voice;
 	am.b.common.action = A2MT_SENDSUB;
 	am.b.common.timestamp = st->timestamp;
@@ -932,8 +918,6 @@ A2_errors a2_Kill(A2_state *st, A2_handle voice)
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = voice;
 	am.b.common.action = A2MT_KILL;
 	am.b.common.timestamp = st->timestamp;
@@ -946,8 +930,6 @@ A2_errors a2_KillSub(A2_state *st, A2_handle voice)
 	A2_apimessage am;
 	if(!(st->config->flags & A2_TIMESTAMP))
 		a2_TimestampReset(st);
-	else
-		a2_poll_api(st);
 	am.target = voice;
 	am.b.common.action = A2MT_KILLSUB;
 	am.b.common.timestamp = st->timestamp;

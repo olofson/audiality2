@@ -909,7 +909,6 @@ A2_errors a2_OpenAPI(A2_state *st);
 A2_errors a2_RegisterAPITypes(A2_state *st);
 void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit);
 void a2r_ProcessEOCEvents(A2_state *st, unsigned frames);
-void a2_PumpAPIMessages(A2_state *st);
 void a2_CloseAPI(A2_state *st);
 
 void a2r_DetachHandle(A2_state *st, A2_handle h);
@@ -980,12 +979,6 @@ static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
 	if(sfifo_Write(f, m, size) != size)
 		return A2_INTERNAL + 22;
 	return A2_OK;
-}
-
-static inline void a2_poll_api(A2_state *st)
-{
-	if(sfifo_Used(st->toapi) >= A2_APIREADSIZE)
-		a2_PumpAPIMessages(st);
 }
 
 

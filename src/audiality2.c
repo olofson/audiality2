@@ -493,7 +493,7 @@ A2_state *a2_Open(A2_config *config)
 	a2_DumpConfig(st->config);
 	printf("------\n");
 #endif
-	a2_poll_api(st);
+	a2_PumpMessages(st);
 	a2_TimestampReset(st);
 	return st;
 }
@@ -603,7 +603,7 @@ void a2_Close(A2_state *st)
 	 */
 	a2r_ProcessEOCEvents(st, 1);
 	if(st->toapi)
-		a2_PumpAPIMessages(st);
+		a2_PumpMessages(st);
 
 	/* Close the realtime context of the engine */
 	if(st->rootvoice >= 0)
