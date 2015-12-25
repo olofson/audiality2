@@ -77,18 +77,13 @@ void a2_DumpConfig(A2_config *c)
 	printf("       drivers:\n");
 	while(d)
 	{
-		const char *dt, *rt;
-		switch(d->type)
-		{
-		  case A2_SYSDRIVER:	dt = "SYS"; break;
-		  case A2_AUDIODRIVER:	dt = "AUDIO"; break;
-		  default:		dt = "<unknown>"; break;
-		}
+		const char *rt;
 		if(d->flags & A2_REALTIME)
 			rt = ", REALTIME";
 		else
 			rt = "";
-		printf("           \"%s\" (%s%s)\n", d->name, dt, rt);
+		printf("           \"%s\" (%s%s)\n", d->name,
+				a2_DriverTypeName(d->type), rt);
 		d = d->next;
 	}
 #endif
@@ -250,7 +245,6 @@ void a2_CloseDriver(A2_driver *driver)
 	Driver registry
 ---------------------------------------------------------*/
 
-typedef struct A2_regdriver A2_regdriver;
 struct A2_regdriver
 {
 	A2_regdriver	*next;
@@ -577,4 +571,56 @@ void a2_DestroyDriver(A2_driver *driver)
 	else
 		free(driver);
 	a2_remove_api_user();
+}
+
+
+A2_regdriver *a2_FindDriver(A2_drivertypes type, A2_regdriver *prev)
+{
+	/*
+	 * NOTE:
+	 *	This is kind of nasty when used without any other API users,
+	 *	because the driver registry will be initialized and closed on
+	 *	every call. However, this shouldn't be a problem, as the only
+	 *	driver entries available in that situation are the statically
+	 *	allocated ones, and they'll be linked in the exact same way in
+	 *	every initialization.
+	 */
+	if(a2_add_api_user() != A2_OK)
+		return NULL;
+	a2_MutexLock(&a2_driver_registry_mtx);
+	a2_register_builtin_drivers();
+	if(prev)
+		prev = prev->next;
+	else
+		prev = a2_driver_registry;
+	if(type != A2_ANYDRIVER)
+		while(prev && prev->type != type)
+			prev = prev->next;
+	a2_MutexUnlock(&a2_driver_registry_mtx);
+	a2_remove_api_user();
+	return prev;
+}
+
+
+const char *a2_DriverName(A2_regdriver *driver)
+{
+	return driver->name;
+}
+
+
+A2_drivertypes a2_DriverType(A2_regdriver *driver)
+{
+	return driver->type;
+}
+
+
+const char *a2_DriverTypeName(A2_drivertypes dt)
+{
+	switch(dt)
+	{
+	  case A2_ANYDRIVER:	return "<any>";
+	  case A2_SYSDRIVER:	return "SYS";
+	  case A2_AUDIODRIVER:	return "AUDIO";
+	  default:		return "<unknown>";
+	}
 }

@@ -32,7 +32,8 @@ extern "C" {
 
 typedef enum A2_drivertypes
 {
-	A2_SYSDRIVER = 0,	/* System driver (realtime memory manager etc) */
+	A2_ANYDRIVER = 0,	/* Any driver type */
+	A2_SYSDRIVER,		/* System driver (memory manager etc) */
 	A2_AUDIODRIVER		/* Audio I/O driver */
 } A2_drivertypes;
 
@@ -67,9 +68,9 @@ struct A2_config
  *
  * If no drivers are added, default drivers will be instantiated as needed when
  * an engine state is opened. An application may add builtin drivers retrieved
- * with a2_GetDriver(), or custom drivers provided by the application. This way,
- * applications can interface Audiality 2 with practically any API, engine or
- * environment.
+ * with a2_GetDriver(), or custom drivers provided by the application. This
+ * way, applications can interface Audiality 2 with practically any API,
+ * engine or environment.
  *
  * NOTE:
  *	The returned A2_config must be closed using a2_CloseConfig(), unless
@@ -167,7 +168,11 @@ void a2_CloseDriver(A2_driver *driver);
 	Driver registry
 ---------------------------------------------------------*/
 
+/* Callback for creating a driver instance */
 typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type, const char *nameopts);
+
+/* Opaque pointer representing a registered driver */
+typedef struct A2_regdriver A2_regdriver;
 
 /* Add a driver to the driver registry. */
 A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
@@ -177,7 +182,8 @@ A2_errors a2_RegisterDriver(A2_drivertypes type, const char *name,
  * Remove the specified driver from the registry. NULL unregisters all drivers,
  * built-in ones included.
  *
- * Returns A2_NOTFOUND if no driver by the specified name exist in the registry.
+ * Returns A2_NOTFOUND if no driver of the specified type, by the specified
+ * name, exist in the registry.
  */
 A2_errors a2_UnregisterDriver(const char *name);
 
@@ -196,6 +202,25 @@ A2_driver *a2_NewDriver(A2_drivertypes type, const char *nameopts);
  * open, it will be closed automatically.
  */
 void a2_DestroyDriver(A2_driver *driver);
+
+/*
+ * Find registered driver. If 'type' is A2_ANYDRIVER, all types of drivers can
+ * be returned. If 'prev' is NULL, the first matching driver in the registry is
+ * returned.
+ *
+ * Returns an opaque driver registry entry pointer, or NULL, if no matching
+ * driver was found.
+ */
+A2_regdriver *a2_FindDriver(A2_drivertypes type, A2_regdriver *prev);
+
+/* Get name of driver */
+const char *a2_DriverName(A2_regdriver *driver);
+
+/* Get type of driver */
+A2_drivertypes a2_DriverType(A2_regdriver *driver);
+
+/* Get descriptive name of driver type code */
+const char *a2_DriverTypeName(A2_drivertypes dt);
 
 
 /*---------------------------------------------------------
@@ -241,7 +266,7 @@ TODO:	void (*APIFreeFromRT)(A2_sysdriver *driver, void *block);
  * NOTE:
  *	A few API calls need API/engine locking. In some cases, this may cause
  *	the engine to skip processing while the lock is held, rather than
- *	actually locking the realtime context!
+ *	actually blocking the realtime context until the lock is released!
  */
 typedef struct A2_audiodriver A2_audiodriver;
 struct A2_audiodriver

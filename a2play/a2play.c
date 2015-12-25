@@ -351,6 +351,7 @@ static void usage(const char *exename)
 	fprintf(stderr,	"\nUsage: %s [switches] <file>\n\n", exename);
 	fprintf(stderr, "Switches:  -d<name>[,opt[,opt[,...]]]\n"
 			"                       Audio driver + options\n"
+			"           -d?         List available drivers\n"
 			"           -b<n>       Audio buffer size (frames)\n"
 			"           -r<n>       Audio sample rate (Hz)\n"
 			"           -c<n>       Number of audio channels\n"
@@ -367,6 +368,16 @@ static void usage(const char *exename)
 }
 
 
+static void list_drivers(void)
+{
+	A2_regdriver *rd = NULL;
+	printf("Available drivers:\n");
+	while((rd = a2_FindDriver(A2_ANYDRIVER, rd)))
+		printf("    %s (%s)\n", a2_DriverName(rd),
+				a2_DriverTypeName(a2_DriverType(rd)));
+}
+
+
 /* Parse driver selection and configuration switches */
 static void parse_args(int argc, const char *argv[])
 {
@@ -377,6 +388,11 @@ static void parse_args(int argc, const char *argv[])
 			continue;
 		if(strncmp(argv[i], "-d", 2) == 0)
 		{
+			if(argv[i][2] == '?')
+			{
+				list_drivers();
+				exit(0);
+			}
 			audiodriver = &argv[i][2];
 			printf("[Audio driver: %s]\n", audiodriver);
 		}
