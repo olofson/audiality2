@@ -595,16 +595,32 @@ struct A2_state
 	uint32_t	randstate;	/* RAND* instruction RNG state */
 	uint32_t	noisestate;	/* 'wtosc' noise generator state */
 
+	/*
+	 * FIXME:
+	 *	These averages and stuff are racy and unreliable! The engine
+	 *	should manage these internally, and update the API state via
+	 *	messages.
+	 */
+	unsigned	instructions;	/* VM instruction counter */
+	unsigned	apimessages;	/* Number of API messages received */
+	unsigned	activevoicesmax;
+
 	int		statreset;	/* Flag to reset averaging/summing */
 	uint64_t	now_micros;	/* Performance monitoring timestamp */
 	uint64_t	avgstart;	/* Timestamp for averaging start */
-	unsigned	instructions;	/* VM instruction counter */
 	unsigned	cputimesum;	/* Time spent in audio callback */
 	unsigned	cputimecount;	/* Number of audio callbacks */
 	unsigned	cputimeavg;	/* Average time spent in callback */
 	unsigned	cputimemax;	/* Maximum time spent in audio cb */
 	unsigned	cpuloadmax;	/* Maximum CPU load */
 	unsigned	cpuloadavg;	/* Average CPU load */
+
+	int		tsstatreset;	/* Flag to reset timestamping stats */
+	unsigned	tssamples;	/* Number of messages */
+	int		tssum;		/* Sum of timestamp deadline margins */
+	int		tsavg;		/* Average TS deadline margin */
+	int		tsmin;		/* Minimum TS deadline margin */
+	int		tsmax;		/* Maximum TS deadline margin */
 
 	/* Global audio buffers */
 	A2_bus		*master;		/* Master outputs */

@@ -371,6 +371,7 @@ void a2_CloseAPI(A2_state *st)
 static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 		unsigned latelimit)
 {
+	int tsdiff;
 	A2_event *e;
 	A2_event **eq = a2_GetEventQueue(st, am->target);
 	if(!eq)
@@ -386,7 +387,14 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
 	if(am->size < A2_MSIZE(b.common.argc))
 		e->b.common.argc = 0;
-	if(a2_TSDiff(e->b.common.timestamp, latelimit) < 0)
+	tsdiff = a2_TSDiff(e->b.common.timestamp, latelimit);
+	if(tsdiff < st->tsmin)
+		st->tsmin = tsdiff;
+	if(tsdiff > st->tsmax)
+		st->tsmax = tsdiff;
+	st->tssum += tsdiff;
+	++st->tssamples;
+	if(tsdiff < 0)
 	{
 #ifdef DEBUG
 		fprintf(stderr, "Audiality 2: API message deliverad "
@@ -435,6 +443,7 @@ void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit)
 						"Engine side FIFO read error");
 				return;
 			}
+		++st->apimessages;
 		switch(am.b.common.action)
 		{
 		  case A2MT_PLAY:

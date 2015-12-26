@@ -395,6 +395,8 @@ A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent, unsigned when)
 	else if(!(v = a2_VoiceAlloc(st)))
 		return NULL;
 	++st->activevoices;
+	if(st->activevoices > st->activevoicesmax)
+		st->activevoicesmax = st->activevoices;
 	v->nestlevel = parent->nestlevel + 1;
 	v->next = parent->sub;
 	parent->sub = v;
@@ -430,6 +432,8 @@ A2_errors a2_init_root_voice(A2_state *st)
 		return -st->rootvoice;
 	v->handle = st->rootvoice;
 	++st->activevoices;
+	if(st->activevoices > st->activevoicesmax)
+		st->activevoicesmax = st->activevoices;
 	v->nestlevel = 0;
 	v->flags = A2_ATTACHED;
 	v->s.waketime = st->now_fragstart;
@@ -1697,7 +1701,17 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	unsigned remain = frames;
 	unsigned latelimit = st->now_frames;
 	uint64_t t1u = a2_GetMicros();	/* Monitoring: pre DSP timestamp */
-	uint64_t dur;
+	unsigned dur;
+
+	/* Clear API message stats, if requested */
+	if(st->tsstatreset)
+	{
+		st->tsstatreset = 0;
+		st->tssamples = 0;
+		st->tssum = 0;
+		st->tsmin = INT32_MAX;
+		st->tsmax = INT32_MIN;
+	}
 
 	/* Update API message timestamping time reference */
 	st->now_frames = st->now_fragstart + (frames << 8);
@@ -1706,6 +1720,10 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 
 	/* API message processing */
 	a2r_PumpEngineMessages(st, latelimit);
+
+	/* Update API message stats */
+	if(st->tssamples)
+		st->tsavg = st->tssum / st->tssamples;
 
 	/* Audio processing */
 	while(remain)
@@ -1720,7 +1738,14 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	}
 	dur = a2_GetMicros() - t1u;	/* Monitoring: DSP processing time */
 
-	/* Update stats */
+	/* Update CPU stats */
+	if(st->statreset)
+	{
+		st->statreset = 0;
+		st->cputimesum = st->cputimecount = 0;
+		st->avgstart = t1u;
+		st->cpuloadmax = 0;
+	}
 	if(dur > st->cputimemax)
 		st->cputimemax = dur;
 	st->cputimesum += dur;
@@ -1732,19 +1757,9 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 			st->cpuloadmax = ld;
 		st->now_micros = t1u;
 	}
-	if(st->cputimecount)
-	{
-		st->cputimeavg = st->cputimesum / st->cputimecount;
-		if(t1u != st->avgstart)
-			st->cpuloadavg = st->cputimeavg * 100 /
-					(t1u - st->avgstart);
-	}
-	if(st->statreset)
-	{
-		st->statreset = 0;
-		st->cputimesum = st->cputimecount = 0;
-		st->avgstart = t1u;
-	}
+	st->cputimeavg = st->cputimesum / st->cputimecount;
+	if(t1u != st->avgstart)
+		st->cpuloadavg = st->cputimesum * 100 / (t1u - st->avgstart);
 
 	/* Process end-of-cycle messages */
 	a2r_ProcessEOCEvents(st, frames);

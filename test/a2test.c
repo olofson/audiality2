@@ -395,16 +395,17 @@ static void update_main(int dt)
 			270, 8, w, 128, screen);
 	gui_oscilloscope(osc_right, dbuffer, plotpos,
 			270 + w + 8, 8, w, 128, screen);
-	a2_GetProperty(state, 0, A2_PCPULOADAVG, &v);
-	gui_cpuload(v);
-	a2_GetProperty(state, 0, A2_PACTIVEVOICES, &v);
-	gui_voices(v);
 	if(now - lastreset > 300)
 	{
-		a2_GetProperty(state, 0, A2_PINSTRUCTIONS, &v);
+		a2_GetStateProperty(state, A2_PCPULOADAVG, &v);
+		gui_cpuload(v);
+		a2_GetStateProperty(state, A2_PACTIVEVOICESMAX, &v);
+		gui_voices(v);
+		a2_GetStateProperty(state, A2_PINSTRUCTIONS, &v);
 		gui_instructions(v * 1000 / (now - lastreset));
-		a2_SetProperty(state, 0, A2_PCPULOADAVG, 0);
-		a2_SetProperty(state, 0, A2_PINSTRUCTIONS, 0);
+		a2_SetStateProperty(state, A2_PCPULOADAVG, 0);
+		a2_SetStateProperty(state, A2_PACTIVEVOICESMAX, 0);
+		a2_SetStateProperty(state, A2_PINSTRUCTIONS, 0);
 		lastreset = now;
 	}
 }

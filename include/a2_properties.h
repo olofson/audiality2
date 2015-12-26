@@ -76,6 +76,7 @@ FIXME: These don't really fit here, as states don't have handles.
 	A2_PSTATISTICS =	0x00030000,
 
 	A2_PACTIVEVOICES,	/* Number of active voices */
+	A2_PACTIVEVOICESMAX,	/* Peak number of active voices */
 	A2_PFREEVOICES,		/* Number of voices in pool */
 	A2_PTOTALVOICES,	/* Number of voices in total */
 	A2_PCPULOADAVG,		/* Average DSP CPU load (%) */
@@ -84,12 +85,10 @@ FIXME: These don't really fit here, as states don't have handles.
 	A2_PCPUTIMEMAX,		/* Peak buffer processing time (ms) */
 	A2_PINSTRUCTIONS,	/* VM instructions executed */
 
-	/*
-	 * Wave properties
-	 */
-	A2_PWAVE =		0x00040000,
-
-	A2_PLOOPED		/* Waveform is looped */
+	A2_PAPIMESSAGES,	/* Number of API messages received */
+	A2_PTSMARGINAVG,	/* Timestamp deadline margin; average */
+	A2_PTSMARGINMIN,	/* Timestamp deadline margin; minimum */
+	A2_PTSMARGINMAX		/* Timestamp deadline margin; maximum */
 
 } A2_properties;
 
@@ -102,6 +101,10 @@ typedef struct A2_property {
 } A2_property;
 
 A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props);
+
+A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v);
+A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v);
+A2_errors a2_SetStateProperties(A2_state *st, A2_property *props);
 
 #if 0
 /* TODO: */

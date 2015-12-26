@@ -45,10 +45,10 @@ int a2_Render(A2_state *st,
 	unsigned lastpeak = 0; /* Frames since last peak > abs(silencelevel) */
 	int offlinebuffer, silencelevel, silencewindow, silencegrace;
 
-	a2_GetProperty(st, -1, A2_POFFLINEBUFFER, &offlinebuffer);
-	a2_GetProperty(st, -1, A2_PSILENCELEVEL, &silencelevel);
-	a2_GetProperty(st, -1, A2_PSILENCEWINDOW, &silencewindow);
-	a2_GetProperty(st, -1, A2_PSILENCEGRACE, &silencegrace);
+	a2_GetStateProperty(st, A2_POFFLINEBUFFER, &offlinebuffer);
+	a2_GetStateProperty(st, A2_PSILENCELEVEL, &silencelevel);
+	a2_GetStateProperty(st, A2_PSILENCEWINDOW, &silencewindow);
+	a2_GetStateProperty(st, A2_PSILENCEGRACE, &silencegrace);
 
 	/* Open off-line substate for rendering */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, "buffer")))
@@ -62,7 +62,7 @@ int a2_Render(A2_state *st,
 
 	/* Parse the property table, if one was provided */
 	if(props)
-		a2_SetProperties(ss, -1, props);
+		a2_SetStateProperties(ss, props);
 
 	/* Start program! */
 	if((h = a2_Starta(ss, a2_RootVoice(ss), program, argc, argv)) < 0)
