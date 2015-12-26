@@ -1344,7 +1344,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 	A2_nametab *x = &c->target->exports;
 	memcpy(c->regmap, sc->regmap, sizeof(A2_regmap));
 
-	DBG(fprintf(stderr, "=== end scope ===\n");)
+	SCOPEDBG(fprintf(stderr, "=== end scope ===\n");)
 	while(c->symbols != sc->symbols)
 	{
 		A2_symbol *s = c->symbols;
@@ -1352,7 +1352,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		c->symbols = s->next;
 		if(s->token == TK_FWDECL)
 			res = A2_UNDEFSYM;
-		DBG(fprintf(stderr, "   %s\t", s->name);)
+		SCOPEDBG(fprintf(stderr, "   %s\t", s->name);)
 		switch(s->token)
 		{
 		  case TK_BANK:
@@ -1361,16 +1361,17 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		  case TK_PROGRAM:
 		  case TK_STRING:
 			h = s->v.i;
-			DBG(fprintf(stderr, "h: %d\t", h);)
-			DBG(fprintf(stderr, "t: %s\t", a2_TypeName(c->state,
+			SCOPEDBG(fprintf(stderr, "h: %d\t", h);)
+			SCOPEDBG(fprintf(stderr, "t: %s\t",
+					a2_TypeName(c->state,
 					a2_TypeOf(c->state, h)));)
 			break;
 		  default:
 			h = -1;
-			DBG(fprintf(stderr, "(unsupported)\t");)
+			SCOPEDBG(fprintf(stderr, "(unsupported)\t");)
 			break;
 		}
-		DBG(
+		SCOPEDBG(
 			if(s->flags & A2_SF_EXPORTED)
 				fprintf(stderr, "EXPORTED\n");
 			else
@@ -1393,7 +1394,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		}
 		a2_FreeSymbol(s);
 	}
-	DBG(fprintf(stderr, "=================\n");)
+	SCOPEDBG(fprintf(stderr, "=================\n");)
 	if(res)
 		a2c_Throw(c, res);
 	c->canexport = sc->canexport;
@@ -2798,7 +2799,7 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 	wd->program = a2c_GetHandle(c, &c->l[0]);
 	maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
 	wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
-	DBG(
+	RENDERDBG(
 		fprintf(stderr, ".--------------------------------\n");
 		fprintf(stderr, "| Rendering wave %s...\n", wd->symbol->name);
 		fprintf(stderr, "|        type: %d\n", wd->type);
@@ -2816,13 +2817,13 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 		a2c_Throw(c, -wd->symbol->v.i);
 	if(wd->symbol->v.i < 0)
 		a2c_Throw(c, -wd->symbol->v.i);
-	DBG(	printf("|  DONE!\n");)
+	RENDERDBG(printf("|  DONE!\n");)
 
 	/* We expect this to be the last statement in the wavedef! */
 	while(a2c_Lex(c, A2_LEX_WHITENEWLINE) != terminator)
 		if(c->l[0].token != TK_EOS)
 			a2c_Throw(c, A2_EXPEOS);
-	DBG(	fprintf(stderr, "'--------------------------------\n");)
+	RENDERDBG(fprintf(stderr, "'--------------------------------\n");)
 }
 
 static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
