@@ -55,6 +55,8 @@
 #	define	DUMPSOURCE(x)
 #	define	SYMBOLDBG(x)
 #	define	REGDBG(x)
+#	define	SCOPEDBG(x)
+#	define	RENDERDBG(x)
 #	define	DUMPLSTRINGS(x)
 #	define	DUMPSTRUCT(x)
 #	define	DUMPSTRUCTRT(x)
