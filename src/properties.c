@@ -115,19 +115,19 @@ A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v)
 		*v = st->apimessages;
 		return A2_OK;
 	  case A2_PTSMARGINAVG:
-		if(st->apimessages)
+		if(st->tssamples)
 			*v = st->tsavg;
 		else
 			*v = 0;
 		return A2_OK;
 	  case A2_PTSMARGINMIN:
-		if(st->apimessages)
+		if(st->tssamples)
 			*v = st->tsmin;
 		else
 			*v = 0;
 		return A2_OK;
 	  case A2_PTSMARGINMAX:
-		if(st->apimessages)
+		if(st->tssamples)
 			*v = st->tsmax;
 		else
 			*v = 0;

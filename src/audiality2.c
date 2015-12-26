@@ -438,6 +438,12 @@ static A2_errors a2_Open2(A2_state *st)
 	st->randstate = A2_DEFAULT_RANDSEED;
 	st->noisestate = A2_DEFAULT_NOISESEED;
 
+	/* Initialize stats */
+	st->tsstatreset = 1;
+	st->tsmin = INT32_MAX;
+	st->tsmax = INT32_MIN;
+	st->statreset = 1;
+
 	/* Install the master process callback! */
 	st->audio->Lock(st->audio);
 	st->audio->state = st;
