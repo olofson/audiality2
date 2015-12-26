@@ -1723,7 +1723,7 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 
 	/* Update API message stats */
 	if(st->tssamples)
-		st->tsavg = st->tssum / st->tssamples;
+		st->tsavg = ((int64_t)st->tssum << 8) / st->tssamples;
 
 	/* Audio processing */
 	while(remain)

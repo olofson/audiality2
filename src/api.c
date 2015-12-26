@@ -392,7 +392,7 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 		st->tsmin = tsdiff;
 	if(tsdiff > st->tsmax)
 		st->tsmax = tsdiff;
-	st->tssum += tsdiff;
+	st->tssum += tsdiff >> 8;
 	++st->tssamples;
 	if(tsdiff < 0)
 	{

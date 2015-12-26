@@ -617,10 +617,10 @@ struct A2_state
 
 	int		tsstatreset;	/* Flag to reset timestamping stats */
 	unsigned	tssamples;	/* Number of messages */
-	int		tssum;		/* Sum of timestamp deadline margins */
-	int		tsavg;		/* Average TS deadline margin */
-	int		tsmin;		/* Minimum TS deadline margin */
-	int		tsmax;		/* Maximum TS deadline margin */
+	int		tssum;		/* Sum of deadline margins (frames) */
+	int		tsavg;		/* Average TS deadline margin (24:8) */
+	int		tsmin;		/* Minimum TS deadline margin (24:8) */
+	int		tsmax;		/* Maximum TS deadline margin (24:8) */
 
 	/* Global audio buffers */
 	A2_bus		*master;		/* Master outputs */
