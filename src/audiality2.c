@@ -434,6 +434,9 @@ static A2_errors a2_Open2(A2_state *st)
 	st->now_ticks = a2_GetTicks();
 	st->now_micros = st->avgstart = a2_GetMicros();
 
+	/* Set default timestamp jitter margin */
+	st->tsmargin = st->config->buffer * 1000 / st->config->samplerate;
+
 	/* Initialize RNGs for noise and RAND instructions */
 	st->randstate = A2_DEFAULT_RANDSEED;
 	st->noisestate = A2_DEFAULT_NOISESEED;

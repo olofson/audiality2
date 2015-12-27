@@ -61,6 +61,7 @@ FIXME: These don't really fit here, as states don't have handles.
 
 	A2_PSAMPLERATE,		/* Audio I/O sample rate */
 	A2_PBUFFER,		/* Audio I/O buffer size */
+	A2_PTIMESTAMPMARGIN,	/* Timestamp jitter margin delay (ms) */
 	A2_PEXPORTALL,		/* Export all programs! (Debug) */
 	A2_PTABSIZE,		/* Tab size for script position printouts */
 	A2_POFFLINEBUFFER,	/* Buffer size for offline rendering */

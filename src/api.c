@@ -753,10 +753,10 @@ A2_timestamp a2_TimestampNow(A2_state *st)
 		nf = st->now_frames;
 		dt = st->now_ticks;
 	} while(nf != st->now_guard);
-	dt = a2_GetTicks() - dt;
+	dt = a2_GetTicks() - dt + st->tsmargin;
 	if(dt < 0)
 		dt = 0;	/* Audio has been off for a looooong time... */
-	return nf + (st->config->buffer << 8) + ((int64_t)st->msdur * dt >> 8);
+	return nf + ((int64_t)st->msdur * dt >> 8);
 }
 
 

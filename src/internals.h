@@ -577,6 +577,7 @@ struct A2_state
 
 	unsigned	timestamp;	/* Current timestamp for async API */
 	int		nudge_adjust;	/* TS nudge from a2_TimestampNudge() */
+	int		tsmargin;	/* TS jitter margin (ms) */
 	SFIFO		*fromapi;	/* Messages from async. API calls */
 	SFIFO		*toapi;		/* Responses to the API context */
 	A2_event	*eocevents;	/* To be sent to API at end of cycle */
