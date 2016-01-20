@@ -2027,6 +2027,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	switch(op)
 	{
 	  case OP_END:
+	  case OP_SLEEP:
 	  case OP_RETURN:
 		a2c_Code(c, op, 0, 0);
 		break;
@@ -3375,6 +3376,7 @@ static struct
 
 	/* Instructions */
 	{ "end",	TK_INSTRUCTION,	OP_END		},
+	{ "sleep",	TK_INSTRUCTION,	OP_SLEEP	},
 	{ "return",	TK_INSTRUCTION,	OP_RETURN	},
 	{ "jump",	TK_INSTRUCTION,	OP_JUMP		},
 	{ "jz",		TK_INSTRUCTION,	OP_JZ		},
