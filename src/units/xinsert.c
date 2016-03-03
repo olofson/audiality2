@@ -1,7 +1,7 @@
 /*
  * xinsert.c - Audiality 2 External Insert unit
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -218,18 +218,14 @@ static A2_errors xi_OpenState(A2_config *cfg, void **statedata)
 }
 
 
-static const A2_crdesc regs[] =
-{
-	{ NULL, NULL }
-};
-
 const A2_unitdesc a2_xinsert_unitdesc =
 {
 	"xinsert",			/* name */
 
 	A2_MATCHIO | A2_XINSERT,	/* flags */
 
-	regs,				/* registers */
+	NULL,				/* registers */
+	NULL,				/* constants */
 
 	1, A2_MAXCHANNELS,		/* [min,max]inputs */
 	1, A2_MAXCHANNELS,		/* [min,max]outputs */

@@ -2383,23 +2383,57 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 		c->coder->program->structure = ni;	/* First! */
 	}
 	ni->next = NULL;
-	DUMPSTRUCT(fprintf(stderr, "  %s %d %d [", ud->name, inputs, outputs);)
+	DUMPSTRUCT(fprintf(stderr, "  %s %d %d", ud->name, inputs, outputs);)
 
-	/* Allocate control registers and add them to the namespace! */
+	/*
+	 * If unit instance is unnamed, registers and constants go into the
+	 * top level namespace of the program.
+	 */
 	if(!namespace)
 		namespace = &c->symbols;
-	for(i = 0; ud->registers[i].name; ++i)
+
+	/* Allocate control registers and add them to the namespace! */
+	if(ud->registers && ud->registers[0].name)
 	{
-		A2_symbol *s;
-		if(a2_FindSymbol(c->state, *namespace, ud->registers[i].name))
-			a2c_Throw(c, A2_SYMBOLDEF);
-		if(!(s = a2_NewSymbol(ud->registers[i].name, TK_REGISTER)))
-			a2c_Throw(c, A2_OOMEMORY);
-		s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
-		a2_PushSymbol(namespace, s);
-		DUMPSTRUCT(fprintf(stderr, " %s:R%d", s->name, s->v.i);)
+		DUMPSTRUCT(fprintf(stderr, " [");)
+		for(i = 0; ud->registers[i].name; ++i)
+		{
+			A2_symbol *s;
+			if(a2_FindSymbol(c->state, *namespace,
+					ud->registers[i].name))
+				a2c_Throw(c, A2_SYMBOLDEF);
+			if(!(s = a2_NewSymbol(ud->registers[i].name,
+					TK_REGISTER)))
+				a2c_Throw(c, A2_OOMEMORY);
+			s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
+			a2_PushSymbol(namespace, s);
+			DUMPSTRUCT(fprintf(stderr, " %s:R%d",
+					s->name, s->v.i);)
+		}
+		DUMPSTRUCT(fprintf(stderr, " ]");)
 	}
-	DUMPSTRUCT(fprintf(stderr, " ]\n");)
+
+	/* Add constants, if any. */
+	if(ud->constants && ud->constants[0].name)
+	{
+		DUMPSTRUCT(fprintf(stderr, " {");)
+		for(i = 0; ud->constants[i].name; ++i)
+		{
+			A2_symbol *s;
+			if(a2_FindSymbol(c->state, *namespace,
+					ud->constants[i].name))
+				a2c_Throw(c, A2_SYMBOLDEF);
+			if(!(s = a2_NewSymbol(ud->constants[i].name,
+					TK_VALUE)))
+				a2c_Throw(c, A2_OOMEMORY);
+			s->v.f = ud->constants[i].value / 65536.0f;
+			a2_PushSymbol(namespace, s);
+			DUMPSTRUCT(fprintf(stderr, " %s=%f", s->name, s->v.f);)
+		}
+		DUMPSTRUCT(fprintf(stderr, " }");)
+	}
+
+	DUMPSTRUCT(fprintf(stderr, "\n");)
 	return ind;
 }
 
@@ -2530,10 +2564,10 @@ static void a2c_StructDef(A2_compiler *c)
 	{
 		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
 		DUMPSTRUCT(fprintf(stderr, " (chain %d)", chainchannels);)
-		DUMPSTRUCT(fprintf(stderr, " [%s ", si->unitdesc->name);)
+		DUMPSTRUCT(fprintf(stderr, " [%s ", ud->name);)
 
 		/* Is this the 'inline' unit? */
-		if(c->state->ss->units[si->uindex] == &a2_inline_unitdesc)
+		if(ud == &a2_inline_unitdesc)
 		{
 			if(p->vflags & A2_SUBINLINE)
 				a2c_Throw(c, A2_MULTIINLINE);

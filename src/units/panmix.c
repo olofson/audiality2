@@ -1,7 +1,7 @@
 /*
  * panmix.c - Audiality 2 PanMix unit
  *
- * Copyright 2012-2015 David Olofson <david@olofson.net>
+ * Copyright 2012-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -303,6 +303,14 @@ static const A2_crdesc regs[] =
 	{ NULL,	NULL				}
 };
 
+static const A2_constdesc constants[] =
+{
+	{ "CENTER",	0			},
+	{ "LEFT",	(-1) << 16		},
+	{ "RIGHT",	1 << 16			},
+	{ NULL,	0				}
+};
+
 const A2_unitdesc a2_panmix_unitdesc =
 {
 	"panmix",		/* name */
@@ -310,6 +318,7 @@ const A2_unitdesc a2_panmix_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
+	constants,		/* constants */
 
 	1, A2PM_MAXINPUTS,	/* [min,max]inputs */
 	1, A2PM_MAXOUTPUTS,	/* [min,max]outputs */

@@ -1,7 +1,7 @@
 /*
  * dcblock.c - Audiality 2 12 dB/oct DC blocker filter unit
  *
- * Copyright 2014-2015 David Olofson <david@olofson.net>
+ * Copyright 2014-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -174,6 +174,7 @@ const A2_unitdesc a2_dcblock_unitdesc =
 	A2_MATCHIO,
 
 	regs,			/* registers */
+	NULL,			/* constants */
 
 	1, 2,			/* [min,max]inputs */
 	1, 2,			/* [min,max]outputs */

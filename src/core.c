@@ -233,12 +233,13 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	/* Initialize instance struct and wire any control registers */
 	u->descriptor = ud;
 	u->registers = v->s.r + v->cregisters;
-	for(i = 0; ud->registers[i].name; ++i)
-	{
-		v->cwrite[v->cregisters] = ud->registers[i].write;
-		v->cunit[v->cregisters] = u;
-		++v->cregisters;
-	}
+	if(ud->registers)
+		for(i = 0; ud->registers[i].name; ++i)
+		{
+			v->cwrite[v->cregisters] = ud->registers[i].write;
+			v->cunit[v->cregisters] = u;
+			++v->cregisters;
+		}
 	u->ninputs = ninputs;
 	u->inputs = scratch;
 	DUMPSTRUCTRT(fprintf(stderr, "in: %d\tout:%d", u->ninputs, u->noutputs);)

@@ -10,7 +10,7 @@
  *	is hard to avoid while maintaining the unity transfer function when the
  *	shaping amount is 0.
  *
- * Copyright 2014-2015 David Olofson <david@olofson.net>
+ * Copyright 2014-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -178,6 +178,7 @@ const A2_unitdesc a2_waveshaper_unitdesc =
 	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
+	NULL,			/* constants */
 
 	1, A2WS_MAXCHANNELS,	/* [min,max]inputs */
 	1, A2WS_MAXCHANNELS,	/* [min,max]outputs */

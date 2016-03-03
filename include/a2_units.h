@@ -1,7 +1,7 @@
 /*
  * a2_units.h - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -61,6 +61,7 @@ extern "C" {
 typedef struct A2_unitdesc A2_unitdesc;
 typedef struct A2_unit A2_unit;
 typedef struct A2_crdesc A2_crdesc;
+typedef struct A2_constdesc A2_constdesc;
 
 typedef enum A2_unitflags
 {
@@ -174,7 +175,7 @@ typedef void (*A2_process_cb)(A2_unit *u, unsigned offset, unsigned frames);
 
 
 /*
- * Control register descriptor. (End array with { NULL, NULL }!
+ * Control register descriptor. (End array with { NULL, NULL }!)
  *
  *	This specifies the name identifying a unit control register in A2S, and
  *	optionally provides a callback that notifies the unit about changes to
@@ -197,6 +198,16 @@ struct A2_crdesc
 };
 
 
+/*
+ * Constant definition descriptor. (End array with { NULL, 0 }!)
+ */
+struct A2_constdesc
+{
+	const char	*name;		/* Symbol name */
+	int		value;		/* Value (16:16 fixed point) */
+};
+
+
 /* Unit descriptor */
 struct A2_unitdesc
 {
@@ -206,6 +217,9 @@ struct A2_unitdesc
 
 	/* Control */
 	const A2_crdesc	*registers;	/* Array of register descriptors */
+
+	/* Constants */
+	const A2_constdesc *constants;	/* Array of constant descriptors */
 
 	/* Audio I/O */
 	uint8_t		mininputs;	/* Minimum number of inputs */

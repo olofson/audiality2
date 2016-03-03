@@ -112,8 +112,8 @@ Hit(P V=1)
 		wtosc o1; panmix pm1 1 >
 		wtosc o2; panmix pm2 1 >
 	}
-	o1.w StringsWave; o1.p (P + .01); pm1.pan -1; set pm1.pan
-	o2.w StringsWave; o2.p (P - .01); pm2.pan 1; set pm2.pan
+	o1.w StringsWave; o1.p (P + .01); pm1.pan pm1.LEFT; set pm1.pan
+	o2.w StringsWave; o2.p (P - .01); pm2.pan pm2.RIGHT; set pm2.pan
 	o1.a V; o2.a V;			d 1
 	*o1.a .9; *o2.a .9;		d 10
 	*o1.a .8; *o2.a .8;		d 10

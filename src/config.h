@@ -1,7 +1,7 @@
 /*
  * config.h - Audiality 2 compile time configuration
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -38,7 +38,7 @@
 #	define	SCOPEDBG(x)		/* Compiler scope management */
 #	define	RENDERDBG(x)		/* Compiler 'wave' rendering info */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
-#	define	DUMPSTRUCT(x)		/* Compiler voice structure dumping */
+#	define	DUMPSTRUCT(x)	x	/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */

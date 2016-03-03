@@ -1,7 +1,7 @@
 /*
  * limiter.c - Audiality 2 compressor/limiter unit
  *
- * Copyright 2001-2002, 2009, 2012 David Olofson <david@olofson.net>
+ * Copyright 2001-2002, 2009, 2012, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -222,6 +222,7 @@ const A2_unitdesc a2_limiter_unitdesc =
 	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
+	NULL,			/* constants */
 
 	1, A2L_MAXCHANNELS,	/* [min,max]inputs */
 	1, A2L_MAXCHANNELS,	/* [min,max]outputs */

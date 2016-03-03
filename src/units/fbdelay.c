@@ -1,7 +1,7 @@
 /*
  * fbdelay.c - Audiality 2 feedback delay unit
  *
- * Copyright 2013-2014 David Olofson <david@olofson.net>
+ * Copyright 2013-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -294,6 +294,7 @@ const A2_unitdesc a2_fbdelay_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
+	NULL,			/* constants */
 
 	1, 2,			/* [min,max]inputs */
 	1, 2,			/* [min,max]outputs */
