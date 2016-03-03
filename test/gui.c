@@ -1,7 +1,7 @@
 /*
  * gui.c - Tracker style GUI
  *
- * Copyright 2006, 2011-2012 David Olofson <david@olofson.net>
+ * Copyright 2006, 2011-2012, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -25,20 +25,32 @@
 #include <string.h>
 #include "gui.h"
 
-#define	MAXACTIVITY	400
+#define	GUI_BANKINFO_Y	(156 + FONT_CH * 8 + 12 + 6)
 
-#define	BANKINFO_Y	(156 + FONT_CH * 8 + 12 + 6)
+#if (SDL_MAJOR_VERSION >= 2)
+#define	GUI_BUFFER_PIXELFORMAT	SDL_PIXELFORMAT_ARGB8888
+#endif
 
 static int dirtyrects = 0;
 static SDL_Rect dirtytab[MAXRECTS];
 
-static SDL_Surface *screen = NULL;
+/*
+ * We're always using a software back buffer here. With SDL2, we have to set it
+ * up ourselves, whereas SDL 1.2 does it behind the scenes, except in the rare
+ * cases where you actually get a hardware display surface.
+ */
+#if (SDL_MAJOR_VERSION >= 2)
+static SDL_Renderer *target = NULL;
+static SDL_Renderer *renderer = NULL;
+static SDL_Texture *transfer = NULL;
+#endif
+static SDL_Surface *buffer = NULL;
 static SDL_Surface *font = NULL;
 static SDL_Surface *logo = NULL;
+
 static Uint32 fwc;
 
 static char *message_text = NULL;
-//static int activity[SSEQ_TRACKS];
 
 
 void gui_dirty(SDL_Rect *r)
@@ -57,43 +69,61 @@ void gui_dirty(SDL_Rect *r)
 
 void gui_refresh(void)
 {
+#if (SDL_MAJOR_VERSION >= 2)
+	int i;
 	if(dirtyrects < 0)
 	{
-		SDL_UpdateRect(screen, 0, 0, 0, 0);
-		dirtyrects = 0;
+		dirtytab[0].x = 0;
+		dirtytab[0].y = 0;
+		dirtytab[0].w = buffer->w;
+		dirtytab[0].h = buffer->h;
+		dirtyrects = 1;
 	}
+	SDL_RenderPresent(renderer);
+	for(i = 0; i < dirtyrects; ++i)
+		SDL_UpdateTexture(transfer, &dirtytab[i],
+				(Uint8 *)buffer->pixels +
+				buffer->pitch * dirtytab[i].y +
+				4 * dirtytab[i].x,
+				buffer->pitch);
+	SDL_RenderCopy(target, transfer, NULL, NULL);
+	SDL_RenderPresent(target);
+#else
+	if(dirtyrects < 0)
+		SDL_UpdateRect(buffer, 0, 0, 0, 0);
 	else
-		SDL_UpdateRects(screen, dirtyrects, dirtytab);
+		SDL_UpdateRects(buffer, dirtyrects, dirtytab);
+#endif
 	dirtyrects = 0;
 }
 
 
-void gui_box(int x, int y, int w, int h, Uint32 c, SDL_Surface *dst)
+void gui_box(int x, int y, int w, int h, Uint32 c)
 {
 	SDL_Rect r;
 	r.x = x;
 	r.y = y;
 	r.w = w;
 	r.h = 1;
-	SDL_FillRect(dst, &r, c);
+	SDL_FillRect(buffer, &r, c);
 
 	r.x = x;
 	r.y = y + h - 1;
 	r.w = w;
 	r.h = 1;
-	SDL_FillRect(dst, &r, c);
+	SDL_FillRect(buffer, &r, c);
 
 	r.x = x;
 	r.y = y + 1;
 	r.w = 1;
 	r.h = h - 2;
-	SDL_FillRect(dst, &r, c);
+	SDL_FillRect(buffer, &r, c);
 
 	r.x = x + w - 1;
 	r.y = y + 1;
 	r.w = 1;
 	r.h = h - 2;
-	SDL_FillRect(dst, &r, c);
+	SDL_FillRect(buffer, &r, c);
 
 	r.x = x;
 	r.y = y;
@@ -103,21 +133,20 @@ void gui_box(int x, int y, int w, int h, Uint32 c, SDL_Surface *dst)
 }
 
 
-void gui_bar(int x, int y, int w, int h, Uint32 c, SDL_Surface *dst)
+void gui_bar(int x, int y, int w, int h, Uint32 c)
 {
 	SDL_Rect r;
 	r.x = x;
 	r.y = y;
 	r.w = w;
 	r.h = h;
-	SDL_FillRect(dst, &r, SDL_MapRGB(dst->format, 0, 0, 0));
-	gui_box(x, y, w, h, c, dst);
+	SDL_FillRect(buffer, &r, SDL_MapRGB(buffer->format, 0, 0, 0));
+	gui_box(x, y, w, h, c);
 }
 
 
-void gui_oscilloscope(Sint32 *buf, int bufsize,
-		int start, int x, int y, int w, int h,
-		SDL_Surface *dst)
+void gui_oscilloscope(Sint32 *buf, int bufsize,	int start,
+		int x, int y, int w, int h)
 {
 	int i;
 	Uint32 green, red;
@@ -132,11 +161,11 @@ void gui_oscilloscope(Sint32 *buf, int bufsize,
 	r.y = y;
 	r.w = w;
 	r.h = h;
-	SDL_FillRect(dst, &r, SDL_MapRGB(dst->format, 0, 0, 0));
+	SDL_FillRect(buffer, &r, SDL_MapRGB(buffer->format, 0, 0, 0));
 	gui_dirty(&r);
 
-	green = SDL_MapRGB(dst->format, 0, 200, 0);
-	red = SDL_MapRGB(dst->format, 255, 0, 0);
+	green = SDL_MapRGB(buffer->format, 0, 200, 0);
+	red = SDL_MapRGB(buffer->format, 255, 0, 0);
 	r.w = 1;
 	for(i = 0; i < w; ++i)
 	{
@@ -166,16 +195,15 @@ void gui_oscilloscope(Sint32 *buf, int bufsize,
 			r.y = y + h / 2;
 			r.h = s;
 		}
-		SDL_FillRect(dst, &r, c);
+		SDL_FillRect(buffer, &r, c);
 	}
 
 	r.x = x;
 	r.y = y + h / 2;
 	r.w = w;
 	r.h = 1;
-	SDL_FillRect(dst, &r, SDL_MapRGB(dst->format, 128, 128, 255));
+	SDL_FillRect(buffer, &r, SDL_MapRGB(buffer->format, 128, 128, 255));
 }
-
 
 
 SDL_Surface *gui_load_image(const char *fn)
@@ -183,8 +211,11 @@ SDL_Surface *gui_load_image(const char *fn)
 	SDL_Surface *cvt;
 	SDL_Surface *img = SDL_LoadBMP(fn);
 	if(!img)
+	{
+		fprintf(stderr, "SDL_LoadBMP() failed: %s\n", SDL_GetError());
 		return NULL;
-#ifndef EMSCRIPTEN
+	}
+#if (!defined(EMSCRIPTEN) && (SDL_MAJOR_VERSION < 2))
 	cvt = SDL_DisplayFormat(img);
 	SDL_FreeSurface(img);
 #else
@@ -194,7 +225,7 @@ SDL_Surface *gui_load_image(const char *fn)
 }
 
 
-void gui_text(int x, int y, const char *txt, SDL_Surface *dst)
+void gui_text(int x, int y, const char *txt)
 {
 	int sx = x;
 	int sy = y;
@@ -243,19 +274,19 @@ void gui_text(int x, int y, const char *txt, SDL_Surface *dst)
 			int hlr = c & 1 ? 255 : 0;
 			int hlg = c & 2 ? 255 : 0;
 			int hlb = c & 4 ? 255 : 0;
-			Uint32 hlc = SDL_MapRGB(dst->format, hlr, hlg, hlb);
+			Uint32 hlc = SDL_MapRGB(buffer->format, hlr, hlg, hlb);
 			r.x = x;
 			r.y = y;
 			r.w = FONT_CW;
 			r.h = FONT_CH;
-			SDL_FillRect(dst, &r,
-					SDL_MapRGB(dst->format, 0, 0, 0));
+			SDL_FillRect(buffer, &r,
+					SDL_MapRGB(buffer->format, 0, 0, 0));
 			gui_dirty(&r);
 			r.x = x + 2;
 			r.y = y + 2;
 			r.w = FONT_CW - 6;
 			r.h = FONT_CH - 6;
-			SDL_FillRect(dst, &r, hlc);
+			SDL_FillRect(buffer, &r, hlc);
 			x += FONT_CW;
 			break;
 		  }
@@ -269,7 +300,7 @@ void gui_text(int x, int y, const char *txt, SDL_Surface *dst)
 			sr.y = (c / (font->w / FONT_CW)) * FONT_CH;
 			dr.x = x;
 			dr.y = y;
-			SDL_BlitSurface(font, &sr, dst, &dr);
+			SDL_BlitSurface(font, &sr, buffer, &dr);
 			gui_dirty(&dr);
 			x += FONT_CW;
 			break;
@@ -309,16 +340,15 @@ void gui_text(int x, int y, const char *txt, SDL_Surface *dst)
 			int hlr = c & 1 ? 255 : 0;
 			int hlg = c & 2 ? 255 : 0;
 			int hlb = c & 4 ? 255 : 0;
-			Uint32 hlc = SDL_MapRGB(screen->format, hlr, hlg, hlb);
+			Uint32 hlc = SDL_MapRGB(buffer->format, hlr, hlg, hlb);
 			int hlw = 1;
 			if(*txt == '\001')
 			{
 				hlw = txt[1];
 				txt += 2;
 			}
-			gui_box(x - 2, y - 2,
-					FONT_CW * hlw + 2, FONT_CH + 2,
-					hlc, dst);
+			gui_box(x - 2, y - 2, FONT_CW * hlw + 2, FONT_CH + 2,
+					hlc);
 			break;
 		  }
 		  default:	/* printables */
@@ -333,7 +363,7 @@ void gui_cpuload(int v)
 {
 	char buf[32];
 	snprintf(buf, sizeof(buf), "CPULoad: %3.1d%%", v);
-	gui_text(12, 60, buf, screen);
+	gui_text(12, 60, buf);
 }
 
 
@@ -341,7 +371,7 @@ void gui_voices(int v)
 {
 	char buf[32];
 	snprintf(buf, sizeof(buf), " Voices: %4.1d", v);
-	gui_text(12, 60 + FONT_CH, buf, screen);
+	gui_text(12, 60 + FONT_CH, buf);
 }
 
 
@@ -349,33 +379,33 @@ void gui_instructions(int v)
 {
 	char buf[32];
 	snprintf(buf, sizeof(buf), "I/s: %8.1d", v);
-	gui_text(12, 60 + FONT_CH * 2, buf, screen);
+	gui_text(12, 60 + FONT_CH * 2, buf);
 }
 
 
 void gui_bankinfo(int row, const char *label, const char *text)
 {
-	int y0 = BANKINFO_Y;
+	int y0 = GUI_BANKINFO_Y;
 	if(!row && !label && !text)
 	{
-		gui_bar(6, BANKINFO_Y, screen->w - 12, FONT_CH * 7 + 12, fwc,
-				screen);
+		gui_bar(6, GUI_BANKINFO_Y, buffer->w - 12, FONT_CH * 7 + 12,
+				fwc);
 		return;
 	}
-	gui_text(12, y0 + 6 + FONT_CH * row, label, screen);
-	gui_text(12 + 12 * FONT_CW, y0 + 6 + FONT_CH * row, text, screen);
+	gui_text(12, y0 + 6 + FONT_CH * row, label);
+	gui_text(12 + 12 * FONT_CW, y0 + 6 + FONT_CH * row, text);
 }
 
 
 void gui_message(const char *message, int curspos)
 {
-	int y0 = screen->h - FONT_CH - 12;
+	int y0 = buffer->h - FONT_CH - 12;
 	SDL_Rect r;
 	r.x = 10;
 	r.y = y0 - 2;
-	r.w = screen->w - 20;
+	r.w = buffer->w - 20;
 	r.h = FONT_CH + 4;
-	SDL_FillRect(screen, &r, SDL_MapRGB(screen->format, 0, 0, 0));
+	SDL_FillRect(buffer, &r, SDL_MapRGB(buffer->format, 0, 0, 0));
 	gui_dirty(&r);
 	if(message)
 	{
@@ -383,28 +413,28 @@ void gui_message(const char *message, int curspos)
 		message_text = strdup(message);
 	}
 	if(message_text)
-		gui_text(12, y0, message_text, screen);
+		gui_text(12, y0, message_text);
 	if(curspos >= 0)
-		gui_text(12 + FONT_CW * curspos, y0, "\007", screen);
+		gui_text(12 + FONT_CW * curspos, y0, "\007");
 }
 
 
 static void gui_logo(Uint32 c)
 {
-	gui_bar(6, 6, 258, 44, c, screen);
+	gui_bar(6, 6, 258, 44, c);
 	if(logo)
 	{
 		SDL_Rect r;
 		r.x = 7;
 		r.y = 7;
 		r.w = logo->w;
-		SDL_BlitSurface(logo, NULL, screen, &r);
+		SDL_BlitSurface(logo, NULL, buffer, &r);
 		gui_dirty(&r);
 	}
 	else
 	{
-		gui_text(18, 17, "  Audiality 2", screen);
-		gui_box(6 + 3, 6 + 3, 258 - 6, 44 - 6, c, screen);
+		gui_text(18, 17, "  Audiality 2");
+		gui_box(6 + 3, 6 + 3, 258 - 6, 44 - 6, c);
 	}
 }
 
@@ -412,27 +442,27 @@ static void gui_logo(Uint32 c)
 void gui_draw_screen(void)
 {
 	int w;
-	fwc = SDL_MapRGB(screen->format, 0, 128, 0);
+	fwc = SDL_MapRGB(buffer->format, 0, 128, 0);
 
 	/* Clear */
-	SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 48, 0));
+	SDL_FillRect(buffer, NULL, SDL_MapRGB(buffer->format, 0, 48, 0));
 	gui_dirty(NULL);
 
 	gui_logo(fwc);
 
 	/* Oscilloscope frames */
-	w = (screen->w - 270) / 2 - 8;
-	gui_bar(270 - 2, 8 - 2, w + 4, 128 + 4, fwc, screen);
-	gui_bar(270 + w + 8 - 2, 8 - 2, w + 4, 128 + 4, fwc, screen);
+	w = (buffer->w - 270) / 2 - 8;
+	gui_bar(270 - 2, 8 - 2, w + 4, 128 + 4, fwc);
+	gui_bar(270 + w + 8 - 2, 8 - 2, w + 4, 128 + 4, fwc);
 
 	/* Song info panel */
-	gui_bar(6, 54, 258, 4 * FONT_CH + 12 + 8, fwc, screen);
+	gui_bar(6, 54, 258, 4 * FONT_CH + 12 + 8, fwc);
 	gui_cpuload(0);
 	gui_voices(0);
 	gui_instructions(0);
 
 	/* Instructions */
-	gui_bar(6, 150, screen->w - 12, FONT_CH * 8 + 12, fwc, screen);
+	gui_bar(6, 150, buffer->w - 12, FONT_CH * 8 + 12, fwc);
 	gui_text(12, 156,
 			"\005\001\003ESC to quit       "
 					"\005R to reload sounds\n"
@@ -448,37 +478,51 @@ void gui_draw_screen(void)
 			"\005\001\003End/\005\001\004Home or "
 					"\005\001\003Del/\005\001\003Ins to "
 					"select next/previous bank\n"
-			"\005+/\005- to select next/previous bank object\n",
-			screen);
+			"\005+/\005- to select next/previous bank object\n");
 
 	gui_bankinfo(0, NULL, NULL);
 
 	/* Message bar */
-	gui_bar(6, screen->h - FONT_CH - 12 - 6,
-			screen->w - 12, FONT_CH + 12, fwc, screen);
+	gui_bar(6, buffer->h - FONT_CH - 12 - 6,
+			buffer->w - 12, FONT_CH + 12, fwc);
 	gui_message(NULL, -1);
 }
 
 
-int gui_open(SDL_Surface *scrn)
+#if (SDL_MAJOR_VERSION >= 2)
+int gui_open(SDL_Renderer *screen)
 {
-	screen = scrn;
+	int bpp, rw, rh;
+	Uint32 Rmask, Gmask, Bmask, Amask;
+	target = screen;
+	SDL_PixelFormatEnumToMasks(GUI_BUFFER_PIXELFORMAT,
+			&bpp, &Rmask, &Gmask, &Bmask, &Amask);
+	SDL_GetRendererOutputSize(target, &rw, &rh);
+	buffer = SDL_CreateRGBSurface(0, rw, rh, bpp,
+			Rmask, Gmask, Bmask, Amask);
+	if(!buffer)
+		return -10;
+	renderer = SDL_CreateSoftwareRenderer(buffer);
+	if(!renderer)
+		return -11;
+	transfer = SDL_CreateTexture(target, GUI_BUFFER_PIXELFORMAT,
+			SDL_TEXTUREACCESS_STREAMING, rw, rh);
+	if(!transfer)
+		return -12;
+#else
+int gui_open(SDL_Surface *screen)
+{
+	buffer = screen;
+#endif
 	font = gui_load_image("data/font.bmp");
 	if(!font)
 	{
-		fprintf(stderr, "Couldn't load font!\n");
+		fprintf(stderr, "ERROR: Couldn't load font!\n");
 		return -1;
 	}
 	logo = gui_load_image("data/Audiality2-256x42.bmp");
 	if(!logo)
-	{
-		fprintf(stderr, "Couldn't load logo!\n");
-#if 0
-		return -1;
-#endif
-	}
-//	SDL_EnableKeyRepeat(250, 25);
-//	memset(activity, 0, sizeof(activity));
+		fprintf(stderr, "WARNING: Couldn't load logo!\n");
 	return 0;
 }
 
@@ -487,4 +531,12 @@ void gui_close(void)
 {
 	SDL_FreeSurface(font);
 	font = NULL;
+	SDL_FreeSurface(logo);
+	logo = NULL;
+#if (SDL_MAJOR_VERSION >= 2)
+	SDL_DestroyTexture(transfer);
+	SDL_DestroyRenderer(renderer);
+	SDL_FreeSurface(buffer);
+#endif
+	buffer = NULL;
 }

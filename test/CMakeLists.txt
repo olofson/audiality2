@@ -50,6 +50,14 @@ if(SDL_FOUND)
 
 	add_executable(apistress WIN32 MACOSX_BUNDLE apistress.c)
 	target_link_libraries(apistress ${AUDIALITY2_LIBRARY} SDLmain)
+elseif(SDL2_FOUND)
+	include_directories(${SDL2_INCLUDE_DIRS})
+
+	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
+	target_link_libraries(a2test ${AUDIALITY2_LIBRARY})
+
+	add_executable(apistress WIN32 MACOSX_BUNDLE apistress.c)
+	target_link_libraries(apistress ${AUDIALITY2_LIBRARY})
 endif(SDL_FOUND)
 
 # Release build: full optimization, no debug features, no debug info

@@ -1,7 +1,7 @@
 /*
  * gui.h - Tracker style GUI
  *
- * Copyright 2006, 2011-2012 David Olofson <david@olofson.net>
+ * Copyright 2006, 2011-2012, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -43,23 +43,26 @@ void gui_dirty(SDL_Rect *r);
 void gui_refresh(void);
 
 /* Draw a hollow box */
-void gui_box(int x, int y, int w, int h, Uint32 c, SDL_Surface *dst);
+void gui_box(int x, int y, int w, int h, Uint32 c);
 
 /* Draw a black box with a colored outline */
-void gui_bar(int x, int y, int w, int h, Uint32 c, SDL_Surface *dst);
+void gui_bar(int x, int y, int w, int h, Uint32 c);
 
 /* Render text */
-void gui_text(int x, int y, const char *txt, SDL_Surface *dst);
+void gui_text(int x, int y, const char *txt);
 
 /* Render an oscilloscope */
-void gui_oscilloscope(Sint32 *buf, int bufsize,
-		int start, int x, int y, int w, int h,
-		SDL_Surface *dst);
+void gui_oscilloscope(Sint32 *buf, int bufsize, int start,
+		int x, int y, int w, int h);
 
 /*
  * High level GUI stuff
  */
+#if (SDL_MAJOR_VERSION >= 2)
+int gui_open(SDL_Renderer *screen);
+#else
 int gui_open(SDL_Surface *screen);
+#endif
 void gui_close(void);
 
 void gui_cpuload(int v);

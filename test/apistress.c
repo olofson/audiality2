@@ -3,7 +3,7 @@
  *
  * This code is in the public domain. Do what you like with it. NO WARRANTY!
  *
- * 2014 David Olofson
+ * 2014, 2016 David Olofson
  */
 
 #include <signal.h>
@@ -69,7 +69,11 @@ int main(int argc, char *argv[])
 	t = SDL_GetTicks();
 	for(i = 0; i < NTHREADS; ++i)
 	{
+#if (SDL_MAJOR_VERSION >= 2)
+		threads[i] = SDL_CreateThread(testthread, NULL, count + i);
+#else
 		threads[i] = SDL_CreateThread(testthread, count + i);
+#endif
 		if(!threads[i])
 		{
 			fprintf(stderr, "Could not create thread! (%s)\n",

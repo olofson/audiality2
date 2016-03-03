@@ -3,7 +3,7 @@
  *
  * This code is in the public domain. Do what you like with it. NO WARRANTY!
  *
- * 2011-2015 David Olofson
+ * 2011-2016 David Olofson
  */
 
 #include <stdlib.h>
@@ -19,7 +19,12 @@
 #endif
 
 /* Display */
+#if (SDL_MAJOR_VERSION >= 2)
+static SDL_Window *window = NULL;
+static SDL_Renderer *renderer = NULL;
+#else
 static SDL_Surface *screen = NULL;
+#endif
 static int screenw = 800;
 static int screenh = 480;
 static int screenbpp = 0;
@@ -225,6 +230,12 @@ static void note_off(int note)
 }
 
 
+#if (SDL_MAJOR_VERSION >= 2)
+# define	NO_KEY_REPEAT	if(event.key.repeat) break;
+#else
+# define	NO_KEY_REPEAT
+#endif
+
 static void handle_events(int argc, const char *argv[])
 {
 	char buf[128];
@@ -264,9 +275,11 @@ static void handle_events(int argc, const char *argv[])
 			  case SDLK_F10:
 			  case SDLK_F11:
 			  case SDLK_F12:
+				NO_KEY_REPEAT
 				note_on(event.key.keysym.sym - SDLK_F1);
 				break;
 			  case SDLK_p:
+				NO_KEY_REPEAT
 				if(legatovoice >= 0)
 					a2_Release(state, legatovoice);
 				legatovoice = a2_Start(state, rootvoice,
@@ -275,10 +288,12 @@ static void handle_events(int argc, const char *argv[])
 
 			  /* Killing voices */
 			  case SDLK_y:
+				NO_KEY_REPEAT
 				a2_Kill(state, legatovoice);
 				legatovoice = -1;
 				break;
 			  case SDLK_k:
+				NO_KEY_REPEAT
 				a2_KillSub(state, rootvoice);
 				legatovoice = -1;
 				memset(chrovoices, -1, sizeof(chrovoices));
@@ -390,11 +405,9 @@ static void handle_events(int argc, const char *argv[])
 static void update_main(int dt)
 {
 	int v;
-	int w = (screen->w - 270) / 2 - 8;
-	gui_oscilloscope(osc_left, dbuffer, plotpos,
-			270, 8, w, 128, screen);
-	gui_oscilloscope(osc_right, dbuffer, plotpos,
-			270 + w + 8, 8, w, 128, screen);
+	int w = (screenw - 270) / 2 - 8;
+	gui_oscilloscope(osc_left, dbuffer, plotpos, 270, 8, w, 128);
+	gui_oscilloscope(osc_right, dbuffer, plotpos, 270 + w + 8, 8, w, 128);
 	if(now - lastreset > 300)
 	{
 		a2_GetStateProperty(state, A2_PCPULOADAVG, &v);
@@ -424,7 +437,11 @@ static void parse_args(int argc, const char *argv[])
 		}
 		if(strncmp(argv[i], "-f", 2) == 0)
 		{
+#if (SDL_MAJOR_VERSION >= 2)
+			screenflags |= SDL_WINDOW_FULLSCREEN;
+#else
 			screenflags |= SDL_FULLSCREEN;
+#endif
 			printf("[Fullscreen mode]\n");
 		}
 		else if(strncmp(argv[i], "-w", 2) == 0)
@@ -506,11 +523,22 @@ int main(int argc, char *argv[])
 	signal(SIGINT, breakhandler);
 
 	/* Open window */
+#if (SDL_MAJOR_VERSION >= 2)
+	if(SDL_CreateWindowAndRenderer(screenw, screenh, screenflags,
+			&window, &renderer))
+		exit(2);
+	SDL_SetWindowTitle(window, "Audiality 2 Test Program");
+#else
 	screen = SDL_SetVideoMode(screenw, screenh, screenbpp, screenflags);
 	SDL_WM_SetCaption("Audiality 2 Test Program", "Audiality 2");
+#endif
 	SDL_ShowCursor(1);
+#if (SDL_MAJOR_VERSION >= 2)
+	if(gui_open(renderer) < 0)
+#else
 	if(gui_open(screen) < 0)
-		exit(2);
+#endif
+		exit(3);
 
 	/*
 	 * Set up an Audiality 2 configuration with the desired drivers.
@@ -538,7 +566,7 @@ int main(int argc, char *argv[])
 	if(!osc_left || !osc_right)
 	{
 		fprintf(stderr, "Couldn't allocate visualization buffers!\n");
-		exit(1);
+		exit(4);
 	}
 	if((tcb = a2_SinkCallback(state, rootvoice, grab_process, NULL)) < 0)
 		fail(-tcb);

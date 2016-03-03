@@ -1,7 +1,7 @@
 /*
  * a2play.c - Audiality 2 command line player
  *
- * Copyright 2013-2015 David Olofson <david@olofson.net>
+ * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -340,7 +340,7 @@ static void print_version(const char *exename)
 			A2_MINOR(v),
 			A2_MICRO(v),
 			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2014 David Olofson\n");
+	fprintf(stderr, "Copyright 2016 David Olofson\n");
 }
 
 
@@ -363,7 +363,8 @@ static void usage(const char *exename)
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
 			"           -x          Print module exports\n"
 			"           -xr         Print engine root exports\n"
-			"           -v          Print engine and header versions\n"
+			"           -v          Print engine and header "
+			"versions\n"
 			"           -h          Help\n\n");
 }
 
