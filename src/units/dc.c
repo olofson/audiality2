@@ -172,6 +172,7 @@ static A2_errors dc_Initialize(A2_unit *u, A2_vmstate *vms,
 
 	/* Internal state initialization */
 	a2_InitRamper(&dc->value, 0);
+	dc->mode = A2DCRM_LINEAR;
 
 	/* Initialize VM registers */
 	ur[A2DCR_VALUE] = 0;
