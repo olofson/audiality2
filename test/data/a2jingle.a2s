@@ -77,7 +77,7 @@ def a2sversion	"1.9"
 	Voices {
 		0:Str0 P V Attack Decay detune s
 		+detune (Spread / Voices)
-		s (neg s)
+		s (-s)
 	}
 	1(NV) { *<1 NV }
 	2(NP) { *<2 NP }

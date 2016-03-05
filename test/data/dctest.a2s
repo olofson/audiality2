@@ -30,11 +30,11 @@ def a2sversion	"1.9"
 	!on 1
 	!a .2
 	while on {
-		value (neg a); set value
+		value (-a); set value
 		value a; d per
 		*a .95
 	}
-	value (neg a); set value
+	value (-a); set value
 	value 0; d (per / 2)
 
 	1() { on 0 }
@@ -100,7 +100,7 @@ def a2sversion	"1.9"
 	!on 1
 	!a .4
 	while on {
-		value (neg a);	d (perh * (rand .6 + .7))
+		value (-a);	d (perh * (rand .6 + .7))
 		value a;	d (perh * (rand .6 + .7))
 		+perh .25
 		*a .99

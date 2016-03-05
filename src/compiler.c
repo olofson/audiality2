@@ -1919,6 +1919,24 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 			a2c_Throw(c, A2_NEXPTOKEN);
 		a2c_Expression(c, r, ')');
 		return;
+	  case '-':
+	  {
+		/* Unary minus */
+		int tmpr = r;
+		a2c_SimplExp(c, r);
+		if(c->l[0].token == TK_VALUE)
+		{
+			/* Constant expression! */
+			a2c_SetTokenf(c, TK_VALUE, a2c_DoUnop(c, OP_NEGR,
+					a2c_GetValue(c, &c->l[0])));
+			return;
+		}
+		if((r < 0) && (c->l[0].token != TK_TEMPREG))
+			tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
+		a2c_CodeOpL(c, OP_NEGR, tmpr, &c->l[0]);
+		a2c_SetToken(c, r < 0 ? TK_TEMPREG : TK_REGISTER, tmpr);
+		return;
+	  }
 	  case TK_INSTRUCTION:
 	  {
 		/* Unary operator */

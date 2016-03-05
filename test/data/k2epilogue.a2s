@@ -2,7 +2,7 @@ def title	"Kobo II Epilogue"
 def version	"1.1"
 def description	"\"Thank You\" outro track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2011-2013 David Olofson"
+def copyright	"Copyright 2011-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -59,7 +59,7 @@ def a2sversion	"1.9"
 	Voices {
 		0:Str0 P V Attack Decay detune s
 		+detune (Spread / Voices)
-		s (neg s)
+		s (-s)
 	}
 	1(NV) { *<1 NV }
 	2(NP) { *<2 NP }
