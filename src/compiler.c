@@ -337,12 +337,15 @@ static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 
 
 /* Create and push a namespace and return the head of its local symbol stack */
-static A2_symbol **a2c_CreateNamespace(A2_compiler *c, const char *name)
+static A2_symbol **a2c_CreateNamespace(A2_compiler *c, A2_symbol **stack,
+		const char *name)
 {
 	A2_symbol *s = a2_NewSymbol(name, TK_NAMESPACE);
 	if(!s)
 		a2c_Throw(c, A2_OOMEMORY);
-	a2_PushSymbol(&c->symbols, s);
+	if(!stack)
+		stack = &c->symbols;
+	a2_PushSymbol(stack, s);
 	return &s->symbols;
 }
 
@@ -2354,6 +2357,29 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 }
 
 
+static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
+		A2_symbol **namespace)
+{
+	int i;
+	if(!ud->constants || !ud->constants[0].name)
+		return;
+
+	DUMPSTRUCT(fprintf(stderr, " {");)
+	for(i = 0; ud->constants[i].name; ++i)
+	{
+		A2_symbol *s;
+		if(a2_FindSymbol(c->state, *namespace, ud->constants[i].name))
+			a2c_Throw(c, A2_SYMBOLDEF);
+		if(!(s = a2_NewSymbol(ud->constants[i].name, TK_VALUE)))
+			a2c_Throw(c, A2_OOMEMORY);
+		s->v.f = ud->constants[i].value / 65536.0f;
+		a2_PushSymbol(namespace, s);
+		DUMPSTRUCT(fprintf(stderr, " %s=%f", s->name, s->v.f);)
+	}
+	DUMPSTRUCT(fprintf(stderr, " }");)
+}
+
+
 static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 		unsigned inputs, unsigned outputs)
 {
@@ -2412,24 +2438,7 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 	}
 
 	/* Add constants, if any. */
-	if(ud->constants && ud->constants[0].name)
-	{
-		DUMPSTRUCT(fprintf(stderr, " {");)
-		for(i = 0; ud->constants[i].name; ++i)
-		{
-			A2_symbol *s;
-			if(a2_FindSymbol(c->state, *namespace,
-					ud->constants[i].name))
-				a2c_Throw(c, A2_SYMBOLDEF);
-			if(!(s = a2_NewSymbol(ud->constants[i].name,
-					TK_VALUE)))
-				a2c_Throw(c, A2_OOMEMORY);
-			s->v.f = ud->constants[i].value / 65536.0f;
-			a2_PushSymbol(namespace, s);
-			DUMPSTRUCT(fprintf(stderr, " %s=%f", s->name, s->v.f);)
-		}
-		DUMPSTRUCT(fprintf(stderr, " }");)
-	}
+	a2c_AddUnitConstants(c, ud, namespace);
 
 	DUMPSTRUCT(fprintf(stderr, "\n");)
 	return ind;
@@ -2478,7 +2487,7 @@ static void a2c_UnitSpec(A2_compiler *c)
 	{
 	  case TK_NAME:
 		/* Named unit! Put the control registers in a namespace. */
-		namespace = a2c_CreateNamespace(c, c->l[0].v.sym->name);
+		namespace = a2c_CreateNamespace(c, NULL, c->l[0].v.sym->name);
 		break;
 	  default:
 		/* Anonymous unit: Control registers --> current namespace. */
@@ -3485,6 +3494,8 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 		c->regmap[i] = A2RT_CONTROL;
 	c->exportall = (flags & A2_EXPORTALL) == A2_EXPORTALL;
 	c->tabsize = st->ss->tabsize;
+
+	/* Add built-in symbols (keywords, directives, hardwired regs etc) */
 	for(i = 0; a2c_rootsyms[i].n; ++i)
 	{
 		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[i].n,
@@ -3500,11 +3511,38 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 			s->v.i = a2c_rootsyms[i].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
+
+	/* Built-in root bank is always imported by default! */
 	if(a2ht_AddItem(&c->imports, A2_ROOTBANK) < 0)
 	{
 		a2_CloseCompiler(c);
 		return NULL;
 	}
+
+	/* Add exports from registered voice units */
+	a2c_Try(c)
+	{
+		A2_symbol **uns = a2c_CreateNamespace(c, NULL, "units");
+		for(i = 0; i < st->ss->nunits; ++i)
+		{
+			A2_symbol **s;
+			const A2_unitdesc *ud = c->state->ss->units[i];
+			if(!ud->constants || !ud->constants[0].name)
+				continue;
+			s = a2c_CreateNamespace(c, uns, ud->name);
+			s = a2c_CreateNamespace(c, s, "constants");
+			DUMPSTRUCT(fprintf(stderr, "units.%s.constants: ",
+					ud->name);)
+			a2c_AddUnitConstants(c, ud, s);
+			DUMPSTRUCT(fprintf(stderr, "\n");)
+		}
+	}
+	a2c_Except
+	{
+		a2_CloseCompiler(c);
+		return NULL;
+	}
+
 	return c;
 }
 

@@ -173,10 +173,10 @@ Song(P V=1 L=0)
 	tempo 120 4
 
 	for {
-		1:test 0 //FIXME: units.dc.constants.STEP
+		1:test units.dc.constants.STEP
 		wait 1
 
-		1:test 1 //FIXME: units.dc.constants.LINEAR
+		1:test units.dc.constants.LINEAR
 		wait 1
 
 		//1:dcsaw 37n1 0;	td 32;	1<1
