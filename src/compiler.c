@@ -337,13 +337,11 @@ static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 
 
 /* Create and push a namespace and return the head of its local symbol stack */
-static A2_symbol **a2c_CreateNamespace(A2_compiler *c, const char *name,
-		A2_handle h)
+static A2_symbol **a2c_CreateNamespace(A2_compiler *c, const char *name)
 {
 	A2_symbol *s = a2_NewSymbol(name, TK_NAMESPACE);
 	if(!s)
 		a2c_Throw(c, A2_OOMEMORY);
-	s->v.i = h;
 	a2_PushSymbol(&c->symbols, s);
 	return &s->symbols;
 }
@@ -2480,7 +2478,7 @@ static void a2c_UnitSpec(A2_compiler *c)
 	{
 	  case TK_NAME:
 		/* Named unit! Put the control registers in a namespace. */
-		namespace = a2c_CreateNamespace(c, c->l[0].v.sym->name, uh);
+		namespace = a2c_CreateNamespace(c, c->l[0].v.sym->name);
 		break;
 	  default:
 		/* Anonymous unit: Control registers --> current namespace. */
