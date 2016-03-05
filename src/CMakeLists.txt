@@ -43,6 +43,7 @@ set(sources ${sources}
 	units/dcblock.c
 	units/waveshaper.c
 	units/fm.c
+	units/dc.c
 )
 
 # Drivers

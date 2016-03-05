@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -35,6 +35,7 @@
 #include "dcblock.h"
 #include "waveshaper.h"
 #include "fm.h"
+#include "dc.h"
 
 
 /*---------------------------------------------------------
@@ -192,6 +193,7 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_fm4p_unitdesc,
 	&a2_fm2r_unitdesc,
 	&a2_fm4r_unitdesc,
+	&a2_dc_unitdesc,
 	NULL
 };
 
