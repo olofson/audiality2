@@ -363,6 +363,14 @@ static A2_state *a2_Open0(A2_config *config)
 		return NULL;
 	}
 
+	/*
+	 * If the A2_REALTIME flag is set in the driver, we obey that, because
+	 * anything else would just break things, and likely crash the engine!
+	 * This way, application code can just forget about the A2_REALTIME
+	 * flag, except when using a2_Run() from a different thread.
+	 */
+	st->config->flags |= st->audio->driver.flags & A2_REALTIME;
+
 	/* Open drivers */
 	if((res = a2_OpenDrivers(st->config, A2_STATECLOSE)))
 	{
@@ -380,6 +388,23 @@ static A2_errors a2_Open2(A2_state *st)
 {
 	A2_errors res;
 	int i;
+
+	/* We set up initial pools by default for realtime states! */
+	if(st->config->flags & A2_REALTIME)
+	{
+		if(!st->config->blockpool)
+			st->config->blockpool = A2_INITBLOCKS;
+		if(!st->config->voicepool)
+			st->config->voicepool = A2_INITVOICES;
+
+		/*
+		 * 'eventpool' is a bit special in that the default pool size
+		 * is calculated based on buffer size. '-1' tells a2_OpenAPI()
+		 * to calculate that as the event system is initialized.
+		 */
+		if(!st->config->eventpool)
+			st->config->eventpool = -1;
+	}
 
 	/* Prepare memory block pool */
 	for(i = 0; i < st->config->blockpool; ++i)

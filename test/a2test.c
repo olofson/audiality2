@@ -46,7 +46,7 @@ static char *audiodriver = NULL;
 static int samplerate = 44100;
 static int audiobuf = 1024;
 static int dbuffer = -1;		/* Sync delay buffer size */
-static int a2flags = A2_REALTIME | A2_EXPORTALL;
+static int a2flags = A2_EXPORTALL;
 static int do_exit = 0;
 
 /* Playing and control */

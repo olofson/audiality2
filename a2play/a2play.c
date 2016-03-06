@@ -533,7 +533,6 @@ int main(int argc, const char *argv[])
 	/* Configure and open engine */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(a2_LastError());
-	a2flags |= drv->flags & A2_REALTIME;
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			a2flags | A2_STATECLOSE)))
 		fail(a2_LastError());

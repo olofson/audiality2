@@ -1,7 +1,7 @@
 /*
  * drivers.c - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -100,12 +100,7 @@ A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 		return NULL;
 	}
 
-	/* Flags first, as they affect the defaults for other parameters! */
-	if(flags >= 0)
-		c->flags = flags;
-	else
-		c->flags = A2_TIMESTAMP | A2_REALTIME;
-
+	c->flags = flags;
 	if(samplerate >= 0)
 		c->samplerate = samplerate;
 	else
@@ -118,14 +113,6 @@ A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 		c->channels = channels;
 	else
 		c->channels = 2;
-
-	/* We set up initial pools only for realtime states! */
-	if(c->flags & A2_REALTIME)
-	{
-		c->blockpool = A2_INITBLOCKS;
-		c->voicepool = A2_INITVOICES;
-		c->eventpool = -1;
-	}
 
 #ifdef DEBUG
 	printf("Created A2_config %p: ------\n", c);

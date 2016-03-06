@@ -8,7 +8,7 @@
  *	NOTE:	This test needs a driver/API that supports multiple opens
  *		or multiple soundcards, or the substate will fail to open!
  *
- * Copyright 2013-2015 David Olofson <david@olofson.net>
+ * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -147,7 +147,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, songh;
 	A2_driver *drv = NULL;
 	A2_config *cfg;
-	unsigned flags = A2_TIMESTAMP | A2_REALTIME;
+	unsigned flags = A2_TIMESTAMP;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 

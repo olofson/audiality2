@@ -4,7 +4,7 @@
  *	This does essentially the same thing as renderwave.c, except using the
  *	higher level conveniency API call a2_RenderWave().
  *
- * Copyright 2013-2015 David Olofson <david@olofson.net>
+ * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -130,7 +130,7 @@ int main(int argc, const char *argv[])
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
-			A2_TIMESTAMP | A2_REALTIME | A2_STATECLOSE)))
+			A2_TIMESTAMP | A2_STATECLOSE)))
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());

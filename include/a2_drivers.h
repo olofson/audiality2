@@ -1,7 +1,7 @@
 /*
  * a2_drivers.h - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2015 David Olofson <david@olofson.net>
+ * Copyright 2012-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -64,13 +64,22 @@ struct A2_config
  *	samplerate	48000
  *	buffer		1024
  *	channels	2
- *	flags		A2_TIMESTAMP | A2_REALTIME
+ *	flags		0
  *
  * If no drivers are added, default drivers will be instantiated as needed when
  * an engine state is opened. An application may add builtin drivers retrieved
  * with a2_GetDriver(), or custom drivers provided by the application. This
  * way, applications can interface Audiality 2 with practically any API,
  * engine or environment.
+ *
+ * NOTE:
+ *	If left 0 (default), blockpool, voicepool, and eventpool are set to
+ *	"reasonable" defaults automatically by a2_Open().
+ *
+ *	Also, if a realtime audio driver is used, a2_Open() automatically
+ *	transfers the A2_REALTIME flag to the configuration. Applications should
+ *	only set the A2_REALTIME flag when using a normally non-realtime driver,
+ *	such as 'buffer', and calling a2_Run() from another thread.
  *
  * NOTE:
  *	The returned A2_config must be closed using a2_CloseConfig(), unless

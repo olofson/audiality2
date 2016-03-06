@@ -39,8 +39,7 @@ static int testthread(void *data)
 	{
 		A2_config *cfg;
 		A2_state *st;
-		if(!(cfg = a2_OpenConfig(44100, 1024, 2,
-				A2_REALTIME | A2_STATECLOSE)))
+		if(!(cfg = a2_OpenConfig(44100, 1024, 2, A2_STATECLOSE)))
 			fail(a2_LastError());
 		if(a2_AddDriver(cfg, a2_NewDriver(A2_AUDIODRIVER, "dummy")))
 			fail(a2_LastError());
