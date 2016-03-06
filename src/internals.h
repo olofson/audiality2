@@ -786,11 +786,6 @@ static inline A2_event *a2_NewEvent(A2_state *st)
 	A2_event *e = st->sys->RTAlloc(st->sys, sizeof(A2_event));
 	if(!e)
 		return NULL;
-#ifdef DEBUG
-	if(st->config->flags & A2_REALTIME)
-		fprintf(stderr, "Audiality 2: Event pool exhausted! "
-				"Allocated new event %p.\n", e);
-#endif
 	EVLEAKTRACK(++st->numevents;)
 	return e;
 }
@@ -801,7 +796,14 @@ static inline A2_event *a2_AllocEvent(A2_state *st)
 	if(e)
 		st->eventpool = e->next;
 	else
+	{
 		e = a2_NewEvent(st);
+#ifdef DEBUG
+		if(st->config->flags & A2_REALTIME)
+			fprintf(stderr, "Audiality 2: Event pool exhausted! "
+					"Allocated new event %p.\n", e);
+#endif
+	}
 	NUMMSGS(e->number = st->msgnum++;)
 	MSGTRACK(e->source = "unknown";)
 	return e;
