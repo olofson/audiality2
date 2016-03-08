@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -937,10 +937,17 @@ static inline void a2_RTSetAll(A2_regtracker *rt, A2_state *st, A2_voice *v,
 
 
 /* Convert musical tick duration to audio frame delta time */
-static inline unsigned a2_VoiceTicks2t(A2_state *st, A2_voice *v, int d)
+static inline unsigned a2_ticks2t(A2_state *st, A2_voice *v, int d)
 {
 	return ((((uint64_t)d * v->s.r[R_TICK] + 127) >> 8) *
 			st->msdur + 0x7fffffff) >> 32;
+}
+
+
+/* Convert milliseconds to audio frame delta time */
+static inline unsigned a2_ms2t(A2_state *st, int d)
+{
+	return ((int64_t)d * st->msdur + 0x7fffff) >> 24;
 }
 
 
@@ -1120,18 +1127,18 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 
 		/* Timing */
 		  case OP_DELAY:
-			dt = ((int64_t)ins->a3 * st->msdur + 0x7fffff) >> 24;
+			dt = a2_ms2t(st, ins->a3);
 			++v->s.pc;
 			goto timing;
 		  case OP_DELAYR:
-			dt = ((int64_t)r[ins->a1] * st->msdur + 0x7fffff) >> 24;
+			dt = a2_ms2t(st, r[ins->a1]);
 			goto timing;
 		  case OP_TDELAY:
-			dt = a2_VoiceTicks2t(st, v, ins->a3);
+			dt = a2_ticks2t(st, v, ins->a3);
 			++v->s.pc;
 			goto timing;
 		  case OP_TDELAYR:
-			dt = a2_VoiceTicks2t(st, v, r[ins->a1]);
+			dt = a2_ticks2t(st, v, r[ins->a1]);
 			goto timing;
 
 		/* Arithmetics */
@@ -1147,7 +1154,8 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			break;
 		  case OP_P2DR:
 			r[ins->a1] = 65536000.0f / (powf(2.0f, r[ins->a2] *
-					(1.0f / 65536.0f)) * A2_MIDDLEC) + 0.5f;
+					(1.0f / 65536.0f)) * A2_MIDDLEC) +
+					0.5f;
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NEGR:
