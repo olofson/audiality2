@@ -1003,7 +1003,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		)
 		if(!--inscount)
 			A2_VMABORT(A2_OVERLOAD, "VM");
-		switch(ins->opcode)
+		switch((A2_opcodes)ins->opcode)
 		{
 
 		/* Program flow control */
@@ -1524,7 +1524,9 @@ TODO:
 			break;
 
 		  case A2_OPCODES:
+#ifdef DEBUG
 		  default:
+#endif
 			A2_VMABORT(A2_ILLEGALOP, "VM:ILLEGALOP");
 		}
 		++v->s.pc;

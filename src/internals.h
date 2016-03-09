@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -194,6 +194,12 @@ typedef enum A2_opcodes
 /* First VM register that may have a write callback */
 #define	A2_FIRSTCONTROLREG	A2_FIXEDREGS
 
+/*
+ * NOTE:
+ *	VM instruction granularity is actually 32 bits, and many instructions
+ *	don't have the 'a3' field! Advancing 'pc' by one only moves 32 bits
+ *	ahead - not the full size of the A2_instruction struct.
+ */
 typedef struct A2_instruction
 {
 	uint8_t		opcode;

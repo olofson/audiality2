@@ -110,7 +110,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 {
 	A2_instruction *ins = (A2_instruction *)(code + pc);
 	fprintf(stderr, "%d:\t%-8.8s", pc, a2_insnames[ins->opcode]);
-	switch(ins->opcode)
+	switch((A2_opcodes)ins->opcode)
 	{
 	  /* No arguments */
 	  case OP_END:
@@ -146,6 +146,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SET:
 	  case OP_DEBUGR:
 	  case OP_SIZEOFR:
+	  case OP_KILLR:
 		a2_PrintRegName(ins->a1);
 		break;
 	  /* <register(a2)> */
@@ -440,7 +441,7 @@ static void a2c_PopCoder(A2_compiler *c)
 /*
  * Issue VM instruction 'op' with arguments 'reg' and 'arg'.
  * Argument range checking is done, and 'arg' is treated as integer or 16:16
- * and handled apropriately, based on the opcode.
+ * and handled appropriately, based on the opcode.
  */
 static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 {
@@ -474,7 +475,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		a2c_Throw(c, A2_BADOPCODE);
 	if(reg >= A2_REGISTERS)
 		a2c_Throw(c, A2_BADREGISTER);
-	switch(op)
+	switch((A2_opcodes)op)
 	{
 	  case OP_END:
 		if(c->inhandler)
@@ -556,9 +557,6 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		if((arg < 0) || (arg > A2_REGISTERS))
 			a2c_Throw(c, A2_BADREG2);
 		break;
-	  case OP_WAIT:
-/*FIXME: Should probably add all instructions that don't use 'arg' here... */
-		break;
 	  case OP_DELAY:
 	  case OP_TDELAY:
 	  case OP_LOAD:
@@ -578,7 +576,21 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		if(c->regmap[reg] != A2RT_CONTROL)
 			a2c_Throw(c, A2_EXPCTRLREGISTER);
 		break;
-	  default:
+	  case OP_WAIT:
+	  case OP_DELAYR:
+	  case OP_TDELAYR:
+	  case OP_SLEEP:
+	  case OP_SETALL:
+	  case OP_PUSHR:
+	  case OP_KILL:
+	  case OP_KILLR:
+	  case OP_KILLA:
+	  case OP_DEBUGR:
+	  case OP_INITV:
+	  case OP_SIZEOF:
+	  case OP_SIZEOFR:
+		/* No extra checks */
+	  case A2_OPCODES:	/* (Not an OP-code) */
 		break;
 	}
 	ins->opcode = op;
@@ -1584,7 +1596,7 @@ static void a2c_code_op_r(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 		a2c_Code(c, op, to, r);
 		break;
 	  default:
-		a2c_Throw(c, A2_BADOPCODE);
+		a2c_Throw(c, A2_INTERNAL + 170);
 	}
 }
 
@@ -2049,7 +2061,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_SLEEP:
 	  case OP_RETURN:
 		a2c_Code(c, op, 0, 0);
-		break;
+		return;
 	  case OP_WAKE:
 	  case OP_FORCE:
 		if(!c->inhandler)
@@ -2059,12 +2071,12 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		if((c->l[0].token != TK_LABEL) && (c->l[0].token != TK_FWDECL))
 			a2c_Throw(c, A2_EXPLABEL);
 		a2c_Code(c, op, 0, a2c_GetIndex(c, &c->l[0]));
-		break;
+		return;
 	  case OP_LOOP:
 		r = a2c_Variable(c);
 		a2c_Expect(c, TK_LABEL, A2_EXPLABEL);
 		a2c_Code(c, op, r, a2c_GetIndex(c, &c->l[0]));
-		break;
+		return;
 	  case OP_JZ:
 	  case OP_JNZ:
 	  case OP_JG:
@@ -2076,7 +2088,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		i = a2c_GetIndex(c, &c->l[0]);
 		a2c_DropToken(c);
 		a2c_Branch(c, op, i, NULL);
-		break;
+		return;
 	  case OP_SPAWN:
 	  case OP_SPAWNV:
 	  case OP_SPAWND:
@@ -2096,7 +2108,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		}
 		a2c_Arguments(c, i);
 		a2c_Code(c, op, r, p);
-		break;
+		return;
 	  case OP_CALL:
 		a2c_Expect(c, TK_FUNCTION, A2_EXPFUNCTION);
 		p = a2c_GetIndex(c, &c->l[0]);	/* Function entry point */
@@ -2105,12 +2117,12 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		i = c->coder->program->funcs[p].argc;
 		a2c_Arguments(c, i);
 		a2c_Code(c, op, r, p);
-		break;
+		return;
 	  case OP_WAIT:
 		if(c->inhandler)
 			a2c_Throw(c, A2_NORUN);
 		a2c_Code(c, op, a2c_Num2Int(c, a2c_Value(c)), 0);
-		break;
+		return;
 	  case OP_SEND:
 	  case OP_SENDR:
 	  case OP_SENDS:
@@ -2120,7 +2132,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			a2c_Throw(c, A2_BADENTRY); /* 0 is not for messages! */
 		a2c_Arguments(c, A2_MAXARGS);
 		a2c_Code(c, op, r, p);
-		break;
+		return;
 	  case OP_KILL:
 		if(a2c_Lex(c, 0) == '*')
 			a2c_Code(c, OP_KILLA, 0, 0);
@@ -2142,13 +2154,13 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			else
 				a2c_Throw(c, A2_INTERNAL + 113);
 		}
-		break;
+		return;
 	  case OP_SET:
 		a2c_Code(c, OP_SET, a2c_Variable(c), 0);
-		break;
+		return;
 	  case OP_SETALL:
 		a2c_Code(c, OP_SETALL, 0, 0);
-		break;
+		return;
 	  case OP_DELAY:
 	  case OP_TDELAY:
 		if(c->inhandler)
@@ -2159,7 +2171,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_CodeOpL(c, op, 0, &c->l[0]);
 		if(c->l[0].token == TK_TEMPREG)
 			a2c_FreeReg(c, a2c_GetIndex(c, &c->l[0]));
-		break;
+		return;
 	  case OP_ADD:
 	  case OP_SUBR:
 	  case OP_MUL:
@@ -2198,9 +2210,9 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_CodeOpL(c, op, r, &c->l[0]);
 		if(c->l[0].token == TK_TEMPREG)
 			a2c_FreeReg(c, a2c_GetIndex(c, &c->l[0]));
-		break;
+		return;
 	  default:
-		a2c_Throw(c, A2_BADOPCODE);
+		a2c_Throw(c, A2_INTERNAL + 171);
 	}
 }
 
