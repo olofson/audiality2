@@ -168,7 +168,8 @@ void a2_DumpConfig(A2_config *c);
 	A2_DI(ANDR)	A2_DI(ORR)	A2_DI(XORR)	A2_DI(NOTR)	\
 									\
 	/* Unit control */						\
-	A2_DI(SET)	A2_DI(SETALL)					\
+	A2_DI(SET)	A2_DI(SETALL)	A2_DI(RAMP)	A2_DI(RAMPR)	\
+	A2_DI(RAMPALL)	A2_DI(RAMPALLR)					\
 									\
 	/* Subvoice control */						\
 	A2_DI(PUSH)	A2_DI(PUSHR)	A2_DI(SPAWN)	A2_DI(SPAWNR)	\

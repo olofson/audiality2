@@ -137,6 +137,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_TDELAY:
 	  case OP_PUSH:
 	  case OP_DEBUG:
+	  case OP_RAMPALL:
 		fprintf(stderr, "%f", ins->a3 / 65536.0f);
 		break;
 	  /* <register(a1)> */
@@ -151,6 +152,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 		break;
 	  /* <register(a2)> */
 	  case OP_SPAWNDR:
+	  case OP_RAMPALLR:
 		a2_PrintRegName(ins->a2);
 		break;
 	  /* <register(a1), 16:16(a3)> */
@@ -160,6 +162,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_MOD:
 	  case OP_QUANT:
 	  case OP_RAND:
+	  case OP_RAMP:
 		a2_PrintRegName(ins->a1);
 		fprintf(stderr, " %f", ins->a3 / 65536.0f);
 		break;
@@ -209,6 +212,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_ORR:
 	  case OP_XORR:
 	  case OP_NOTR:
+	  case OP_RAMPR:
 		a2_PrintRegName(ins->a1);
 		fprintf(stderr, " ");
 		a2_PrintRegName(ins->a2);
@@ -550,10 +554,8 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_SPAWNR:
 	  case OP_SPAWNDR:
 	  case OP_SPAWNVR:
-#if 0
 	  case OP_RAMPR:
-	  case OP_DETACHR:
-#endif
+	  case OP_RAMPALLR:
 		if((arg < 0) || (arg > A2_REGISTERS))
 			a2c_Throw(c, A2_BADREG2);
 		break;
@@ -565,11 +567,10 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_MOD:
 	  case OP_QUANT:
 	  case OP_RAND:
-#if 0
-	  case OP_RAMP:
-#endif
 	  case OP_PUSH:
 	  case OP_DEBUG:
+	  case OP_RAMP:
+	  case OP_RAMPALL:
 		longins = 1;
 		break;
 	  case OP_SET:
@@ -2161,6 +2162,25 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_SETALL:
 		a2c_Code(c, OP_SETALL, 0, 0);
 		return;
+	  case OP_RAMP:
+		r = a2c_Variable(c);
+		a2c_SimplExp(c, -1);
+		if(a2_IsRegister(c->l[0].token))
+			a2c_Codef(c, OP_RAMPR, r, a2c_GetIndex(c, c->l));
+		else if(a2_IsValue(c->l[0].token))
+			a2c_Codef(c, OP_RAMP, r, a2c_GetValue(c, c->l));
+		else
+			a2c_Throw(c, A2_EXPEXPRESSION);
+		return;
+	  case OP_RAMPALL:
+		a2c_SimplExp(c, -1);
+		if(a2_IsRegister(c->l[0].token))
+			a2c_Codef(c, OP_RAMPALLR, 0, a2c_GetIndex(c, c->l));
+		else if(a2_IsValue(c->l[0].token))
+			a2c_Codef(c, OP_RAMPALL, 0, a2c_GetValue(c, c->l));
+		else
+			a2c_Throw(c, A2_EXPEXPRESSION);
+		return;
 	  case OP_DELAY:
 	  case OP_TDELAY:
 		if(c->inhandler)
@@ -3469,6 +3489,8 @@ static struct
 	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
 	{ "set",	TK_INSTRUCTION,	OP_SET		},
 	{ "setall",	TK_INSTRUCTION,	OP_SETALL	},
+	{ "ramp",	TK_INSTRUCTION,	OP_RAMP		},
+	{ "rampall",	TK_INSTRUCTION,	OP_RAMPALL	},
 	{ "sizeof",	TK_INSTRUCTION,	OP_SIZEOF	},
 	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 

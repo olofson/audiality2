@@ -1277,23 +1277,31 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_SETALL:
 			a2_RTSetAll(&rt, st, v, v->s.waketime);
 			break;
-#if 0
+
 		  case OP_RAMP:
-			++v->s.pc;
-			if(ins->a1 >= v->cregisters)
-				break;
-			a2_VoiceControl(v, ins->a1,
-					(int64_t)ins->a3 * st->msdur >> 32);
-			a2_RTMark(&rt, ins->a1);
+			a2_VoiceControl(st, v, ins->a1, v->s.waketime,
+					a2_ms2t(st, ins->a3));
+			a2_RTUnmark(&rt, ins->a1);
 			++v->s.pc;
 			break;
 		  case OP_RAMPR:
-			if(ins->a1 >= v->cregisters)
-				break;
-			a2_VoiceControl(v, ins->a1,
-					(int64_t)r[ins->a2] * st->msdur >> 32);
-			a2_RTMark(&rt, ins->a1);
+			a2_VoiceControl(st, v, ins->a1, v->s.waketime,
+					a2_ms2t(st, r[ins->a2]));
+			a2_RTUnmark(&rt, ins->a1);
 			break;
+
+		  case OP_RAMPALL:
+			a2_RTApply(&rt, st, v, v->s.waketime,
+					a2_ms2t(st, ins->a3));
+			a2_RTInit(&rt);
+			++v->s.pc;
+			break;
+		  case OP_RAMPALLR:
+			a2_RTApply(&rt, st, v, v->s.waketime,
+					a2_ms2t(st, r[ins->a2]));
+			a2_RTInit(&rt);
+			break;
+#if 0
 		  case OP_DETACHR:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
@@ -1313,7 +1321,6 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			v->sv[ins->a1] = NULL;
 			break;
 #endif
-
 		/* Subvoice control */
 		  case OP_PUSH:
 			if(cargc >= A2_MAXARGS)
