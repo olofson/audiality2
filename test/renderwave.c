@@ -41,10 +41,10 @@ typedef struct TEST_settings {
 
 static TEST_settings settings[2] = {
 	{
-		"default", 44100, 2, 4096
+		"default", 48000, 2, 4096
 	},
 	{
-		"buffer", 44100, 1, 1024
+		"buffer", 48000, 1, 1024
 	}
 };
 

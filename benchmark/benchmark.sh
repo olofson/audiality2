@@ -45,9 +45,9 @@ do
    do
       echo Pass $i
       if [ ! -z $VERBOSE ]; then
-         time a2play -dbuffer $SONGNAME -pSong -st250
+         time a2play -dbuffer -r44100 $SONGNAME -pSong -st250
       else
-         time $(a2play -dbuffer $SONGNAME -pSong -st250 > /dev/null 2>&1)
+         time $(a2play -dbuffer -r44100 $SONGNAME -pSong -st250 > /dev/null 2>&1)
       fi
       echo
    done

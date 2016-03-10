@@ -38,7 +38,7 @@ static int readstdin = 0;
 
 /* Configuration */
 static const char *audiodriver = "default";
-static int samplerate = 44100;
+static int samplerate = 48000;
 static int channels = 2;
 static int audiobuf = 4096;
 static int a2flags = A2_EXPORTALL | A2_TIMESTAMP;

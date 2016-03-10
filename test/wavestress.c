@@ -66,7 +66,7 @@
 
 /* Configuration */
 const char *audiodriver = "default";
-int samplerate = 44100;
+int samplerate = 48000;
 int channels = 2;
 int audiobuf = 4096;
 int waverate = 0;

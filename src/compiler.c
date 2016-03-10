@@ -3030,7 +3030,7 @@ static void a2c_WaveDef(A2_compiler *c)
 	int export = 1;
 	memset(&wd, 0, sizeof(wd));
 	wd.type = A2_WMIPWAVE;
-	wd.samplerate = 44100;	/* FIXME: Parent state fs... or what...? */
+	wd.samplerate = 48000;	/* FIXME: Parent state fs... or what...? */
 	/*
 	 * FIXME: If we were to actually save the *seed* somewhere, we should
 	 * probably have substates inherit defaults from their parents.
