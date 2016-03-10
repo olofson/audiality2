@@ -1,7 +1,7 @@
 /*
  * compiler.h - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -149,6 +149,17 @@ static inline int a2_IsSymbol(A2_tokens tk)
 {
 	return (tk == TK_NAMESPACE) || (tk == TK_NAME) || (tk == TK_FWDECL) ||
 			(tk == TK_LABEL);
+}
+
+/*
+ * Returns "true" if the token marks the end of a statement. Note that this
+ * accepts '}' without context; that is, it doesn't care if there's a matching
+ * opening brace! Also note that it does NOT recognize ';', since the lexer
+ * always returns TK_EOS when encountering that.
+ */
+static inline int a2_IsEOS(A2_tokens tk)
+{
+	return (tk == TK_EOS) || (tk == '}');
 }
 
 

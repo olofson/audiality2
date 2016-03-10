@@ -1998,7 +1998,7 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 	for(argc = 0; argc <= maxargc; ++argc)
 	{
 		a2c_Lex(c, 0);
-		if((c->l[0].token == '}') || (c->l[0].token == TK_EOS))
+		if(a2_IsEOS(c->l[0].token))
 		{
 			a2c_Unlex(c);
 			return;		/* Done! */
@@ -2031,7 +2031,7 @@ static int a2c_ConstArguments(A2_compiler *c, int maxargc, int *argv)
 	for(argc = 0; argc <= maxargc; ++argc)
 	{
 		a2c_Lex(c, 0);
-		if((c->l[0].token == '}') || (c->l[0].token == TK_EOS))
+		if(a2_IsEOS(c->l[0].token))
 		{
 			a2c_Unlex(c);
 			return argc;	/* Done! */
