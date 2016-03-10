@@ -93,7 +93,7 @@ Song(P V=1 L=0)
 	D2.fbdelay (tick * 6.95);	D2.fbgain .03
 	D2.ldelay (tick * 9.01);	D2.lgain .05
 	D2.rdelay (tick * 11.03);	D2.rgain .05
-	setall
+	set
 
 	tr P
 	for {

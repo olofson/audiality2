@@ -1369,6 +1369,6 @@ Song(P V=1 L=0)
 	end
 .stop	10 { *vol .7; d 100 }
 	vol 0; d 100
-	kill *
+	kill
 	1() { force stop }
 }

@@ -267,7 +267,7 @@ play2()
 .l	blit2 pitch .5
 	+pitch 2n
 	d 400
-	kill *
+	kill
 	d 100
 	loop i l
 }

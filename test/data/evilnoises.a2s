@@ -135,12 +135,12 @@ def a2sversion	"1.9"
 	!d1 (drive + 1.4)
 	!d2 (drive + .3)
 	!n (trans - 36n)
-		EvilSyncBass n .8 d1;		td 24; kill *
-	+n 7n;	EvilSyncBass n .8 d2;		td 24; kill *
-	-n 1n;	EvilSyncBass n .8 drive;	td 48; kill *
-	-n 6n;	EvilSyncBass n .3;		td 6; kill *
+		EvilSyncBass n .8 d1;		td 24; kill
+	+n 7n;	EvilSyncBass n .8 d2;		td 24; kill
+	-n 1n;	EvilSyncBass n .8 drive;	td 48; kill
+	-n 6n;	EvilSyncBass n .3;		td 6; kill
 						td 10
-		EvilSyncBass n .3;		td 4; kill *
+		EvilSyncBass n .3;		td 4; kill
 						td 12
 }
 .h2(trans drive)
@@ -148,31 +148,31 @@ def a2sversion	"1.9"
 	!d1 (drive + 1.4)
 	!d2 (drive + .3)
 	!n (trans - 36n)
-		EvilSyncBass n .8 d1;		td 8; kill *
-		EvilSyncBass n .3 drive;	td 16; kill *
-	+n 7n;	EvilSyncBass n .8 drive;	td 4; kill *
-		EvilSyncBass n .3;		td 12; kill *
-	+n 11n;	EvilSyncBass n .8 d2;		td 4; kill *
-		EvilSyncBass n .3;		td 4; kill *
-	-n 1;	EvilSyncBass n .8 drive;	td 48; kill *
-	-n 6n;	EvilSyncBass n .3;		td 6; kill *
+		EvilSyncBass n .8 d1;		td 8; kill
+		EvilSyncBass n .3 drive;	td 16; kill
+	+n 7n;	EvilSyncBass n .8 drive;	td 4; kill
+		EvilSyncBass n .3;		td 12; kill
+	+n 11n;	EvilSyncBass n .8 d2;		td 4; kill
+		EvilSyncBass n .3;		td 4; kill
+	-n 1;	EvilSyncBass n .8 drive;	td 48; kill
+	-n 6n;	EvilSyncBass n .3;		td 6; kill
 						td 10
-		EvilSyncBass n .3;		td 4; kill *
+		EvilSyncBass n .3;		td 4; kill
 						td 4
-	+n 1;	EvilSyncBass n .3 2.5;		td 4; kill *;
+	+n 1;	EvilSyncBass n .3 2.5;		td 4; kill;
 	-n 1;					td 4
 }
 .h3(trans)
 {
 	!n (trans - 36n)
-		EvilSyncBass n .8 .5;		td 24; kill *
-	+n 7n;	EvilSyncBass n .8 1;		td 24; kill *
-	-n 1n;	EvilSyncBass n .8 1.5;		td 24; kill *
-		EvilSyncBass n .3;		td 8; kill *
-	-n 3n;	EvilSyncBass n .8 2;		td 16; kill *
-		EvilSyncBass n .3;		td 8; kill *
-	-n 1n;	EvilSyncBass n .8 2.5;		td 16; kill *
-		EvilSyncBass n .3;		td 8; kill *
+		EvilSyncBass n .8 .5;		td 24; kill
+	+n 7n;	EvilSyncBass n .8 1;		td 24; kill
+	-n 1n;	EvilSyncBass n .8 1.5;		td 24; kill
+		EvilSyncBass n .3;		td 8; kill
+	-n 3n;	EvilSyncBass n .8 2;		td 16; kill
+		EvilSyncBass n .3;		td 8; kill
+	-n 1n;	EvilSyncBass n .8 2.5;		td 16; kill
+		EvilSyncBass n .3;		td 8; kill
 }
 .heavy(trans)
 {
@@ -184,25 +184,25 @@ def a2sversion	"1.9"
 
 .h21(d1 d2)
 {
-	EvilSyncBass -36n .8 d1;	td 8; kill *
-	EvilSyncBass -36n .3;		td 16; kill *
-	EvilSyncBass -36n .8 d2;	td 8; kill *
-	EvilSyncBass -36n .3;		td 16; kill *
+	EvilSyncBass -36n .8 d1;	td 8; kill
+	EvilSyncBass -36n .3;		td 16; kill
+	EvilSyncBass -36n .8 d2;	td 8; kill
+	EvilSyncBass -36n .3;		td 16; kill
 }
 .h22(d1 d2)
 {
 	h21 d1 d2;			td 48
-	EvilSyncBass -24n .8 2;		td 4; kill *
+	EvilSyncBass -24n .8 2;		td 4; kill
 	td 4
-	EvilSyncBass -36n .8 1.2;	td 8; kill *
-	EvilSyncBass -36n .3 .3;	td 16; kill *
-	EvilSyncBass -34n .8 1.7;	td 8; kill *
-	EvilSyncBass -34n .3 .7;	td 8; kill *
-	EvilSyncBass -22n .8 2;		td 4; kill *
+	EvilSyncBass -36n .8 1.2;	td 8; kill
+	EvilSyncBass -36n .3 .3;	td 16; kill
+	EvilSyncBass -34n .8 1.7;	td 8; kill
+	EvilSyncBass -34n .3 .7;	td 8; kill
+	EvilSyncBass -22n .8 2;		td 4; kill
 	td 4
-	EvilSyncBass -33n .8 2.3;	td 8; kill *
-	EvilSyncBass -33n .3 1;		td 8; kill *
-	EvilSyncBass -21n .5 3;		td 4; kill *
+	EvilSyncBass -33n .8 2.3;	td 8; kill
+	EvilSyncBass -33n .3 1;		td 8; kill
+	EvilSyncBass -21n .5 3;		td 4; kill
 	td 4
 }
 .heavy2()
@@ -223,25 +223,25 @@ def a2sversion	"1.9"
 
 .h31(d1 d2)
 {
-	EvilSyncBass -24n .5 d1;	td 4; kill *
-	EvilSyncBass -36n .2;		td 20; kill *
-	EvilSyncBass -36n .5 d2;	td 4; kill *
-	EvilSyncBass -36n .2;		td 20; kill *
+	EvilSyncBass -24n .5 d1;	td 4; kill
+	EvilSyncBass -36n .2;		td 20; kill
+	EvilSyncBass -36n .5 d2;	td 4; kill
+	EvilSyncBass -36n .2;		td 20; kill
 }
 .h32(d1 d2)
 {
 	h31 d1 d2;			td 48
-	EvilSyncBass -24n .5 2;		td 4; kill *
+	EvilSyncBass -24n .5 2;		td 4; kill
 	td 4
-	EvilSyncBass -36n .5 1.2;	td 4; kill *
-	EvilSyncBass -36n .2 .3;	td 20; kill *
-	EvilSyncBass -34n .6 1.7;	td 6; kill *
-	EvilSyncBass -34n .2 .7;	td 10; kill *
-	EvilSyncBass -22n .7 2;		td 4; kill *
+	EvilSyncBass -36n .5 1.2;	td 4; kill
+	EvilSyncBass -36n .2 .3;	td 20; kill
+	EvilSyncBass -34n .6 1.7;	td 6; kill
+	EvilSyncBass -34n .2 .7;	td 10; kill
+	EvilSyncBass -22n .7 2;		td 4; kill
 	td 4
-	EvilSyncBass -33n .8 2.3;	td 8; kill *
-	EvilSyncBass -33n .3 1;		td 8; kill *
-	EvilSyncBass -21n .5 3;		td 4; kill *
+	EvilSyncBass -33n .8 2.3;	td 8; kill
+	EvilSyncBass -33n .3 1;		td 8; kill
+	EvilSyncBass -21n .5 3;		td 4; kill
 	td 4
 }
 .heavy3()
@@ -258,8 +258,8 @@ def a2sversion	"1.9"
 
 .heavy4(pitch)
 {
-	EvilSyncBass (pitch - 3) .4;		td 248; kill *
-	EvilSyncBass (pitch - 2) .6 1.7;	td 4; kill *
+	EvilSyncBass (pitch - 3) .4;		td 248; kill
+	EvilSyncBass (pitch - 2) .6 1.7;	td 4; kill
 }
 
 .sdn(vel)
@@ -600,7 +600,7 @@ Song(P V=1 L=0)
 		d 100
 	}
 	vol 0; d 100
-	kill *
+	kill
 
 	// "Stop" message handler
 	1() {

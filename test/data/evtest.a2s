@@ -50,6 +50,6 @@ Song()
 
 	end
 
-.stop	kill *
+.stop	kill
 	1() { force stop }
 }

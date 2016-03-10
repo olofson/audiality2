@@ -14,7 +14,7 @@ import chords;
 	struct { fm4; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
 	fb .25; fb1 .25; fb2 .125; fb3 .125;
-	setall
+	set
 	
 	a V;				d 100
 		a1 3; a2 3; *a3 3;	d 3000
@@ -30,7 +30,7 @@ import chords;
 	struct { fm4p; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
 	fb .25; fb1 .25; fb2 .125; fb3 .125;
-	setall
+	set
 	
 	a V;				d 100
 		a1 3; a2 3; *a3 3;	d 3000
@@ -46,7 +46,7 @@ import chords;
 	struct { fm4r; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
 	fb .25; fb1 .25; fb2 .125; fb3 .125;
-	setall
+	set
 	
 	a V;				d 100
 		a1 3; a2 3; *a3 3;	d 3000
@@ -73,7 +73,7 @@ Song(P V=1 L=0)
 	D2.ldelay (tick * 9.01);	D2.lgain .05
 	D2.rdelay (tick * 11.03);	D2.rgain .05
 	PM.vol .5
-	setall
+	set
 
 	tr (P - 5n)
 	for {
@@ -109,7 +109,7 @@ Song(P V=1 L=0)
 		d 100
 	}
 	PM.vol 0;	d 100
-	kill *
+	kill
 
 	1() {
 		force stop

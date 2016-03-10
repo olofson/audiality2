@@ -1008,7 +1008,7 @@ BassR()
 	vol 0; set vol; vol 1
 	1:i 4n v;	2:i 7n v;	3:i 11n v;	4:i -32n v;	td 14
 	vol 0;								td 1
-	kill *
+	kill
 }
 
 LongIntro()
@@ -1138,7 +1138,7 @@ Song(P V=1 L=1 I=1)
 		d 100
 	}
 	vol 0; d 100
-	kill *
+	kill
 
 	// "Stop" message handler
 	1() {

@@ -1,7 +1,7 @@
 /*
  * a2_types.h - Audiality 2 basic data types
  *
- * Copyright 2012-2015 David Olofson <david@olofson.net>
+ * Copyright 2012-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -182,6 +182,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(EXPCONSTANT,	"Expected constant")\
   A2_DEFERR(EXPWAVETYPE,	"Expected wave type identifier")\
   A2_DEFERR(EXPEXPRESSION,	"Expected expression")\
+  A2_DEFERR(EXPVOICEEOS,	"Expected voice index or end of statement")\
   \
   A2_DEFERR(NEXPEOF,		"Unexpected end of file")\
   A2_DEFERR(NEXPNAME,		"Undefined symbol")\

@@ -74,7 +74,7 @@ Song(P V=1 L=0)
 	FBD.fbdelay 67; FBD.fbgain .1
 	FBD.ldelay 70; FBD.lgain .1
 	FBD.rdelay 83; FBD.rgain .1
-	setall
+	set
 
 	1:Tuning;		d 2500
 	2:A2Jingle.Song P V L;	d 8000
@@ -86,7 +86,7 @@ Song(P V=1 L=0)
 		d 100
 	}
 	PM.vol 0;	d 100
-	kill *
+	kill
 
 	1() {
 		force stop

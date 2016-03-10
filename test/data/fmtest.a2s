@@ -109,7 +109,7 @@ import chords;
 	p1 1.001
 	p2 1.997; fb2 .3
 	p3 3.005; a3 .3
-	setall
+	set
 	
 	a V; a1 .2; a2 .3; fb .3; fb1 .4; fb2 .5;	d 500
 	*fb .7;	*fb1 .7; *fb2 .7; *a3 .3;		d 2000
@@ -134,7 +134,7 @@ import chords;
 	D2.fbdelay (tick * 6.95);	D2.fbgain .05
 	D2.ldelay (tick * 9.01);	D2.lgain .05
 	D2.rdelay (tick * 11.03);	D2.rgain .05
-	setall
+	set
 
 	Bassline FMBass1;	td 32
 	Bassline FMBass2;	td 32
@@ -159,7 +159,7 @@ Song(P V=1 L=0)
 	D.ldelay 67;	D.lgain .02
 	D.rdelay 97;	D.rgain .01
 	PM.vol .6
-	setall
+	set
 
 	tr P
 	for {
@@ -178,7 +178,7 @@ Song(P V=1 L=0)
 		d 100
 	}
 	PM.vol 0;	d 100
-	kill *
+	kill
 
 	1() {
 		force stop

@@ -2135,48 +2135,58 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Code(c, op, r, p);
 		return;
 	  case OP_KILL:
-		if(a2c_Lex(c, 0) == '*')
+		a2c_Lex(c, 0);
+		if(a2_IsEOS(c->l[0].token))
+		{
+			a2c_Unlex(c);
 			a2c_Code(c, OP_KILLA, 0, 0);
+			return;
+		}
+		a2c_Unlex(c);
+		a2c_SimplExp(c, -1);
+		if(a2_IsValue(c->l[0].token))
+			a2c_Code(c, OP_KILL, a2c_Num2Int(c, a2c_GetValue(c,
+					c->l)), 0);
+		else if(a2_IsRegister(c->l[0].token))
+		{
+			r = a2c_GetIndex(c, c->l);
+			a2c_Code(c, OP_KILLR, r, 0);
+			if(c->l[0].token == TK_TEMPREG)
+				a2c_FreeReg(c, r);
+		}
+		else
+			a2c_Throw(c, A2_EXPVOICEEOS);
+		return;
+	  case OP_SET:
+		a2c_Lex(c, 0);
+		if(a2_IsEOS(c->l[0].token))
+		{
+			a2c_Unlex(c);
+			a2c_Code(c, OP_SETALL, 0, 0);
+			return;
+		}
+		a2c_Unlex(c);
+		a2c_Code(c, OP_SET, a2c_Variable(c), 0);
+		return;
+	  case OP_RAMP:
+		a2c_SimplExp(c, -1);
+		a2c_Lex(c, 0);
+		if(a2_IsEOS(c->l[0].token))
+		{
+			a2c_Unlex(c);
+			op = OP_RAMPALL;
+			r = 0;
+		}
 		else
 		{
 			a2c_Unlex(c);
+			r = a2c_GetIndex(c, c->l);
 			a2c_SimplExp(c, -1);
-			if(a2_IsValue(c->l[0].token))
-				a2c_Code(c, OP_KILL, a2c_Num2Int(c,
-						a2c_GetValue(c, c->l)), 0);
-			else if(a2_IsRegister(c->l[0].token))
-			{
-				r = a2c_GetIndex(c, c->l);
-				a2c_Code(c, OP_KILLR, r, 0);
-				if(c->l[0].token == TK_TEMPREG)
-					a2c_FreeReg(c, r);
-			}
-			else
-				a2c_Throw(c, A2_INTERNAL + 113);
 		}
-		return;
-	  case OP_SET:
-		a2c_Code(c, OP_SET, a2c_Variable(c), 0);
-		return;
-	  case OP_SETALL:
-		a2c_Code(c, OP_SETALL, 0, 0);
-		return;
-	  case OP_RAMP:
-		r = a2c_Variable(c);
-		a2c_SimplExp(c, -1);
 		if(a2_IsRegister(c->l[0].token))
-			a2c_Codef(c, OP_RAMPR, r, a2c_GetIndex(c, c->l));
+			a2c_Codef(c, op + 1, r, a2c_GetIndex(c, c->l));
 		else if(a2_IsValue(c->l[0].token))
-			a2c_Codef(c, OP_RAMP, r, a2c_GetValue(c, c->l));
-		else
-			a2c_Throw(c, A2_EXPEXPRESSION);
-		return;
-	  case OP_RAMPALL:
-		a2c_SimplExp(c, -1);
-		if(a2_IsRegister(c->l[0].token))
-			a2c_Codef(c, OP_RAMPALLR, 0, a2c_GetIndex(c, c->l));
-		else if(a2_IsValue(c->l[0].token))
-			a2c_Codef(c, OP_RAMPALL, 0, a2c_GetValue(c, c->l));
+			a2c_Codef(c, op, r, a2c_GetValue(c, c->l));
 		else
 			a2c_Throw(c, A2_EXPEXPRESSION);
 		return;
@@ -3487,9 +3497,7 @@ static struct
 	{ "p2d",	TK_INSTRUCTION,	OP_P2DR		},
 	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
 	{ "set",	TK_INSTRUCTION,	OP_SET		},
-	{ "setall",	TK_INSTRUCTION,	OP_SETALL	},
 	{ "ramp",	TK_INSTRUCTION,	OP_RAMP		},
-	{ "rampall",	TK_INSTRUCTION,	OP_RAMPALL	},
 	{ "sizeof",	TK_INSTRUCTION,	OP_SIZEOF	},
 	{ "debug",	TK_INSTRUCTION,	OP_DEBUG	},
 

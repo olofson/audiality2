@@ -49,7 +49,7 @@
 			<item> p2d </item>
 			<item> neg </item>
 			<item> set </item>
-			<item> setall </item>
+			<item> ramp </item>
 			<item> debug </item>
 			<item> sizeof </item>
 		</list>

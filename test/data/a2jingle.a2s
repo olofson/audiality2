@@ -244,7 +244,7 @@ Song(P V=1 L=0)
 		d 100
 	}
 	vol 0; d 100
-	kill *
+	kill
 
 	// "Stop" message handler
 	1() {

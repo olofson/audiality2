@@ -166,7 +166,7 @@ def a2sversion	"1.9"
 		Electro;	td 1.1
 				td 4
 	}
-	1() { kill * }
+	1() { kill }
 }
 
 .HatNoise(P V W spread decay)
@@ -197,7 +197,7 @@ def a2sversion	"1.9"
 		Hat Vel;		td 2
 		*Vel Fade
 	}
-	1() { kill * }
+	1() { kill }
 }
 
 .PXBeat1()
@@ -236,7 +236,7 @@ def a2sversion	"1.9"
 	PXBeat2;	td 16
 	PXBeat1;	td 16
 	PXBeat3;	td 16
-	1() { kill * }
+	1() { kill }
 }
 
 .LowBD(Bars=4)
@@ -676,7 +676,7 @@ def a2sversion	"1.9"
 	6:ResoLoop -5n triangle
 			td 52
 	7<1;		td 7
-	kill *; Fill;	td 5
+	kill; Fill;	td 5
 }
 
 .Chorus(P)
@@ -895,6 +895,6 @@ Song(P V=1 L=0)
 	end
 .stop	10 { *vol .7; d 100 }
 	vol 0; d 100
-	kill *
+	kill
 	1() { force stop }
 }
