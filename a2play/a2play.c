@@ -414,7 +414,7 @@ static void parse_args(int argc, const char *argv[])
 		}
 		else if(strncmp(argv[i], "-p", 2) == 0)
 			continue;
-		else if(strncmp(argv[i], "-s", 2) == 0)
+		else if(strncmp(argv[i], "-s", 3) == 0)	/* No args! */
 		{
 			readstdin = 1;
 			printf("[Reading stdin]\n");
@@ -437,12 +437,12 @@ static void parse_args(int argc, const char *argv[])
 			continue;
 		else if(strncmp(argv[i], "-x", 2) == 0)
 			continue;
-		else if(strncmp(argv[i], "-h", 2) == 0)
+		else if(strncmp(argv[i], "-h", 3) == 0)	/* No args! */
 		{
 			usage(argv[0]);
 			exit(0);
 		}
-		else if(strncmp(argv[i], "-v", 2) == 0)
+		else if(strncmp(argv[i], "-v", 3) == 0)	/* No args! */
 		{
 			print_version(argv[0]);
 			exit(0);
