@@ -148,12 +148,9 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_DEBUGR:
 	  case OP_SIZEOFR:
 	  case OP_KILLR:
-		a2_PrintRegName(ins->a1);
-		break;
-	  /* <register(a2)> */
 	  case OP_SPAWNDR:
 	  case OP_RAMPALLR:
-		a2_PrintRegName(ins->a2);
+		a2_PrintRegName(ins->a1);
 		break;
 	  /* <register(a1), 16:16(a3)> */
 	  case OP_LOAD:
@@ -552,10 +549,8 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_NOTR:
 	  case OP_QUANTR:
 	  case OP_SPAWNR:
-	  case OP_SPAWNDR:
 	  case OP_SPAWNVR:
 	  case OP_RAMPR:
-	  case OP_RAMPALLR:
 		if((arg < 0) || (arg > A2_REGISTERS))
 			a2c_Throw(c, A2_BADREG2);
 		break;
@@ -590,6 +585,8 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_INITV:
 	  case OP_SIZEOF:
 	  case OP_SIZEOFR:
+	  case OP_SPAWNDR:
+	  case OP_RAMPALLR:
 		/* No extra checks */
 	  case A2_OPCODES:	/* (Not an OP-code) */
 		break;
@@ -2098,6 +2095,11 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		  case TK_REGISTER:
 			++op;
 			p = a2c_GetIndex(c, c->l);
+			if(op == OP_SPAWNDR)
+			{
+				r = p;
+				p = 0;	/* (Unused.) */
+			}
 			i = A2_MAXARGS;	/* Can't check these compile time... */
 			break;
 		  case TK_PROGRAM:
@@ -2173,20 +2175,38 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Lex(c, 0);
 		if(a2_IsEOS(c->l[0].token))
 		{
+			/* Only one argument, which should be ramp duration */
 			a2c_Unlex(c);
 			op = OP_RAMPALL;
-			r = 0;
+			r = 0;	/* (Unused field.) */
 		}
 		else
 		{
+			/* Two arguments: target register; ramp duration */
 			a2c_Unlex(c);
 			r = a2c_GetIndex(c, c->l);
 			a2c_SimplExp(c, -1);
 		}
 		if(a2_IsRegister(c->l[0].token))
-			a2c_Codef(c, op + 1, r, a2c_GetIndex(c, c->l));
+		{
+			/* Second (or only) argument is a register! */
+			++op;
+			if(op == OP_RAMPALL)
+			{
+				/* duration in R[a1]! */
+				a2c_Code(c, op, a2c_GetIndex(c, c->l), 0);
+			}
+			else
+			{
+				/* target in R[a1], duration in R[a2] */
+				a2c_Code(c, op, r, a2c_GetIndex(c, c->l));
+			}
+		}
 		else if(a2_IsValue(c->l[0].token))
+		{
+			/* target (if any) in R[a1], duration in a3 */
 			a2c_Codef(c, op, r, a2c_GetValue(c, c->l));
+		}
 		else
 			a2c_Throw(c, A2_EXPEXPRESSION);
 		return;

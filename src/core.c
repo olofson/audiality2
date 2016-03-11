@@ -1298,7 +1298,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			break;
 		  case OP_RAMPALLR:
 			a2_RTApply(&rt, st, v, v->s.waketime,
-					a2_ms2t(st, r[ins->a2]));
+					a2_ms2t(st, r[ins->a1]));
 			a2_RTInit(&rt);
 			break;
 #if 0
@@ -1362,7 +1362,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			cargc = 0;
 			break;
 		  case OP_SPAWNDR:
-			a2_VoiceSpawn(st, v, -1, r[ins->a2] >> 16, cargc,
+			a2_VoiceSpawn(st, v, -1, r[ins->a1] >> 16, cargc,
 					cargv);
 			cargc = 0;
 			break;
