@@ -581,7 +581,7 @@ int main(int argc, const char *argv[])
 		return 1;
 	}
 
-	if(a2flags & A2_REALTIME)
+	if(cfg->flags & A2_REALTIME)
 	{
 		printf("a2play: Realtime mode.\n");
 
