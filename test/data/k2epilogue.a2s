@@ -315,9 +315,9 @@ def a2sversion	"1.9"
 .Fill()
 {
 	struct { inline; panmix }
-	!ramp .1
+	!r .1
 	4 {
-		SD ramp ramp; td .25; +ramp .1
+		SD r r; td .25; +r .1
 	}
 	4 {
 		SD; td 1
@@ -787,20 +787,20 @@ def a2sversion	"1.9"
 {
 	struct { inline; panmix }
 	BD;		td 6
-	!ramp .1
+	!r .1
 	8 {
-		SD ramp ramp;	td .25
-		+ramp .05
+		SD r r;	td .25
+		+r .05
 	}
 }
 .b2fill2()
 {
 	struct { inline; panmix }
 	BD; Cymbal -.5 .25; Cymbal 0 .25;			td 6
-	!ramp .1
+	!r .1
 	8 {
-		SD ramp ramp;					td .25
-		+ramp .05
+		SD r r;						td .25
+		+r .05
 	}
 }
 .Break2()
