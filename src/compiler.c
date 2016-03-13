@@ -3407,6 +3407,8 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Instruction(c, OP_MOD, 0);
 		break;
 	  case TK_INSTRUCTION:
+		if((terminator == TK_EOF) && (a2c_GetIndex(c, c->l) == OP_END))
+			return 0;	/* Script file ended with 'end'! */
 		a2c_Instruction(c, a2c_GetIndex(c, c->l), 0);
 		break;
 	  case TK_PROGRAM:
