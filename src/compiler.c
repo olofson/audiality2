@@ -1628,7 +1628,7 @@ static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 	  default:
 		switch(op)
 		{
-		  /* In-place unary operators - no teporary register needed! */
+		  /* In-place unary operators. No temporary register needed! */
 		  case OP_RAND:
 		  case OP_P2DR:
 		  case OP_NEGR:
@@ -3518,6 +3518,7 @@ static struct
 	{ "rand",	TK_INSTRUCTION,	OP_RAND		},
 	{ "p2d",	TK_INSTRUCTION,	OP_P2DR		},
 	{ "neg",	TK_INSTRUCTION,	OP_NEGR		},
+	{ "not",	TK_INSTRUCTION,	OP_NOTR		},
 	{ "set",	TK_INSTRUCTION,	OP_SET		},
 	{ "ramp",	TK_INSTRUCTION,	OP_RAMP		},
 	{ "sizeof",	TK_INSTRUCTION,	OP_SIZEOF	},
@@ -3550,7 +3551,6 @@ static struct
 	{ "and",	KW_AND,		0		},
 	{ "or",		KW_OR,		0		},
 	{ "xor",	KW_XOR,		0		},
-	{ "not",	KW_NOT,		0		},
 
 	{ NULL, 0, 0 }
 };
