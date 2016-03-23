@@ -39,7 +39,7 @@
 #	define	RENDERDBG(x)		/* Compiler 'wave' rendering info */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)	x	/* Compiler voice structure dumping */
-#	define	DUMPSTRUCTRT(x)		/* Realtime voice structure dumping */
+#	define	DUMPSTRUCTRT(x)	x	/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
 #	undef	CERRDIE			/* Die in assert(0) on compile errs */

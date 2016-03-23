@@ -2486,7 +2486,40 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 		c->coder->program->structure = ni;	/* First! */
 	}
 	ni->next = NULL;
-	DUMPSTRUCT(fprintf(stderr, "  %s %d %d", ud->name, inputs, outputs);)
+	DUMPSTRUCT(
+		fprintf(stderr, "  %s", ud->name);
+		switch(inputs)
+		{
+		  case A2_IO_MATCHOUT:
+			fprintf(stderr, " *");
+			break;
+		  case A2_IO_WIREOUT:
+			/* This should never happen! */
+			fprintf(stderr, " >");
+			break;
+		  case A2_IO_DEFAULT:
+			fprintf(stderr, " ?");
+			break;
+		  default:
+			fprintf(stderr, " %d", inputs);
+			break;
+		}
+		switch(outputs)
+		{
+		  case A2_IO_MATCHOUT:
+			fprintf(stderr, " *");
+			break;
+		  case A2_IO_WIREOUT:
+			fprintf(stderr, " >");
+			break;
+		  case A2_IO_DEFAULT:
+			fprintf(stderr, " ?");
+			break;
+		  default:
+			fprintf(stderr, " %d", outputs);
+			break;
+		}
+	)
 
 	/*
 	 * If unit instance is unnamed, registers and constants go into the
@@ -2611,18 +2644,15 @@ static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 
 
 /* Check if 'si' or any other items down the chain have inputs. */
-static int downstream_inputs(A2_structitem *si)
+static int a2c_DownstreamInputs(A2_compiler *c, A2_structitem *si)
 {
-	while(si)
+	for( ; si; si = si->next)
 	{
-		/*
-		 * NOTE: ninputs is already checked against unit min/max, so we
-		 *       can only ever get values that mean "there are inputs",
-		 *	 and of course, 0.
-		 */
+		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
+		if(!ud->maxinputs)
+			continue;	/* Can't have any inputs! */
 		if(si->ninputs)
 			return 1;
-		si = si->next;
 	}
 	return 0;
 }
@@ -2632,6 +2662,7 @@ static void a2c_StructDef(A2_compiler *c)
 	A2_program *p = c->coder->program;
 	int matchout = 0;
 	int chainchannels = 0;	/* Number of channels in current chain */
+	DUMPSTRUCT(int prevchainchannels = 0;)
 	A2_structitem *si;
 	if(a2c_Lex(c, A2_LEX_WHITENEWLINE) != KW_STRUCT)
 	{
@@ -2645,12 +2676,23 @@ static void a2c_StructDef(A2_compiler *c)
 	DUMPSTRUCT(fprintf(stderr, "}\n");)
 
 	/* Finalize the voice structure; autowiring etc... */
-	DUMPSTRUCT(fprintf(stderr, "Wiring...");)
+	DUMPSTRUCT(fprintf(stderr, "Wiring:\n");)
 	for(si = p->structure; si; si = si->next)
 	{
+		int dsi;
 		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
-		DUMPSTRUCT(fprintf(stderr, " (chain %d)", chainchannels);)
-		DUMPSTRUCT(fprintf(stderr, " [%s ", ud->name);)
+#if DUMPSTRUCT(1)+0
+		if(chainchannels != prevchainchannels)
+		{
+			fprintf(stderr, "  (Chain channels: ");
+			if(chainchannels == A2_IO_MATCHOUT)
+				fprintf(stderr, "*)\n");
+			else
+				fprintf(stderr, "%d)\n", chainchannels);
+			prevchainchannels = chainchannels;
+		}
+		fprintf(stderr, "  %16.16s", ud->name);
+#endif
 
 		/* Is this the 'inline' unit? */
 		if(ud == &a2_inline_unitdesc)
@@ -2677,10 +2719,8 @@ static void a2c_StructDef(A2_compiler *c)
 		  case A2_IO_MATCHOUT:
 			matchout = 1;
 			break;
-#ifdef DEBUG
 		  case A2_IO_WIREOUT:
 			a2c_Throw(c, A2_INTERNAL + 112);
-#endif
 		}
 		if(si->ninputs)
 		{
@@ -2695,20 +2735,31 @@ static void a2c_StructDef(A2_compiler *c)
 		}
 
 		/* Autowire outputs */
+		dsi = a2c_DownstreamInputs(c, si->next);
 		switch(si->noutputs)
 		{
 		  case A2_IO_DEFAULT:
 			/*
-			 * Default output config! Last unit mixes to the voice
-			 * output bus and grabs the channel count from there at
-			 * instantiation. Other units use the default (minimum)
-			 * channel count.
-			 *    If there's no chain going, and no later units
-			 * have inputs, we also send to the voice output.
+			 * Default output config! Last unit in the struct mixes
+			 * to the voice output bus and grabs the channel count
+			 * from there at instantiation.
+			 *
+			 * Remaining units try to match the channel count of
+			 * the ongoing chain, or if there isn't one, fall back
+			 * to the default (minimum) channel count for the unit.
+			 *
+			 * If there's no chain going, and no downstream units
+			 * have inputs, we send to the voice output bus.
 			 */
-			if(!si->next || (!chainchannels &&
-					!downstream_inputs(si->next)))
+			if(!si->next || !dsi)
 				si->noutputs = A2_IO_WIREOUT;
+			else if(chainchannels)
+			{
+				si->noutputs = chainchannels;
+				if((si->noutputs > 0) &&
+						(si->noutputs < ud->minoutputs))
+					a2c_Throw(c, A2_FEWCHANNELS);
+			}
 			else
 				si->noutputs = ud->minoutputs;
 			break;
@@ -2726,6 +2777,13 @@ static void a2c_StructDef(A2_compiler *c)
 			/* Only A2_IO_WIREOUT allowed for the final unit! */
 			if(!si->next)
 				a2c_Throw(c, A2_NOOUTPUT);
+
+			/*
+			 * No point in writing to scratch buffers that no one's
+			 * going to read...
+			 */
+			if(!dsi)
+				a2c_Throw(c, A2_BLINDCHAIN);
 
 			/*
 			 * If we already have a chain, but no inputs, we switch
@@ -2747,8 +2805,28 @@ static void a2c_StructDef(A2_compiler *c)
 		if(p->buffers && (si->noutputs > p->buffers))
 			p->buffers = si->noutputs;
 
-		DUMPSTRUCT(fprintf(stderr, " %d %d %s]", si->ninputs, si->noutputs,
-				si->flags & A2_PROCADD ? "adding" : "replacing");)
+#if DUMPSTRUCT(1)+0
+		if(si->ninputs == A2_IO_MATCHOUT)
+			fprintf(stderr, "  inputs: *");
+		else
+			fprintf(stderr, "  inputs: %d", si->ninputs);
+		switch(si->noutputs)
+		{
+		  case A2_IO_WIREOUT:
+			fprintf(stderr, "  outputs: >");
+			break;
+		  case A2_IO_MATCHOUT:
+			fprintf(stderr, "  outputs: *");
+			break;
+		  default:
+			fprintf(stderr, "  outputs: %d", si->noutputs);
+			break;
+		}
+		if(si->flags & A2_PROCADD)
+			fprintf(stderr, " / adding\n");
+		else
+			fprintf(stderr, " / replacing\n");
+#endif
 	}
 	if(matchout)
 	{
@@ -2757,12 +2835,13 @@ static void a2c_StructDef(A2_compiler *c)
 		else
 			p->buffers = -1;
 	}
-	DUMPSTRUCT(
-		fprintf(stderr, "\tbuffers: %d", p->buffers);
-		if(p->vflags & A2_SUBINLINE)
-			fprintf(stderr, "\tSUBINLINE");
-		fprintf(stderr, "\n");
-	)
+#if DUMPSTRUCT(1)+0
+	fprintf(stderr, "  Scratch buffers: %d\n", p->buffers);
+	fprintf(stderr, "  Flags:");
+	if(p->vflags & A2_SUBINLINE)
+		fprintf(stderr, " SUBINLINE");
+	fprintf(stderr, "\n");
+#endif
 }
 
 
@@ -2805,7 +2884,9 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	if(export || (c->exportall && c->canexport))
 		s->flags |= A2_SF_EXPORTED;
 	a2_PushSymbol(&c->symbols, s);
-	DUMPCODE(fprintf(stderr, "program %s():\n", s->name);)
+#if (DUMPSTRUCT(1)+0) || (DUMPCODE(1)+0)
+	fprintf(stderr, "\nprogram %s(): ------------------------\n", s->name);
+#endif
 	a2c_PushCoder(c, p, 0);
 	if(a2c_AddFunction(c) != 0)
 		a2c_Throw(c, A2_INTERNAL + 131); /* Should be impossible! */

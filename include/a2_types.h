@@ -233,6 +233,8 @@ typedef enum A2_sampleformats
   A2_DEFERR(MULTIINLINE,	"Voice cannot have multiple inline units")\
   A2_DEFERR(CHAINMISMATCH,	"Unit input count does not match chain")\
   A2_DEFERR(NOOUTPUT,		"Final unit must send to voice output")\
+  A2_DEFERR(BLINDCHAIN,		"Outputs wired to nothing, as there are no"\
+  						" inputs downstream")\
   \
   A2_DEFERR(INTERNAL,		"INTERNAL ERROR")	/* Must be last! */
 

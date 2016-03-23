@@ -327,7 +327,7 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 		}
 		DUMPSTRUCTRT(fprintf(stderr, "%sllocating %d channel bus for "
 				"voice %p, nestlevel %d\n", *b ? "Rea" : "A",
-		      		bmin, v, v->nestlevel);)
+				bmin, v, v->nestlevel);)
 		if(!*b)
 		{
 			if(!(*b = a2_AllocBus(st, bmin)))
