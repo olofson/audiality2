@@ -129,6 +129,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SENDS:
 	  case OP_CALL:
 	  case OP_SPAWND:
+	  case OP_SPAWNA:
 	  case OP_SIZEOF:
 		fprintf(stderr, "%d", ins->a2);
 		break;
@@ -149,6 +150,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SIZEOFR:
 	  case OP_KILLR:
 	  case OP_SPAWNDR:
+	  case OP_SPAWNAR:
 	  case OP_RAMPALLR:
 		a2_PrintRegName(ins->a1);
 		break;
@@ -474,8 +476,21 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	ins = (A2_instruction *)(cdr->code + cdr->pos);
 	if(op >= A2_OPCODES)
 		a2c_Throw(c, A2_BADOPCODE);
-	if(reg >= A2_REGISTERS)
-		a2c_Throw(c, A2_BADREGISTER);
+	switch((A2_opcodes)op)
+	{
+	  case OP_SPAWN:
+	  case OP_SPAWNR:
+	  case OP_SEND:
+	  case OP_WAIT:
+	  case OP_KILL:
+		if(reg > 255)
+			a2c_Throw(c, A2_INTERNAL + 106);
+		break;
+	  default:
+		if(reg >= A2_REGISTERS)
+			a2c_Throw(c, A2_BADREGISTER);
+		break;
+	}
 	switch((A2_opcodes)op)
 	{
 	  case OP_END:
@@ -511,8 +526,9 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		}
 		break;
 	  case OP_SPAWN:
-	  case OP_SPAWND:
 	  case OP_SPAWNV:
+	  case OP_SPAWND:
+	  case OP_SPAWNA:
 		if(!a2_GetProgram(c->state, arg))
 			a2c_Throw(c, A2_BADPROGRAM);
 		break;
@@ -586,6 +602,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_SIZEOF:
 	  case OP_SIZEOFR:
 	  case OP_SPAWNDR:
+	  case OP_SPAWNAR:
 	  case OP_RAMPALLR:
 		/* No extra checks */
 	  case A2_OPCODES:	/* (Not an OP-code) */
@@ -2090,16 +2107,12 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 	  case OP_SPAWN:
 	  case OP_SPAWNV:
 	  case OP_SPAWND:
+	  case OP_SPAWNA:
 		switch(c->l[0].token)
 		{
 		  case TK_REGISTER:
 			++op;
 			p = a2c_GetIndex(c, c->l);
-			if(op == OP_SPAWNDR)
-			{
-				r = p;
-				p = 0;	/* (Unused.) */
-			}
 			i = A2_MAXARGS;	/* Can't check these compile time... */
 			break;
 		  case TK_PROGRAM:
@@ -2110,7 +2123,17 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			a2c_Throw(c, A2_EXPPROGRAM);
 		}
 		a2c_Arguments(c, i);
-		a2c_Code(c, op, r, p);
+		if(op == OP_SPAWNDR)
+			a2c_Code(c, op, p, 0);
+		else if((op == OP_SPAWN || op == OP_SPAWNR) && (r > 255))
+		{
+			int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
+			a2c_Codef(c, OP_LOAD, tmpr, r);
+			a2c_Code(c, op, tmpr, p);
+			a2c_FreeReg(c, tmpr);
+		}
+		else
+			a2c_Code(c, op, r, p);
 		return;
 	  case OP_CALL:
 		a2c_Expect(c, TK_FUNCTION, A2_EXPFUNCTION);
@@ -2128,13 +2151,21 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		return;
 	  case OP_SEND:
 	  case OP_SENDR:
-	  case OP_SENDS:
 	  case OP_SENDA:
+	  case OP_SENDS:
 		p = a2c_Num2Int(c, a2c_Value(c));	/* Entry point */
 		if(!p)
 			a2c_Throw(c, A2_BADENTRY); /* 0 is not for messages! */
 		a2c_Arguments(c, A2_MAXARGS);
-		a2c_Code(c, op, r, p);
+		if((op == OP_SEND) && (r > 255))
+		{
+			int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
+			a2c_Codef(c, OP_LOAD, tmpr, r);
+			a2c_Code(c, op, tmpr, p);
+			a2c_FreeReg(c, tmpr);
+		}
+		else
+			a2c_Code(c, op, r, p);
 		return;
 	  case OP_KILL:
 		a2c_Lex(c, 0);
@@ -2147,12 +2178,22 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		a2c_Unlex(c);
 		a2c_SimplExp(c, -1);
 		if(a2_IsValue(c->l[0].token))
-			a2c_Code(c, OP_KILL, a2c_Num2Int(c, a2c_GetValue(c,
-					c->l)), 0);
+		{
+			r = a2c_Num2Int(c, a2c_GetValue(c, c->l));
+			if(r > 255)
+			{
+				int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
+				a2c_Codef(c, OP_LOAD, tmpr, r);
+				a2c_Code(c, op, tmpr, 0);
+				a2c_FreeReg(c, tmpr);
+			}
+			else
+				a2c_Code(c, op, r, 0);
+		}
 		else if(a2_IsRegister(c->l[0].token))
 		{
 			r = a2c_GetIndex(c, c->l);
-			a2c_Code(c, OP_KILLR, r, 0);
+			a2c_Code(c, op, r, 0);
 			if(c->l[0].token == TK_TEMPREG)
 				a2c_FreeReg(c, r);
 		}
@@ -3473,12 +3514,20 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_Instruction(c, OP_SUBR, 0);
 		break;
 	  case '*':
-		if(a2c_Lex(c, 0) == '<')
-			a2c_Instruction(c, OP_SENDA, 0);
-		else
+		switch(a2c_Lex(c, 0))
 		{
+		  case '<':
+			a2c_Instruction(c, OP_SENDA, 0);
+			break;
+		  case ':':
+			a2c_Lex(c, 0);
+			a2c_Namespace(c);
+			a2c_Instruction(c, OP_SPAWNA, 0);
+			break;
+		  default:
 			a2c_Unlex(c);
 			a2c_Instruction(c, OP_MUL, 0);
+			break;
 		}
 		break;
 	  case '/':

@@ -156,7 +156,7 @@ Strings(P V=1 Attack=.3 Decay=.2)
 	def Spread .02
 	!detune (0 - (Spread / 2))
 	Voices {
-		0:Str0 P V Attack Decay detune
+		*:Str0 P V Attack Decay detune
 		+detune (Spread / Voices)
 	}
 	1(NV) { *<1 NV }

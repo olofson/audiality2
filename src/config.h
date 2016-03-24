@@ -129,4 +129,7 @@
 /* Size of temporary string buffers (bytes) */
 #define	A2_TMPSTRINGSIZE	256
 
+/* Subvoice IDs covered by the subvoice LUT. Set to 0 to disable the LUT. */
+#define	A2_SV_LUT_SIZE		8
+
 #endif /* A2_CONFIG_H */

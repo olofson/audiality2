@@ -171,9 +171,12 @@ void a2_DumpConfig(A2_config *c);
 	A2_DI(SET)	A2_DI(SETALL)	A2_DI(RAMP)	A2_DI(RAMPR)	\
 	A2_DI(RAMPALL)	A2_DI(RAMPALLR)					\
 									\
+	/* Argument stack */						\
+	A2_DI(PUSH)	A2_DI(PUSHR)					\
+									\
 	/* Subvoice control */						\
-	A2_DI(PUSH)	A2_DI(PUSHR)	A2_DI(SPAWN)	A2_DI(SPAWNR)	\
-	A2_DI(SPAWND)	A2_DI(SPAWNDR)	A2_DI(SPAWNV)	A2_DI(SPAWNVR)	\
+	A2_DI(SPAWN)	A2_DI(SPAWNR)	A2_DI(SPAWND)	A2_DI(SPAWNDR)	\
+	A2_DI(SPAWNV)	A2_DI(SPAWNVR)	A2_DI(SPAWNA)	A2_DI(SPAWNAR)	\
 	A2_DI(SEND)	A2_DI(SENDR)	A2_DI(SENDA)	A2_DI(SENDS)	\
 	A2_DI(WAIT)	A2_DI(KILL)	A2_DI(KILLR)	A2_DI(KILLA)	\
 									\
@@ -488,8 +491,9 @@ struct A2_event
 
 typedef enum A2_voiceflags
 {
-	A2_SUBINLINE =	0x0100,		/* Subvoices as inline unit */
-	A2_ATTACHED =	0x0200		/* Voice attached to handle or parent */
+	A2_SUBINLINE =	0x0100,	/* Subvoices as inline unit */
+	A2_ATTACHED =	0x0200,	/* Voice attached to handle or parent */
+	A2_APIHANDLE =	0x0400	/* 'handle' field is a valid API handle */
 } A2_voiceflags;
 
 /* Voice - node of the processing tree graph */
@@ -516,7 +520,9 @@ struct A2_voice
 
 	/* Sub-voices */
 	A2_voice	*sub;			/* List of all subvoices */
-	A2_voice	*sv[A2_REGISTERS];	/* Attached sub-voices */
+#if A2_SV_LUT_SIZE
+	A2_voice	*sv[A2_SV_LUT_SIZE];	/* Quick subvoice LUT */
+#endif
 
 	unsigned	noutputs;
 	int32_t		**outputs;

@@ -27,17 +27,17 @@ RenderStringsWave(Voices Spread Gain)
 {
 	!detune (0 - (Spread / 2))
 	(Voices * 5 / 8) {
-		0:StrW0 detune Gain
+		*:StrW0 detune Gain
 		+detune (Spread / Voices)
 	}
 	+detune 1
 	(Voices * 2 / 8) {
-		0:StrW0 detune Gain
+		*:StrW0 detune Gain
 		+detune (Spread / Voices)
 	}
 	+detune 1
 	(Voices * 1 / 8) {
-		0:StrW0 detune Gain
+		*:StrW0 detune Gain
 		+detune (Spread / Voices)
 	}
 }

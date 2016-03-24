@@ -43,15 +43,15 @@ static inline void a2_flush_event(A2_state *st, A2_event *e, A2_handle h)
 	{
 	  case A2MT_ADDXIC:
 	  {
-	  	/*
-	  	 * The logic here is that we discard any incoming XICs right
-	  	 * here, whether or not this queue belongs to a real voice or a
-	  	 * NEWVOICE. (A handle serving as a temporary event queue.)
-	  	 * A2MT_REMOVEXIC events can just be ignored, since if there's
-	  	 * no voice, any XICs would already have been discarded, and if
-	  	 * there is a voice, the xinsert unit will take care of XICs in
-	  	 * Deinitialize().
-	  	 */
+		/*
+		 * The logic here is that we discard any incoming XICs right
+		 * here, whether or not this queue belongs to a real voice or a
+		 * NEWVOICE. (A handle serving as a temporary event queue.)
+		 * A2MT_REMOVEXIC events can just be ignored, since if there's
+		 * no voice, any XICs would already have been discarded, and if
+		 * there is a voice, the xinsert unit will take care of XICs in
+		 * Deinitialize().
+		 */
 		if(st->config->flags & A2_REALTIME)
 		{
 			A2_apimessage am;
@@ -65,7 +65,7 @@ static inline void a2_flush_event(A2_state *st, A2_event *e, A2_handle h)
 		break;
 	  }
 	  case A2MT_RELEASE:
-	  	if(h >= 0)
+		if(h >= 0)
 			a2r_DetachHandle(st, h);
 		break;
 	  default:
@@ -368,9 +368,11 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 	v->program = NULL;
 	v->events = NULL;
 	v->units = NULL;
-	v->cregisters = A2_FIXEDREGS;	/* Start at the first "free" register */
+	v->cregisters = A2_FIXEDREGS;	/* Start at the first free register */
 	v->handle = -1;
+#if A2_SV_LUT_SIZE
 	memset(v->sv, 0, sizeof(v->sv));
+#endif
 	memset(v->cwrite, 0, sizeof(v->cwrite));
 	++st->totalvoices;
 #ifdef DEBUG
@@ -436,7 +438,7 @@ A2_errors a2_init_root_voice(A2_state *st)
 	if(st->activevoices > st->activevoicesmax)
 		st->activevoicesmax = st->activevoices;
 	v->nestlevel = 0;
-	v->flags = A2_ATTACHED;
+	v->flags = A2_ATTACHED | A2_APIHANDLE;
 	v->s.waketime = st->now_fragstart;
 	v->next = NULL;
 	v->s.r[R_TICK] = A2_DEFAULTTICK;
@@ -465,10 +467,11 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 	st->voicepool = v;
 	--st->activevoices;
 
-	if(v->handle >= 0)
+	if(v->flags & A2_APIHANDLE)
 	{
 		a2r_DetachHandle(st, v->handle);
 		v->handle = -1;
+		v->flags &= ~A2_APIHANDLE;
 	}
 
 	/* NOTE: -1 because we deal with the voice handles here! */
@@ -477,7 +480,9 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 
 	while(v->sub)
 		a2_VoiceFree(st, &v->sub);
+#if A2_SV_LUT_SIZE
 	memset(v->sv, 0, sizeof(v->sv));
+#endif
 
 	while(v->units)
 	{
@@ -493,7 +498,7 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 	v->s.func = 0;
 	v->s.pc = 0;
 	v->s.state = A2_RUNNING;
-	v->flags &= ~A2_ATTACHED;
+	v->flags = 0;
 	v->program = NULL;
 	for(i = A2_FIXEDREGS; i < v->cregisters; ++i)
 		v->cwrite[i] = NULL;
@@ -594,27 +599,128 @@ static inline A2_errors a2_VoiceKill(A2_state *st, A2_voice *v, unsigned when)
 }
 
 
-/* Start a new voice, at the specified time, with the specified program. */
+static inline A2_voice *a2_FindSubvoice(A2_voice *v, int vid)
+{
+	A2_voice *sv;
+	if(vid < 0)
+		return NULL;
+#if A2_SV_LUT_SIZE
+	if(vid < A2_SV_LUT_SIZE)
+		return v->sv[vid];
+#endif
+	for(sv = v->sub; sv; sv = sv->next)
+		if((sv->handle == vid) && (sv->flags & A2_ATTACHED) &&
+				!(sv->flags & A2_APIHANDLE))
+			return sv;
+	return NULL;
+}
+
+
+static inline void a2_AttachSubvoice(A2_voice *v, A2_voice *sv, int vid)
+{
+#ifdef DEBUG
+	if(sv->flags & A2_APIHANDLE)
+	{
+		fprintf(stderr, "a2_AttachSubvoice(): %p already attached to "
+				" API handle %d!\n", sv, sv->handle);
+		return;
+	}
+	else if(sv->flags & A2_ATTACHED)
+	{
+		fprintf(stderr, "a2_AttachSubvoice(): %p already attached; "
+				"VID %d!\n", sv, sv->handle);
+		return;
+	}
+#endif
+	if(vid < 0)
+	{
+		if(vid == -2)
+		{
+			sv->flags |= A2_ATTACHED;
+			sv->handle = -1;
+		}
+		return;
+	}
+#if A2_SV_LUT_SIZE
+	if(vid < A2_SV_LUT_SIZE)
+		v->sv[vid] = sv;
+#endif
+	sv->flags |= A2_ATTACHED;
+	sv->handle = vid;
+}
+
+
+static inline void a2_DetachSubvoice(A2_voice *v, int vid)
+{
+	A2_voice *sv;
+	if(vid < 0)
+		return;
+#if A2_SV_LUT_SIZE
+	if((vid < A2_SV_LUT_SIZE) && v->sv[vid])
+	{
+		a2_VoiceDetach(v->sv[vid], v->s.waketime);
+		v->sv[vid] = NULL;
+		return;
+	}
+#endif
+	for(sv = v->sub; sv; sv = sv->next)
+		if((sv->handle == vid) && (sv->flags & A2_ATTACHED) &&
+				!(sv->flags & A2_APIHANDLE))
+		{
+			a2_VoiceDetach(sv, v->s.waketime);
+			break;
+		}
+}
+
+
+static inline void a2_KillSubvoice(A2_state *st, A2_voice *v, int vid)
+{
+	A2_voice *sv;
+	if(vid < 0)
+		return;
+#if A2_SV_LUT_SIZE
+	if((vid < A2_SV_LUT_SIZE) && v->sv[vid])
+	{
+		a2_VoiceKill(st, v->sv[vid], v->s.waketime);
+		v->sv[vid] = NULL;
+		return;
+	}
+#endif
+	for(sv = v->sub; sv; sv = sv->next)
+		if((sv->handle == vid) && (sv->flags & A2_ATTACHED) &&
+				!(sv->flags & A2_APIHANDLE))
+		{
+			a2_VoiceKill(st, sv, v->s.waketime);
+			break;
+		}
+}
+
+
+/*
+ * Start a new voice, at the specified time, with the specified program.
+ *
+ * If 'vid' >= 0, any former voice with that ID will be detached, and the new
+ * voice will be attached to that ID instead.
+ *
+ * If 'vid' is -1, the new voice will start in detached mode.
+ *
+ * If 'vid' is -2, the new voice will start in attached mode, but will be
+ * anonymous.
+ */
 static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, int vid,
 		A2_handle program, int argc, int *argv)
 {
 	int res;
 	A2_voice *nv;
 	A2_program *p = a2_GetProgram(st, program);
-	if((vid > 0) && (v->sv[vid]))	/* NOTE: No detach for id 0! */
-		a2_VoiceDetach(v->sv[vid], v->s.waketime);
+	a2_DetachSubvoice(v, vid);
 	if(!p)
 		return A2_BADPROGRAM;
 	if(!(nv = a2_VoiceNew(st, v, v->s.waketime)))
 		return v->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
-	if(vid > 0)
-	{
-		v->sv[vid] = nv;
-		nv->flags = A2_ATTACHED;
-	}
-	else
-		nv->flags = 0;
+	nv->flags = 0;
+	a2_AttachSubvoice(v, nv, vid);
 	if(!nv)
 		return v->nestlevel < A2_NESTLIMIT ?
 				A2_VOICEALLOC : A2_VOICENEST;
@@ -671,7 +777,7 @@ static inline A2_errors a2_event_start(A2_state *st, A2_voice *parent,
 	v->events = (A2_event *)hi->d.data;
 	hi->d.data = (void *)v;
 	hi->typecode = A2_TVOICE;
-	v->flags = A2_ATTACHED;
+	v->flags = A2_ATTACHED | A2_APIHANDLE;
 	return a2_VoiceStart(st, v, p, eb->common.argc, eb->start.a);
 }
 
@@ -842,14 +948,14 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 				else
 					fprintf(stderr, "KILLSUB\n");
 			)
-		  	if(v->sub)
-		  	{
+			if(v->sub)
+			{
 				/* Turn into non-SUB event! */
 				--e->b.common.action;
 				v->events = e->next;
 				a2_event_subforward(st, v, e);
 				continue;	/* The event is reused! */
-		  	}
+			}
 			break;
 		  case A2MT_KILL:
 			DUMPMSGS(fprintf(stderr, "KILL\n");)
@@ -868,6 +974,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			DUMPMSGS(fprintf(stderr, "RELEASE\n");)
 			a2r_DetachHandle(st, v->handle);
 			v->handle = -1;
+			v->flags &= ~A2_APIHANDLE;
 			a2_VoiceDetach(v, e->b.common.timestamp);
 			break;
 		}
@@ -1045,7 +1152,9 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 				return A2_END;
 			}
 			/* Detach subvoices, then wait for them to terminate */
+#if A2_SV_LUT_SIZE
 			memset(v->sv, 0, sizeof(v->sv));
+#endif
 			for(v = v->sub; v; v = v->next)
 				a2_VoiceDetach(v, now);
 			st->instructions += A2_INSLIMIT - inscount;
@@ -1301,26 +1410,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 					a2_ms2t(st, r[ins->a1]));
 			a2_RTInit(&rt);
 			break;
-#if 0
-		  case OP_DETACHR:
-		  {
-			unsigned vid = r[ins->a1] >> 16;
-			if(vid > A2_REGISTERS)
-			{
-				st->instructions += (A2_INSLIMIT - inscount);
-				return A2_BADVOICE;
-			}
-			if(v->sv[vid])
-				a2_VoiceDetach(v->sv[vid]);
-			v->sv[vid] = NULL;
-			break;
-		  }
-		  case OP_DETACH:
-			if(v->sv[ins->a1])
-				a2_VoiceDetach(v->sv[ins->a1]);
-			v->sv[ins->a1] = NULL;
-			break;
-#endif
+
 		/* Subvoice control */
 		  case OP_PUSH:
 			if(cargc >= A2_MAXARGS)
@@ -1370,25 +1460,36 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			a2_VoiceSpawn(st, v, -1, ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
+		  case OP_SPAWNAR:
+			a2_VoiceSpawn(st, v, -2, r[ins->a1] >> 16, cargc,
+					cargv);
+			cargc = 0;
+			break;
+		  case OP_SPAWNA:
+			a2_VoiceSpawn(st, v, -2, ins->a2, cargc, cargv);
+			cargc = 0;
+			break;
 		  case OP_SENDR:
 		  {
+			A2_voice *sv;
 			unsigned vid = r[ins->a1] >> 16;
-			if(vid >= A2_REGISTERS)
-				A2_VMABORT(A2_BADVOICE, "VM:SENDR");
-			if(v->sv[vid])
-				a2_VoiceSend(st, v->sv[vid], v->s.waketime,
-						ins->a2, cargc, cargv);
+			if((sv = a2_FindSubvoice(v, vid)))
+				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
+						cargc, cargv);
 			cargc = 0;
 			break;
 		  }
 		  case OP_SEND:
+		  {
+			A2_voice *sv;
 			DBG(if(!ins->a2)
 				fprintf(stderr, "Weird...! SEND to EP0...\n");)
-			if(v->sv[ins->a1])
-				a2_VoiceSend(st, v->sv[ins->a1], v->s.waketime,
-						ins->a2, cargc, cargv);
+			if((sv = a2_FindSubvoice(v, ins->a1)))
+				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
+						cargc, cargv);
 			cargc = 0;
 			break;
+		  }
 		  case OP_SENDA:
 		  {
 			A2_voice *sv;
@@ -1410,10 +1511,12 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			break;
 		  }
 		  case OP_WAIT:
-			if(!v->sv[ins->a1])
+		  {
+			A2_voice *sv = a2_FindSubvoice(v, ins->a1);
+			if(!sv)
 				break;	/* No voice to wait for! */
 			/* NOTE: This only waits with fragment granularity! */
-			if(v->sv[ins->a1]->s.state >= A2_ENDING)
+			if(sv->s.state >= A2_ENDING)
 				break;	/* Done! */
 			a2_RTApply(&rt, st, v, v->s.waketime, 0);
 			v->s.waketime = st->now_fragstart + (A2_MAXFRAG << 8);
@@ -1421,29 +1524,24 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			st->instructions += A2_INSLIMIT - inscount;
 			DUMPCODERT(fprintf(stderr, "%p: [waiting]\n", v);)
 			return A2_OK;
+		  }
 		  case OP_KILLR:
 		  {
 			unsigned vid = r[ins->a1] >> 16;
-			if(vid >= A2_REGISTERS)
-				A2_VMABORT(A2_BADVOICE, "VM:KILLR");
-			if(!v->sv[vid])
-				break;
-			a2_VoiceKill(st, v->sv[vid], v->s.waketime);
-			v->sv[vid] = NULL;
+			a2_KillSubvoice(st, v, vid);
 			break;
 		  }
 		  case OP_KILL:
-			if(!v->sv[ins->a1])
-				break;
-			a2_VoiceKill(st, v->sv[ins->a1], v->s.waketime);
-			v->sv[ins->a1] = NULL;
+			a2_KillSubvoice(st, v, ins->a1);
 			break;
 		  case OP_KILLA:
 		  {
 			A2_voice *sv;
 			for(sv = v->sub; sv; sv = sv->next)
 				a2_VoiceKill(st, sv, v->s.waketime);
+#if A2_SV_LUT_SIZE
 			memset(v->sv, 0, sizeof(v->sv));
+#endif
 			break;
 		  }
 
@@ -1801,18 +1899,20 @@ static void a2_kill_subvoices_using_program(A2_state *st, A2_voice *v,
 		A2_voice *sv = *head;
 		if(sv->program == p)
 		{
+#if A2_SV_LUT_SIZE
 			int i;
-			a2_VoiceFree(st, head);
-			/*
-			 * Since we may be killing voices started by scripts,
-			 * we need to make sure those are detached properly!
-			 */
-			for(i = 0; i < A2_REGISTERS; ++i)
+			for(i = 0; i < A2_SV_LUT_SIZE; ++i)
 				if(v->sv[i] == sv)
 				{
 					v->sv[i] = NULL;
 					break;
 				}
+#endif
+			a2_VoiceFree(st, head);
+			/*
+			 * Since we may be killing voices started by scripts,
+			 * we need to make sure those are detached properly!
+			 */
 		}
 		else
 		{

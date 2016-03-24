@@ -59,7 +59,7 @@ def a2sversion	"1.9"
 	def Spread .03
 	!detune (0 - (Spread / 2))
 	Voices {
-		0:Str0 P V Attack Decay detune
+		*:Str0 P V Attack Decay detune
 		+detune (Spread / Voices)
 	}
 	1(NV) { *<1 NV }
@@ -174,7 +174,7 @@ def a2sversion	"1.9"
 	def Spread .06
 	!detune (0 - (Spread / 2))
 //	Voices {
-//		0:Saw0 P V detune
+//		*:Saw0 P V detune
 //		+detune (Spread / Voices)
 //	}
 	1:Saw0 P V detune
