@@ -5,7 +5,7 @@
 All processing in Audiality 2 is performed in a tree graph of voices, each with an optional graph of audio processing units (see audio-processing.md), and a scripting VM instance (see a2script.md). Every voice in the processing graph can have zero or more subvoices, that can be managed in three different fashions: Detached, Anonymous and Attached.
 
 #### Detached
-Detached voices are started by spawning a program using only the program name, or ":" followed by the program name or handle. They will terminate if/when they reach the end of their main program. These voices do not have handles, but they will receive messages sent to all subvoices using the "*<" construct.
+Detached voices are started by spawning a program using only the program name, or ":" followed by the program name or handle. They will terminate if/when they reach the end of their main program. These voices do not have handles, but they will receive messages sent to all subvoices using the "\*<" construct.
 ```
 // voice-management-detached.a2s
 // Play major chord using three detached subvoices
@@ -32,12 +32,47 @@ Program()
 ```
 
 #### Anonymous
-Anonymous subvoices are started with the "*:" construct, and are attached, so they will pause instead of terminating if they reach the end of their main program, allowing them to be brought back to life via messages. They do not have unique handles, but will receive messages sent to all subvoices using the "*<" construct.
+Anonymous subvoices are started with the "\*:" construct, and are attached, so they will pause instead of terminating if they reach the end of their main program, allowing them to be brought back to life via messages. They do not have unique handles, but will receive messages sent to all subvoices using the "\*<" construct.
 ```
+// voice-management-anonymous.a2s
+// Play major chord using three anonymous subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+	a V
+	d 100
+	end
+
+.stop	a 0
+	d 100
+
+	1() {
+		force stop
+	}
+}
+
+Program()
+{
+	// Start three voices
+	*:SubProgram 0n .2
+	*:SubProgram 4n .2
+	*:SubProgram 7n .2
+
+	// Stop all voices after 1 s
+	d 1000
+	*<1
+
+	d 500
+}
 ```
 
 #### Attached
-Attached subvoices are started with "handle:program", where *handle* needs to be an integer greater than or equal to 0. Like Anonymous voices, Attached voices will pause instead of terminating if they reach the end of their main program. However, messages can be addressed to individual Attached voices using the "handle<message" construct. Attached voices will also receive any messages sent to all subvoices using the "*<" construct.
+Attached subvoices are started with "handle:program", where *handle* needs to be an integer greater than or equal to 0. Like Anonymous voices, Attached voices will pause instead of terminating if they reach the end of their main program. However, messages can be addressed to individual Attached voices using the "handle < message" construct. Attached voices will also receive any messages sent to all subvoices using the "\*<" construct.
 ```
 // voice-management-attached.a2s
 // Play major chord using three attached subvoices
