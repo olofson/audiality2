@@ -1,0 +1,22 @@
+// voice-management-detached.a2s
+// Play major chord using three detached subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+	@a V
+	a 0
+	d 1000
+}
+
+Program()
+{
+	SubProgram 0n .2
+	SubProgram 4n .2
+	SubProgram 7n .2
+	d 1000
+}

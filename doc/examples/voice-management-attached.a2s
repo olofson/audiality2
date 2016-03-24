@@ -1,0 +1,43 @@
+// voice-management-attached.a2s
+// Play major chord using three attached subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+	a V
+	d 100
+	end
+
+.stop	a 0
+	d 100
+
+	1() {
+		force stop
+	}
+}
+
+Program()
+{
+	// Start three voices
+	1:SubProgram 0n .2
+	2:SubProgram 4n .2
+	3:SubProgram 7n .2
+
+	// Stop third voice after .5 s
+	d 500
+	3<1
+
+	// Stop second voice after 1 s
+	d 500
+	2<1
+
+	// Stop first voice after 1.5 s
+	d 500
+	1<1
+
+	d 500
+}

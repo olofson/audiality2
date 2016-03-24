@@ -1,0 +1,48 @@
+// voice-management-anonymous.a2s
+// Play major chord using three anonymous subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+
+.retrig	a V
+	d 100
+	end
+
+.stop	a 0
+	d 100
+
+	1() {
+		force stop
+	}
+
+	2() {
+		force retrig
+	}
+}
+
+Program()
+{
+	// Start three voices
+	*:SubProgram 0n .2
+	*:SubProgram 4n .2
+	*:SubProgram 7n .2
+
+	// Stop all voices
+	d 500
+	*<1
+
+	// Retrig all voices
+	d 500
+	*<2
+
+	// Stop all voices
+	d 500
+	*<1
+
+	d 500
+}
