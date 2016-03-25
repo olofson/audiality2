@@ -101,27 +101,21 @@ static A2_errors sink_process(int **buffers, unsigned nbuffers,
 	Object info printouts
 -------------------------------------------------------------------*/
 
-static void print_info(int indent, const char *xname, A2_handle h)
+static void print_info(int indent, const char *xname, A2_handle h, int is_last)
 {
 	int i;
 	A2_handle x;
 	A2_otypes t = a2_TypeOf(state, h);
 	const char *name = a2_Name(state, h);
 	int has_exports = a2_GetExport(state, h, 0) >= 1;
-	if(has_exports)
-	{
-		for(i = 0; i < indent; ++i)
-			printf("    ");
-		printf("---------------------------------------------\n");
-	}
 	for(i = 0; i < indent; ++i)
-		printf("    ");
+		printf("| ");
 	if(xname)
-		printf("%-16s", xname);
+		printf("%-24s", xname);
 	else if(name)
-		printf("%-16s", name);
+		printf("%-24s", name);
 	else
-		printf("%-16d", h);
+		printf("%-24d", h);
 	printf("%-12s", a2_TypeName(state, t));
 	switch(t)
 	{
@@ -167,7 +161,6 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	  case A2_TUNIT:
 	  {
-		const A2_crdesc *crd;
 		const A2_unitdesc *ud = a2_GetUnitDescriptor(state, h);
 
 		/* Inputs and outputs */
@@ -194,8 +187,22 @@ static void print_info(int indent, const char *xname, A2_handle h)
 
 		/* Control registers */
 		if(ud->registers)
-			for(crd = ud->registers; crd->name; crd++)
-				printf(" %s", crd->name);
+		{
+			const A2_crdesc *rd;
+			printf("R:");
+			for(rd = ud->registers; rd->name; rd++)
+				printf(" %s", rd->name);
+		}
+
+		/* Control registers */
+		if(ud->constants)
+		{
+			const A2_constdesc *cd;
+			printf("   C:");
+			for(cd = ud->constants; cd->name; cd++)
+				printf(" %s:%f", cd->name,
+						cd->value / 65536.0f);
+		}
 		break;
 	  }
 	  case A2_TSTRING:
@@ -212,12 +219,14 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	if(has_exports)
 	{
 		for(i = 0; i < indent; ++i)
-			printf("    ");
-		printf("---------------------------------------------\n");
+			printf("| ");
+		printf("|--------------------------------------------\n");
 		for(i = 0; (x = a2_GetExport(state, h, i)) >= 0; ++i)
-			print_info(indent + 1, a2_GetExportName(state, h, i), x);
+			print_info(indent + 1, a2_GetExportName(state, h, i),
+					x, a2_GetExport(state, h, i + 1) >= 0);
 		for(i = 0; i < indent; ++i)
-			printf("    ");
+			printf("| ");
+		printf("'--------------------------------------------\n");
 	}
 }
 
@@ -312,9 +321,9 @@ static int play_sounds(int argc, const char *argv[])
 			res = 1;
 		}
 		else if(strncmp(argv[i], "-xr", 3) == 0)
-			print_info(0, NULL, A2_ROOTBANK);
+			print_info(0, NULL, A2_ROOTBANK, 0);
 		else if(strncmp(argv[i], "-x", 2) == 0)
-			print_info(0, NULL, module);
+			print_info(0, NULL, module, 0);
 	}
 	if(!res && (a2_Get(state, module, "Song") >= 0))
 		res = play_sound("Song");
