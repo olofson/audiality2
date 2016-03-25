@@ -193,8 +193,9 @@ static void print_info(int indent, const char *xname, A2_handle h)
 			printf("o: ----  ");
 
 		/* Control registers */
-		for(crd = ud->registers; crd->name; crd++)
-			printf(" %s", crd->name);
+		if(ud->registers)
+			for(crd = ud->registers; crd->name; crd++)
+				printf(" %s", crd->name);
 		break;
 	  }
 	  case A2_TSTRING:
