@@ -2310,7 +2310,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 }
 
 
-static void a2c_Import(A2_compiler *c, int export)
+static void a2c_Import(A2_compiler *c)
 {
 	int h, res;
 	const char *name;
@@ -2400,20 +2400,10 @@ static void a2c_Def(A2_compiler *c, int export)
 {
 	A2_symbol *s;
 
-	/* Local? */
-	if(a2c_Lex(c, 0) == '.')
-		export = 0;
-	else
-		a2c_Unlex(c);
-
 	a2c_Expect(c, TK_NAME, A2_EXPNAME);
 	s = a2c_GrabSymbol(c, c->l);
 
-	/*
-	 * A bit ugly; we just ignore the 'export' argument if we're in a
-	 * scope from where symbols cannot be exported...
-	 */
-	if(c->canexport && export)
+	if(export)
 		s->flags |= A2_SF_EXPORTED;
 
 	a2c_SimplExp(c, -1);
@@ -2923,11 +2913,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	if((i = a2ht_AddItem(&c->target->deps, s->v.i)) < 0)
 		a2c_Throw(c, -i);
 	if(export)
-	{
-		if(!c->canexport)
-			a2c_Throw(c, A2_CANTEXPORT);
 		s->flags |= A2_SF_EXPORTED;
-	}
 	a2_PushSymbol(&c->symbols, s);
 #if (DUMPSTRUCT(1)+0) || (DUMPCODE(1)+0)
 	fprintf(stderr, "\nprogram %s(): ------------------------\n", s->name);
@@ -3168,12 +3154,11 @@ static struct
 	{ NULL, 0, 0 }
 };
 
-static void a2c_WaveDef(A2_compiler *c)
+static void a2c_WaveDef(A2_compiler *c, int export)
 {
 	A2_scope sc;
 	A2_wavedef wd;
 	int i;
-	int export = 1;
 	memset(&wd, 0, sizeof(wd));
 	wd.type = A2_WMIPWAVE;
 	wd.samplerate = 48000;	/* FIXME: Parent state fs... or what...? */
@@ -3183,25 +3168,13 @@ static void a2c_WaveDef(A2_compiler *c)
 	 */
 	wd.randseed = A2_DEFAULT_RANDSEED;
 	wd.noiseseed = A2_DEFAULT_NOISESEED;
-	
-	/* Local? */
-	if(a2c_Lex(c, 0) == '.')
-	{
-		export = 0;
-		a2c_Lex(c, 0);
-	}
 
 	/* Name of wave */
-	if(c->l[0].token != TK_NAME)
-		a2c_Throw(c, A2_EXPNAME);
+	a2c_Expect(c, TK_NAME, A2_EXPNAME);
 	wd.symbol = a2c_GrabSymbol(c, c->l);
 	wd.symbol->token = TK_WAVE;
 	if(export)
-	{
-		if(!c->canexport)
-			a2c_Throw(c, A2_CANTEXPORT);
 		wd.symbol->flags |= A2_SF_EXPORTED;
-	}
 	a2_PushSymbol(&c->symbols, wd.symbol);
 
 	a2c_SkipWhite(c, 1);
@@ -3317,12 +3290,31 @@ static void a2c_For(A2_compiler *c)
 static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 {
 	int setprefix = 0;
+	int export = 0;
 	int r;
 	a2c_Lex(c, 0);
-	if(c->l[0].token == '@')
+	switch((int)c->l[0].token)
 	{
+	  case KW_EXPORT:
+		if(!c->canexport)
+			a2c_Throw(c, A2_CANTEXPORT);
+		export = 1;
+		a2c_Lex(c, 0);
+		switch((int)c->l[0].token)
+		{
+		  case TK_NAME:
+		  case KW_DEF:
+		  case KW_WAVE:
+			/* This MAY be a valid use of 'export'... */
+			break;
+		  default:
+			a2c_Throw(c, A2_NOEXPORT);
+		}
+		break;
+	  case '@':
 		setprefix = 1;
 		a2c_Lex(c, 0);
+		break;
 	}
 	if(a2c_Namespace(c))
 		switch(c->l[0].token)
@@ -3450,28 +3442,24 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		}
 		break;
 	  }
-	  case '.':		/* Label, def or local program */
+	  case '.':		/* Label */
 		switch(a2c_Lex(c, 0))
 		{
 		  case TK_NAME:
 		  case TK_FWDECL:
-			if(a2c_Lex(c, 0) == '(')
-				a2c_ProgDef(c, a2c_GrabSymbol(c, &c->l[1]), 0);
-			else
-			{
-				A2_symbol *s;
-				if(!c->coder)
-					a2c_Throw(c, A2_NEXPLABEL);
-				a2c_Unlex(c);
-				s = a2c_GrabSymbol(c, c->l);
-				s->token = TK_LABEL;
-				s->v.i = c->coder->pos;
-				a2_PushSymbol(&c->symbols, s);
-				DUMPCODE(fprintf(stderr, "label .%s:\n", s->name);)
-				if(c->l[0].token == TK_FWDECL)
-					a2c_DoFixups(c, s);
-			}
+		  {
+			A2_symbol *s;
+			if(!c->coder)
+				a2c_Throw(c, A2_NEXPLABEL);
+			s = a2c_GrabSymbol(c, c->l);
+			s->token = TK_LABEL;
+			s->v.i = c->coder->pos;
+			a2_PushSymbol(&c->symbols, s);
+			DUMPCODE(fprintf(stderr, "label .%s:\n", s->name);)
+			if(c->l[0].token == TK_FWDECL)
+				a2c_DoFixups(c, s);
 			return 1;
+		  }
 		  default:
 			a2c_Throw(c, A2_BADLABEL);
 		}
@@ -3483,7 +3471,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		if(c->coder && c->coder->program)
 			a2c_FuncDef(c, a2c_GrabSymbol(c, &c->l[1]));
 		else
-			a2c_ProgDef(c, a2c_GrabSymbol(c, &c->l[1]), 1);
+			a2c_ProgDef(c, a2c_GrabSymbol(c, &c->l[1]), export);
 		break;
 	  case TK_LABEL:
 		a2c_Throw(c, A2_SYMBOLDEF);	/* Already defined! */
@@ -3569,13 +3557,13 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_FreeReg(c, r);
 		break;
 	  case KW_IMPORT:
-		a2c_Import(c, c->canexport);
+		a2c_Import(c);
 		return 1;
 	  case KW_DEF:
-		a2c_Def(c, c->canexport);
+		a2c_Def(c, export);
 		return 1;
 	  case KW_WAVE:
-		a2c_WaveDef(c);
+		a2c_WaveDef(c, export);
 		return 1;
 	  case TK_IF:
 		a2c_IfWhile(c, c->l[0].v.i, 0);
@@ -3664,6 +3652,7 @@ static struct
 
 	/* Directives, macros, keywords... */
 	{ "import",	KW_IMPORT,	0		},
+	{ "export",	KW_EXPORT,	0		},
 	{ "as",		KW_AS,		0		},
 	{ "def",	KW_DEF,		0		},
 	{ "struct",	KW_STRUCT,	0		},

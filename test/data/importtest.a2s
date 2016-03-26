@@ -8,7 +8,7 @@ def a2sversion	"1.9"
 
 import "test.a2s"
 
-.ChorusMelo(P)
+ChorusMelo(P)
 {
 	+tr P
 	def I MusicBox2
@@ -88,7 +88,7 @@ import "test.a2s"
 	1<1
 }
 
-.bl1(n1 n2 n3 n4)
+bl1(n1 n2 n3 n4)
 {
 	def I Pig
 		1:I n1;		td 1
@@ -102,7 +102,7 @@ import "test.a2s"
 		1:I n4;		td 2
 	1<1;			td 6
 }
-.bl2(n1 n2 n3)
+bl2(n1 n2 n3)
 {
 	def I Pig
 		1:I n2;		td 1
@@ -113,7 +113,7 @@ import "test.a2s"
 		1:I n3;		td 3
 	1<1;			td 8
 }
-.bl3(n1 n2 n3)
+bl3(n1 n2 n3)
 {
 	def I Pig
 		1:I n1;		td 1
@@ -125,7 +125,7 @@ import "test.a2s"
 	1<1;	1:I n3;		td 2
 	1<1;			td 8
 }
-.Bassline()
+Bassline()
 {
 	-tr 2
 
@@ -140,7 +140,7 @@ import "test.a2s"
 	bl3 -3n -5n -3n;		td 16
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

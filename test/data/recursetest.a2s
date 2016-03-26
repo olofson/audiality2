@@ -26,7 +26,7 @@ Recurse(Level Delay)
 	wait 1
 }
 
-Song()
+export Song()
 {
 	// Ten recursive voices at 50 ms intervals
 	1:Recurse 10 50

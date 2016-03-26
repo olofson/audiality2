@@ -10,7 +10,7 @@ def a2sversion	"1.9"
   //
  // Pre-rendered wave for the Strings instrument
 /////////////////////////////////////////////////////////////////////
-.StrW0(P G)
+StrW0(P G)
 {
 	struct { wtosc }
 	w saw; phase (rand 1)
@@ -111,7 +111,7 @@ Main(L)
 	}
 }
 
-Song(P V=1 L=1)
+export Song(P V=1 L=1)
 {
 	struct {
 		inline 0 *

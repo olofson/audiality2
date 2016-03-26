@@ -6,7 +6,7 @@ def copyright	"Copyright 2016 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
 
-.dcsaw(P md)
+dcsaw(P md)
 {
 	struct { dc }
 	mode md
@@ -22,7 +22,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.dcsaw2(P md)
+dcsaw2(P md)
 {
 	struct { dc }
 	mode md
@@ -40,7 +40,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.dcpw(P md)
+dcpw(P md)
 {
 	struct { dc }
 	mode md
@@ -62,7 +62,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.dcbuzz(P md)
+dcbuzz(P md)
 {
 	struct { dc }
 	mode md
@@ -77,7 +77,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.dcnoise(P md)
+dcnoise(P md)
 {
 	struct { dc }
 	mode md
@@ -92,7 +92,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.dcexplo(P md)
+dcexplo(P md)
 {
 	struct { dc }
 	mode md
@@ -110,7 +110,7 @@ def a2sversion	"1.9"
 	1() { on 0 }
 }
 
-.phrase(I md)
+phrase(I md)
 {
 	tr 1
 	2 {
@@ -136,7 +136,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.test(md)
+test(md)
 {
 	phrase dcsaw md;	td 32
 	phrase dcsaw2 md;	td 32
@@ -146,7 +146,7 @@ def a2sversion	"1.9"
 	1:dcexplo 3 md;		td 12; 1<1; td 4
 }
 
-.easteregg(md)
+easteregg(md)
 {
 	phrase dcsaw md;	td 16
 	phrase dcsaw2 md;	td 16
@@ -154,7 +154,7 @@ def a2sversion	"1.9"
 	phrase dcbuzz md;	td 16
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

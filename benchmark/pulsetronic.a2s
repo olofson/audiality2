@@ -6,7 +6,7 @@ def copyright	"Copyright 2012-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.c0(P A W rmax dl)
+c0(P A W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
@@ -18,7 +18,7 @@ def a2sversion	"1.9"
 		*a .9; *rmax .99; *rmh .99
 	}
 }
-.Cymbal(P V=1)
+Cymbal(P V=1)
 {
 	c0 (P + 5.3) V saw 2 .3
 	c0 (P + 4) (V * .5) saw 2 .4
@@ -26,7 +26,7 @@ def a2sversion	"1.9"
 	c0 (P + 2.3) (V * .2) sine 4 .6
 }
 
-.Explo0(P V=1 Wave Attack Decay)
+Explo0(P V=1 Wave Attack Decay)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
@@ -36,14 +36,14 @@ def a2sversion	"1.9"
 	tr P
 	wg (a - .001) {	rand p x; *a Decay; d 2.5 }
 }
-.Explosion(P V=1)
+Explosion(P V=1)
 {
 	+tr P
 	Explo0 1 (V * .2) sine 2 .995
 	Explo0 -1 V sine 4 .998
 }
 
-.Reed0(P V=1 Wave)
+Reed0(P V=1 Wave)
 {
 	struct { wtosc }
 	!P0 tr; +P tr; w Wave; p P; a 0; !er .1; !vib 0; !tvib .005
@@ -64,7 +64,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (P0 + NP) }
 }
-.Reed(P V=1)
+Reed(P V=1)
 {
 	struct { inline; panmix }
 	1:Reed0 (P + 1.01) (V * .3) saw
@@ -73,7 +73,7 @@ def a2sversion	"1.9"
 	2(NP) { 1<2 (NP + .01); 2<2 NP }
 }
 
-.Whistle(P V=1)
+Whistle(P V=1)
 {
 	struct { wtosc; panmix }
 	pan .5; set pan
@@ -96,7 +96,7 @@ def a2sversion	"1.9"
 	2(NP) { P (P0 + NP) }
 }
 
-.SoftArp(P V=1 Maj=0)
+SoftArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix }
 	sa0(PP VV)
@@ -126,7 +126,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Bleep2(P V=1 Wave)
+Bleep2(P V=1 Wave)
 {
 	struct { wtosc }
 	w Wave; p (P - .5); phase (rand 1); a V; set a
@@ -146,7 +146,7 @@ def a2sversion	"1.9"
 	a 0; td 1
 	1() { force stop }
 }
-.BleepLead(P V=1)
+BleepLead(P V=1)
 {
 	struct { inline; panmix }
 	Bleep2 (P - .01) (V * .25) saw
@@ -158,7 +158,7 @@ def a2sversion	"1.9"
 	1() { force stop }
 }
 
-.Str0(P V Attack Decay Detune)
+Str0(P V Attack Decay Detune)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 50)
@@ -180,7 +180,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.EStrings(P V=1 Attack=.3 Decay=.2)
+EStrings(P V=1 Attack=.3 Decay=.2)
 {
 	!Voices (3 - P quant 1)
 	ifl (Voices - 2) {
@@ -196,7 +196,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.Blepp(P V=1)
+Blepp(P V=1)
 {
 	struct { wtosc; filter12; panmix }
 	pan (rand .5 - .25)
@@ -207,7 +207,7 @@ def a2sversion	"1.9"
 	-p 1; a 0;			cutoff P;	d 100
 }
 
-.PulseBass(P V=1)
+PulseBass(P V=1)
 {
 	struct {
 		wtosc
@@ -233,7 +233,7 @@ def a2sversion	"1.9"
 	1() { force rel }
 }
 
-.SD(Vel=1)
+SD(Vel=1)
 {
 	struct { wtosc }
 	w square; p 1.7; a Vel; set a
@@ -253,7 +253,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SD2(Vel=1)
+SD2(Vel=1)
 {
 	struct { wtosc }
 	w square; p 1.5; a Vel; set a
@@ -273,7 +273,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.BD(Vel=1)
+BD(Vel=1)
 {
 	struct { wtosc }
 	w square; a Vel; p 1.3
@@ -288,7 +288,7 @@ def a2sversion	"1.9"
 	a 0; d 20
 }
 
-.HatNoise(P V W spread decay)
+HatNoise(P V W spread decay)
 {
 	struct { wtosc }
 	!env V
@@ -298,7 +298,7 @@ def a2sversion	"1.9"
 		p (rand spread + P); a env; -env da; d 1
 	}
 }
-.Hat(V=1 L=1)
+Hat(V=1 L=1)
 {
 	HatNoise 9000f (V * .5) triangle .6 (50 * L)
 	HatNoise 7000f (V * .3) triangle .5 (300 * L)
@@ -306,7 +306,7 @@ def a2sversion	"1.9"
 	HatNoise 3000f (V * .1) triangle .3 (200 * L)
 }
 
-.HH(V=1)
+HH(V=1)
 {
 	2 {
 		Hat V .05;	td 1
@@ -329,14 +329,14 @@ def a2sversion	"1.9"
 	}
 }
 
-.hh4(V L1 L2 L3 L4)
+hh4(V L1 L2 L3 L4)
 {
 	Hat V L1;	td 1
 	Hat V L2;	td 1
 	Hat V L3;	td 1
 	Hat V L4;	td 1
 }
-.HH2(V=1)
+HH2(V=1)
 {
 	struct { inline; panmix }
 	hh4 V .1 .1 .5 .2;	td 4
@@ -359,7 +359,7 @@ def a2sversion	"1.9"
 	Hat V .1;		td 1
 	hh4 V .2 .3 .5 .3;	td 4
 }
-.HH2b(V=1)
+HH2b(V=1)
 {
 	struct { inline; panmix }
 	hh4 V .1 .1 .5 .2;	td 4
@@ -373,7 +373,7 @@ def a2sversion	"1.9"
 	hh4 V .1 .1 .5 .1;	td 4
 }
 
-.b01()
+b01()
 {
 	BD .8;	td 4
 	SD .5;	td 2
@@ -381,7 +381,7 @@ def a2sversion	"1.9"
 		td 2
 	SD .5;	td 4
 }
-.b02()
+b02()
 {
 	BD .7;	td 4
 	SD .5;	td 2
@@ -391,7 +391,7 @@ def a2sversion	"1.9"
 	SD .3;	td 1
 	BD .5;	td 1
 }
-.b03()
+b03()
 {
 	BD .7;	td 4
 	SD .5;	td 2
@@ -402,7 +402,7 @@ def a2sversion	"1.9"
 	SD .6;	td 1
 	SD .8;	td 1
 }
-.Beat0()
+Beat0()
 {
 	struct { inline; panmix }
 	HH .7;	b01;	td 16
@@ -411,7 +411,7 @@ def a2sversion	"1.9"
 		b03;	td 16
 }
 
-.b1()
+b1()
 {
 	BD;	td 4
 	SD;	td 2
@@ -419,7 +419,7 @@ def a2sversion	"1.9"
 	BD;	td 2
 	SD;	td 4
 }
-.b2()
+b2()
 {
 	BD;	td 4
 	SD;	td 2
@@ -429,7 +429,7 @@ def a2sversion	"1.9"
 	SD;	td 3
 	BD .3;	td 1
 }
-.b3()
+b3()
 {
 	BD;	td 4
 	SD;	td 2
@@ -442,7 +442,7 @@ def a2sversion	"1.9"
 	SD .6;	td 1
 	SD;	td 1
 }
-.Beat1()
+Beat1()
 {
 	struct { inline; panmix }
 	HH;	b1;	td 16
@@ -450,7 +450,7 @@ def a2sversion	"1.9"
 	HH;	b1;	td 16
 		b3;	td 16
 }
-.Beat1b()
+Beat1b()
 {
 	struct { inline; panmix }
 	HH2;	b1;	td 16
@@ -459,7 +459,7 @@ def a2sversion	"1.9"
 		b3;	td 16
 }
 
-.b21()
+b21()
 {
 	BD;	td 3
 	BD .5;	td 1
@@ -469,7 +469,7 @@ def a2sversion	"1.9"
 	SD2;	td 2
 	BD .5;	td 2
 }
-.b22()
+b22()
 {
 	BD;	td 3
 	BD .5;	td 1
@@ -480,7 +480,7 @@ def a2sversion	"1.9"
 	SD2;	td 2
 	BD .5;	td 2
 }
-.b23()
+b23()
 {
 	BD;	td 2
 	BD .3;	td 1
@@ -495,7 +495,7 @@ def a2sversion	"1.9"
 	BD; SD .6;	td 1
 	SD2;		td 1
 }
-.b23b()
+b23b()
 {
 	BD;	td 12
 
@@ -504,7 +504,7 @@ def a2sversion	"1.9"
 	SD .5;	td 1
 	SD .6;	td 1
 }
-.Beat2()
+Beat2()
 {
 	struct { inline; panmix }
 	HH2;	b21;	td 16
@@ -512,7 +512,7 @@ def a2sversion	"1.9"
 	HH2;	b21;	td 16
 		b23;	td 16
 }
-.Beat2b()
+Beat2b()
 {
 	struct { inline; panmix }
 	HH2;	b21;	td 16
@@ -521,14 +521,14 @@ def a2sversion	"1.9"
 		b23b;	td 16
 }
 
-.b31()
+b31()
 {
 	BD;	td 6
 	BD;	td 4
 	BD;	td 2
 	SD;	td 4
 }
-.b32()
+b32()
 {
 	BD;	td 6
 	BD;	td 3
@@ -537,7 +537,7 @@ def a2sversion	"1.9"
 	SD;	td 3
 	BD .3;	td 1
 }
-.b33()
+b33()
 {
 	BD;	td 6
 	BD;	td 3
@@ -548,7 +548,7 @@ def a2sversion	"1.9"
 	SD .6;	td 1
 	SD;	td 1
 }
-.Beat3()
+Beat3()
 {
 	struct { inline; panmix }
 	HH;	b31;	td 16
@@ -557,7 +557,7 @@ def a2sversion	"1.9"
 		b33;	td 16
 }
 
-.IntroFill()
+IntroFill()
 {
 	struct { inline; panmix }
 	!Vel .1
@@ -566,7 +566,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.RestartFill()
+RestartFill()
 {
 	struct { inline; panmix }
 	!Vel .1
@@ -575,7 +575,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.PBass(pitch Len=16 V=1)
+PBass(pitch Len=16 V=1)
 {
 	struct { inline; panmix }
 	Len {
@@ -584,7 +584,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Kl(Vel Decay Wave Base Period)
+Kl(Vel Decay Wave Base Period)
 {
 	struct { wtosc }
 	!warble (rand .05 + .1)
@@ -599,7 +599,7 @@ def a2sversion	"1.9"
 		*a Decay
 	}
 }
-.Metalloop(P V=.2 DP=0 Len=16)
+Metalloop(P V=.2 DP=0 Len=16)
 {
 	struct { inline; panmix }
 	Len {
@@ -607,7 +607,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.ResoBass(P V=1 Reso Wave)
+ResoBass(P V=1 Reso Wave)
 {
 	struct { wtosc }
 	a (V * .5); set a; +Reso P; w Wave
@@ -624,7 +624,7 @@ def a2sversion	"1.9"
 		-Reso .1n; *V mv
 	}
 }
-.Reso(P V=1)
+Reso(P V=1)
 {
 	struct { inline; panmix }
 	!r .5
@@ -636,20 +636,20 @@ def a2sversion	"1.9"
 	2(NP) { P NP }
 }
 
-.Reso1()
+Reso1()
 {
 	1:Reso -5n;	td 8;	1<1
 	1:Reso -8n 1.2;	td 8;	1<1
 }
 
-.Strings2()
+Strings2()
 {
 	1:EStrings -27n .4; 2:EStrings -15n .4;	td 48; *<1
 	1:EStrings -29n .4; 2:EStrings -17n .4;	td 8; *<1
 	1:EStrings -32n .4; 2:EStrings -20n .4;	td 8; *<1
 }
 
-.PreIntro()
+PreIntro()
 {
 	struct { inline; panmix }
 	SD .2;	td 1
@@ -658,17 +658,17 @@ def a2sversion	"1.9"
 	SD .7;	td 1
 }
 
-.sbd(V=1)
+sbd(V=1)
 {
 	struct { inline; panmix }
 	BD V
 }
-.iHH()
+iHH()
 {
 	struct { inline; panmix }
 	HH
 }
-.Intro()
+Intro()
 {
 	sbd .7
 	Cymbal -1.5 .3; Cymbal 0 .7
@@ -684,7 +684,7 @@ def a2sversion	"1.9"
 	1<1; 2<1
 }
 
-.bt1()
+bt1()
 {
 	1:BleepLead 9n 1.2;		td 1
 	1<1;				td 3
@@ -695,7 +695,7 @@ def a2sversion	"1.9"
 	1<1; 1:BleepLead 11n 1.2;	td 1
 	1<1;				td 3
 }
-.bt2()
+bt2()
 {
 	1:BleepLead 11n;		td 2
 	1<1; 1:BleepLead 7n;		td 1
@@ -706,7 +706,7 @@ def a2sversion	"1.9"
 	1:BleepLead 4n;			td 2
 	1<1
 }
-.bt3a()
+bt3a()
 {
 	1:BleepLead 12n;		td 2
 	1<1; 1:BleepLead 11n 1.2;	td 1
@@ -716,7 +716,7 @@ def a2sversion	"1.9"
 	1:BleepLead 4n;			td 2
 	1<1
 }
-.bt3b()
+bt3b()
 {
 	1:BleepLead 12n;		td 2
 	1<1; 1:BleepLead 11n 1.2;	td 1
@@ -724,14 +724,14 @@ def a2sversion	"1.9"
 	1<1; 1:BleepLead 11n;		td 1
 	1<1;				td 9
 }
-.butheme1()
+butheme1()
 {
 	bt1;	td 16
 	bt2;	td 16
 	bt1;	td 16
 	bt3a;	td 16
 }
-.butheme2(V=1)
+butheme2(V=1)
 {
 	struct { inline; panmix }
 	vol V
@@ -741,7 +741,7 @@ def a2sversion	"1.9"
 	bt3b;	td 16
 }
 
-.bucut()
+bucut()
 {
 	tr -1
 	1:BleepLead 9n;		td .5
@@ -768,7 +768,7 @@ def a2sversion	"1.9"
 	1<1;			td 3.5
 }
 
-.bc1(P V=1)
+bc1(P V=1)
 {
 	tr P
 						td 1
@@ -787,7 +787,7 @@ def a2sversion	"1.9"
 	2(NP) { tr NP }
 }
 
-.whbuild(P V=.5)
+whbuild(P V=.5)
 {
 	tr P
 	1:Whistle 9n V;		td 6
@@ -804,7 +804,7 @@ def a2sversion	"1.9"
 	1<1;			td 8
 }
 
-.chpre(P V=1)
+chpre(P V=1)
 {
 	1:Reed -15n V;	td 1
 	1<2 -12n;	td 1
@@ -816,7 +816,7 @@ def a2sversion	"1.9"
 	1<2 12n;	td .5
 	1<1
 }
-.chtheme(P V=1)
+chtheme(P V=1)
 {
 	tr P
 	1:Reed 16n V;	td 5
@@ -888,18 +888,18 @@ def a2sversion	"1.9"
 	1<2 9n; 1<1 (V * .7);	td 12
 	1<1
 }
-.chpreE(P V=1)
+chpreE(P V=1)
 {
 	chpre P (V * .7);		td 5.5
 	chpre (P - .01) (V * .2)
 }
-.chthE(P V=1)
+chthE(P V=1)
 {
 	chtheme P (V * .7);		td 5.5
 	chtheme (P - .01) (V * .2)
 }
 
-.buSD()
+buSD()
 {
 	struct { inline; panmix }
 	SD .4;		td 1
@@ -907,7 +907,7 @@ def a2sversion	"1.9"
 	SD .8
 }
 
-.Buildup()
+Buildup()
 {
 	1:bc1 -3n .5;		whbuild 0 .25
 	butheme1;	Strings2;	Cymbal;	Beat1;	PBass -27n 48;	td 45
@@ -928,7 +928,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.Break()
+Break()
 {
 	Metalloop 2 .3 -.1 56;	Metalloop -3 .3 .1 56
 	1:bc1 -3n .5;		whbuild -1 .5;
@@ -949,7 +949,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.bc2(P V=1)
+bc2(P V=1)
 {
 	tr P
 						td 1
@@ -968,7 +968,7 @@ def a2sversion	"1.9"
 	2(NP) { tr NP }
 }
 
-.mainloop(P V=1)
+mainloop(P V=1)
 {
 	tr P
 	mln(fP fV T=3 D=.5)
@@ -1006,7 +1006,7 @@ def a2sversion	"1.9"
 	mln 26n V 2 1.3
 	mln 29n V 2 1.3
 }
-.mainloopstop(P V=1)
+mainloopstop(P V=1)
 {
 	tr P
 	mln(fP fV T=3 D=.5)
@@ -1018,7 +1018,7 @@ def a2sversion	"1.9"
 		mln 28n V 4; *V .4
 	}
 }
-.mainloopout(P V=1)
+mainloopout(P V=1)
 {
 	tr P
 	mln(fP fV T=3 D=.5)
@@ -1037,7 +1037,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.postfigure(V)
+postfigure(V)
 {
 	1:Whistle 9n V;	td 2
 	1<2 16n;	td 2
@@ -1048,7 +1048,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.JMelPre(V=1)
+JMelPre(V=1)
 {
 	1:Reed -8n (V * .5);	td 1
 	1<2 -5n;		td 1
@@ -1058,7 +1058,7 @@ def a2sversion	"1.9"
 	1<2 7n;			td 1
 	1<1
 }
-.JMel1(V=1)
+JMel1(V=1)
 {
 	1:Reed 8n (V * .6);	td .5
 	1<2 9n;			td 5.5
@@ -1118,7 +1118,7 @@ def a2sversion	"1.9"
 	1<2 12n;		td 1
 	1<1
 }
-.JMel2(V=1)
+JMel2(V=1)
 {
 	1:Reed 17n (V * .65);	td 4
 	1<2 16.75n;		td 1
@@ -1165,21 +1165,21 @@ def a2sversion	"1.9"
 	1<2 16n;		td 23.5
 	1<1;			td 8
 }
-.JMelPree()
+JMelPree()
 {
 	JMelPre;	td 5
 	JMelPre .4;	td 5
 	JMelPre .2;	td 5
 	JMelPre .1
 }
-.JMel1e()
+JMel1e()
 {
 	JMel1;		td 5
 	JMel1 .4;	td 5
 	JMel1 .2;	td 5
 	JMel1 .1
 }
-.JMel2e()
+JMel2e()
 {
 	JMel2;		td 5
 	JMel2 .4;	td 5
@@ -1187,7 +1187,7 @@ def a2sversion	"1.9"
 	JMel2 .1
 }
 
-.JStrings1(P V=1)
+JStrings1(P V=1)
 {
 	tr P
 	1:EStrings -8n V; 2:EStrings -3n V; 3:EStrings -1n V; 4:EStrings 2n V
@@ -1196,7 +1196,7 @@ def a2sversion	"1.9"
 			td 32; *<1
 }
 
-.JStrings2(P V=1)
+JStrings2(P V=1)
 {
 	tr P
 	1:EStrings -10n V; 2:EStrings -5n V; 3:EStrings -3n V; 4:EStrings 2n V
@@ -1205,7 +1205,7 @@ def a2sversion	"1.9"
 			td 32; *<1
 }
 
-.Chorus()
+Chorus()
 {
 	mainloop -2 .6;	chthE;	2:EStrings 33n .2
 	1:bc2 9n .4
@@ -1221,7 +1221,7 @@ def a2sversion	"1.9"
 	1<1; 2<1
 }
 
-.Theme()
+Theme()
 {
 	1:bc2 9n .4;		Metalloop 1 .3 0 64
 	mainloop 0 .6;	mainloop -2 .8
@@ -1236,7 +1236,7 @@ def a2sversion	"1.9"
 	1<2 2n;				PBass -34n 16;	td 16
 	1<1
 }
-.PostTheme()
+PostTheme()
 {
 	1:bc2 -3n .3;		Metalloop 1 .3 0 48
 	mainloopout 0 .6;	mainloopout -2 .8
@@ -1248,7 +1248,7 @@ def a2sversion	"1.9"
 	1<1;		Cymbal; 			td 10
 	JMelPree;					td 6
 }
-.ThemeStop()
+ThemeStop()
 {
 	1:bc2 -3n .3;	PBass -39n 16 .7
 	sbd;	Cymbal 0 .2;	Explosion 0 .5
@@ -1257,7 +1257,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.Ending()
+Ending()
 {
 	1:bc2 -3n .2;	PBass -39n 16 .7
 	sbd;	Cymbal 0 .2;	Explosion 0 .5
@@ -1270,7 +1270,7 @@ def a2sversion	"1.9"
 	1<1; 2<1
 }
 
-.Jazzy()
+Jazzy()
 {
 	JMel1e;		Explosion -.3
 	1:Reso -27n .5;		JStrings1 0 .2;	Cymbal;	Beat0;	td 64
@@ -1287,7 +1287,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.Stall()
+Stall()
 {
 	1:Reso 4n; 2:Reso -3n;	sbd;	Cymbal 0 .5;		td 8
 	1<2 5n; 2<2 -2n;					td 4
@@ -1295,14 +1295,14 @@ def a2sversion	"1.9"
 	1<1; 2<1
 }
 
-.Stall2()
+Stall2()
 {
 	1:Reso 4n; 2:Reso -3n;	sbd;	Cymbal 0 .5;		td 4
 	1<2 5n; 2<2 -2n;	PreIntro;			td 4
 	1<1; 2<1
 }
 
-.StopGo()
+StopGo()
 {
 	bucut;	Cymbal -.5 .5;	Beat3;	PBass -27n 17;	td 16
 	SoftArp -3n .25;				td 16
@@ -1315,7 +1315,7 @@ def a2sversion	"1.9"
 	SoftArp 2n .25 -1n;				td 16
 }
 
-.Restart()
+Restart()
 {
 	sbd;	Cymbal 0 .5;	Explosion
 	1:EStrings -16n .4;	2:EStrings -28n .4;	td 8
@@ -1323,7 +1323,7 @@ def a2sversion	"1.9"
 	1<1; 2<1
 }
 
-.Main()
+Main()
 {
 	tempo 138 4
 	PreIntro;				td 4
@@ -1355,7 +1355,7 @@ def a2sversion	"1.9"
 	}
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

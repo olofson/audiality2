@@ -9,7 +9,7 @@ def a2sversion	"1.9"
 import chords;
 
 // A simple swelling pad with detuned octaves.
-.PadFM4(P V=1)
+PadFM4(P V=1)
 {
 	struct { fm4; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
@@ -25,7 +25,7 @@ import chords;
 }
 
 // Same, but with the operators in parallel.
-.PadFM4P(P V=1)
+PadFM4P(P V=1)
 {
 	struct { fm4p; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
@@ -41,7 +41,7 @@ import chords;
 }
 
 // Same again, but now with two chains of 2 ops, combined via ring modulation.
-.PadFM4R(P V=1)
+PadFM4R(P V=1)
 {
 	struct { fm4r; panmix }
 	p (P - .005); p1 .005; p2 .995; p3 2.005
@@ -56,7 +56,7 @@ import chords;
 	1() { force rel }
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

@@ -8,7 +8,7 @@ def a2sversion	"1.9"
 
 // Instruments //
 
-.c0(P A W rmax dl)
+c0(P A W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
@@ -20,7 +20,7 @@ def a2sversion	"1.9"
 		*a .9; *rmax .99; *rmh .99
 	}
 }
-.Cymbal(P V=1)
+Cymbal(P V=1)
 {
 	c0 (P + 5.3) V saw 2 .3
 	c0 (P + 4) (V * .5) saw 2 .4
@@ -28,7 +28,7 @@ def a2sversion	"1.9"
 	c0 (P + 2.3) (V * .2) sine 4 .6
 }
 
-.Str0(P V Attack Decay Detune)
+Str0(P V Attack Decay Detune)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 50)
@@ -50,7 +50,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.Strings(P V=1 Attack=.3 Decay=.2)
+Strings(P V=1 Attack=.3 Decay=.2)
 {
 	!Voices (7 - P quant 1)
 	ifl (Voices - 2) {
@@ -66,7 +66,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.HHClosed(V=1)
+HHClosed(V=1)
 {
 	struct { wtosc }
 	w square; a (V * .4); set a; p 5
@@ -74,7 +74,7 @@ def a2sversion	"1.9"
 	200 {	p (rand 1 + 4.5); *a .95; d .5 }
 }
 
-.HHOpen(V=1)
+HHOpen(V=1)
 {
 	struct { wtosc }
 	w square; a (V * .4); set a; p 5
@@ -83,7 +83,7 @@ def a2sversion	"1.9"
 	300 {	p (rand 1 + 4.5); *a .992; d .5 }
 }
 
-.BD(V=1)
+BD(V=1)
 {
 	struct { wtosc }
 	w sine; p 2; a V; set a
@@ -94,7 +94,7 @@ def a2sversion	"1.9"
 	a 0; d 30
 }
 
-.clp(P V=1 D)
+clp(P V=1 D)
 {
 	struct { wtosc }
 	w square; a (V * .3); set a; p (P + 2)
@@ -103,7 +103,7 @@ def a2sversion	"1.9"
 		p (P + rand 1.5 + 1.6); *a D; d .5
 	}
 }
-.Clap(P V=1 D=.003)
+Clap(P V=1 D=.003)
 {
 	struct { wtosc }
 	clp P V (1 - D)
@@ -115,7 +115,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.sdn(V)
+sdn(V)
 {
 	struct { wtosc }
 	w noise; p 5.5; a V; set a; d 2
@@ -127,7 +127,7 @@ def a2sversion	"1.9"
 		p 6; d D
 	}
 }
-.SD(P V=1)
+SD(P V=1)
 {
 	struct { wtosc }
 	sdn V
@@ -146,7 +146,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Saw0(P V Detune)
+Saw0(P V Detune)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 30)
@@ -168,7 +168,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.SawSynth(P V=1)
+SawSynth(P V=1)
 {
 	def Voices 3
 	def Spread .06
@@ -187,7 +187,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.Cute(P V=1)
+Cute(P V=1)
 {
 	struct { wtosc }
 	def ATK .1; def REL .03
@@ -210,7 +210,7 @@ def a2sversion	"1.9"
 	2(NP) { P (P0 + NP); p P }
 }
 
-.NoiseSweep(P=5 V=.5)
+NoiseSweep(P=5 V=.5)
 {
 	struct { wtosc; panmix }
 	w noise; a V; p P
@@ -225,7 +225,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.ResoBass(P V=1 Reso Wave=sine)
+ResoBass(P V=1 Reso Wave=sine)
 {
 	struct { wtosc }
 	a V; set a; w Wave
@@ -241,7 +241,7 @@ def a2sversion	"1.9"
 
 // Patterns //
 
-.ms(P V=1 PM)
+ms(P V=1 PM)
 {
 	+tr P
 	1:SawSynth 9n V;	td 2
@@ -273,7 +273,7 @@ def a2sversion	"1.9"
 	1<1;			td 1
 }
 
-.mc(P V=1 PM)
+mc(P V=1 PM)
 {
 	+tr P
 	1:SawSynth 9n V;	td 2
@@ -305,7 +305,7 @@ def a2sversion	"1.9"
 	1<1;			td 1
 }
 
-.mc1b(P V=1 PM)
+mc1b(P V=1 PM)
 {
 	+tr P
 	1:SawSynth 9n V;	td 2
@@ -335,7 +335,7 @@ def a2sversion	"1.9"
 	1<1;			td 1
 }
 
-.mc23(P V=1)
+mc23(P V=1)
 {
 	1:SawSynth 9n V;	td 2
 	1<1;			td 1
@@ -359,7 +359,7 @@ def a2sversion	"1.9"
 	1<1 V;			td 1
 	1<1;			td 1
 }
-.mc2(P V=1)
+mc2(P V=1)
 {
 	+tr P
 	mc23 P V;		td 24
@@ -372,7 +372,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.mc3(P V=1 PM)
+mc3(P V=1 PM)
 {
 	+tr P
 	mc23 P V;		td 24
@@ -384,7 +384,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.mc45(P V=1 PM)
+mc45(P V=1 PM)
 {
 	1:SawSynth (9n + PM) V;	td 1
 	1<1;			td 2
@@ -397,7 +397,7 @@ def a2sversion	"1.9"
 	1<2 13n; 1<1 V;		td 1
 	1<1;			td 1
 }
-.mc4(P V=1 PM)
+mc4(P V=1 PM)
 {
 	+tr P
 	mc45 P V PM;		td 14
@@ -416,7 +416,7 @@ def a2sversion	"1.9"
 	1<2 10n; 1<1 V;		td 1
 	1<1
 }
-.mc5(P V=1 PM)
+mc5(P V=1 PM)
 {
 	+tr P
 	mc45 P V PM;		td 14
@@ -431,7 +431,7 @@ def a2sversion	"1.9"
 	1<2 13n; 1<1 V;		td 1
 	1<1
 }
-.mc6(P V=1 PM)
+mc6(P V=1 PM)
 {
 	+tr P
 	mc45 P V PM;		td 14
@@ -445,7 +445,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.MegaStabs(P V=1)
+MegaStabs(P V=1)
 {
 	*V 1.2
 	!V2 (V * .7)
@@ -454,7 +454,7 @@ def a2sversion	"1.9"
 	ms -3 V; ms -2 V;	ms 0 V2
 }
 
-.MegaChords1(V=1)
+MegaChords1(V=1)
 {
 	*V 1.2
 	!V2 (V * .7)
@@ -462,7 +462,7 @@ def a2sversion	"1.9"
 	*V .3; *V2 .3
 	mc -3 V; mc -2 V;	mc 0 V2; mc 3n V2 1n; mc 7n V2
 }
-.MegaChords1B(V=1)
+MegaChords1B(V=1)
 {
 	*V 1.2
 	!V2 (V * .7)
@@ -471,7 +471,7 @@ def a2sversion	"1.9"
 	mc1b -3 V; mc1b -2 V;	mc1b 0 V2; mc1b 3n V2 1n; mc1b 7n V2
 }
 
-.MegaChords2(V=1)
+MegaChords2(V=1)
 {
 	*V 1.2
 	!V2 (V * .7)
@@ -479,7 +479,7 @@ def a2sversion	"1.9"
 	*V .3; *V2 .3
 	mc2 -3 V; mc2 -2 V;	mc2 0 V2; mc2 3n V2; mc2 7n V2
 }
-.MegaChords3(V=1)
+MegaChords3(V=1)
 {
 	*V 1.2
 	!V2 (V * .7)
@@ -488,14 +488,14 @@ def a2sversion	"1.9"
 	mc3 -3 V; mc3 -2 V;	mc3 0 V2; mc3 3n V2; mc3 7n V2
 }
 
-.MegaChords2L(V=1)
+MegaChords2L(V=1)
 {
 	!V2 (V * .5)
 	mc2 -1 V2; mc2 -5n V2;	td 4.5
 	*V2 .3
 	mc2 -1 V2; mc2 -5n V2;
 }
-.MegaChords3L(V=1)
+MegaChords3L(V=1)
 {
 	!V2 (V * .5)
 	mc3 -1 V2; mc3 -5n V2;	td 4.5
@@ -503,7 +503,7 @@ def a2sversion	"1.9"
 	mc3 -1 V2; mc3 -5n V2;
 }
 
-.MegaChords4(V=1)
+MegaChords4(V=1)
 {
 	-tr 4n
 	*V 1.2
@@ -512,7 +512,7 @@ def a2sversion	"1.9"
 	*V .3; *V2 .3
 	mc4 -3 V; mc4 -2 V;	mc4 0 V2; mc4 4n V2 0n; mc4 7n V2
 }
-.MegaChords5(V=1)
+MegaChords5(V=1)
 {
 	-tr 4n
 	*V 1.2
@@ -521,7 +521,7 @@ def a2sversion	"1.9"
 	*V .3; *V2 .3
 	mc5 -3 V; mc5 -2 V;	mc5 0 V2; mc5 4n V2 0n; mc5 7n V2
 }
-.MegaChords6(V=1)
+MegaChords6(V=1)
 {
 	-tr 4n
 	*V 1.2
@@ -531,7 +531,7 @@ def a2sversion	"1.9"
 	mc6 -3 V; mc6 -2 V;	mc6 0 V2; mc6 4n V2 0n; mc6 7n V2
 }
 
-.PCStrings(V=1)
+PCStrings(V=1)
 {
 	1:Strings 9n V; 2:Strings 12n V; 3:Strings 16n V;	td 32
 	1<2 7n;		2<2 11n;	3<2 14n;		td 32
@@ -540,7 +540,7 @@ def a2sversion	"1.9"
 	1<1;		2<1;		3<1
 }
 
-.IntroPerc()
+IntroPerc()
 {
 	struct { inline; panmix }
 	HHClosed .05;	td 1
@@ -554,7 +554,7 @@ def a2sversion	"1.9"
 	BD .5;	Cymbal
 }
 
-.ChorusStall()
+ChorusStall()
 {
 	struct { inline; panmix }
 	BD; Cymbal;	HHClosed .1;	td 1
@@ -567,7 +567,7 @@ def a2sversion	"1.9"
 	BD .7;		HHClosed .6;	td 1
 }
 
-.B2Stall()
+B2Stall()
 {
 	struct { inline; panmix }
 	BD; Clap;	HHClosed .1;	td 1
@@ -576,7 +576,7 @@ def a2sversion	"1.9"
 	BD .5;		HHClosed .4;	td 1
 }
 
-.Hihats()
+Hihats()
 {
 	4 {
 		HHClosed .2;	td 1
@@ -589,7 +589,7 @@ def a2sversion	"1.9"
 		HHClosed .3;	td 1
 	}
 }
-.Beat0()
+Beat0()
 {
 	struct { inline; panmix }
 	BD;	Hihats;		td 32
@@ -603,7 +603,7 @@ def a2sversion	"1.9"
 	7 {	BD;	td 4	}
 }
 
-.Beat1()
+Beat1()
 {
 	struct { inline; panmix }
 	8 {
@@ -612,7 +612,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Beat1C()
+Beat1C()
 {
 	struct { inline; panmix }
 	6 {
@@ -622,7 +622,7 @@ def a2sversion	"1.9"
 	BD;	Clap
 }
 
-.Beat2()
+Beat2()
 {
 	struct { inline; panmix }
 	4 {
@@ -633,7 +633,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.b3()
+b3()
 {
 	BD;			HHClosed;	td 1
 				HHClosed .3;	td 1
@@ -644,7 +644,7 @@ def a2sversion	"1.9"
 				HHOpen;		td 1
 		Clap 0 .7 .01;	HHClosed .3;	td 1
 }
-.Beat3()
+Beat3()
 {
 	struct { inline; panmix }
 	3 {
@@ -659,7 +659,7 @@ def a2sversion	"1.9"
 		Clap;		HHOpen;		td 1
 		Clap 0 .7 .01;	HHClosed .3;	td 1
 }
-.Beat3b()
+Beat3b()
 {
 	struct { inline; panmix }
 	2 {
@@ -684,7 +684,7 @@ def a2sversion	"1.9"
 	BD; 	Clap;		HHOpen;		td 1
 		Clap -1n .7 .01;HHClosed .3;	td 1
 }
-.Beat3C()
+Beat3C()
 {
 	struct { inline; panmix }
 	2 {
@@ -701,7 +701,7 @@ def a2sversion	"1.9"
 }
 
 
-.cht(P V)
+cht(P V)
 {
 	struct { inline; panmix }
 	+tr P
@@ -727,7 +727,7 @@ def a2sversion	"1.9"
 	1<2 23n;	td 2
 	1<1
 }
-.chtback(P V)
+chtback(P V)
 {
 	struct { inline; panmix }
 	pan -.8
@@ -754,7 +754,7 @@ def a2sversion	"1.9"
 	1<2 14n;	td 2
 	1<1
 }
-.chtback2(P V)
+chtback2(P V)
 {
 	struct { inline; panmix }
 	pan .8
@@ -781,14 +781,14 @@ def a2sversion	"1.9"
 	1<2 19n;	td 2
 	1<1
 }
-.ChTheme(P V=.5)
+ChTheme(P V=.5)
 {
 	cht P (V * .9); chtback P (V * .3); chtback2 P (V * .3)
 	td 3.5
 	cht P (V * .5)
 }
 
-.chi1(P V)
+chi1(P V)
 {
 	1:Cute 21n V;	td 4
 	1<2 16n;	td 2
@@ -803,7 +803,7 @@ def a2sversion	"1.9"
 	1<2 16n;	td 6
 	1<1
 }
-.ChInter1(P V=.5)
+ChInter1(P V=.5)
 {
 	struct { inline; panmix }
 	pan .15
@@ -812,7 +812,7 @@ def a2sversion	"1.9"
 	chi1 P (V * .4)
 }
 
-.chi2(P V)
+chi2(P V)
 {
 	1:Cute 21n V;	td 4
 	1<2 16n;	td 2
@@ -825,7 +825,7 @@ def a2sversion	"1.9"
 	1<2 9n;		td 24
 	1<1
 }
-.ChInter2(P V=.5)
+ChInter2(P V=.5)
 {
 	struct { inline; panmix }
 	pan .15
@@ -837,7 +837,7 @@ def a2sversion	"1.9"
 
 // Song //
 
-.Intro()
+Intro()
 {
 	IntroPerc;		td 8
 	NoiseSweep
@@ -847,7 +847,7 @@ def a2sversion	"1.9"
 	Beat1;	MegaStabs;	td 32
 }
 
-.Chorus()
+Chorus()
 {
 	ChTheme;	ChorusStall;	td 8
 	Cymbal
@@ -868,7 +868,7 @@ def a2sversion	"1.9"
 	Beat2;	MegaStabs;		td 32
 }
 
-.Break()
+Break()
 {
 	PCStrings .5;
 	NoiseSweep; Cymbal
@@ -878,7 +878,7 @@ def a2sversion	"1.9"
 		MegaChords3L;	td 32
 }
 
-.PostChorus()
+PostChorus()
 {
 	NoiseSweep; Cymbal
 	Beat3;	MegaChords2;	td 32
@@ -887,7 +887,7 @@ def a2sversion	"1.9"
 	Beat3;	MegaChords3;	td 32
 }
 
-.Break2()
+Break2()
 {
 		B2Stall;	td 4
 	NoiseSweep; Cymbal
@@ -901,7 +901,7 @@ def a2sversion	"1.9"
 	Beat3C;	MegaChords6;	td 32
 }
 
-.Main()
+Main()
 {
 	tempo 150 4
 	Intro;	td (8 + 128)
@@ -915,7 +915,7 @@ def a2sversion	"1.9"
 	}
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

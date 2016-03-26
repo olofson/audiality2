@@ -6,7 +6,7 @@ def copyright	"Copyright 2011-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.Explo0(P V=1 Wave Attack)
+Explo0(P V=1 Wave Attack)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5); set pan
@@ -16,7 +16,7 @@ def a2sversion	"1.9"
 	tr P
 	800 {	rand p x; *a .995; d 2.5 }
 }
-.Explosion(P V=1)
+Explosion(P V=1)
 {
 	+tr P
 	Explo0 0 V sine 2
@@ -25,7 +25,7 @@ def a2sversion	"1.9"
 	Explo0 1.5 (V * .25) sine 3
 }
 
-.nb(P V=1 Pan)
+nb(P V=1 Pan)
 {
 	struct { wtosc; wtosc o2; filter12; panmix }
 	pan Pan; set pan
@@ -44,13 +44,13 @@ def a2sversion	"1.9"
 	}
 	a 0; o2.a 0; d 5
 }
-.NBurst3(P V=1)
+NBurst3(P V=1)
 {
 	nb P (V * .25) -1.25
 	nb P (V * .25) 1.25
 }
 
-.Str0(P V Attack Decay detune)
+Str0(P V Attack Decay detune)
 {
 	struct { wtosc; panmix }
 	pan (detune * 200)
@@ -72,7 +72,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + detune) }
 }
-.Strings(P V=1 Attack=.3 Decay=.2)
+Strings(P V=1 Attack=.3 Decay=.2)
 {
 	!Voices (9 - P quant 1)
 	ifl (Voices - 2) {
@@ -88,7 +88,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.ResoBass(P V=1 Reso)
+ResoBass(P V=1 Reso)
 {
 	struct { wtosc }
 	a (V * .2); set a; +Reso P; w sine
@@ -105,7 +105,7 @@ def a2sversion	"1.9"
 		-Reso .1n; *V mv
 	}
 }
-.Reso(P V=1)
+Reso(P V=1)
 {
 	!r 2
 .rt	while V {
@@ -116,7 +116,7 @@ def a2sversion	"1.9"
 	2(NP) { P NP }
 }
 
-.Sonar(P V=1)
+Sonar(P V=1)
 {
 	struct {
 		wtosc o1; panmix pm1 1 >
@@ -143,7 +143,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.BD(V=1)
+BD(V=1)
 {
 	struct { wtosc }
 	w sine; p 3.5; a (V * .8); set a
@@ -157,7 +157,7 @@ def a2sversion	"1.9"
 	d 1000
 }
 
-.sdn(Vel Color)
+sdn(Vel Color)
 {
 	struct { wtosc }
 	w noise; p (5.5 + Color); a (Vel * .15); set a
@@ -168,7 +168,7 @@ def a2sversion	"1.9"
 	}
 	a 0; d 200
 }
-.SD(Vel=1 Color)
+SD(Vel=1 Color)
 {
 	struct { wtosc }
 	sdn Vel Color
@@ -190,7 +190,7 @@ def a2sversion	"1.9"
 	a 0; d 200
 }
 
-.HHClosed(P V=1)
+HHClosed(P V=1)
 {
 	struct { wtosc }
 	w square; a (V * .2); set a; p 6
@@ -199,7 +199,7 @@ def a2sversion	"1.9"
 	a 0; d 1
 }
 
-.HHOpen(P V=1)
+HHOpen(P V=1)
 {
 	struct { wtosc }
 	w square; a (V * .2); set a; p 6
@@ -208,7 +208,7 @@ def a2sversion	"1.9"
 	a 0; d 1
 }
 
-.HH()
+HH()
 {
 	def c HHClosed; def o HHOpen
 	2 {
@@ -237,7 +237,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.ResoLoop()
+ResoLoop()
 {
 	struct { inline; panmix }
 	pan .25
@@ -255,7 +255,7 @@ def a2sversion	"1.9"
 	1() { force stop }
 }
 
-.PulseBass(P V=1)
+PulseBass(P V=1)
 {
 	struct { wtosc; wtosc o2; wtosc o3; filter12; panmix }
 	!detune (.005 * (1 - P))
@@ -274,7 +274,7 @@ def a2sversion	"1.9"
 	d 500
 	1() { force rel }
 }
-.PBass(P)
+PBass(P)
 {
 	def V .5
 	def i PulseBass
@@ -293,7 +293,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SoftArp(P V=1 Maj=0)
+SoftArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix }
 	pan -.5
@@ -323,7 +323,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.CuteSine(P V=1 Pan)
+CuteSine(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
@@ -345,7 +345,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (P0 + NP) }
 }
-.Appre(P1 P2 P3 P4 Vel Pan Tr)
+Appre(P1 P2 P3 P4 Vel Pan Tr)
 {
 	+tr Tr
 	1:CuteSine P1 Vel Pan;	td 1
@@ -368,7 +368,7 @@ def a2sversion	"1.9"
 
 	1<1
 }
-.Appre1(P1 P2 P3 P4 Vel)
+Appre1(P1 P2 P3 P4 Vel)
 {
 	Appre P1 P2 P3 P4 Vel -.5 1
 	td 1
@@ -377,7 +377,7 @@ def a2sversion	"1.9"
 	Appre P1 P2 P3 P4 (Vel * .25) 1.2 1
 }
 
-.PreAppre(Vel Pan Tr)
+PreAppre(Vel Pan Tr)
 {
 	+tr (Tr - 0)
 	1:CuteSine -26n Vel Pan;td 1
@@ -400,7 +400,7 @@ PreAppre1()
 	PreAppre (VEL * .25) 1.2 1
 }
 
-.VAppre()
+VAppre()
 {
 	Appre1 -5n 0n 3n 7n .2;	td 16
 				td 16
@@ -412,7 +412,7 @@ PreAppre1()
 				td 16
 }
 
-.sbeat()
+sbeat()
 {
 	struct { inline; panmix }
 	BD;		td 2
@@ -424,7 +424,7 @@ PreAppre1()
 	BD;	HH;	td 2
 	BD;		td 30
 }
-.sbeat2()
+sbeat2()
 {
 	struct { inline; panmix }
 	2 {
@@ -444,7 +444,7 @@ PreAppre1()
 		SD;		td 8
 	}
 }
-.pausebeat()
+pausebeat()
 {
 	struct { inline; panmix }
 	BD;	HH;	td 16
@@ -455,7 +455,7 @@ PreAppre1()
 	SD .6;		td 1
 }
 
-.MainPerc()
+MainPerc()
 {
 	struct {
 		inline 0 *
@@ -478,7 +478,7 @@ PreAppre1()
 		pausebeat;	Explosion -1 .4;	td 32
 	}
 }
-.MainInstr()
+MainInstr()
 {
 	struct {
 		inline 0 *
@@ -520,13 +520,13 @@ PreAppre1()
 					td 16
 	}
 }
-.Main()
+Main()
 {
 	tempo 120 4
 	MainPerc;	MainInstr
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

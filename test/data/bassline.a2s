@@ -6,7 +6,7 @@ def copyright	"Copyright 2014 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
 
-.bl1(I V n1 n2 n3 n4 m0 m1)
+bl1(I V n1 n2 n3 n4 m0 m1)
 {
 	!dm (m1 - m0 / 12)
 	1:I n1 V m0; +m0 dm;	td 2;		1<1;
@@ -28,7 +28,7 @@ def a2sversion	"1.9"
 	1:I n4 V m0; +m0 dm;	td 1;		1<1;
 }
 
-Bassline(I V=1)
+export Bassline(I V=1)
 {
 	-tr 2
 	bl1 I V -12n 0n 1n 0n	0 2;	td 16

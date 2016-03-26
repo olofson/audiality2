@@ -9,7 +9,7 @@ def a2sversion	"1.9"
 import bassline;
 
 // Reference
-.SineBass(P V=1)
+SineBass(P V=1)
 {
 	struct { wtosc; panmix }
 	w sine; @a V; p P
@@ -24,7 +24,7 @@ import bassline;
 }
 
 // Unity test. Should sound exactly like SineBass!
-.FMBass0(P V=1)
+FMBass0(P V=1)
 {
 	struct { fm1; panmix }
 	@a V; p P
@@ -38,7 +38,7 @@ import bassline;
 	1() { force rel }
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	tempo 120 4
 	tr P

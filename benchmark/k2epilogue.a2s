@@ -6,7 +6,7 @@ def copyright	"Copyright 2011-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.Rumble(P V=1 attack=1 decay=3 Pan)
+Rumble(P V=1 attack=1 decay=3 Pan)
 {
 	struct { wtosc; panmix }
 	vol V
@@ -25,7 +25,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Str0(P V Attack Decay Detune S)
+Str0(P V Attack Decay Detune S)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 50)
@@ -47,7 +47,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.Strings(P V=1 Attack=.3 Decay=.2)
+Strings(P V=1 Attack=.3 Decay=.2)
 {
 	!Voices (7 - P quant 1)
 	ifl (Voices - 2) {
@@ -65,7 +65,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.sdn(Vel Color)
+sdn(Vel Color)
 {
 	struct { wtosc }
 	w noise; p (5.5 + Color); a (Vel * .15); set a
@@ -76,7 +76,7 @@ def a2sversion	"1.9"
 	}
 	a 0; d 200
 }
-.SD(Vel=1 Color)
+SD(Vel=1 Color)
 {
 	struct { wtosc }
 	sdn Vel Color
@@ -98,7 +98,7 @@ def a2sversion	"1.9"
 	a 0; d 200
 }
 
-.BD(Vel=1)
+BD(Vel=1)
 {
 	struct { wtosc }
 	w square; a (Vel * .4); p 1.5
@@ -114,7 +114,7 @@ def a2sversion	"1.9"
 	a 0; d 300
 }
 
-.C0(P V W rmax dl)
+C0(P V W rmax dl)
 {
 	struct { wtosc; panmix }
 	pan (rand .25)
@@ -127,7 +127,7 @@ def a2sversion	"1.9"
 	}
 	a 0; d 10
 }
-.Cymbal(P V=1)
+Cymbal(P V=1)
 {
 	C0 (P + 5.3) (V * .5) saw 1 .03
 	C0 (P + 4) (V * .3) saw 2 .04
@@ -136,7 +136,7 @@ def a2sversion	"1.9"
 	C0 (P + 2) (V * .1) sine 2.5 .07
 }
 
-.Electro()
+Electro()
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
@@ -157,7 +157,7 @@ def a2sversion	"1.9"
 	a 0; d 10
 }
 
-.Zap(Bars)
+Zap(Bars)
 {
 	*Bars 2
 	Bars {
@@ -169,7 +169,7 @@ def a2sversion	"1.9"
 	1() { kill }
 }
 
-.HatNoise(P V W spread decay)
+HatNoise(P V W spread decay)
 {
 	struct { wtosc }
 	!env V
@@ -179,7 +179,7 @@ def a2sversion	"1.9"
 		p (rand spread + P); a env; -env da; d 1
 	}
 }
-.Hat(Vel=1 Len=1)
+Hat(Vel=1 Len=1)
 {
 	HatNoise 7000f (Vel * .2) triangle .6 (50 * Len)
 	HatNoise 5500f (Vel * .15) triangle .5 (300 * Len)
@@ -187,7 +187,7 @@ def a2sversion	"1.9"
 	HatNoise 2500f (Vel * .03) triangle .3 (200 * Len)
 }
 
-.HH(Bars Vel=1 Fade=1)
+HH(Bars Vel=1 Fade=1)
 {
 	struct { inline; panmix }
 	*Bars 4
@@ -200,7 +200,7 @@ def a2sversion	"1.9"
 	1() { kill }
 }
 
-.PXBeat1()
+PXBeat1()
 {
 	BD;	td 4
 	SD;	td 4
@@ -209,7 +209,7 @@ def a2sversion	"1.9"
 	SD;	td 3
 	SD;	td 1
 }
-.PXBeat2()
+PXBeat2()
 {
 	BD;	td 4
 	SD;	td 4
@@ -217,7 +217,7 @@ def a2sversion	"1.9"
 	BD;	td 4
 	SD;	td 4
 }
-.PXBeat3()
+PXBeat3()
 {
 	BD;	td 4
 	SD;	td 3
@@ -229,7 +229,7 @@ def a2sversion	"1.9"
 	SD;	td 3
 	SD;	td 1
 }
-.PXPattern()
+PXPattern()
 {
 	struct { inline; panmix }
 	PXBeat1;	td 16
@@ -239,7 +239,7 @@ def a2sversion	"1.9"
 	1() { kill }
 }
 
-.LowBD(Bars=4)
+LowBD(Bars=4)
 {
 	struct { inline; panmix }
 	Bars (Bars * 2 - 1)
@@ -249,7 +249,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.ResoBass(P V=1 Reso=1 Wave=triangle)
+ResoBass(P V=1 Reso=1 Wave=triangle)
 {
 	struct { wtosc; panmix }
 	a (V * .2); set a; +Reso P; w Wave
@@ -266,7 +266,7 @@ def a2sversion	"1.9"
 		-Reso .1n; *V mv
 	}
 }
-.Reso(P V=1 Wave=triangle)
+Reso(P V=1 Wave=triangle)
 {
 	!r .5
 .rt	while V {
@@ -277,7 +277,7 @@ def a2sversion	"1.9"
 	2(NP) { P NP }
 }
 
-.ResoLoop(P Wave=triangle)
+ResoLoop(P Wave=triangle)
 {
 // The .5 timings are a hack to ensure that quantized messages are processed
 // BEFORE the notes are triggered...
@@ -310,7 +310,7 @@ def a2sversion	"1.9"
 	1() { force stop }
 }
 
-.Fill()
+Fill()
 {
 	struct { inline; panmix }
 	!r .1
@@ -322,7 +322,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SoftArp(P V=1 Maj=0)
+SoftArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix }
 	w qsine
@@ -352,7 +352,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Kl(Vel Decay Wave Base Period Pan)
+Kl(Vel Decay Wave Base Period Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan
@@ -368,7 +368,7 @@ def a2sversion	"1.9"
 		*a Decay
 	}
 }
-.Metallic(P V=1)
+Metallic(P V=1)
 {
 	def W square
 	Kl (V * .15) .94 W (P + rand 1) (rand .1 + .2) (rand 1 - .5)
@@ -376,7 +376,7 @@ def a2sversion	"1.9"
 	Kl (V * .15) .9 W (P + rand 1 + 1) (rand .1 + .2) .7
 }
 
-.Metalloop(P V=1 DP=.1 Bars=4)
+Metalloop(P V=1 DP=.1 Bars=4)
 {
 	Bars {
 		Metallic P V;	+P DP;	td 2
@@ -391,7 +391,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Pad()
+Pad()
 {
 	def Vel .3
 	1:Strings 2n Vel;	2:Strings 5n Vel;	3:Strings 7n Vel; td 32
@@ -403,7 +403,7 @@ def a2sversion	"1.9"
 	1(NV) { *<1 NV }
 }
 
-.sbass(P V)
+sbass(P V)
 {
 	struct { wtosc }
 	p P; w hsine; a V; d 10
@@ -412,7 +412,7 @@ def a2sversion	"1.9"
 .stop	a 0; d 100
 	1() { force stop }
 }
-.Bass(P V=1 R=5.5)
+Bass(P V=1 R=5.5)
 {
 	struct { inline; wtosc; panmix }
 	-P 2
@@ -433,7 +433,7 @@ def a2sversion	"1.9"
 	1() { *<1 }
 }
 
-.bl1(n1 n2 n3 n4)
+bl1(n1 n2 n3 n4)
 {
 		1:Bass n1;	td 1
 	1<1;	1:Bass n3;	td 1
@@ -446,7 +446,7 @@ def a2sversion	"1.9"
 		1:Bass n4;	td 2
 	1<1;			td 6
 }
-.bl2(n1 n2 n3)
+bl2(n1 n2 n3)
 {
 		1:Bass n2;	td 1
 	1<1;	1:Bass n3;	td 1
@@ -456,7 +456,7 @@ def a2sversion	"1.9"
 		1:Bass n3;	td 3
 	1<1;			td 8
 }
-.bl3(n1 n2 n3)
+bl3(n1 n2 n3)
 {
 		1:Bass n1;	td 1
 	1<1;	1:Bass n3;	td 1
@@ -467,14 +467,14 @@ def a2sversion	"1.9"
 	1<1;	1:Bass n3;	td 2
 	1<1;			td 8
 }
-.Bassline()
+Bassline()
 {
 	bl1 -10n -7n -5n -5n;	td 16
 	bl2 0 -7n -5n;		td 16
 	bl1 -10n -7n -5n -5n;	td 16
 	bl3 -10n -7n -5n;	td 16
 }
-.Bassline2()
+Bassline2()
 {
 	bl1 -10n -10n -8n -8n;	td 16
 	bl2 -4n -10n -8n;	td 16
@@ -482,7 +482,7 @@ def a2sversion	"1.9"
 	bl3 -5n -10n -8n;	td 16
 }
 
-.CuteSaw(P V=1 Pan)
+CuteSaw(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
@@ -504,7 +504,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (P0 + NP); p P }
 }
-.BreakMelo(P V=1 Pan)
+BreakMelo(P V=1 Pan)
 {
 	+tr P
 	def I CuteSaw
@@ -535,7 +535,7 @@ def a2sversion	"1.9"
 	1<1; 2<1; 3<1; 4<1;		td 2
 }
 
-.OutroMelo(P V=1 Pan)
+OutroMelo(P V=1 Pan)
 {
 	+tr P
 	1:CuteSaw 7n V Pan;	td 1
@@ -552,7 +552,7 @@ def a2sversion	"1.9"
 	1<1;			td 4
 }
 
-.ChorusMelo(P V=1 Pan)
+ChorusMelo(P V=1 Pan)
 {
 	+tr P
 	def I CuteSaw
@@ -627,7 +627,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-.BreakMeloEcho(P V=1)
+BreakMeloEcho(P V=1)
 {
 	struct { inline 0 2; fbdelay 2 > }
 	fbdelay (tick * 6); fbgain .4
@@ -637,7 +637,7 @@ def a2sversion	"1.9"
 	wait 1; d 8000
 }
 
-.OutroMeloEcho(P V=1)
+OutroMeloEcho(P V=1)
 {
 	struct { inline 0 2; fbdelay 2 > }
 	fbdelay (tick * 6); fbgain .4
@@ -647,7 +647,7 @@ def a2sversion	"1.9"
 	wait 1; d 8000
 }
 
-.ChorusMeloEcho(P V=1)
+ChorusMeloEcho(P V=1)
 {
 	struct { inline 0 2; fbdelay 2 > }
 	fbdelay (tick * 6); fbgain .3
@@ -658,7 +658,7 @@ def a2sversion	"1.9"
 	wait 1; d 5000
 }
 
-.Intro()
+Intro()
 {
 	// Pre-intro
 	Rumble 1 .2 1 2 -.5; Rumble 0 .2 .5 3 .5;	td 4
@@ -679,7 +679,7 @@ def a2sversion	"1.9"
 	kill; Fill;	td 5
 }
 
-.Chorus(P)
+Chorus(P)
 {
 	Cymbal -.5 .25; Cymbal 0 .25; HH 4; PXPattern; Zap 4
 	ChorusMeloEcho P .5
@@ -705,7 +705,7 @@ def a2sversion	"1.9"
 	1<1; 2<1; 3<1
 }
 
-.Break()
+Break()
 {
 	BreakMeloEcho 0 .15
 	4:Strings (7n - 2) .1; 5:Strings (7n - 3) .5
@@ -720,7 +720,7 @@ def a2sversion	"1.9"
 	Fill;	td 5
 }
 
-.CuteSine(P V=1 Pan)
+CuteSine(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
@@ -742,7 +742,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (P0 + NP) }
 }
-.Appre(P1 P2 P3 Vel Pan Tr)
+Appre(P1 P2 P3 Vel Pan Tr)
 {
 	+tr Tr
 	1:CuteSine P1 Vel Pan
@@ -766,7 +766,7 @@ def a2sversion	"1.9"
 	}
 	1<1
 }
-.Appre1(P1 P2 P3 Vel)
+Appre1(P1 P2 P3 Vel)
 {
 	struct {
 		inline 0 *
@@ -781,7 +781,7 @@ def a2sversion	"1.9"
 	Appre P1 P2 P3 (Vel * .4) 1.5
 	td 80
 }
-.b2fill1()
+b2fill1()
 {
 	struct { inline; panmix }
 	BD;		td 6
@@ -791,7 +791,7 @@ def a2sversion	"1.9"
 		+r .05
 	}
 }
-.b2fill2()
+b2fill2()
 {
 	struct { inline; panmix }
 	BD; Cymbal -.5 .25; Cymbal 0 .25;			td 6
@@ -801,7 +801,7 @@ def a2sversion	"1.9"
 		+r .05
 	}
 }
-.Break2()
+Break2()
 {
 	Appre1 -5n 0n 2n .15
 	5:Strings -5n .2; 6:Strings -2n .2; 7:Strings 2n .2
@@ -830,7 +830,7 @@ def a2sversion	"1.9"
 	b2fill2;						td 8
 }
 
-.PostChorus()
+PostChorus()
 {
 	4:Strings (7n - 2) .1; 5:Strings (7n - 3) .4
 	LowBD; HH 4; Zap 7
@@ -848,12 +848,12 @@ def a2sversion	"1.9"
 	Fill; td 5
 }
 
-.fbd()
+fbd()
 {
 	struct { inline; panmix }
 	BD .5
 }
-.Finale()
+Finale()
 {
 	Cymbal -2 .2
 	OutroMeloEcho 0 .07;
@@ -863,7 +863,7 @@ def a2sversion	"1.9"
 	fbd;			td 16
 }
 
-.Main()
+Main()
 {
 	tempo 108 4
 	for {
@@ -879,7 +879,7 @@ def a2sversion	"1.9"
 	}
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

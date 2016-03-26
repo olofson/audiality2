@@ -6,7 +6,7 @@ def copyright	"Copyright 2011-2013 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.Flute0(P V=1 Wave)
+Flute0(P V=1 Wave)
 {
 	struct { wtosc }
 	!P0 tr; +P tr; w Wave; p P; a 0; !er .05; !vib 0; !tvib .005; !pf .3
@@ -125,7 +125,7 @@ SpaceFeep(P V=1)
 				td 40
 }
 
-.Str0(P V Attack Decay Detune)
+Str0(P V Attack Decay Detune)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 100)
@@ -171,7 +171,7 @@ OctStrings(P V=1)
 	2(NP) { 1<2 (NP + 1); 2<2 (NP - 1) }
 }
 
-.nb(P V=1 Pan)
+nb(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
@@ -193,7 +193,7 @@ NBurst2(P V=1)
 	60 {	*a .9; d 50 }
 }
 
-.sdn(V)
+sdn(V)
 {
 	struct { wtosc }
 	w noise; p 5.5; a V; set a; d 2
@@ -285,7 +285,7 @@ HH2()
 	}
 }
 
-.bdnoise(P V)
+bdnoise(P V)
 {
 	struct { wtosc }
 	w noise; p (P + 4); a (V * .2); set a
@@ -307,7 +307,7 @@ BDrum(P V=1)
 	d 1000
 }
 
-.tn(P V)
+tn(P V)
 {
 	struct { wtosc }
 	w noise; p (P + 6); a (V * .5); set a; d 10
@@ -381,7 +381,7 @@ SoftArp2(P V=1 Maj=0)
 	}
 }
 
-.Explo0(P V=1 Wave Attack)
+Explo0(P V=1 Wave Attack)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5); set pan
@@ -413,7 +413,7 @@ PulseOct(P V=1)
 	}
 }
 
-.subs(P V=1 W)
+subs(P V=1 W)
 {
 	struct { wtosc }
 	w W
@@ -476,14 +476,14 @@ ResoBass(P V=1 Reso)
 	}
 }
 
-.rl(p1 v v1 r r1 cnt=16)
+rl(p1 v v1 r r1 cnt=16)
 {
 	-p1 24n
 	!dv ((v1 - v) / cnt)
 	!dr ((r1 - r) / cnt)
 	cnt {	ResoBass p1 v r; +v dv; +r dr; td 2 }
 }
-.rl2(p1 v v1 r r1 cnt=16)
+rl2(p1 v v1 r r1 cnt=16)
 {
 	*cnt 2;
 	!dv ((v1 - v) / cnt)
@@ -494,7 +494,7 @@ ResoBass(P V=1 Reso)
 		4 {	ResoBass p1 v r; +v dv; +r dr; -r .3; td 1 }
 	}
 }
-.rl3(p1 v v1 r r1 cnt=16)
+rl3(p1 v v1 r r1 cnt=16)
 {
 	*cnt 2;
 	-p1 24n
@@ -551,7 +551,7 @@ EvilSyncBass(P V=1 Drive)
 	1() { *a .5; *ma .85; +p 1; /per 4; *<1 }
 }
 
-.c0(P V W rmax D)
+c0(P V W rmax D)
 {
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
@@ -780,7 +780,7 @@ Perc2()
 	Tom;			td 1
 }
 
-.p30()
+p30()
 {
 	BDrum;		td 4
 	BDrum;		td 4
@@ -788,7 +788,7 @@ Perc2()
 	BDrum -4n .5;	td 1
 	BDrum;		td 6
 }
-.p3a()
+p3a()
 {
 	p30;		td 22
 	Tom 7n .02;	td .5
@@ -797,7 +797,7 @@ Perc2()
 	Tom 7n .1;	td .5
 	SDrum; NBurst2;	td 8
 }
-.p3b()
+p3b()
 {
 	p30;		td 22
 	SDrum 0 .05;	td .5
@@ -1114,7 +1114,7 @@ Main(L I)
 	}
 }
 
-Song(P V=1 L=1 I=1)
+export Song(P V=1 L=1 I=1)
 {
 	struct {
 		inline 0 *

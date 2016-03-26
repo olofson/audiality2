@@ -256,9 +256,9 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 	if(!(c = a2_OpenCompiler(st, 0)))
 		return A2_OOMEMORY;
 	if((res = a2_CompileString(c, A2_ROOTBANK,
-			"def square pulse50\n"
+			"export def square pulse50\n"
 			"\n"
-			"a2_rootdriver()\n"
+			"export a2_rootdriver()\n"
 			"{\n"
 			"	struct {\n"
 			"		inline 0 *\n"
@@ -269,7 +269,7 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			"	3(PX PY PZ) { pan PX; ramp pan 100 }\n"
 			"}\n"
 			"\n"
-			"a2_rootdriver_mono()\n"
+			"export a2_rootdriver_mono()\n"
 			"{\n"
 			"	struct {\n"
 			"		inline 0 2\n"
@@ -280,7 +280,7 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			"	3(PX PY PZ) { pan PX; ramp pan 100 }\n"
 			"}\n"
 			"\n"
-			"a2_groupdriver()\n"
+			"export a2_groupdriver()\n"
 			"{\n"
 			"	struct {\n"
 			"		inline 0 *\n"
@@ -292,7 +292,7 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			"	3(PX PY PZ) { pan PX; ramp pan 100 }\n"
 			"}\n"
 			"\n"
-			"a2_terminator() {}\n", "rootbank")))
+			"export a2_terminator() {}\n", "rootbank")))
 		return res;
 	a2_CloseCompiler(c);
 

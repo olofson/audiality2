@@ -94,6 +94,7 @@ typedef enum A2_tokens
 	TK_REGISTER,	/* i = register index */
 	TK_INSTRUCTION,	/* i = pseudo opcode */
 	KW_IMPORT,	/* 'import' directive */
+	KW_EXPORT,	/* 'export' directive */
 	KW_AS,		/* 'as' keyword */
 	KW_DEF,		/* 'def' directive */
 	KW_STRUCT,	/* 'struct' keyword */

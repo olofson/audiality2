@@ -8,7 +8,7 @@ def a2sversion	"1.9"
 
 import bassline;
 
-.FMBass3(P V=1)
+FMBass3(P V=1)
 {
 	struct { fm3; panmix }
 	a V;	p P;		fb .7
@@ -25,7 +25,7 @@ import bassline;
 	1() { force rel }
 }
 
-.FMBass3P(P V=1)
+FMBass3P(P V=1)
 {
 	struct { fm3p; panmix }
 	a V;	p P;		fb .7
@@ -42,7 +42,7 @@ import bassline;
 	1() { force rel }
 }
 
-.FMBass2R(P V=1)
+FMBass2R(P V=1)
 {
 	struct { fm2r; panmix }
 	a V;	p (P - .01);	fb .9
@@ -58,7 +58,7 @@ import bassline;
 	1() { force rel }
 }
 
-.FMBass4R(P V=1)
+FMBass4R(P V=1)
 {
 	struct { fm4r; panmix }
 	a V;	p P;		fb .6
@@ -78,7 +78,7 @@ import bassline;
 	1() { force rel }
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *

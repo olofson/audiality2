@@ -8,7 +8,7 @@ def a2sversion	"1.9"
 
 import a2jingle as A2Jingle
 
-.Tuning()
+Tuning()
 {
 	struct {
 		wtosc
@@ -54,7 +54,7 @@ import a2jingle as A2Jingle
 	}
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 1

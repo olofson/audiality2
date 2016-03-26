@@ -6,7 +6,7 @@ def copyright	"Copyright 2012 David Olofson"
 def license	"CC BY 3.0"
 def a2sversion	"1.9"
 
-.Sonar(P V=1 Pan)
+Sonar(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan
@@ -21,7 +21,7 @@ def a2sversion	"1.9"
 	a 0; d 100
 }
 
-.Bell(V)
+Bell(V)
 {
 	struct { wtosc; panmix }
 	pan (rand 3 - 1.5)
@@ -33,7 +33,7 @@ def a2sversion	"1.9"
 	*a .5; d 50
 	a 0; d 150
 }
-.Magic()
+Magic()
 {
 	!V .01; !TV 1
 	wg (V - .001) {
@@ -43,7 +43,7 @@ def a2sversion	"1.9"
 	1(NV) { TV NV }
 }
 
-.Str0(P V Attack Decay Detune S)
+Str0(P V Attack Decay Detune S)
 {
 	struct { wtosc; panmix }
 	pan (Detune * 80)
@@ -65,7 +65,7 @@ def a2sversion	"1.9"
 	}
 	2(NP) { P (NP + Detune) }
 }
-.Strings(P V=1 Attack=.3 Decay=.1)
+Strings(P V=1 Attack=.3 Decay=.1)
 {
 	!Voices (10 - (P * 2) quant 1)
 	ifl (Voices - 2) {
@@ -83,7 +83,7 @@ def a2sversion	"1.9"
 	2(NP) { *<2 NP }
 }
 
-.Chords()
+Chords()
 {
 	struct { inline 0 2; panmix 2 > }
 	def I Strings
@@ -108,7 +108,7 @@ def a2sversion	"1.9"
 	*<1
 }
 
-.BackArp(P V=1 Maj=0)
+BackArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix 1 2; fbdelay 2 > }
 	vol .2; set vol
@@ -145,7 +145,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.SoftArp(P V=1 Maj=0)
+SoftArp(P V=1 Maj=0)
 {
 	struct { wtosc; panmix 1 2; fbdelay 2 > }
 	vol .2; set vol
@@ -171,7 +171,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.Explo0(P V Wave Attack Period PP)
+Explo0(P V Wave Attack Period PP)
 {
 	struct { wtosc; panmix }
 	pan PP
@@ -187,7 +187,7 @@ def a2sversion	"1.9"
 		rand p x; *a .993; d 2.5
 	}
 }
-.Explosion(P V=.2 Period=2)
+Explosion(P V=.2 Period=2)
 {
 	+tr P
 	Explo0 -1 (V * 2) sine 3 Period 0
@@ -203,7 +203,7 @@ def a2sversion	"1.9"
 	Explo0 1.3 (V * .2) triangle 1.2 (Period * .3) 1.5
 }
 
-.Main()
+Main()
 {
 	tempo 120 4
 	Chords;					BackArp -9n .4 3n;	td 4
@@ -213,7 +213,7 @@ def a2sversion	"1.9"
 	1<1
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct {
 		inline 0 *	// Inline all subvoices

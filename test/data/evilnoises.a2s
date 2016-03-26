@@ -6,7 +6,7 @@ def copyright	"Copyright 2011 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
-.flute(pitch vel=1)
+flute(pitch vel=1)
 {
 	struct { wtosc }
 	w triangle; p pitch; -p .05; a vel; d 50
@@ -16,7 +16,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.farp(trans v=1 dv)
+farp(trans v=1 dv)
 {
 	!n 26n; +n trans;
 	4 {
@@ -31,7 +31,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.DWVib(pitch)
+DWVib(pitch)
 {
 	struct { wtosc }
 	!p1 (pitch - .5n); !p2 (pitch + .5n)
@@ -47,7 +47,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.sonar()
+sonar()
 {
 	struct { wtosc }
 	!max .5
@@ -62,7 +62,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.ResoBass(pitch vel=1 reso)
+ResoBass(pitch vel=1 reso)
 {
 	struct { wtosc }
 	+reso pitch; +reso 2; w triangle
@@ -75,7 +75,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.rl(p1 vel p2 r dr)
+rl(p1 vel p2 r dr)
 {
 	-p1 36n; +p2 p1
 	ResoBass p1 vel r; +r dr; td 8
@@ -88,7 +88,7 @@ def a2sversion	"1.9"
 	ResoBass p2 vel r; +r dr; td 8
 }
 
-.resoloopi(pitch vel=1 p2=1)
+resoloopi(pitch vel=1 p2=1)
 {
 	rl pitch vel p2 .4 -.05;	td 64
 	rl pitch vel p2 0 -.05;		td 64
@@ -96,7 +96,7 @@ def a2sversion	"1.9"
 	rl pitch vel p2 0 .05;		td 64
 }
 
-.resoloop(pitch vel=1 p2=1)
+resoloop(pitch vel=1 p2=1)
 {
 	rl pitch vel p2 0 .2;		td 64
 	rl pitch vel p2 1.6 .2;		td 64
@@ -104,7 +104,7 @@ def a2sversion	"1.9"
 	rl pitch vel p2 1.6 -.2;	td 64
 }
 
-.resoloop2(pitch vel=1 p2=1)
+resoloop2(pitch vel=1 p2=1)
 {
 	rl pitch vel p2 1.6 -.2;	td 64
 	rl pitch vel p2 0 -.1;		td 64
@@ -112,7 +112,7 @@ def a2sversion	"1.9"
 	rl pitch vel p2 0 .1;		td 64
 }
 
-.EvilSyncBass(pitch vel=1 drive)
+EvilSyncBass(pitch vel=1 drive)
 {
 	struct { wtosc }
 	!per (p2d pitch * .5)
@@ -130,7 +130,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.h1(trans drive)
+h1(trans drive)
 {
 	!d1 (drive + 1.4)
 	!d2 (drive + .3)
@@ -143,7 +143,7 @@ def a2sversion	"1.9"
 		EvilSyncBass n .3;		td 4; kill
 						td 12
 }
-.h2(trans drive)
+h2(trans drive)
 {
 	!d1 (drive + 1.4)
 	!d2 (drive + .3)
@@ -162,7 +162,7 @@ def a2sversion	"1.9"
 	+n 1;	EvilSyncBass n .3 2.5;		td 4; kill;
 	-n 1;					td 4
 }
-.h3(trans)
+h3(trans)
 {
 	!n (trans - 36n)
 		EvilSyncBass n .8 .5;		td 24; kill
@@ -174,7 +174,7 @@ def a2sversion	"1.9"
 	-n 1n;	EvilSyncBass n .8 2.5;		td 16; kill
 		EvilSyncBass n .3;		td 8; kill
 }
-.heavy(trans)
+heavy(trans)
 {
 	h1 trans;	td 128
 	h2 trans 1.2;	td 128
@@ -182,14 +182,14 @@ def a2sversion	"1.9"
 	h3 trans;	td 128
 }
 
-.h21(d1 d2)
+h21(d1 d2)
 {
 	EvilSyncBass -36n .8 d1;	td 8; kill
 	EvilSyncBass -36n .3;		td 16; kill
 	EvilSyncBass -36n .8 d2;	td 8; kill
 	EvilSyncBass -36n .3;		td 16; kill
 }
-.h22(d1 d2)
+h22(d1 d2)
 {
 	h21 d1 d2;			td 48
 	EvilSyncBass -24n .8 2;		td 4; kill
@@ -205,7 +205,7 @@ def a2sversion	"1.9"
 	EvilSyncBass -21n .5 3;		td 4; kill
 	td 4
 }
-.heavy2()
+heavy2()
 {
 	h21 2;		td 128
 	h21 1;		td 128
@@ -213,7 +213,7 @@ def a2sversion	"1.9"
 	h22 2.3 1;	td 128
 }
 
-.heavy0()
+heavy0()
 {
 	h1;		td 128
 	h21 2;		td 128
@@ -221,14 +221,14 @@ def a2sversion	"1.9"
 	h22 2.3 1;	td 128
 }
 
-.h31(d1 d2)
+h31(d1 d2)
 {
 	EvilSyncBass -24n .5 d1;	td 4; kill
 	EvilSyncBass -36n .2;		td 20; kill
 	EvilSyncBass -36n .5 d2;	td 4; kill
 	EvilSyncBass -36n .2;		td 20; kill
 }
-.h32(d1 d2)
+h32(d1 d2)
 {
 	h31 d1 d2;			td 48
 	EvilSyncBass -24n .5 2;		td 4; kill
@@ -244,7 +244,7 @@ def a2sversion	"1.9"
 	EvilSyncBass -21n .5 3;		td 4; kill
 	td 4
 }
-.heavy3()
+heavy3()
 {
 	h31;		td 128
 	h31 2;		td 128
@@ -256,13 +256,13 @@ def a2sversion	"1.9"
 	h32 3.5 2.5;	td 128
 }
 
-.heavy4(pitch)
+heavy4(pitch)
 {
 	EvilSyncBass (pitch - 3) .4;		td 248; kill
 	EvilSyncBass (pitch - 2) .6 1.7;	td 4; kill
 }
 
-.sdn(vel)
+sdn(vel)
 {
 	struct { wtosc }
 	w noise; p 6; a vel; set a; d 5
@@ -274,7 +274,7 @@ def a2sversion	"1.9"
 		p 6; d dl
 	}
 }
-.sdrum(pitch vel=1)
+sdrum(pitch vel=1)
 {
 	struct { wtosc }
 	sdn vel
@@ -291,14 +291,14 @@ def a2sversion	"1.9"
 	1000 {	p (rand 1.5 + p0); *a .99; d 1 }
 }
 
-.bdnoise(pitch vel)
+bdnoise(pitch vel)
 {
 	struct { wtosc }
 	w noise; p (pitch + 4); a (vel * .2); set a
 	*a .05; d 30
 	a 0; d 200
 }
-.bdrum(pitch vel=1)
+bdrum(pitch vel=1)
 {
 	struct { wtosc }
 	bdnoise pitch vel
@@ -313,14 +313,14 @@ def a2sversion	"1.9"
 	d 200
 }
 
-.tn(pitch)
+tn(pitch)
 {
 	struct { wtosc }
 	w noise; p (pitch + 6); a .5; set a; d 10
 	-p 2
 	100 {	-p .07; *a .8; d 10 }
 }
-.tom(pitch)
+tom(pitch)
 {
 	struct { wtosc }
 	tn pitch
@@ -337,7 +337,7 @@ def a2sversion	"1.9"
 	}
 }
 
-.c0(P V W Rmax D)
+c0(P V W Rmax D)
 {
 	struct { wtosc }
 	w W; a V; set a; +tr P
@@ -353,7 +353,7 @@ def a2sversion	"1.9"
 		*a .85; *Rmax .99; *rmh .99
 	}
 }
-.cymbal()
+cymbal()
 {
 	c0 5.3 1 saw 1 .03
 	c0 4 1 saw 2 .04
@@ -362,7 +362,7 @@ def a2sversion	"1.9"
 	c0 2 .15 sine 2.5 .07
 }
 
-.rd(P V W rpitch mrpitch per)
+rd(P V W rpitch mrpitch per)
 {
 	struct { wtosc }
 	w W; a V; set a
@@ -371,7 +371,7 @@ def a2sversion	"1.9"
 		*rpitch mrpitch; *a .7
 	}
 }
-.ride(pitch vel=1)
+ride(pitch vel=1)
 {
 	rd (pitch + 5) (vel * .4) saw 1 1 .4
 	rd (pitch + 4.5) (vel * .2) saw .7 .96 .6
@@ -379,7 +379,7 @@ def a2sversion	"1.9"
 	rd (pitch + 3.5) (vel * .05) square .3 .97 1
 }
 
-.hhclosed()
+hhclosed()
 {
 	struct { wtosc }
 	w square; a .3; set a; p 5.5
@@ -387,7 +387,7 @@ def a2sversion	"1.9"
 	100 {	p (rand .5 + 4.7); *a .95; d 1 }
 }
 
-.hhopen()
+hhopen()
 {
 	struct { wtosc }
 	w square; a .3; set a; p 5.5
@@ -395,14 +395,14 @@ def a2sversion	"1.9"
 	300 {	p (rand .5 + 4.7); *a .993; d 1 }
 }
 
-.ridebeat()
+ridebeat()
 {
 	15 {	ride; td 32 }
 	ride;	td 16
 	ride;	td 16
 }
 
-.ridebeatup()
+ridebeatup()
 {
 	!v .1
 	15 {	ride 0 v; td 32; +v .06 }
@@ -410,7 +410,7 @@ def a2sversion	"1.9"
 	ride; td 16
 }
 
-.beat1()
+beat1()
 {
 	bdrum; td 24
 	bdrum; td 8
@@ -419,7 +419,7 @@ def a2sversion	"1.9"
 	bdrum; td 16
 	sdrum; td 32
 }
-.beat2()
+beat2()
 {
 	bdrum; td 24
 	bdrum; td 8
@@ -429,7 +429,7 @@ def a2sversion	"1.9"
 	bdrum; td 8
 	sdrum; td 32
 }
-.beat3()
+beat3()
 {
 	bdrum; td 24
 	bdrum; td 8
@@ -441,7 +441,7 @@ def a2sversion	"1.9"
 	bdrum; td 8
 	sdrum; td 8
 }
-.beat()
+beat()
 {
 	beat1;	td 128
 	beat2;	td 128
@@ -449,14 +449,14 @@ def a2sversion	"1.9"
 	beat3;	td 128
 }
 
-.dbeat1()
+dbeat1()
 {
 	bdrum;	td 24
 	bdrum;	td 8
 	sdrum;	td 16
 	bdrum;	td 80
 }
-.dintro()
+dintro()
 {
 	dbeat1;		td 256
 	dbeat1;		td 208
@@ -467,19 +467,19 @@ def a2sversion	"1.9"
 	bdrum;		td 8
 	sdrum 0 .7;	td 8
 }
-.roll()
+roll()
 {
 	!vel .2
 	8 { bdrum 0 vel; sdrum 0 vel; +vel .1; td 8 }
 }
-.dbreak()
+dbreak()
 {
 	dbeat1;		td 256
 	dbeat1;		td 192
 	roll;		td 64
 }
 
-.fill()
+fill()
 {
 		td 440
 	tom 6n;	td 8
@@ -490,17 +490,17 @@ def a2sversion	"1.9"
 	tom;	td 16
 }
 
-.hihats()
+hihats()
 {
 	64 { hhclosed; td 8 }
 }
 
-.hihats2()
+hihats2()
 {
 	32 { hhclosed; td 16 }
 }
 
-.hihats3()
+hihats3()
 {
 	4 {
 		hhclosed;	td 8
@@ -515,12 +515,12 @@ def a2sversion	"1.9"
 	}
 }
 
-.p0() {	hihats3;	cymbal;		dintro;		td 512	}
-.p1() {	hihats;		ridebeat;	cymbal;	beat;	td 512	}
-.p2() {	p1;					fill;	td 512	}
-.p3() {	hihats2;	cymbal;			beat;	td 512	}
-.p4() {	p3;		ridebeatup;		fill;	td 512	}
-.intro()
+p0() {	hihats3;	cymbal;		dintro;		td 512	}
+p1() {	hihats;		ridebeat;	cymbal;	beat;	td 512	}
+p2() {	p1;					fill;	td 512	}
+p3() {	hihats2;	cymbal;			beat;	td 512	}
+p4() {	p3;		ridebeatup;		fill;	td 512	}
+intro()
 {
 	resoloopi;	sonar;			td 128
 			ride -5n .5;		td 128
@@ -529,19 +529,19 @@ def a2sversion	"1.9"
 	cymbal;	bdrum;	hihats2;	heavy0;	td 512
 	sonar;		p0;		heavy0;	td 512
 }
-.theme()
+theme()
 {
 	sonar;	p1;	heavy;		td 512
 	sonar;	p2;	heavy -3n;	td 512
 }
-.inter1()
+inter1()
 {
 	p3;	heavy2;	resoloop 12n;	td 256
 			resoloop 18n;	td 256
 	p4;	heavy2;	resoloop 15n;	td 256
 			resoloop 9n;	td 256
 }
-.inter2()
+inter2()
 {
 	farp -2 .1 .001;	heavy4
 		cymbal;	bdrum;	hihats3;	resoloop 24n .4 0;	td 256
@@ -550,7 +550,7 @@ def a2sversion	"1.9"
 				heavy4 3n;	resoloop 24n .6 3n;	td 256
 	farp -2 .196 .001;	heavy4 5n;	resoloop 24n .7 5n;	td 256
 }
-.break()
+break()
 {
 	DWVib;		DWVib 7n;	cymbal
 	resoloop2 2;	hihats3;	dbreak;		td 128
@@ -558,13 +558,13 @@ def a2sversion	"1.9"
 	DWVib 7n;	DWVib 12n;	resoloop2 2;	td 128
 	sonar;						td 128
 }
-.break2()
+break2()
 {
 	bdrum;		sdrum;		cymbal;	td 64
 	roll;					td 64
 }
 
-.Main(L)
+Main(L)
 {
 	tick (1000 / 60)
 	intro;	td 1536
@@ -583,7 +583,7 @@ def a2sversion	"1.9"
 	}
 }
 
-Song(P V=1 L=0)
+export Song(P V=1 L=0)
 {
 	struct { inline; panmix }
 
