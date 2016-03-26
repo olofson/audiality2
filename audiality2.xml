@@ -4,6 +4,7 @@
 	<highlighting>
 		<list name="directives">
 			<item> import </item>
+			<item> export </item>
 			<item> as </item>
 			<item> def </item>
 			<item> struct </item>

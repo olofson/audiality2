@@ -14,7 +14,7 @@
 			<key>comment</key>
 			<string>Compiler directives</string>
 			<key>match</key>
-			<string>\b(import|as|def|struct|wire|tempo|wave)\b</string>
+			<string>\b(import|export|as|def|struct|wire|tempo|wave)\b</string>
 			<key>name</key>
 			<string>storage.type</string>
 		</dict>
