@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -242,6 +242,7 @@ int a2_Size(A2_state *st, A2_handle handle)
 	switch((A2_otypes)hi->typecode)
 	{
 	  case A2_TBANK:
+		/* NOTE: Exports only! Private symbols are excluded here. */
 		return ((A2_bank *)hi->d.data)->exports.nitems;
 	  case A2_TWAVE:
 	  {

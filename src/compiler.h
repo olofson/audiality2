@@ -269,7 +269,6 @@ struct A2_compiler
 	char		*lexbuf;	/* Buffer for string parsing */
 	A2_lexvalue	l[A2_LEXDEPTH];	/* Lex value buffer; [0] is current */
 	A2_regmap	regmap;		/* Current register allocation map */
-	int		exportall;	/* Export everything from banks! */
 	int		tabsize;	/* Script tab size for messages */
 	int		canexport;	/* Current context allows exports! */
 	int		inhandler;	/* Disallow timing, RUN, SLEEP ,... */

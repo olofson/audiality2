@@ -35,13 +35,14 @@
 #define	READ_CHUNK_SIZE	256
 
 static int readstdin = 0;
+static int show_private = 0;
 
 /* Configuration */
 static const char *audiodriver = "default";
 static int samplerate = 48000;
 static int channels = 2;
 static int audiobuf = 4096;
-static int a2flags = A2_EXPORTALL | A2_TIMESTAMP;
+static int a2flags = A2_TIMESTAMP;
 
 /* State and control */
 static A2_state *state = NULL;	/* Engine state */
@@ -101,13 +102,14 @@ static A2_errors sink_process(int **buffers, unsigned nbuffers,
 	Object info printouts
 -------------------------------------------------------------------*/
 
-static void print_info(int indent, const char *xname, A2_handle h, int is_last)
+static void print_info(int indent, const char *xname, A2_handle h)
 {
 	int i;
 	A2_handle x;
 	A2_otypes t = a2_TypeOf(state, h);
 	const char *name = a2_Name(state, h);
 	int has_exports = a2_GetExport(state, h, 0) >= 1;
+	int has_private = show_private && (a2_GetExport(state, h, -1) >= 1);
 	for(i = 0; i < indent; ++i)
 		printf("| ");
 	if(xname)
@@ -216,14 +218,26 @@ static void print_info(int indent, const char *xname, A2_handle h, int is_last)
 		break;
 	}
 	printf("\n");
-	if(has_exports)
+	if(has_exports || has_private)
 	{
 		for(i = 0; i < indent; ++i)
 			printf("| ");
-		printf("|--------------------------------------------\n");
+		printf("|----------------(exports)-------------------\n");
 		for(i = 0; (x = a2_GetExport(state, h, i)) >= 0; ++i)
 			print_info(indent + 1, a2_GetExportName(state, h, i),
-					x, a2_GetExport(state, h, i + 1) >= 0);
+					x);
+	}
+	if(has_private)
+	{
+		for(i = 0; i < indent; ++i)
+			printf("| ");
+		printf("|-------------(private symbols)--------------\n");
+		for(i = -1; (x = a2_GetExport(state, h, i)) >= 0; --i)
+			print_info(indent + 1, a2_GetExportName(state, h, i),
+					x);
+	}
+	if(has_exports || has_private)
+	{
 		for(i = 0; i < indent; ++i)
 			printf("| ");
 		printf("'--------------------------------------------\n");
@@ -320,10 +334,10 @@ static int play_sounds(int argc, const char *argv[])
 				return -1;
 			res = 1;
 		}
-		else if(strncmp(argv[i], "-xr", 3) == 0)
-			print_info(0, NULL, A2_ROOTBANK, 0);
-		else if(strncmp(argv[i], "-x", 2) == 0)
-			print_info(0, NULL, module, 0);
+		else if(strncmp(argv[i], "-xr", 4) == 0)
+			print_info(0, NULL, A2_ROOTBANK);
+		else if(strncmp(argv[i], "-x", 3) == 0)
+			print_info(0, NULL, module);
 	}
 	if(!res && (a2_Get(state, module, "Song") >= 0))
 		res = play_sound("Song");
@@ -373,6 +387,7 @@ static void usage(const char *exename)
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
 			"           -x          Print module exports\n"
 			"           -xr         Print engine root exports\n"
+			"           -xp         Show private symbols (x/xr)\n"
 			"           -v          Print engine and header "
 			"versions\n"
 			"           -h          Help\n\n");
@@ -423,7 +438,7 @@ static void parse_args(int argc, const char *argv[])
 			printf("[Audio channels: %d]\n", channels);
 		}
 		else if(strncmp(argv[i], "-p", 2) == 0)
-			continue;
+			;
 		else if(strncmp(argv[i], "-s", 3) == 0)	/* No args! */
 		{
 			readstdin = 1;
@@ -443,10 +458,12 @@ static void parse_args(int argc, const char *argv[])
 				silencelevel = 1;
 			printf("[Stop below: %f]\n", sl);
 		}
-		else if(strncmp(argv[i], "-xr", 3) == 0)
-			continue;
-		else if(strncmp(argv[i], "-x", 2) == 0)
-			continue;
+		else if(strncmp(argv[i], "-xp", 4) == 0)
+			show_private = 1;
+		else if(strncmp(argv[i], "-xr", 4) == 0)
+			;
+		else if(strncmp(argv[i], "-x", 3) == 0)
+			;
 		else if(strncmp(argv[i], "-h", 3) == 0)	/* No args! */
 		{
 			usage(argv[0]);

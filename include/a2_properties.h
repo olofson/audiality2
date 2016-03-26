@@ -1,7 +1,7 @@
 /*
  * a2_properties.h - Audiality 2 property interface
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -62,7 +62,6 @@ FIXME: These don't really fit here, as states don't have handles.
 	A2_PSAMPLERATE,		/* Audio I/O sample rate */
 	A2_PBUFFER,		/* Audio I/O buffer size */
 	A2_PTIMESTAMPMARGIN,	/* Timestamp jitter margin delay (ms) */
-	A2_PEXPORTALL,		/* Export all programs! (Debug) */
 	A2_PTABSIZE,		/* Tab size for script position printouts */
 	A2_POFFLINEBUFFER,	/* Buffer size for offline rendering */
 	A2_PSILENCELEVEL,	/* Max peak level considered as silence */

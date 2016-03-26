@@ -1370,6 +1370,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 {
 	int res = A2_OK;
 	A2_nametab *x = &c->target->exports;
+	A2_nametab *p = &c->target->private;
 	memcpy(c->regmap, sc->regmap, sizeof(A2_regmap));
 
 	SCOPEDBG(fprintf(stderr, "=== end scope ===\n");)
@@ -1420,6 +1421,8 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			if(h >= 0)
 				a2nt_AddItem(x, s->name, h);
 		}
+		else if(c->canexport && (h >= 0))
+			a2nt_AddItem(p, s->name, h);
 		a2_FreeSymbol(s);
 	}
 	SCOPEDBG(fprintf(stderr, "=================\n");)
@@ -2410,7 +2413,7 @@ static void a2c_Def(A2_compiler *c, int export)
 	 * A bit ugly; we just ignore the 'export' argument if we're in a
 	 * scope from where symbols cannot be exported...
 	 */
-	if(c->canexport && (export || c->exportall))
+	if(c->canexport && export)
 		s->flags |= A2_SF_EXPORTED;
 
 	a2c_SimplExp(c, -1);
@@ -2421,7 +2424,6 @@ static void a2c_Def(A2_compiler *c, int export)
 		s->v.f = a2c_GetValue(c, c->l);
 		break;
 	  case TK_REGISTER:
-		s->flags &= ~A2_SF_EXPORTED; /* In case we have 'exportall' */
 		if(export)
 			a2c_Throw(c, A2_NOEXPORT);
 		/* Fall through! */
@@ -2920,10 +2922,12 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	}
 	if((i = a2ht_AddItem(&c->target->deps, s->v.i)) < 0)
 		a2c_Throw(c, -i);
-	if(export && !c->canexport)
-		a2c_Throw(c, A2_CANTEXPORT);
-	if(export || (c->exportall && c->canexport))
+	if(export)
+	{
+		if(!c->canexport)
+			a2c_Throw(c, A2_CANTEXPORT);
 		s->flags |= A2_SF_EXPORTED;
+	}
 	a2_PushSymbol(&c->symbols, s);
 #if (DUMPSTRUCT(1)+0) || (DUMPCODE(1)+0)
 	fprintf(stderr, "\nprogram %s(): ------------------------\n", s->name);
@@ -3192,8 +3196,12 @@ static void a2c_WaveDef(A2_compiler *c)
 		a2c_Throw(c, A2_EXPNAME);
 	wd.symbol = a2c_GrabSymbol(c, c->l);
 	wd.symbol->token = TK_WAVE;
-	if(export || (c->exportall && c->canexport))
+	if(export)
+	{
+		if(!c->canexport)
+			a2c_Throw(c, A2_CANTEXPORT);
 		wd.symbol->flags |= A2_SF_EXPORTED;
+	}
 	a2_PushSymbol(&c->symbols, wd.symbol);
 
 	a2c_SkipWhite(c, 1);
@@ -3703,7 +3711,6 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 	c->state = st;
 	for(i = 0; i < A2_CREGISTERS; ++i)
 		c->regmap[i] = A2RT_CONTROL;
-	c->exportall = (flags & A2_EXPORTALL) == A2_EXPORTALL;
 	c->tabsize = st->ss->tabsize;
 
 	/* Add built-in symbols (keywords, directives, hardwired regs etc) */

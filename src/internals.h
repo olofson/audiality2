@@ -345,6 +345,9 @@ struct A2_bank
 	/* Exported objects */
 	A2_nametab	exports;
 
+	/* Private objects */
+	A2_nametab	private;
+
 	/* Dependency table - internal and external objects */
 	A2_handletab	deps;
 };

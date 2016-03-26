@@ -46,7 +46,7 @@ static char *audiodriver = NULL;
 static int samplerate = 48000;
 static int audiobuf = 1024;
 static int dbuffer = -1;		/* Sync delay buffer size */
-static int a2flags = A2_EXPORTALL;
+static int a2flags = 0;
 static int do_exit = 0;
 
 /* Playing and control */
@@ -107,6 +107,22 @@ static A2_errors grab_process(int **buffers, unsigned nbuffers, unsigned frames,
 	File I/O
 -------------------------------------------------------------------*/
 
+static void clamp_selection(void)
+{
+	if(bankindex < 0)
+		bankindex = 0;
+	while((a2_GetExport(state, songbank, bankindex) < 0) && bankindex)
+		--bankindex;
+	selbank = a2_GetExport(state, songbank, bankindex);
+	while((exportindex > 0) &&
+			(a2_GetExport(state, selbank, exportindex) < 0))
+		--exportindex;
+	while((exportindex < 0) &&
+			(a2_GetExport(state, selbank, exportindex) < 0))
+		++exportindex;
+	selected = a2_GetExport(state, selbank, exportindex);
+}
+
 static void bankinfo(int row, const char *key)
 {
 	A2_handle kh = a2_Get(state, selbank, key);
@@ -119,12 +135,18 @@ static void bankinfo(int row, const char *key)
 static void select_object(void)
 {
 	char buf[128];
-	selbank = a2_GetExport(state, songbank, bankindex);
-	selected = a2_GetExport(state, selbank, exportindex);
-	snprintf(buf, sizeof(buf), "B%d:%s X%d:%s (%s)\n",
-		 	bankindex, a2_GetExportName(state, songbank, bankindex),
-		 	exportindex, a2_GetExportName(state, selbank, exportindex),
-			a2_TypeName(state, a2_TypeOf(state, selected)));
+	const char *bxname, *xname, *tname;
+	clamp_selection();
+	bxname = a2_GetExportName(state, songbank, bankindex);
+	xname = a2_GetExportName(state, selbank, exportindex);
+	tname = a2_TypeName(state, a2_TypeOf(state, selected));
+	if(exportindex >= 0)
+		snprintf(buf, sizeof(buf), "B%d:%s X%d:%s (%s)\n",
+				bankindex, bxname, exportindex, xname, tname);
+	else
+		snprintf(buf, sizeof(buf), "B%d:%s P%d:%s (%s)\n",
+				bankindex, bxname, -1 - exportindex, xname,
+				tname);
 	gui_bankinfo(0, NULL, NULL);
 	bankinfo(0, "title");
 	bankinfo(1, "version");
@@ -307,16 +329,12 @@ static void handle_events(int argc, const char *argv[])
 			  /* Bank selection */
 			  case SDLK_END:
 			  case SDLK_DELETE:
-				if(bankindex > 0)
-					--bankindex;
+				--bankindex;
 				select_object();
 				break;
 			  case SDLK_HOME:
 			  case SDLK_INSERT:
 				++bankindex;
-				while((a2_GetExport(state, songbank,
-						bankindex) < 0) && bankindex)
-					--bankindex;
 				select_object();
 				break;
 
@@ -324,15 +342,11 @@ static void handle_events(int argc, const char *argv[])
 			  case SDLK_PLUS:
 			  case SDLK_KP_PLUS:
 				++exportindex;
-				while((a2_GetExport(state, selbank,
-						exportindex) < 0) && exportindex)
-					--exportindex;
 				select_object();
 				break;
 			  case SDLK_MINUS:
 			  case SDLK_KP_MINUS:
-				if(exportindex > 0)
-					--exportindex;
+				--exportindex;
 				select_object();
 				break;
 

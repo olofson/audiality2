@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -340,24 +340,30 @@ int a2_Render(A2_state *st,
  * Return handle of object specified by 'path' relative to object 'node'.
  * Object names are separated with '/' characters.
  *
+ * NOTE:
+ *	This call does NOT distinguish between private and exported symbols!
+ *	It will return any matching object, whether or not it is exported.
+ *
  * Returns a negative A2_errors error code if no object was found.
  */
 A2_handle a2_Get(A2_state *st, A2_handle node, const char *path);
 
 /*
- * Get handle of export 'i' of object 'node'.
+ * Get handle of export 'i' of object 'node'. Positive (including zero) indexes
+ * address exported symbols, while negative indexes address private symbols.
  *
  * Returns -A2_WRONGTYPE if 'node' cannot have exports, or -A2_INDEXRANGE if
  * 'i' is out of range.
  */
-A2_handle a2_GetExport(A2_state *st, A2_handle node, unsigned i);
+A2_handle a2_GetExport(A2_state *st, A2_handle node, int i);
 
 /*
- * Get name of export 'i' of object 'node'.
+ * Get name of export 'i' of object 'node'. Positive (including zero) indexes
+ * address exported symbols, while negative indexes address private symbols.
  *
  * Returns NULL if 'node' cannot have exports, or if 'i' is out of range.
  */
-const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i);
+const char *a2_GetExportName(A2_state *st, A2_handle node, int i);
 
 
 /*---------------------------------------------------------

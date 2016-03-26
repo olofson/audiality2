@@ -1,7 +1,7 @@
 /*
  * bank.c - Audiality 2 banks and symbols
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -40,6 +40,7 @@ static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle 
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
 	a2nt_Cleanup(&b->exports);
+	a2nt_Cleanup(&b->private);
 	for(i = 0; i < b->deps.nitems; ++i)
 		a2_Release(st, b->deps.items[i]);
 	a2ht_Cleanup(&b->deps);
@@ -307,7 +308,8 @@ A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
 		if(!b)
 			return -A2_INVALIDHANDLE;
 		if((h = a2nt_FindItem(&b->exports, path)) < 0)
-			return -A2_NOTFOUND;
+			if((h = a2nt_FindItem(&b->private, path)) < 0)
+				return -A2_NOTFOUND;
 		break;
 	  }
 	  default:
@@ -319,7 +321,7 @@ A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
 }
 
 
-A2_handle a2_GetExport(A2_state *st, A2_handle node, unsigned i)
+A2_handle a2_GetExport(A2_state *st, A2_handle node, int i)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
@@ -331,9 +333,19 @@ A2_handle a2_GetExport(A2_state *st, A2_handle node, unsigned i)
 	  case A2_TBANK:
 	  {
 		A2_bank *b = (A2_bank *)hi->d.data;
-		if(i >= b->exports.nitems)
-			return -A2_INDEXRANGE;
-		return b->exports.items[i].handle;
+		if(i >= 0)
+		{
+			if(i >= b->exports.nitems)
+				return -A2_INDEXRANGE;
+			return b->exports.items[i].handle;
+		}
+		else
+		{
+			i = -1 - i;
+			if(i >= b->private.nitems)
+				return -A2_INDEXRANGE;
+			return b->private.items[i].handle;
+		}
 	  }
 	  default:
 		return -A2_WRONGTYPE;
@@ -341,7 +353,7 @@ A2_handle a2_GetExport(A2_state *st, A2_handle node, unsigned i)
 }
 
 
-const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i)
+const char *a2_GetExportName(A2_state *st, A2_handle node, int i)
 {
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
@@ -353,9 +365,19 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, unsigned i)
 	  case A2_TBANK:
 	  {
 		A2_bank *b = (A2_bank *)hi->d.data;
-		if(i >= b->exports.nitems)
-			return NULL;
-		return b->exports.items[i].name;
+		if(i >= 0)
+		{
+			if(i >= b->exports.nitems)
+				return NULL;
+			return b->exports.items[i].name;
+		}
+		else
+		{
+			i = -1 - i;
+			if(i >= b->private.nitems)
+				return NULL;
+			return b->private.items[i].name;
+		}
 	  }
 	  default:
 		return NULL;

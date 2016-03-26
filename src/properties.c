@@ -51,9 +51,6 @@ A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v)
 	  case A2_PTIMESTAMPMARGIN:
 		*v = st->tsmargin;
 		return A2_OK;
-	  case A2_PEXPORTALL:
-		*v = (st->config->flags & A2_EXPORTALL) == A2_EXPORTALL;
-		return A2_OK;
 	  case A2_PTABSIZE:
 		*v = st->ss->tabsize;
 		return A2_OK;
@@ -264,12 +261,6 @@ A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v)
 		return A2_READONLY;
 	  case A2_PTIMESTAMPMARGIN:
 		st->tsmargin = v;
-		return A2_OK;
-	  case A2_PEXPORTALL:
-		if(v)
-			st->config->flags |= A2_EXPORTALL;
-		else
-			st->config->flags &= ~A2_EXPORTALL;
 		return A2_OK;
 	  case A2_PTABSIZE:
 		if(v < 1)

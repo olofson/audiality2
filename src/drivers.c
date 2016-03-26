@@ -61,7 +61,6 @@ void a2_DumpConfig(A2_config *c)
 	printf("        buffer: %d\n", c->buffer);
 	printf("      channels: %d\n", c->channels);
 	printf("         flags:");
-	if(c->flags & A2_EXPORTALL) printf(" EXPORTALL");
 	if(c->flags & A2_TIMESTAMP) printf(" TIMESTAMP");
 	if(c->flags & A2_NOAUTOCNX) printf(" NOAUTOCNX");
 	if(c->flags & A2_REALTIME) printf(" REALTIME");

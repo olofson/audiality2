@@ -254,7 +254,6 @@ typedef enum A2_errors
 typedef enum A2_initflags
 {
 	/* Flags for A2_config */
-	A2_EXPORTALL =	0x00000100,	/* Export all programs! (Debug/tool) */
 	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Timestamp*() API */
 	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect (JACK etc) */
 	A2_REALTIME =	0x00000800,	/* Configure for realtime operation */
