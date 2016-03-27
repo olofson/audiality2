@@ -633,8 +633,6 @@ void a2_Close(A2_state *st)
 	 * a2_WhenAllHaveProcessed() for thread safe cleanup.
 	 */
 	a2r_ProcessEOCEvents(st, 1);
-	if(st->toapi)
-		a2_PumpMessages(st);
 
 	/* Close the realtime context of the engine */
 	if(st->rootvoice >= 0)
@@ -644,6 +642,14 @@ void a2_Close(A2_state *st)
 			a2_VoiceFree(st, (A2_voice **)&hi->d.data);
 		rchm_Free(&st->ss->hm, st->rootvoice);
 	}
+
+	/*
+	 * Must do this last thing, because destroying the root voice may
+	 * result in xinsert clients and whatnot being disposed of.
+	 */
+	if(st->toapi)
+		a2_PumpMessages(st);
+
 	a2_CloseAPI(st);
 	for(i = 0; i < A2_NESTLIMIT; ++i)
 		if(st->scratch[i])
