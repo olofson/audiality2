@@ -493,6 +493,17 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	}
 	switch((A2_opcodes)op)
 	{
+	  case OP_RAMPR:
+	  case OP_RAMP:
+	  case OP_SET:
+		if(c->regmap[reg] != A2RT_CONTROL)
+			a2c_Throw(c, A2_EXPCTRLREGISTER);
+		break;
+	  default:
+		break;
+	}
+	switch((A2_opcodes)op)
+	{
 	  case OP_END:
 		if(c->inhandler)
 			a2c_Throw(c, A2_INTERNAL + 103);
@@ -585,9 +596,6 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		longins = 1;
 		break;
 	  case OP_SET:
-		if(c->regmap[reg] != A2RT_CONTROL)
-			a2c_Throw(c, A2_EXPCTRLREGISTER);
-		break;
 	  case OP_WAIT:
 	  case OP_DELAYR:
 	  case OP_TDELAYR:
