@@ -288,7 +288,7 @@ static int play_sound(const char *cmd)
 	int ia[A2_MAXARGS];
 	int cnt;
 	printf("Playing %s/%s...\n", a2_Name(state, module), cmd);
-	cnt = sscanf(cmd, "%[A-Za-z0-9_],%f,%f,%f,%f,%f,%f,%f,%f", program,
+	cnt = sscanf(cmd, "%[A-Za-z0-9_.],%f,%f,%f,%f,%f,%f,%f,%f", program,
 			a, a + 1, a + 2, a + 3, a + 4, a + 5, a + 6, a + 7);
 	if(cnt <= 0)
 	{

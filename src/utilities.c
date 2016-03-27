@@ -1,7 +1,7 @@
 /*
  * utilities.c - Audiality 2 internal utilities
  *
- * Copyright 2012 David Olofson <david@olofson.net>
+ * Copyright 2012, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -49,7 +49,7 @@ int a2nt_AddItem(A2_nametab *nt, const char *name, A2_handle h)
 A2_handle a2nt_FindItem(A2_nametab *nt, const char *name)
 {
 	int len, i;
-	const char *sep = strchr(name, '/');
+	const char *sep = strchr(name, '.');
 	if(sep)
 		len = sep - name;
 	else

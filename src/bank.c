@@ -307,15 +307,16 @@ A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
 		A2_bank *b = (A2_bank *)hi->d.data;
 		if(!b)
 			return -A2_INVALIDHANDLE;
-		if((h = a2nt_FindItem(&b->exports, path)) < 0)
-			if((h = a2nt_FindItem(&b->private, path)) < 0)
-				return -A2_NOTFOUND;
-		break;
+		if((h = a2nt_FindItem(&b->exports, path)) >= 0)
+			break;
+		if((h = a2nt_FindItem(&b->private, path)) >= 0)
+			break;
+		return -A2_NOTFOUND;
 	  }
 	  default:
 		return -A2_WRONGTYPE;
 	}
-	if((path = strchr(path, '/')) && path[1])
+	if((path = strchr(path, '.')) && path[1])
 		return a2_Get(st, h, path + 1);	/* Recurse into containers! */
 	return h;
 }

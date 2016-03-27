@@ -2310,7 +2310,20 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 }
 
 
-static void a2c_Import(A2_compiler *c)
+/*
+ * Forward exports from module 'm' to the exports table of the current module.
+ */
+static void a2c_ForwardExports(A2_compiler *c, A2_handle m)
+{
+	A2_nametab *x = &c->target->exports;
+	A2_handle h;
+	int i;
+	for(i = 0; (h = a2_GetExport(c->state, m, i)) >= 0; ++i)
+		a2nt_AddItem(x, a2_GetExportName(c->state, m, i), h);
+}
+
+
+static void a2c_Import(A2_compiler *c, int export)
 {
 	int h, res;
 	const char *name;
@@ -2383,15 +2396,19 @@ static void a2c_Import(A2_compiler *c)
 		if(!(s = a2_NewSymbol(c->l[0].v.sym->name, TK_BANK)))
 			a2c_Throw(c, A2_OOMEMORY);
 		s->v.i = h;
+		if(export)
+			s->flags |= A2_SF_EXPORTED;
 		a2_PushSymbol(&c->symbols, s);
 	}
 	else
-		res = a2ht_AddItem(&c->imports, h);
-
-	if(res < 0)
 	{
-		a2_Release(c->state, h);
-		a2c_Throw(c, -res);
+		if((res = a2ht_AddItem(&c->imports, h)) < 0)
+		{
+			a2_Release(c->state, h);
+			a2c_Throw(c, -res);
+		}
+		if(export)
+			a2c_ForwardExports(c, h);
 	}
 }
 
@@ -3305,6 +3322,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		  case TK_NAME:
 		  case KW_DEF:
 		  case KW_WAVE:
+		  case KW_IMPORT:
 			/* This MAY be a valid use of 'export'... */
 			break;
 		  default:
@@ -3557,7 +3575,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_FreeReg(c, r);
 		break;
 	  case KW_IMPORT:
-		a2c_Import(c);
+		a2c_Import(c, export);
 		return 1;
 	  case KW_DEF:
 		a2c_Def(c, export);
