@@ -560,7 +560,12 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 	if(interrupt)
 		v->s.state = A2_INTERRUPT;
 	if(argc > fn->argc)
+	{
+		/* TODO: Figure out what program and entry point this is! */
+		DBG(fprintf(stderr, "Too many arguments to function %d! "
+				"(%d/%d)\n", func, argc, fn->argc);)
 		argc = fn->argc;
+	}
 	memcpy(v->s.r + fn->argv, argv, argc * sizeof(int));
 	for(i = argc; i < fn->argc; ++i)
 		v->s.r[i + fn->argv] = fn->argdefs[i];
