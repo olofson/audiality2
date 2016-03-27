@@ -416,6 +416,10 @@ static void a2c_PushCoder(A2_compiler *c, A2_program *p, unsigned func)
 	else if(c->coder)
 		cdr->program = c->coder->program;
 	cdr->func = func;
+	if(c->coder)
+		cdr->topreg = c->coder->topreg;
+	else
+		cdr->topreg = 0;
 	cdr->prev = c->coder;
 	c->coder = cdr;
 }
@@ -436,6 +440,9 @@ static void a2c_PopCoder(A2_compiler *c)
 		a2c_Throw(c, A2_OOMEMORY);
 	ins = (A2_instruction *)(fn->code + cdr->pos);
 	ins->opcode = OP_END;
+	fn->topreg = cdr->topreg;
+	if(fn->topreg - fn->argv > A2_MAXSAVEREGS)
+		a2c_Throw(c, A2_LARGEFRAME);
 	c->coder = cdr->prev;
 	free(cdr);
 }
@@ -1334,6 +1341,8 @@ static unsigned a2c_AllocReg(A2_compiler *c, A2_regtypes rt)
 		{
 			c->regmap[r] = rt;
 			REGDBG(fprintf(stderr, "[AllocReg %d (%d)]\n", r, rt);)
+			if(c->coder && (r > c->coder->topreg))
+				c->coder->topreg = r;
 			return r;
 		}
 	a2c_Throw(c, A2_OUTOFREGS);
@@ -3725,7 +3734,7 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 	}
 	c->state = st;
 	for(i = 0; i < A2_CREGISTERS; ++i)
-		c->regmap[i] = A2RT_CONTROL;
+		a2c_AllocReg(c, A2RT_CONTROL);
 	c->tabsize = st->ss->tabsize;
 
 	/* Add built-in symbols (keywords, directives, hardwired regs etc) */

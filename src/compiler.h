@@ -222,6 +222,7 @@ struct A2_coder
 	unsigned	*code;		/* Code buffer */
 	unsigned	size;		/* Size of buffer (instructions) */
 	unsigned	pos;		/* Write position (instructions) */
+	unsigned	topreg;		/* Highest VM register used */
 };
 
 

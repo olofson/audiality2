@@ -90,9 +90,10 @@ void a2_FlushEventQueue(A2_state *st, A2_event **eq, A2_handle h)
 ---------------------------------------------------------*/
 
 static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
-		int interrupt)
+		int topreg, int interrupt)
 {
 	A2_stackentry *se = &a2_AllocBlock(st)->stackentry;
+	int saveregs = topreg - firstreg + 1;
 	if(!se)
 		return A2_OOMEMORY;
 	se->prev = v->stack;
@@ -103,7 +104,18 @@ static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
 	se->interrupt = interrupt;
 	se->waketime = v->s.waketime;
 	se->firstreg = firstreg;
-	memcpy(se->r, v->s.r + firstreg, sizeof(int) * (A2_REGISTERS - firstreg));
+	se->topreg = topreg;
+#ifdef DEBUG
+	if(saveregs > A2_MAXSAVEREGS)
+	{
+		a2_FreeBlock(st, se);
+		fprintf(stderr, "Audiality 2: A2S compiler bug: Too large "
+				"stack frame! %d (max: %d)\n",
+				saveregs, A2_MAXSAVEREGS);
+		return A2_INTERNAL + 401;
+	}
+#endif
+	memcpy(se->r, v->s.r + firstreg, sizeof(int) * saveregs);
 	return A2_OK;
 }
 
@@ -112,6 +124,7 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 {
 	A2_stackentry *se = v->stack;
 	int inter = se->interrupt;
+	int saveregs = se->topreg - se->firstreg + 1;
 	v->s.state = se->state;
 	v->s.func = se->func;
 	if(inter)
@@ -121,8 +134,7 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 	}
 	else
 		v->s.pc = se->pc + 1;
-	memcpy(v->s.r + se->firstreg, se->r,
-			sizeof(int) * (A2_REGISTERS - se->firstreg));
+	memcpy(v->s.r + se->firstreg, se->r, sizeof(int) * saveregs);
 	v->stack = se->prev;
 	a2_FreeBlock(st, se);
 	return inter;
@@ -180,8 +192,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(ninputs < ud->mininputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few "
-					"channels for unit '%s'!\n",
+			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
+					" channels for unit '%s'!\n",
 					v, ud->name);)
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()");
 			return NULL;
@@ -212,8 +224,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(u->noutputs < minoutputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few "
-					"channels for unit '%s'!\n",
+			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
+					" channels for unit '%s'!\n",
 					v, ud->name);)
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()");
 			return NULL;
@@ -257,8 +269,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if((res = ud->Initialize(u, &v->s, us->statedata, si->flags)))
 	{
 		a2_FreeBlock(st, u);
-		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed to "
-				"initialize! (%s)\n",
+		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed"
+				" to initialize! (%s)\n",
 				ud->name, v, a2_ErrorString(res));)
 		a2r_Error(st, res, "a2_AddUnit()");
 		return NULL;
@@ -553,8 +565,9 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 {
 	int i;
 	A2_function *fn = v->program->funcs + func;
-	if(a2_VoicePush(st, v, fn->argv, interrupt))
-		return A2_OOMEMORY;
+	A2_errors res;
+	if((res = a2_VoicePush(st, v, fn->argv, fn->topreg, interrupt)))
+		return res;
 	v->s.func = func;
 	v->s.pc = 0;
 	if(interrupt)
@@ -863,8 +876,8 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			/* NOTE: Can only happen if there's a bug somewhere! */
 			fprintf(stderr, "Audiality 2: Incorrect timestamp for "
 					"voice %p! (%f frames late.)", v,
-			       		(st->now_fragstart -
-			       		e->b.common.timestamp) / 256.0f);
+					(st->now_fragstart -
+					e->b.common.timestamp) / 256.0f);
 			MSGTRACK(fprintf(stderr, "(ev %p from %s)", e, e->source);)
 			fprintf(stderr, "\n");
 			e->b.common.timestamp = st->now_fragstart;
@@ -1142,10 +1155,8 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			{
 				/* Hang around until detached! */
 				st->instructions += A2_INSLIMIT - inscount;
-				DUMPCODERT(
-				  fprintf(stderr, "%p: [waiting for detach]\n",
-				      v);
-				)
+				DUMPCODERT(fprintf(stderr, "%p: [waiting for "
+						"detach]\n", v);)
 				return A2_OK;
 			}
 			v->s.state = A2_FINALIZING;
@@ -1189,10 +1200,12 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  }
 		  case OP_CALL:
 			DBG(if(!ins->a2)
-				fprintf(stderr, "Tried to CALL function 0!\n");)
+				fprintf(stderr, "CALL to function 0!\n");)
 			DBG(if(ins->a2 >= v->program->nfuncs)
-				fprintf(stderr, "Function index %d out of range!\n", ins->a2);)
-			if((res = a2_VoiceCall(st, v, ins->a2, cargc, cargv, 0)))
+				fprintf(stderr, "Function index %d out of "
+						"range!\n", ins->a2);)
+			if((res = a2_VoiceCall(st, v, ins->a2, cargc, cargv,
+					0)))
 				A2_VMABORT(res, "VM:CALL");
 			code = v->program->funcs[v->s.func].code;
 			cargc = 0;
@@ -1603,8 +1616,8 @@ TODO:
 		/* Debugging */
 		  case OP_DEBUGR:
 			fprintf(stderr, ":: Audiality 2 DEBUG: R%d=%f\t(%p)\n",
-					ins->a1, r[ins->a1] * (1.0f / 65536.0f),
-					v);
+					ins->a1,
+					r[ins->a1] * (1.0f / 65536.0f), v);
 			break;
 		  case OP_DEBUG:
 			fprintf(stderr, ":: Audiality 2 DEBUG: %f\t(%p)\n",

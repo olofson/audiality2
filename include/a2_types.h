@@ -127,6 +127,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(VALUERANGE,		"Value out of range")\
   A2_DEFERR(INDEXRANGE,		"Index out of range")\
   A2_DEFERR(OUTOFREGS,		"Out of VM registers")\
+  A2_DEFERR(LARGEFRAME,		"Function uses too many VM registers")\
   \
   A2_DEFERR(NOTIMPLEMENTED,	"Operation or feature not implemented")\
   A2_DEFERR(OPEN,		"Error opening file")\

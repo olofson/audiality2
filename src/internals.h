@@ -380,10 +380,11 @@ struct A2_structitem
 typedef struct A2_function
 {
 	unsigned	*code;		/* VM code */
+	int		argdefs[A2_MAXARGS];	/* Argument default values */
 	uint16_t	size;		/* Size of 'code' (32 bit words) */
 	uint8_t		argv;		/* First register of argument list */
 	uint8_t		argc;		/* Number of arguments */
-	int		argdefs[A2_MAXARGS];	/* Argument default values */
+	uint8_t		topreg;		/* Highest register used */
 } A2_function;
 
 struct A2_program
@@ -405,12 +406,16 @@ struct A2_stackentry
 	A2_vstates	state;
 	unsigned	waketime;	/* Timer as message is handled */
 	unsigned	pc;		/* PC of calling instruction */
-	uint16_t	func;		/* Index of calling function */
+	uint8_t		func;		/* Index of calling function */
 	uint8_t		firstreg;	/* First register saved */
+	uint8_t		topreg;		/* Last register saved */
 	uint8_t		interrupt;	/* Interrupt! (Timer hack.) */
-	int		r[A2_REGISTERS - A2_CREGISTERS]; /* Saved registers */
+	int		r[1];		/* Saved registers */
 };
 
+/* Actual size of A2_stackentry.r */
+#define	A2_MAXSAVEREGS	\
+	((sizeof(A2_block) - offsetof(A2_stackentry, r)) / sizeof(int))
 
 /*
  * Internal event struct - sent directly to voice event queues
