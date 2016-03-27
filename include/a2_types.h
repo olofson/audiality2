@@ -155,6 +155,12 @@ typedef enum A2_sampleformats
   A2_DEFERR(NOREPLACE,		"Unit does not implement replacing output"\
   						" mode")\
   A2_DEFERR(NOTOUTPUT,		"Tried to wire inputs to voice output bus")\
+  A2_DEFERR(NOUNITS,		"Voice has no units")\
+  A2_DEFERR(MULTIINLINE,	"Voice cannot have multiple inline units")\
+  A2_DEFERR(CHAINMISMATCH,	"Unit input count does not match chain")\
+  A2_DEFERR(NOOUTPUT,		"Final unit must send to voice output")\
+  A2_DEFERR(BLINDCHAIN,		"Outputs wired to nothing, as there are no"\
+  						" inputs downstream")\
   A2_DEFERR(EXPORTDECL,		"Export already declared")\
   A2_DEFERR(SYMBOLDEF,		"Symbol already defined")\
   A2_DEFERR(UNDEFSYM,		"Undefined symbols in program")\
@@ -229,12 +235,6 @@ typedef enum A2_sampleformats
   A2_DEFERR(NOPORT,		"Port is unavailable or does not exist")\
   A2_DEFERR(NOINPUT,		"Unit with inputs where there is no audio")\
   A2_DEFERR(NONAME,		"Object has no name")\
-  A2_DEFERR(NOUNITS,		"Voice has no units")\
-  A2_DEFERR(MULTIINLINE,	"Voice cannot have multiple inline units")\
-  A2_DEFERR(CHAINMISMATCH,	"Unit input count does not match chain")\
-  A2_DEFERR(NOOUTPUT,		"Final unit must send to voice output")\
-  A2_DEFERR(BLINDCHAIN,		"Outputs wired to nothing, as there are no"\
-  						" inputs downstream")\
   \
   A2_DEFERR(INTERNAL,		"INTERNAL ERROR")	/* Must be last! */
 
