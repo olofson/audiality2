@@ -30,7 +30,7 @@ extern "C" {
 #endif
 
 /* Number of VM registers */
-#define	A2_REGISTERS	32
+#define	A2_REGISTERS	64
 
 /* Maximum number of arguments to a VM program or function */
 #define	A2_MAXARGS	8
