@@ -477,11 +477,6 @@ static inline void a2_detach_or_free_handle(A2_state *st, A2_handle h)
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, h);
 	if(hi)
 	{
-#ifdef DEBUG
-		if(hi->typecode == A2_TNEWVOICE)
-			fprintf(stderr, "Audiality 2: Incorrect detachment of "
-					"A2_TNEWVOICE handle!\n");
-#endif
 		if(hi->refcount)
 			hi->typecode = A2_TDETACHED;
 		else
