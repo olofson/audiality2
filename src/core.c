@@ -1434,24 +1434,15 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			cargv[cargc++] = r[ins->a1];
 			break;
 		  case OP_SPAWNVR:
-		  {
-			unsigned vid = r[ins->a1] >> 16;
-			if(vid >= A2_REGISTERS)
-				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
-			a2_VoiceSpawn(st, v, vid, r[ins->a2] >> 16,
-					cargc, cargv);
+			a2_VoiceSpawn(st, v, r[ins->a1] >> 16,
+					r[ins->a2] >> 16, cargc, cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SPAWNV:
-		  {
-			unsigned vid = r[ins->a1] >> 16;
-			if(vid >= A2_REGISTERS)
-				A2_VMABORT(A2_BADVOICE, "VM:SPAWNRR");
-			a2_VoiceSpawn(st, v, vid, ins->a2, cargc, cargv);
+			a2_VoiceSpawn(st, v, r[ins->a1] >> 16,
+					ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
-		  }
 		  case OP_SPAWNR:
 			a2_VoiceSpawn(st, v, ins->a1, r[ins->a2] >> 16,
 					cargc, cargv);
@@ -1482,8 +1473,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_SENDR:
 		  {
 			A2_voice *sv;
-			unsigned vid = r[ins->a1] >> 16;
-			if((sv = a2_FindSubvoice(v, vid)))
+			if((sv = a2_FindSubvoice(v, r[ins->a1] >> 16)))
 				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
 						cargc, cargv);
 			cargc = 0;
