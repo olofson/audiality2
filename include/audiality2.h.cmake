@@ -45,15 +45,6 @@ extern "C" {
 /* Default reference frequency for linear pitch 0.0; "middle C" */
 #define	A2_MIDDLEC	261.626f
 
-/* Number of VM registers */
-#define	A2_REGISTERS	32
-
-/* Maximum number of arguments to a VM program or function */
-#define	A2_MAXARGS	8
-
-/* Maximum number of entry points a VM program can have. (EP 0 is "main()".) */
-#define	A2_MAXEPS	8
-
 /* Number of waveform mipmap levels */
 #define	A2_MIPLEVELS	10
 
