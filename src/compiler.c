@@ -2368,7 +2368,15 @@ static void a2c_Import(A2_compiler *c, int export)
 				a2_Release(c->state, nameh);
 			a2c_Throw(c, -A2_OOMEMORY);
 		}
+#ifdef WIN32
+		/*
+		 * Not strictly required, but since we have to support '\' in
+		 * paths for 'import' directives anyway...
+		 */
+		snprintf(buf, bufsize, "%s\\%s", c->path, name);
+#else
 		snprintf(buf, bufsize, "%s/%s", c->path, name);
+#endif
 		buf[bufsize - 1] = 0;
 		h = a2_Load(c->state, buf, 0);
 		free(buf);
@@ -3933,7 +3941,12 @@ A2_errors a2_CompileFile(A2_compiler *c, A2_handle bank, const char *fn)
 		return A2_READ;
 	}
 	fclose(f);
-	if((slashpos = strrchr(fn, '/')))
+	slashpos = strrchr(fn, '/');
+#ifdef WIN32
+	if(!slashpos)
+		slashpos = strrchr(fn, '\\');
+#endif
+	if(slashpos)
 	{
 		/* Grab directory path of 'fn' for local imports */
 		int bufsize = slashpos - fn;
