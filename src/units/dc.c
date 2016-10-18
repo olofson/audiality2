@@ -118,15 +118,15 @@ static inline void dc_process(A2_unit *u, unsigned offset, unsigned frames,
 	  case A2DCRM_LINEAR:
 		/* TODO: "Transient" sample between ramps */
 		/* TODO: minBLEP or similar */
-		a2_PrepareRamper(&dc->value, frames);
+		a2_PrepareRamper(v, frames);
 		for(s = offset; s < end; ++s)
 		{
 			for(o = 0; o < outputs; ++o)
 				if(add)
-					out[o][s] += dc->value.value;
+					out[o][s] += v->value;
 				else
-					out[o][s] = dc->value.value;
-			a2_RunRamper(&dc->value, 1);
+					out[o][s] = v->value;
+			a2_RunRamper(v, 1);
 		}
 		break;
 #if 0
