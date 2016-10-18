@@ -73,7 +73,7 @@ typedef enum A2FM_cregisters
 	/* Operator 3 */
 	A2FMR_PITCH3,		/* Pitch, relative to op0 */
 	A2FMR_AMP3,		/* op1->op0 modulation depth */
-	A2FMR_FB3,		/* op3->op3 feedback modulation depth */
+	A2FMR_FB3		/* op3->op3 feedback modulation depth */
 } A2FM_cregisters;
 #define	A2FMR_OP_SIZE	(A2FMR_PITCH1 - A2FMR_PITCH0)
 

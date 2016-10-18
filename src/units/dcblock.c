@@ -27,8 +27,7 @@
 
 typedef enum A2DCB_cregisters
 {
-	A2DCBR_CUTOFF = 0,
-	A2DCBR_REGISTERS
+	A2DCBR_CUTOFF = 0
 } A2DCB_cregisters;
 
 typedef struct A2_dcblock

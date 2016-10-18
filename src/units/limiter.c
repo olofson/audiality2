@@ -29,8 +29,7 @@
 typedef enum A2L_cregisters
 {
 	A2LR_RELEASE = 0,
-	A2LR_THRESHOLD,
-	A2LR_REGISTERS
+	A2LR_THRESHOLD
 } A2L_cregisters;
 
 typedef struct A2_limiter

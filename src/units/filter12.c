@@ -31,8 +31,7 @@ typedef enum A2F12_cregisters
 	A2F12R_Q,
 	A2F12R_LP,
 	A2F12R_BP,
-	A2F12R_HP,
-	A2F12R_REGISTERS
+	A2F12R_HP
 } A2F12_cregisters;
 
 typedef struct A2_filter12

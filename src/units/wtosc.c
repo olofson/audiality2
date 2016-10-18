@@ -61,8 +61,7 @@ typedef enum A2O_cregisters
 	A2OR_WAVE = 0,
 	A2OR_PITCH,
 	A2OR_AMPLITUDE,
-	A2OR_PHASE,
-	A2OR_REGISTERS
+	A2OR_PHASE
 } A2O_cregisters;
 
 typedef struct A2_wtosc

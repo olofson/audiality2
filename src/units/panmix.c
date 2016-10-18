@@ -29,8 +29,7 @@
 typedef enum A2PM_cregisters
 {
 	A2PMR_VOL = 0,
-	A2PMR_PAN,
-	A2PMR_REGISTERS
+	A2PMR_PAN
 } A2PM_cregisters;
 
 typedef struct A2_panmix

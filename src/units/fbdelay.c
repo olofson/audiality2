@@ -35,8 +35,7 @@ typedef enum A2FBD_cregisters
 	A2FBDR_DRYGAIN,
 	A2FBDR_FBGAIN,
 	A2FBDR_LGAIN,
-	A2FBDR_RGAIN,
-	A2FBDR_REGISTERS
+	A2FBDR_RGAIN
 } A2FBD_cregisters;
 
 typedef struct A2_fbdelay

@@ -36,8 +36,7 @@
 /* Control register frame enumeration */
 typedef enum A2WS_cregisters
 {
-	A2WSR_AMOUNT = 0,
-	A2WSR_REGISTERS
+	A2WSR_AMOUNT = 0
 } A2WS_cregisters;
 
 typedef struct A2_waveshaper

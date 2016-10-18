@@ -27,8 +27,7 @@
 typedef enum A2DC_cregisters
 {
 	A2DCR_VALUE = 0,
-	A2DCR_MODE,
-	A2DCR_REGISTERS
+	A2DCR_MODE
 } A2DC_cregisters;
 
 typedef enum A2DC_rampmodes
