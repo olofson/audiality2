@@ -177,6 +177,8 @@ const A2_unitdesc a2_waveshaper_unitdesc =
 	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
+	NULL,			/* control outputs */
+
 	NULL,			/* constants */
 
 	1, A2WS_MAXCHANNELS,	/* [min,max]inputs */

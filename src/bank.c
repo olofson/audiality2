@@ -57,10 +57,16 @@ static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_hand
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
 	a2_KillVoicesUsingProgram(st, h);
-	while(p->structure)
+	while(p->units)
 	{
-		A2_structitem *pp = p->structure;
-		p->structure = pp->next;
+		A2_structitem *pp = p->units;
+		p->units = pp->next;
+		free(pp);
+	}
+	while(p->wires)
+	{
+		A2_structitem *pp = p->wires;
+		p->wires = pp->next;
 		free(pp);
 	}
 	for(i = 0; i < p->nfuncs; ++i)

@@ -168,6 +168,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(MESSAGEDEF,		"Handler for this message already defined")\
   A2_DEFERR(ONLYLOCAL,		"Symbols can only be local in this scope")\
   A2_DEFERR(DECLNOINIT,		"Declared variable not initialized")\
+  A2_DEFERR(COUTWIRED,		"Control output is already wired")\
   \
   A2_DEFERR(EXPEOS,		"Expected end of statement")\
   A2_DEFERR(EXPCLOSE,		"Expected closing brace")\

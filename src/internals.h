@@ -363,18 +363,39 @@ typedef enum A2_iocodes
 	A2_IO_DEFAULT =		-3	/* Nothing specified in the script! */
 } A2_iocodes;
 
+typedef enum A2_sikinds
+{
+	/* (values >= 0 are indices for st->ss->units[]) */
+	A2_SI_CONTROL_WIRE =	-1,
+	A2_SI_AUDIO_WIRE =	-2
+} A2_sikinds;
+
 typedef struct A2_structitem A2_structitem;
 struct A2_structitem
 {
 	A2_structitem		*next;
-	unsigned		uindex;		/* Unit index */
-	unsigned		flags;		/* A2_unitflags */
-	int16_t			ninputs;	/* Count or A2_iocodes! */
-	int16_t			noutputs;	/* Count or A2_iocodes! */
+	int			kind;		/* A2_sikinds or unit index */
+	union {
+		struct {
+			unsigned	flags;		/* A2_unitflags */
+			int16_t		ninputs;	/* Count/A2_iocodes */
+			int16_t		noutputs;	/* Count/A2_iocodes */
+		} unit;
+		struct {
+			int16_t		from_unit;
+			int16_t		from_output;
 #if 0
-	uint8_t 		inputs[A2_MAXCHANNELS];
-	uint8_t 		outputs[A2_MAXCHANNELS];
+/*
+TODO: Address control registers directly, as we're not going to map them to VM
+TODO: registers in future versions!
+*/
+			int16_t		to_unit;
+			int16_t		to_register;
+#else
+			int		to_register;
 #endif
+		} wire;
+	} p;
 };
 
 typedef struct A2_function
@@ -390,7 +411,8 @@ typedef struct A2_function
 struct A2_program
 {
 	A2_function	*funcs;		/* Function and handler entry points */
-	A2_structitem	*structure;	/* Voice structure definition */
+	A2_structitem	*units;		/* Voice structure: units */
+	A2_structitem	*wires;		/* Voice structure: wires */
 	int8_t		eps[A2_MAXEPS];	/* Message to funcs index map */
 	uint16_t	vflags;		/* Extra voice flags (A2_voiceflags) */
 	int8_t		buffers;	/* Number of scratch buffers needed */
@@ -520,10 +542,8 @@ struct A2_voice
 	uint8_t		nestlevel;	/* Nest level, for scratch buffers */
 
 	/* Units and control registers */
-	uint8_t		cregisters;	/* Number of potentially wired regs */
-
-	A2_write_cb	cwrite[A2_REGISTERS];	/* Write callbacks for cregs */
-	A2_unit		*cunit[A2_REGISTERS];	/* Unit instance for cregs */
+	uint8_t		ncregs;			/* Number of wired regs */
+	A2_cout		cregs[A2_REGISTERS];	/* Register write info */
 	A2_unit		*units;			/* Chain of voice units */
 
 	/* Sub-voices */

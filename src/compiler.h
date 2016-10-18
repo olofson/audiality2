@@ -82,7 +82,9 @@ typedef enum A2_tokens
 	TK_NAMESPACE,	/* sym = namespace symbol */
 	TK_ALIAS,	/* sym = alias target symbol */
 	TK_VALUE,	/* f = value */
+	TK_REGISTER,	/* i = register index */
 	TK_TEMPREG,	/* Temporary register; i = register index */
+	TK_COUTPUT,	/* Control output; sym = TK_COUTPUT symbol */
 	TK_STRING,	/* i = value (handle) */
 	TK_BANK,	/* i = value (handle) */
 	TK_WAVE,	/* i = value (handle) */
@@ -92,7 +94,6 @@ typedef enum A2_tokens
 	TK_NAME,	/* sym = new symbol (add or free!) */
 	TK_FWDECL,	/* sym = symbol (accumulates fixups!) */
 	TK_LABEL,	/* sym->v.i = code position */
-	TK_REGISTER,	/* i = register index */
 	TK_INSTRUCTION,	/* i = pseudo opcode */
 	KW_IMPORT,	/* 'import' directive */
 	KW_EXPORT,	/* 'export' directive */
@@ -150,7 +151,7 @@ static inline int a2_IsRegister(A2_tokens tk)
 static inline int a2_IsSymbol(A2_tokens tk)
 {
 	return (tk == TK_NAMESPACE) || (tk == TK_NAME) || (tk == TK_FWDECL) ||
-			(tk == TK_LABEL);
+			(tk == TK_LABEL) || (tk == TK_COUTPUT);
 }
 
 /*
@@ -187,6 +188,10 @@ struct A2_symbol
 		int		i;
 		double		f;
 		A2_symbol	*alias;		/* Alias target symbol */
+		struct {
+			int	instance;	/* Unit instance index */
+			int	index;		/* Control reg or out index */
+		} port;
 	} v;
 };
 

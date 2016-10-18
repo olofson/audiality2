@@ -225,6 +225,8 @@ const A2_unitdesc a2_xinsert_unitdesc =
 	A2_MATCHIO | A2_XINSERT,	/* flags */
 
 	NULL,				/* registers */
+	NULL,				/* control outputs */
+
 	NULL,				/* constants */
 
 	1, A2_MAXCHANNELS,		/* [min,max]inputs */

@@ -231,7 +231,9 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case TK_NAMESPACE:	return "TK_NAMESPACE";
 	  case TK_ALIAS:	return "TK_ALIAS";
 	  case TK_VALUE:	return "TK_VALUE";
+	  case TK_REGISTER:	return "TK_REGISTER";
 	  case TK_TEMPREG:	return "TK_TEMPREG";
+	  case TK_COUTPUT:	return "TK_COUTPUT";
 	  case TK_STRING:	return "TK_STRING";
 	  case TK_BANK:		return "TK_BANK";
 	  case TK_WAVE:		return "TK_WAVE";
@@ -241,9 +243,9 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case TK_NAME:		return "TK_NAME";
 	  case TK_FWDECL:	return "TK_FWDECL";
 	  case TK_LABEL:	return "TK_LABEL";
-	  case TK_REGISTER:	return "TK_REGISTER";
 	  case TK_INSTRUCTION:	return "TK_INSTRUCTION";
 	  case KW_IMPORT:	return "KW_IMPORT";
+	  case KW_EXPORT:	return "KW_EXPORT";
 	  case KW_AS:		return "KW_AS";
 	  case KW_DEF:		return "KW_DEF";
 	  case KW_STRUCT:	return "KW_STRUCT";
@@ -2523,6 +2525,84 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 }
 
 
+/*
+ * Add an A2_structitem to the currently compiling program. The 'index' argument
+ * can be used for returning the unit instance index (when adding units), or it
+ * can be left NULL.
+ */
+static A2_structitem *a2c_AddStructItem(A2_compiler *c, A2_structitem **list,
+		int *index)
+{
+	A2_structitem *ni = (A2_structitem *)calloc(1, sizeof(A2_structitem));
+	if(!ni)
+		a2c_Throw(c, A2_OOMEMORY);
+
+	if(index)
+		*index = 0;
+	if(*list)
+	{
+		/* Attach as last unit */
+		A2_structitem *li = *list;
+		for( ; li->next; li = li->next)
+			if(index && (li->kind >= 0))	/* Count only units! */
+				++*index;
+		li->next = ni;
+	}
+	else
+		*list = ni;	/* First! */
+	ni->next = NULL;
+
+	return ni;
+}
+
+
+static void a2c_AddUnitRegisters(A2_compiler *c, const A2_unitdesc *ud,
+		A2_symbol **namespace)
+{
+	int i;
+	if(!ud->registers || !ud->registers[0].name)
+		return;
+
+	DUMPSTRUCT(fprintf(stderr, " [");)
+	for(i = 0; ud->registers[i].name; ++i)
+	{
+		A2_symbol *s;
+		if(a2_FindSymbol(c->state, *namespace, ud->registers[i].name))
+			a2c_Throw(c, A2_SYMBOLDEF);
+		if(!(s = a2_NewSymbol(ud->registers[i].name, TK_REGISTER)))
+			a2c_Throw(c, A2_OOMEMORY);
+		s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
+		a2_PushSymbol(namespace, s);
+		DUMPSTRUCT(fprintf(stderr, " %s:R%d", s->name, s->v.i);)
+	}
+	DUMPSTRUCT(fprintf(stderr, " ]");)
+}
+
+
+static void a2c_AddUnitCOutputs(A2_compiler *c, const A2_unitdesc *ud,
+		A2_symbol **namespace, int instance)
+{
+	int i;
+	if(!ud->coutputs || !ud->coutputs[0].name)
+		return;
+
+	DUMPSTRUCT(fprintf(stderr, " [");)
+	for(i = 0; ud->coutputs[i].name; ++i)
+	{
+		A2_symbol *s;
+		if(a2_FindSymbol(c->state, *namespace, ud->coutputs[i].name))
+			a2c_Throw(c, A2_SYMBOLDEF);
+		if(!(s = a2_NewSymbol(ud->coutputs[i].name, TK_COUTPUT)))
+			a2c_Throw(c, A2_OOMEMORY);
+		s->v.port.instance = instance;
+		s->v.port.index = i;
+		a2_PushSymbol(namespace, s);
+		DUMPSTRUCT(fprintf(stderr, " %s:CO%d", s->name, s->v.i);)
+	}
+	DUMPSTRUCT(fprintf(stderr, " ]");)
+}
+
+
 static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
 		A2_symbol **namespace)
 {
@@ -2546,33 +2626,18 @@ static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
 }
 
 
-static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
+static void a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 		unsigned inputs, unsigned outputs)
 {
-	int i, ind;
 	const A2_unitdesc *ud = c->state->ss->units[uindex];
-	A2_structitem *ni = (A2_structitem *)calloc(1, sizeof(A2_structitem));
-	if(!ni)
-		a2c_Throw(c, A2_OOMEMORY);
+	int ind;
+	A2_structitem *ni = a2c_AddStructItem(c, &c->coder->program->units,
+			&ind);
 
 	/* Add unit to program */
-	ni->uindex = uindex;
-	ni->ninputs = inputs;
-	ni->noutputs = outputs;
-	if(c->coder->program->structure)
-	{
-		/* Attach as last unit */
-		A2_structitem *li = c->coder->program->structure;
-		for(ind = 0; li->next; li = li->next)
-			++ind;
-		li->next = ni;
-	}
-	else
-	{
-		ind = 0;
-		c->coder->program->structure = ni;	/* First! */
-	}
-	ni->next = NULL;
+	ni->kind = uindex;
+	ni->p.unit.ninputs = inputs;
+	ni->p.unit.noutputs = outputs;
 	DUMPSTRUCT(
 		fprintf(stderr, "  %s", ud->name);
 		switch(inputs)
@@ -2609,38 +2674,17 @@ static int a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 	)
 
 	/*
-	 * If unit instance is unnamed, registers and constants go into the
-	 * top level namespace of the program.
+	 * If unit instance is unnamed, registers, control outputs and
+	 * constants go into the top level namespace of the program.
 	 */
 	if(!namespace)
 		namespace = &c->symbols;
 
-	/* Allocate control registers and add them to the namespace! */
-	if(ud->registers && ud->registers[0].name)
-	{
-		DUMPSTRUCT(fprintf(stderr, " [");)
-		for(i = 0; ud->registers[i].name; ++i)
-		{
-			A2_symbol *s;
-			if(a2_FindSymbol(c->state, *namespace,
-					ud->registers[i].name))
-				a2c_Throw(c, A2_SYMBOLDEF);
-			if(!(s = a2_NewSymbol(ud->registers[i].name,
-					TK_REGISTER)))
-				a2c_Throw(c, A2_OOMEMORY);
-			s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
-			a2_PushSymbol(namespace, s);
-			DUMPSTRUCT(fprintf(stderr, " %s:R%d",
-					s->name, s->v.i);)
-		}
-		DUMPSTRUCT(fprintf(stderr, " ]");)
-	}
-
-	/* Add constants, if any. */
+	a2c_AddUnitRegisters(c, ud, namespace);
+	a2c_AddUnitCOutputs(c, ud, namespace, ind);
 	a2c_AddUnitConstants(c, ud, namespace);
 
 	DUMPSTRUCT(fprintf(stderr, "\n");)
-	return ind;
 }
 
 
@@ -2701,9 +2745,44 @@ static void a2c_UnitSpec(A2_compiler *c)
 /* 'wire' statement (for a2c_StructStatement) */
 static void a2c_WireSpec(A2_compiler *c)
 {
-//TODO: wire <from_unit> <from_output> <to_unit> <to_input>
-	a2c_Throw(c, A2_INTERNAL + 111);
+	a2c_Lex(c, 0);
+	a2c_Namespace(c);
+	switch(c->l[0].token)
+	{
+	  case TK_VALUE:
+		/* Audio wire - not yet implemented! */
+		a2c_Throw(c, A2_NOTIMPLEMENTED);
+	  case TK_COUTPUT:
+	  {
+		A2_structitem *si;
+		A2_symbol *from = c->l[0].v.sym;
+
+		/* Verify that this output isn't already wired! */
+		for(si = c->coder->program->wires; si; si = si->next)
+		{
+			if(si->kind != A2_SI_CONTROL_WIRE)
+				continue;
+			if(from->v.port.instance != si->p.wire.from_unit)
+				continue;
+			if(from->v.port.index != si->p.wire.from_output)
+				continue;
+			a2c_Throw(c, A2_COUTWIRED);
+		}
+
+		a2c_Namespace(c);
+		a2c_Expect(c, TK_REGISTER, A2_EXPCTRLREGISTER);
+		si = a2c_AddStructItem(c, &c->coder->program->wires, NULL);
+		si->kind = A2_SI_CONTROL_WIRE;
+		si->p.wire.from_unit = from->v.port.instance;
+		si->p.wire.from_output = from->v.port.index;
+		si->p.wire.to_register = c->l[0].v.i;
+		break;
+	  }
+	  default:
+		a2c_Throw(c, A2_NEXPTOKEN);
+	}
 }
+
 
 static int a2c_StructStatement(A2_compiler *c, A2_tokens terminator)
 {
@@ -2735,10 +2814,10 @@ static int a2c_DownstreamInputs(A2_compiler *c, A2_structitem *si)
 {
 	for( ; si; si = si->next)
 	{
-		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
+		const A2_unitdesc *ud = c->state->ss->units[si->kind];
 		if(!ud->maxinputs)
 			continue;	/* Can't have any inputs! */
-		if(si->ninputs)
+		if(si->p.unit.ninputs)
 			return 1;
 	}
 	return 0;
@@ -2764,10 +2843,10 @@ static void a2c_StructDef(A2_compiler *c)
 
 	/* Finalize the voice structure; autowiring etc... */
 	DUMPSTRUCT(fprintf(stderr, "Wiring:\n");)
-	for(si = p->structure; si; si = si->next)
+	for(si = p->units; si; si = si->next)
 	{
 		int dsi;
-		const A2_unitdesc *ud = c->state->ss->units[si->uindex];
+		const A2_unitdesc *ud = c->state->ss->units[si->kind];
 #if DUMPSTRUCT(1)+0
 		if(chainchannels != prevchainchannels)
 		{
@@ -2790,7 +2869,7 @@ static void a2c_StructDef(A2_compiler *c)
 		}
 
 		/* Autowire inputs */
-		switch(si->ninputs)
+		switch(si->p.unit.ninputs)
 		{
 		  case 0:
 			/*
@@ -2798,10 +2877,10 @@ static void a2c_StructDef(A2_compiler *c)
 			 * chain, if any!
 			 */
 			if(chainchannels)
-				si->flags |= A2_PROCADD;
+				si->p.unit.flags |= A2_PROCADD;
 			break;
 		  case A2_IO_DEFAULT:
-			si->ninputs = ud->mininputs;
+			si->p.unit.ninputs = ud->mininputs;
 			break;
 		  case A2_IO_MATCHOUT:
 			matchout = 1;
@@ -2809,7 +2888,7 @@ static void a2c_StructDef(A2_compiler *c)
 		  case A2_IO_WIREOUT:
 			a2c_Throw(c, A2_INTERNAL + 112);
 		}
-		if(si->ninputs)
+		if(si->p.unit.ninputs)
 		{
 			/*
 			 * If we have inputs, there must be a chain going, and
@@ -2817,13 +2896,13 @@ static void a2c_StructDef(A2_compiler *c)
 			 */
 			if(!chainchannels)
 				a2c_Throw(c, A2_NOINPUT);
-			else if(si->ninputs != chainchannels)
+			else if(si->p.unit.ninputs != chainchannels)
 				a2c_Throw(c, A2_CHAINMISMATCH);
 		}
 
 		/* Autowire outputs */
 		dsi = a2c_DownstreamInputs(c, si->next);
-		switch(si->noutputs)
+		switch(si->p.unit.noutputs)
 		{
 		  case A2_IO_DEFAULT:
 			/*
@@ -2839,27 +2918,28 @@ static void a2c_StructDef(A2_compiler *c)
 			 * have inputs, we send to the voice output bus.
 			 */
 			if(!si->next || !dsi)
-				si->noutputs = A2_IO_WIREOUT;
+				si->p.unit.noutputs = A2_IO_WIREOUT;
 			else if(chainchannels)
 			{
-				si->noutputs = chainchannels;
-				if((si->noutputs > 0) &&
-						(si->noutputs < ud->minoutputs))
+				si->p.unit.noutputs = chainchannels;
+				if((si->p.unit.noutputs > 0) &&
+						(si->p.unit.noutputs <
+						ud->minoutputs))
 					a2c_Throw(c, A2_FEWCHANNELS);
 			}
 			else
-				si->noutputs = ud->minoutputs;
+				si->p.unit.noutputs = ud->minoutputs;
 			break;
 		  case A2_IO_MATCHOUT:
 			matchout = 1;
 			break;
 		}
-		if(si->noutputs == A2_IO_WIREOUT)
+		if(si->p.unit.noutputs == A2_IO_WIREOUT)
 		{
-			chainchannels = 0;	/* Terminate chain! */
-			si->flags |= A2_PROCADD; /* Mix instead of replace! */
+			chainchannels = 0;		/* Terminate chain! */
+			si->p.unit.flags |= A2_PROCADD;
 		}
-		else if(si->noutputs)
+		else if(si->p.unit.noutputs)
 		{
 			/* Only A2_IO_WIREOUT allowed for the final unit! */
 			if(!si->next)
@@ -2877,27 +2957,27 @@ static void a2c_StructDef(A2_compiler *c)
 			 * to adding mode in order to mix our output into the
 			 * chain, instead of cutting it off by overwriting it!
 			 */
-			if(chainchannels && !si->ninputs)
-				si->flags |= A2_PROCADD;
+			if(chainchannels && !si->p.unit.ninputs)
+				si->p.unit.flags |= A2_PROCADD;
 
 			/* We have a chain! */
-			chainchannels = si->noutputs;
+			chainchannels = si->p.unit.noutputs;
 		}
 
 		/* Any unit having inputs ==> use voice scratch buffers! */
-		if(si->ninputs > p->buffers)
-			p->buffers = si->ninputs;
+		if(si->p.unit.ninputs > p->buffers)
+			p->buffers = si->p.unit.ninputs;
 
 		/* Make sure we have enough scratch buffers, if using them! */
-		if(p->buffers && (si->noutputs > p->buffers))
-			p->buffers = si->noutputs;
+		if(p->buffers && (si->p.unit.noutputs > p->buffers))
+			p->buffers = si->p.unit.noutputs;
 
 #if DUMPSTRUCT(1)+0
-		if(si->ninputs == A2_IO_MATCHOUT)
+		if(si->p.unit.ninputs == A2_IO_MATCHOUT)
 			fprintf(stderr, "  inputs: *");
 		else
-			fprintf(stderr, "  inputs: %d", si->ninputs);
-		switch(si->noutputs)
+			fprintf(stderr, "  inputs: %d", si->p.unit.ninputs);
+		switch(si->p.unit.noutputs)
 		{
 		  case A2_IO_WIREOUT:
 			fprintf(stderr, "  outputs: >");
@@ -2906,15 +2986,16 @@ static void a2c_StructDef(A2_compiler *c)
 			fprintf(stderr, "  outputs: *");
 			break;
 		  default:
-			fprintf(stderr, "  outputs: %d", si->noutputs);
+			fprintf(stderr, "  outputs: %d", si->p.unit.noutputs);
 			break;
 		}
-		if(si->flags & A2_PROCADD)
+		if(si->p.unit.flags & A2_PROCADD)
 			fprintf(stderr, " / adding\n");
 		else
 			fprintf(stderr, " / replacing\n");
 #endif
 	}
+
 	if(matchout)
 	{
 		if(p->buffers)
@@ -2922,6 +3003,16 @@ static void a2c_StructDef(A2_compiler *c)
 		else
 			p->buffers = -1;
 	}
+
+#if DUMPSTRUCT(1)+0
+	for(si = p->wires; si; si = si->next)
+	{
+		fprintf(stderr, "  %16.16s  %d:%d R%d\n", "wire",
+				si->p.wire.from_unit, si->p.wire.from_output,
+				si->p.wire.to_register);
+	}
+#endif
+
 #if DUMPSTRUCT(1)+0
 	fprintf(stderr, "  Scratch buffers: %d\n", p->buffers);
 	fprintf(stderr, "  Flags:");
@@ -2981,7 +3072,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_StructDef(c);
 	c->inhandler = c->nocode = 0;
-	if(c->coder->program->structure)
+	if(c->coder->program->units)
 		a2c_Code(c, OP_INITV, 0, 0);
 	a2c_Body(c, '}');
 	if(!c->nocode)

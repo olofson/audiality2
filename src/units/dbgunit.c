@@ -159,6 +159,8 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 	0,			/* flags */
 
 	NULL,			/* registers */
+	NULL,			/* control outputs */
+
 	NULL,			/* constants */
 
 	0, A2_MAXCHANNELS,	/* [min,max]inputs */

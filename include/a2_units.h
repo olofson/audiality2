@@ -61,6 +61,8 @@ extern "C" {
 typedef struct A2_unitdesc A2_unitdesc;
 typedef struct A2_unit A2_unit;
 typedef struct A2_crdesc A2_crdesc;
+typedef struct A2_codesc A2_codesc;
+typedef struct A2_cout A2_cout;
 typedef struct A2_constdesc A2_constdesc;
 
 typedef enum A2_unitflags
@@ -74,7 +76,7 @@ typedef enum A2_unitflags
 } A2_unitflags;
 
 /*
- * Control register write callback for A2_cregdesc
+ * Control input write callback for A2_crdesc
  *
  *	Instructs the unit to change the value of a control register at the
  *	specified fractional sample frame, or, if 'duration' is non-zero, ramp
@@ -107,8 +109,8 @@ typedef enum A2_unitflags
  *	This will run in the real time context of Audiality 2, and will be
  *	called whenever a VM program changes the contents of the respective
  *	control register. (Actually, the current VM implementation "filters"
- *	register writes so that only the final value is applied as a timing
- *	instruction is executed.)
+ *	register writes so that only the final value is applied to the mapped
+ *	control register as a timing instruction is executed.)
  */
 typedef void (*A2_write_cb)(A2_unit *u, int value, unsigned start,
 		unsigned duration);
@@ -175,26 +177,38 @@ typedef void (*A2_process_cb)(A2_unit *u, unsigned offset, unsigned frames);
 
 
 /*
- * Control register descriptor. (End array with { NULL, NULL }!)
+ * Control input descriptor. (End array with { NULL, NULL }!)
  *
- *	This specifies the name identifying a unit control register in A2S, and
- *	optionally provides a callback that notifies the unit about changes to
- *	the register value, along with ramping information.
+ *	This specifies the name identifying a unit control input in A2S, and
+ *	optionally provides a callback that notifies the unit about changes,
+ *	along with ramping information.
  *
- *	Readable control registers may be implemented by having the unit write
- *	back values into the VM registers via the 'registers' pointer in the
- *	A2_unit header of the unit instance.
+ *	Although control inputs are primarily meant for, well, input, readable
+ *	control registers may be implemented by having the unit write back
+ *	values into the VM registers via the 'registers' pointer in the A2_unit
+ *	header of the unit instance.
  *
  * NOTE:
- *	It is actually legal to specify control registers without callbacks!
- *	What happens is that a VM register is allocated, but the register works
- *	like a normal, "passive" VM register. The unit is expected to read the
- *	register value via A2_vmstate when desired.
+ *	It is actually legal to specify control inputs without callbacks! What
+ *	happens is that a VM register is allocated as usual, but the register
+ *	works like a normal, "passive" VM register. The unit is expected to
+ *	read the register value via A2_vmstate when desired.
  */
 struct A2_crdesc
 {
-	const char	*name;		/* Register name for the compiler */
-	A2_write_cb	write;		/* Callback for register writes */
+	const char	*name;		/* Control input name */
+	A2_write_cb	write;		/* Callback for setting and ramping */
+};
+
+
+/*
+ * Control output descriptor. (End array with { NULL }!)
+ *
+ *	This specifies the name identifying a unit control output in A2S.
+ */
+struct A2_codesc
+{
+	const char	*name;		/* Control output name */
 };
 
 
@@ -216,7 +230,8 @@ struct A2_unitdesc
 	unsigned	flags;		/* A2_unitflags */
 
 	/* Control */
-	const A2_crdesc	*registers;	/* Array of register descriptors */
+	const A2_crdesc	*registers;	/* Array of control register desc's */
+	const A2_codesc	*coutputs;	/* Array of control output desc's */
 
 	/* Constants */
 	const A2_constdesc *constants;	/* Array of constant descriptors */
@@ -235,6 +250,20 @@ struct A2_unitdesc
 	/* Shared state management */
 	A2_udopen_cb	OpenState;
 	A2_udclose_cb	CloseState;
+};
+
+
+/* Control output */
+struct A2_cout
+{
+	/*
+	 * NOTE:
+	 *	This CAN, but doesn't necessarily have to be, an actual write
+	 *	callback of an actual unit instance! Treat this like private
+	 *	engine data! Don't assume that 'unit' points to a real unit.
+	 */
+	A2_unit		*unit;		/* Target unit */
+	A2_write_cb	write;		/* Target callback */
 };
 
 
@@ -273,6 +302,7 @@ struct A2_unit
 
 	/* Control */
 	int		*registers;
+	A2_cout		*coutputs;
 
 	/* Processing */
 	A2_process_cb	Process;

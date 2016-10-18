@@ -247,6 +247,8 @@ const A2_unitdesc a2_filter12_unitdesc =
 	A2_MATCHIO,
 
 	regs,			/* registers */
+	NULL,			/* control outputs */
+
 	NULL,			/* constants */
 
 	1, 2,			/* [min,max]inputs */

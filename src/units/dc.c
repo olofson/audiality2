@@ -271,6 +271,8 @@ const A2_unitdesc a2_dc_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
+	NULL,			/* control outputs */
+
 	constants,		/* constants */
 
 	0, 0,			/* [min,max]inputs */

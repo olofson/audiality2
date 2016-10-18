@@ -144,9 +144,9 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
 		unsigned start, unsigned duration)
 {
-	A2_write_cb cb = v->cwrite[reg];
-	if(cb)
-		cb(v->cunit[reg], v->s.r[reg], start & 255, duration);
+	A2_cout *co = &v->cregs[reg];
+	if(co->write)
+		co->write(co->unit, v->s.r[reg], start & 255, duration);
 }
 
 
@@ -169,23 +169,26 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	A2_errors res;
 	int minoutputs, maxoutputs, ninputs;
 	A2_unit *u;
-	const A2_unitdesc *ud = st->ss->units[si->uindex];
-	A2_unitstate *us = st->unitstate + si->uindex;
+	const A2_unitdesc *ud = st->ss->units[si->kind];
+	A2_unitstate *us = st->unitstate + si->kind;
 
 	if(us->status)
 	{
 		/* This module failed in shared state init. We can't use it! */
-		a2r_Error(st, us->status, "a2_AddUnit()");
+		a2r_Error(st, us->status, "a2_AddUnit()[1]");
 		return NULL;
 	}
 
 	if(!(u = &a2_AllocBlock(st)->unit))
+	{
+		a2r_Error(st, A2_OOMEMORY, "a2_AddUnit()[2]");
 		return NULL;
+	}
 
 	DUMPSTRUCTRT(fprintf(stderr, "Wiring %s... ", ud->name);)
 
 	/* Input wiring */
-	switch(si->ninputs)
+	switch(si->p.unit.ninputs)
 	{
 	  case A2_IO_MATCHOUT:
 		ninputs = noutputs;
@@ -195,14 +198,14 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
 					" channels for unit '%s'!\n",
 					v, ud->name);)
-			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()");
+			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[3]");
 			return NULL;
 		}
 		else if(ninputs > ud->maxinputs)
 			ninputs = ud->maxinputs;
 		break;
 	  default:
-		ninputs = si->ninputs;
+		ninputs = si->p.unit.ninputs;
 		break;
 	}
 
@@ -216,7 +219,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	}
 
 	/* Output wiring */
-	switch(si->noutputs)
+	switch(si->p.unit.noutputs)
 	{
 	  case A2_IO_WIREOUT:
 	  case A2_IO_MATCHOUT:
@@ -227,52 +230,70 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
 					" channels for unit '%s'!\n",
 					v, ud->name);)
-			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()");
+			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[4]");
 			return NULL;
 		}
 		else if(u->noutputs > maxoutputs)
 			u->noutputs = maxoutputs;
 		break;
 	  default:
-		u->noutputs = si->noutputs;
+		u->noutputs = si->p.unit.noutputs;
 		break;
 	}
-	if(si->noutputs == A2_IO_WIREOUT)
+	if(si->p.unit.noutputs == A2_IO_WIREOUT)
 		u->outputs = outputs;
 	else
 		u->outputs = scratch;
 
 	/* Initialize instance struct and wire any control registers */
 	u->descriptor = ud;
-	u->registers = v->s.r + v->cregisters;
+	u->registers = v->s.r + v->ncregs;
 	if(ud->registers)
 		for(i = 0; ud->registers[i].name; ++i)
 		{
-			v->cwrite[v->cregisters] = ud->registers[i].write;
-			v->cunit[v->cregisters] = u;
-			++v->cregisters;
+			v->cregs[v->ncregs].write = ud->registers[i].write;
+			v->cregs[v->ncregs].unit = u;
+			++v->ncregs;
 		}
 	u->ninputs = ninputs;
 	u->inputs = scratch;
-	DUMPSTRUCTRT(fprintf(stderr, "in: %d\tout:%d", u->ninputs, u->noutputs);)
+	DUMPSTRUCTRT(fprintf(stderr, "in: %d\tout:%d", u->ninputs,
+			u->noutputs);)
+
+	/* Initialize control outputs, if any */
+	if(ud->coutputs)
+	{
+/*HACK*/
+		if(!(u->coutputs = (A2_cout *)a2_AllocBlock(st)))
+		{
+			a2_FreeBlock(st, u);
+			a2r_Error(st, A2_OOMEMORY, "a2_AddUnit()[5]");
+			return NULL;
+		}
+/*/HACK*/
+		for(i = 0; ud->coutputs[i].name; ++i)
+			u->coutputs[i].write = NULL;
+	}
+	else
+		u->coutputs = NULL;
 
 	if((ud->flags & A2_MATCHIO) && (u->ninputs != u->noutputs))
 	{
 		a2_FreeBlock(st, u);
 		DBG(fprintf(stderr, "Audiality 2: Unit '%s' needs to have "
 				"matching input/output counts!\n", ud->name);)
-		a2r_Error(st, A2_IODONTMATCH, "a2_AddUnit()");
+		a2r_Error(st, A2_IODONTMATCH, "a2_AddUnit()[6]");
 		return NULL;
 	}
 
 	/* Initialize the unit instance itself! */
-	if((res = ud->Initialize(u, &v->s, us->statedata, si->flags)))
+	if((res = ud->Initialize(u, &v->s, us->statedata, si->p.unit.flags)))
 	{
 		a2_FreeBlock(st, u);
 		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed"
 				" to initialize! (%s)\n",
 				ud->name, v, a2_ErrorString(res));)
-		a2r_Error(st, res, "a2_AddUnit()");
+		a2r_Error(st, res, "a2_AddUnit()[7]");
 		return NULL;
 	}
 	DUMPSTRUCTRT(fprintf(stderr, "\n");)
@@ -299,7 +320,28 @@ static inline void a2_DestroyUnit(A2_state *st, A2_unit *u)
 {
 	if(u->descriptor->Deinitialize)
 		u->descriptor->Deinitialize(u, st);
+/*HACK*/
+	if(u->coutputs)
+		a2_FreeBlock(st, u->coutputs);
+/*/HACK*/
 	a2_FreeBlock(st, u);
+}
+
+
+static inline A2_errors a2_ControlWire(A2_state *st, const A2_structitem *si,
+		A2_voice *v)
+{
+	/* Find the unit with the control output */
+	int i;
+	A2_cout *co, *cr;
+	A2_unit *u = v->units;
+	for(i = 0; i < si->p.wire.from_unit; ++i)
+		u = u->next;
+	co = &u->coutputs[si->p.wire.from_output];
+	cr = &v->cregs[si->p.wire.to_register];
+	co->unit = cr->unit;
+	co->write = cr->write;
+	return A2_OK;
 }
 
 
@@ -317,7 +359,7 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 	unsigned noutputs = v->noutputs;
 	int32_t **outputs = v->outputs;
 
-	if(!p->structure)
+	if(!p->units)
 		return A2_OK;	/* No units - all done! */
 
 	/* Make sure we have enough scratch buffers, if any are needed */
@@ -354,10 +396,26 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 	}
 
 	/* Add and wire the voice units! */
-	for(si = p->structure; si; si = si->next)
+	for(si = p->units; si; si = si->next)
 		if(!(lastu = a2_AddUnit(st, si, v, lastu, scratch,
 				noutputs, outputs)))
 			return A2_VOICEINIT;
+
+	for(si = p->wires; si; si = si->next)
+		switch(si->kind)
+		{
+		  case A2_SI_CONTROL_WIRE:
+		  {
+			A2_errors res = a2_ControlWire(st, si, v);
+			if(res)
+				return res;
+			break;
+		  }
+		  case A2_SI_AUDIO_WIRE:
+			return A2_NOTIMPLEMENTED;
+		  default:
+			return A2_INTERNAL + 402;
+		}
 
 	return A2_OK;
 }
@@ -380,12 +438,12 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 	v->program = NULL;
 	v->events = NULL;
 	v->units = NULL;
-	v->cregisters = A2_FIXEDREGS;	/* Start at the first free register */
+	v->ncregs = A2_FIXEDREGS;	/* Start at the first free register */
 	v->handle = -1;
 #if A2_SV_LUT_SIZE
 	memset(v->sv, 0, sizeof(v->sv));
 #endif
-	memset(v->cwrite, 0, sizeof(v->cwrite));
+	memset(v->cregs, 0, sizeof(v->cregs));
 	++st->totalvoices;
 #ifdef DEBUG
 	if(st->audio && st->audio->Process && (st->config->flags & A2_REALTIME))
@@ -457,7 +515,7 @@ A2_errors a2_init_root_voice(A2_state *st)
 	v->s.r[R_TRANSPOSE] = 0;
 	v->noutputs = st->master->channels;
 	v->outputs = st->master->buffers;
-	for(i = A2_FIRSTCONTROLREG; i < v->cregisters; ++i)
+	for(i = A2_FIRSTCONTROLREG; i < v->ncregs; ++i)
 		a2_VoiceControl(st, v, i, 0, 0);
 	if((res = a2_VoiceStart(st, v, rootdriver, 0, NULL)))
 	{
@@ -512,9 +570,9 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
 	v->s.state = A2_RUNNING;
 	v->flags = 0;
 	v->program = NULL;
-	for(i = A2_FIXEDREGS; i < v->cregisters; ++i)
-		v->cwrite[i] = NULL;
-	v->cregisters = A2_FIXEDREGS;
+	for(i = A2_FIXEDREGS; i < v->ncregs; ++i)
+		v->cregs[i].write = NULL;
+	v->ncregs = A2_FIXEDREGS;
 }
 
 
@@ -551,7 +609,7 @@ A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 		v->s.r[i + p->funcs[0].argv] = p->funcs[0].argdefs[i];
 
 	/* Unit control registers start after the main program arguments! */
-	v->cregisters = p->funcs->argv + p->funcs->argc;
+	v->ncregs = p->funcs->argv + p->funcs->argc;
 
 	return A2_OK;
 }

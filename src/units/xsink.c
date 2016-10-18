@@ -95,6 +95,8 @@ const A2_unitdesc a2_xsink_unitdesc =
 	A2_XINSERT,			/* flags */
 
 	NULL,				/* registers */
+	NULL,				/* control outputs */
+
 	NULL,				/* constants */
 
 	1, A2_MAXCHANNELS,		/* [min,max]inputs */

@@ -293,6 +293,8 @@ const A2_unitdesc a2_fbdelay_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
+	NULL,			/* control outputs */
+
 	NULL,			/* constants */
 
 	1, 2,			/* [min,max]inputs */

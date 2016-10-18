@@ -317,6 +317,8 @@ const A2_unitdesc a2_panmix_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
+	NULL,			/* control outputs */
+
 	constants,		/* constants */
 
 	1, A2PM_MAXINPUTS,	/* [min,max]inputs */
