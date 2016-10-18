@@ -172,11 +172,11 @@ Zap(Bars)
 HatNoise(P V W spread decay)
 {
 	struct { wtosc }
-	!env V
-	w W; p P; a env
+	!e V
+	w W; p P; a e
 	!da (V / decay)
 	decay {
-		p (rand spread + P); a env; -env da; d 1
+		p (rand spread + P); a e; -e da; d 1
 	}
 }
 Hat(Vel=1 Len=1)

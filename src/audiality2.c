@@ -36,6 +36,7 @@
 #include "waveshaper.h"
 #include "fm.h"
 #include "dc.h"
+#include "env.h"
 
 
 /*---------------------------------------------------------
@@ -194,6 +195,7 @@ static const A2_unitdesc *a2_core_units[] = {
 	&a2_fm2r_unitdesc,
 	&a2_fm4r_unitdesc,
 	&a2_dc_unitdesc,
+	&a2_env_unitdesc,
 	NULL
 };
 

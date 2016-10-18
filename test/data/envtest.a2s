@@ -1,0 +1,128 @@
+def title	"EnvelopeTest"
+def version	"1.0"
+def description	"Test of sync and async ramping, and the 'env' unit"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Comparison of basic linear hold/release enveloping using different but
+// equivalent methods, that should produce practically identical results.
+//
+//	Ping (reference)
+//		Traditional synchronous ramping of the 'a' register of the
+//		oscillator. Sample accurate in all cases.
+//
+//	PingAsync
+//		Asynchronous ramping of the 'a' register of the oscillator.
+//
+//	PingEnv
+//		Asynchronous ramping via an 'env' unit, which is wired to
+//		control the amplitude of the oscillator.
+//
+// Note on accuracy:
+//	Since asynchronous ramping (including 'env'), will not split fragments,
+//	the final section of ramps may be stretched slightly. In the worst
+//	case scenario, a section spanning one sample frame is stretched to
+//	A2_MAXFRAG (currently 64) samples.
+//	   The difference should be inaudible in any sensible use case, since
+//	the affected ramp sections are very short, and only ever become longer;
+//	never shorter. Also, any other activities, such as killing voices or
+//	switching waveform, would split fragments for sample accuracy, thus
+//	making the ramps accurate, so there should never be clicks or pops
+//	resulting from this.
+//
+// TL;DR:
+//	You may spot slight differences if you compare left/right/center sample
+//	by sample, but if you hear clicks or pops, or any differences in the
+//	left/right/center envelopes, something is broken.
+//
+///////////////////////////////////////////////////////////////////////////////
+
+Ping(P V=1)
+{
+	struct {
+		wtosc
+	}
+
+	w sine; p P
+	@a V
+	a 0;	d 2000
+	end
+
+.rel	a 0;	d 100
+
+	1() {
+		force rel
+	}
+}
+
+
+PingAsync(P V=1)
+{
+	struct {
+		wtosc
+	}
+
+	w sine; p P
+	@a V
+	a 0; ramp a 2000
+	end
+
+	1() {
+		a 0; ramp a 100
+	}
+}
+
+
+PingEnv(P V=1)
+{
+	struct {
+		env E
+		wtosc
+		wire E.out a
+	}
+
+	w sine; p P
+	@E.target V
+	E.target 0; ramp E.target 2000
+	end
+
+	1() {
+		E.target 0; ramp E.target 100
+	}
+}
+
+
+Test(P I Pan)
+{
+	struct {
+		inline
+		panmix
+	}
+	@pan Pan
+	1:I P .3;	td 12;	1<1;	td 4
+	1:I P .3;	td 8;	1<1;	td 8
+	1:I P .3;	td 4;	1<1;	td 12
+	1:I P .3;	td 2;	1<1;	td 14
+}
+
+
+export Song(P V=1 L=0)
+{
+	tempo 140 4
+	for {
+		// Left: Using asynchronous ramping
+		Test 0 PingAsync -1
+
+		// Center: Reference, using synchronous ramping
+		Test 4n Ping 0
+
+		// Right: Using 'env'
+		Test 7n PingEnv 1
+
+		td 64
+	}
+}

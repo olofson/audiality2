@@ -1,0 +1,90 @@
+def title	"EnvelopeTest3"
+def version	"1.0"
+def description	"Test of the 'env' unit ramping modes"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+def SHORT	10
+def LONG	990
+def MEDIUM	500
+def INTERVAL	1000
+def AMPLITUDE	.6
+def C		units.env.constants
+
+Test(A D UpMode DownMode=C.LINK)
+{
+	struct {
+		env E
+		wtosc
+		wire E.out a
+	}
+	w triangle
+	E.mode UpMode; E.down DownMode
+	E.target AMPLITUDE; d A
+	E.target 0; d D
+}
+
+export Song(P V=1 L=0)
+{
+	struct {
+		inline
+		panmix
+	}
+	for {
+		// Long decays
+		Test SHORT LONG C.IEXP7;			d INTERVAL
+		Test SHORT LONG C.IEXP6;			d INTERVAL
+		Test SHORT LONG C.IEXP5;			d INTERVAL
+		Test SHORT LONG C.IEXP4;			d INTERVAL
+		Test SHORT LONG C.IEXP3;			d INTERVAL
+		Test SHORT LONG C.IEXP2;			d INTERVAL
+		Test SHORT LONG C.IEXP1;			d INTERVAL
+		Test SHORT LONG C.LINEAR;			d INTERVAL
+		Test SHORT LONG C.EXP1;				d INTERVAL
+		Test SHORT LONG C.EXP2;				d INTERVAL
+		Test SHORT LONG C.EXP3;				d INTERVAL
+		Test SHORT LONG C.EXP4;				d INTERVAL
+		Test SHORT LONG C.EXP5;				d INTERVAL
+		Test SHORT LONG C.EXP6;				d INTERVAL
+		Test SHORT LONG C.EXP7;				d INTERVAL
+								d INTERVAL
+
+		// Slow attacks
+		Test LONG SHORT C.IEXP7;			d INTERVAL
+		Test LONG SHORT C.IEXP6;			d INTERVAL
+		Test LONG SHORT C.IEXP5;			d INTERVAL
+		Test LONG SHORT C.IEXP4;			d INTERVAL
+		Test LONG SHORT C.IEXP3;			d INTERVAL
+		Test LONG SHORT C.IEXP2;			d INTERVAL
+		Test LONG SHORT C.IEXP1;			d INTERVAL
+		Test LONG SHORT C.LINEAR;			d INTERVAL
+		Test LONG SHORT C.EXP1;				d INTERVAL
+		Test LONG SHORT C.EXP2;				d INTERVAL
+		Test LONG SHORT C.EXP3;				d INTERVAL
+		Test LONG SHORT C.EXP4;				d INTERVAL
+		Test LONG SHORT C.EXP5;				d INTERVAL
+		Test LONG SHORT C.EXP6;				d INTERVAL
+		Test LONG SHORT C.EXP7;				d INTERVAL
+								d INTERVAL
+
+		// "Symmetric" up/down curves
+		Test MEDIUM MEDIUM C.IEXP7	C.EXP7;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP6	C.EXP6;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP5	C.EXP5;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP4	C.EXP4;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP3	C.EXP3;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP2	C.EXP2;		d INTERVAL
+		Test MEDIUM MEDIUM C.IEXP1	C.EXP1;		d INTERVAL
+		Test MEDIUM MEDIUM C.LINEAR	C.LINEAR;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP1	C.IEXP1;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP2	C.IEXP2;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP3	C.IEXP3;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP4	C.IEXP4;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP5	C.IEXP5;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP6	C.IEXP6;	d INTERVAL
+		Test MEDIUM MEDIUM C.EXP7	C.IEXP7;	d INTERVAL
+								d INTERVAL
+	}
+}

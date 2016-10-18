@@ -44,6 +44,7 @@ set(sources ${sources}
 	units/waveshaper.c
 	units/fm.c
 	units/dc.c
+	units/env.c
 )
 
 # Drivers
