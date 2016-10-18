@@ -93,7 +93,6 @@ typedef struct A2_fm
 
 	/* Needed for op0 pitch calculations */
 	int		*transpose;
-	int		*regs;
 	float		onedivfs;	/* Actually, 8:24... */
 
 	/* Oscillators/operators */
@@ -326,7 +325,6 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	int i, structure;
 	A2_config *cfg = (A2_config *)statedata;
 	A2_fm *fm = fm_cast(u);
-	fm->regs = u->registers;
 
 	/* So... Don't rename these units, OK!? :-) */
 	structure = fm->nops = u->descriptor->name[2] - '0';
@@ -354,8 +352,8 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	fm_set_phase(fm, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
-	fm->regs[A2FMR_PHASE] = 0;
-	memset(fm->regs + A2FMR_PITCH0, 0,
+	u->registers[A2FMR_PHASE] = 0;
+	memset(u->registers + A2FMR_PITCH0, 0,
 			sizeof(int) * A2FMR_OP_SIZE * fm->nops);
 
 	/* Install Process callback */
@@ -407,7 +405,7 @@ static void fm_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 			A2_MIDDLEC);
 	for(i = 1; i < fm->nops; ++i)
 	{
-		int rv = fm->regs[A2FMR_PITCH0 + i * A2FMR_OP_SIZE];
+		int rv = u->registers[A2FMR_PITCH0 + i * A2FMR_OP_SIZE];
 		fm->op[i].dphase = fm->op[0].dphase *
 				powf(2.0f, rv * (1.0f / 65536.0f));
 	}
