@@ -111,6 +111,14 @@ A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
 			return -A2_IODONTMATCH;
 		}
 	}
+	if(ud->instancesize > sizeof(A2_block))
+	{
+		fprintf(stderr, "Audiality 2: Unit '%s' instance struct "
+				"(%d bytes) is too large! Max supported size: "
+				"%d bytes \n", ud->name, ud->instancesize,
+				(int)sizeof(A2_block));
+		return -A2_OOMEMORY;
+	}
 
 	/* Add to sharedstate unitdesc table */
 	uds = (const A2_unitdesc **)realloc(st->ss->units,
@@ -143,7 +151,8 @@ A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
 	if(h < 0)
 		return h;
 
-	DBG(printf("registered unit \"%s\", handle %d\n", ud->name, h);)
+	DBG(printf("registered unit \"%s\", handle %d, instancesize %d\n",
+			ud->name, h, ud->instancesize);)
 	return h;
 }
 
