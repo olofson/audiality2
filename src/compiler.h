@@ -80,6 +80,7 @@ typedef enum A2_tokens
 	TK_EOF = 256,	/* End of file */
 	TK_EOS,		/* End of statement */
 	TK_NAMESPACE,	/* sym = namespace symbol */
+	TK_ALIAS,	/* sym = alias target symbol */
 	TK_VALUE,	/* f = value */
 	TK_TEMPREG,	/* Temporary register; i = register index */
 	TK_STRING,	/* i = value (handle) */
@@ -185,6 +186,7 @@ struct A2_symbol
 	union {
 		int		i;
 		double		f;
+		A2_symbol	*alias;		/* Alias target symbol */
 	} v;
 };
 

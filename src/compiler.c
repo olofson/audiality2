@@ -229,6 +229,7 @@ static const char *a2c_T2S(A2_tokens tk)
 	  case TK_EOF:		return "TK_EOF";
 	  case TK_EOS:		return "TK_EOS";
 	  case TK_NAMESPACE:	return "TK_NAMESPACE";
+	  case TK_ALIAS:	return "TK_ALIAS";
 	  case TK_VALUE:	return "TK_VALUE";
 	  case TK_TEMPREG:	return "TK_TEMPREG";
 	  case TK_STRING:	return "TK_STRING";
@@ -333,6 +334,8 @@ static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 		if(!strcmp(name, s->name))
 		{
 			SYMBOLDBG(fprintf(stderr, "FOUND!\n");)
+			while(s->token == TK_ALIAS)
+				s = s->v.alias;
 			return s;
 		}
 	SYMBOLDBG(fprintf(stderr, "NOT FOUND!\n");)
@@ -1888,8 +1891,12 @@ static int a2c_Namespace(A2_compiler *c)
 	while(c->l[0].token == TK_NAMESPACE)
 	{
 		A2_symbol *ns = c->l[0].v.sym->symbols;
+		if(a2c_Lex(c, 0) != '.')
+		{
+			a2c_Unlex(c);
+			return in_namespace;
+		}
 		in_namespace = 1;
-		a2c_Expect(c, '.', A2_NEXPTOKEN);
 		a2c_LexNamespace(c, ns);
 	}
 	while(c->l[0].token == TK_BANK)
@@ -1960,6 +1967,7 @@ static void a2c_SimplExp(A2_compiler *c, int r)
 	  case TK_STRING:
 	  case TK_LABEL:
 	  case TK_REGISTER:
+	  case TK_NAMESPACE:
 		return;		/* Done! Just return as is - no code! */
 	  case '(':
 		if(in_namespace)
@@ -2466,7 +2474,11 @@ static void a2c_Def(A2_compiler *c, int export)
 		s->v.i = a2c_GetHandle(c, c->l);
 		break;
 	  default:
-		a2c_Throw(c, A2_BADVALUE);
+		if(!a2_IsSymbol(c->l[0].token))
+			a2c_Throw(c, A2_BADVALUE);
+		s->token = TK_ALIAS;
+		s->v.alias = c->l[0].v.sym;
+		break;
 	}
 	a2_PushSymbol(&c->symbols, s);
 }
