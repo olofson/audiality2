@@ -144,9 +144,9 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
 		unsigned start, unsigned duration)
 {
-	A2_cout *co = &v->cregs[reg];
-	if(co->write)
-		co->write(co->unit, v->s.r[reg], start & 255, duration);
+	A2_cport *cp = &v->cregs[reg];
+	if(cp->write)
+		cp->write(cp->unit, v->s.r[reg], start & 255, duration);
 }
 
 
@@ -264,7 +264,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if(ud->coutputs)
 	{
 /*HACK*/
-		if(!(u->coutputs = (A2_cout *)a2_AllocBlock(st)))
+		if(!(u->coutputs = (A2_cport *)a2_AllocBlock(st)))
 		{
 			a2_FreeBlock(st, u);
 			a2r_Error(st, A2_OOMEMORY, "a2_AddUnit()[5]");
@@ -333,7 +333,7 @@ static inline A2_errors a2_ControlWire(A2_state *st, const A2_structitem *si,
 {
 	/* Find the unit with the control output */
 	int i;
-	A2_cout *co, *cr;
+	A2_cport *co, *cr;
 	A2_unit *u = v->units;
 	for(i = 0; i < si->p.wire.from_unit; ++i)
 		u = u->next;

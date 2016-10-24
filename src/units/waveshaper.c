@@ -177,7 +177,7 @@ const A2_unitdesc a2_waveshaper_unitdesc =
 	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

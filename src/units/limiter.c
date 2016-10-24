@@ -221,7 +221,7 @@ const A2_unitdesc a2_limiter_unitdesc =
 	A2_MATCHIO,		/* flags */
 
 	regs,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

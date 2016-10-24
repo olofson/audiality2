@@ -159,7 +159,7 @@ const A2_unitdesc a2_dbgunit_unitdesc =
 	0,			/* flags */
 
 	NULL,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

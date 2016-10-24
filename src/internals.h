@@ -543,7 +543,7 @@ struct A2_voice
 
 	/* Units and control registers */
 	uint8_t		ncregs;			/* Number of wired regs */
-	A2_cout		cregs[A2_REGISTERS];	/* Register write info */
+	A2_cport	cregs[A2_REGISTERS];	/* Register write info */
 	A2_unit		*units;			/* Chain of voice units */
 
 	/* Sub-voices */

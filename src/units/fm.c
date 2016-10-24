@@ -529,7 +529,7 @@ const A2_unitdesc a2_fm1_unitdesc =
 	0,			/* flags */
 
 	fm1_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -576,7 +576,7 @@ const A2_unitdesc a2_fm2_unitdesc =
 	0,			/* flags */
 
 	fm2_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -628,7 +628,7 @@ const A2_unitdesc a2_fm3_unitdesc =
 	0,			/* flags */
 
 	fm3_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -685,7 +685,7 @@ const A2_unitdesc a2_fm4_unitdesc =
 	0,			/* flags */
 
 	fm4_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -716,7 +716,7 @@ const A2_unitdesc a2_fm3p_unitdesc =
 	0,			/* flags */
 
 	fm3_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -749,7 +749,7 @@ const A2_unitdesc a2_fm4p_unitdesc =
 	0,			/* flags */
 
 	fm4_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -780,7 +780,7 @@ const A2_unitdesc a2_fm2r_unitdesc =
 	0,			/* flags */
 
 	fm2_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
@@ -811,7 +811,7 @@ const A2_unitdesc a2_fm4r_unitdesc =
 	0,			/* flags */
 
 	fm4_regs,		/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

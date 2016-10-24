@@ -175,7 +175,7 @@ const A2_unitdesc a2_xsource_unitdesc =
 	A2_XINSERT,			/* flags */
 
 	NULL,				/* registers */
-	NULL,				/* control outputs */
+	NULL,				/* coutputs */
 
 	NULL,				/* constants */
 

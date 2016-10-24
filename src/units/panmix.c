@@ -317,7 +317,7 @@ const A2_unitdesc a2_panmix_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	constants,		/* constants */
 

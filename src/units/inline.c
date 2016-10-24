@@ -53,7 +53,7 @@ const A2_unitdesc a2_inline_unitdesc =
 	0,			/* flags */
 
 	NULL,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

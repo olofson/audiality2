@@ -453,7 +453,7 @@ const A2_unitdesc a2_wtosc_unitdesc =
 	0,			/* flags */
 
 	regs,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 

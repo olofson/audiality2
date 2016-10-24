@@ -173,7 +173,7 @@ const A2_unitdesc a2_dcblock_unitdesc =
 	A2_MATCHIO,
 
 	regs,			/* registers */
-	NULL,			/* control outputs */
+	NULL,			/* coutputs */
 
 	NULL,			/* constants */
 
