@@ -2511,7 +2511,9 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 		if(a2c_Lex(c, 0) == '=')
 		{
 			int v;
-			if(a2_IsValue(a2c_Lex(c, 0)))
+			a2c_Lex(c, 0);
+			a2c_Namespace(c);
+			if(a2_IsValue(c->l[0].token))
 				v = a2c_Num2VM(c, a2c_GetValue(c, c->l));
 			else if(a2_IsHandle(c->l[0].token))
 				v = a2c_GetHandle(c, c->l) << 16;
