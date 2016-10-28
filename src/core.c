@@ -1697,11 +1697,11 @@ TODO:
 	  timing:
 		++v->s.pc;
 	  timing_interrupt:
+		a2_RTApply(&rt, st, v, v->s.waketime, dt);
 		if(!dt)
 			continue;
 		DUMPCODERT(fprintf(stderr, "%p: [reschedule; dt=%f]\n",
 				v, dt / 256.0f);)
-		a2_RTApply(&rt, st, v, v->s.waketime, dt);
 		v->s.state = A2_WAITING;
 		st->instructions += A2_INSLIMIT - inscount;
 		v->s.waketime += dt;

@@ -162,7 +162,8 @@ static inline void a2_SetRamper(A2_ramper *rr, int target, int start,
 		int duration)
 {
 	rr->target = target << 8;
-	if((rr->timer = duration) < 256)
+	rr->timer = duration + start;
+	if(rr->timer < 256)
 		rr->value = rr->target;
 	else
 		rr->value += rr->delta * start >> 8;
