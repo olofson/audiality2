@@ -2,7 +2,7 @@
 ## Audiality 2 Voice Management
 
 ### Overview
-All processing in Audiality 2 is performed in a tree graph of voices, each with an optional graph of audio processing units (see audio-processing.md), and a scripting VM instance (see a2script.md). Every voice in the processing graph can have zero or more subvoices, that can be managed in three different fashions: Detached, Anonymous and Attached.
+All processing in Audiality 2 is performed in a [tree graph of voices](audio-processing.md), each with an optional graph of [audio processing units](units-overview.md), and a [scripting](scripting.md) VM instance. Every voice in the processing graph can have zero or more subvoices, that can be managed in three different fashions: Detached, Anonymous and Attached.
 
 #### Detached
 Detached voices are started by spawning a program using only the program name, or ":" followed by the program name or handle. They will terminate if/when they reach the end of their main program. These voices do not have handles, but they will receive messages sent to all subvoices using the "\*<" construct.
