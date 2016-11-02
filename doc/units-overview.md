@@ -11,48 +11,50 @@ TODO: Explain the wiring rules!
 ### Available Units
 
 #### inline
+Insert point in the graph for inline processed subvoices. The output from subvoices will be available at the outputs of this unit, instead of being sent to the same place as the output of the local voice.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1..8|
 
 
 #### wtosc
+Wavetable oscillator for playing built-in or custom waves. It also contains a SID (C64) style sample-and-hold noise generator, which is activated by selecting the 'noise' wave.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|w	|	||
-|p	|	||
-|a	|	||
-|phase	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|w	|off	|No	|Wave|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
 
 
 #### panmix
+Pan/balance/volume mixer stage. Can serve be used as a mono volume control ('pan' has no effect), or to pan a mono source into a stereo bus, mix stereo into mono, or to control the volume and balance of a stereo mix. Negative 'vol' values will invert the signal. Values outside the [-1, 1] range for 'pan' will result in "surround" panning, where the far channel is inverted.
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|vol	|	||
-|pan	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|vol	|1.0	|Yes	|Volume (1.0 <==> unity gain)|
+|pan	|0.0	|Yes	|Panorama/balance (see LEFT/CENTER/RIGHT constants)|
 
 |Constant|Value|Description|
 |:-:|:-:|---|
-|CENTER	|0	|pan center|
-|LEFT	|-1	|pan full left|
-|RIGHT	|1	|pan full right|
+|CENTER	|0.0	|pan: center|
+|LEFT	|-1.0	|pan: full left|
+|RIGHT	|1.0	|pan: full right|
 
 
 #### xsink
+Sink unit for the xinsert stream/callback API. Audio sent to these inputs will be sent to any stream or callback attached to the voice.
 
 |||
 |:-:|:-:|
@@ -61,6 +63,7 @@ TODO: Explain the wiring rules!
 
 
 #### xsource
+Source unit for the xinsert stream/callback API. Audio sent from a stream or callback attached to the voice will appear at the outputs of this unit.
 
 |||
 |:-:|:-:|
@@ -69,6 +72,7 @@ TODO: Explain the wiring rules!
 
 
 #### xinsert
+Combined source and sink unit for the xinsert stream/callback API. Audio sent to the inputs will be sent to the sink stream (if any) attached to the voice, and audio sent from a source stream attached to the voice will appear at the outputs of this unit. If an insert callback is installed, it will handle both input and output; that is, the callback essentially runs as an audio processing "plugin" inside the voice graph.
 
 |||
 |:-:|:-:|
@@ -77,6 +81,9 @@ TODO: Explain the wiring rules!
 
 
 #### dbgunit
+Pass-through debug unit, that prints information to stderr about the audio sent through it. It does not alter the audio in any way.
+
+**NOTE:** The current implementation is not "realtime safe," and may cause occasional audio glitches on some platform!
 
 |||
 |:-:|:-:|
@@ -85,62 +92,66 @@ TODO: Explain the wiring rules!
 
 
 #### limiter
+Simple compressor/limiter, with a hardwired zero attack rate, and configurable threshold/limit level and release time. That is, it will detect peaks and instantly lock the gain to keep the signal peaks at threshold level, and while the level is below that level, fades back towards unity gain with the specified release rate.
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|release	|	||
-|threshold	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|release	|64.0	|No	|Release rate|
+|threshold	|1.0	|No	|Threshold level|
 
 
 #### fbdelay
+Stereo feedback delay.
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|fbdelay	|	||
-|ldelay		|	||
-|rdelay		|	||
-|drygain	|	||
-|fbgain		|	||
-|lgain		|	||
-|rgain		|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|fbdelay	|400.0	|No	|Feedback delay (ms)|
+|ldelay		|280.0	|No	|Left channel delay (ms)|
+|rdelay		|320.0	|No	|Right channel delay (ms)|
+|drygain	|1.0	|No	|Dry gain|
+|fbgain		|0.25	|No	|Feedback gain|
+|lgain		|0.5	|No	|Left channel gain|
+|rgain		|0.5	|No	|Right channel gain|
 
 
-#### filter1
+#### filter12
+12 dB/octave resonant HP/BP/LP/notch filter. The filter has a "mixer" for the highpass, bandpass, and lowpass channels, allowing it to be configered as highpass, bandpass, lowpass, notch, or anything in between. If more than one input/output pair is used, the unit runs one independent filter instance for each pair, using the same parameters for all instances.
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|cutoff	|	||
-|q	|	||
-|lp	|	||
-|bp	|	||
-|hp	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|cutoff	|0.0	|Yes	|Cutoff (1.0/octave linear pitch)|
+|q	|0.0	|Yes	|Filter Q/"resonance depth"|
+|lp	|1.0	|No	|Lowpass gain|
+|bp	|0.0	|No	|Bandpass gain|
+|hp	|0.0	|No	|Highpass gain|
 
 
 #### dcblock
+12 dB/octave "DC-blocker" lowpass filter.
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|cutoff	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|cutoff	|-5.0 (~8 Hz)	|No	|Cutoff (1.0/octave linear pitch)|
 
 
 #### waveshaper
@@ -339,39 +350,35 @@ TODO: Explain the wiring rules!
 
 
 #### env
+Envelope generator with non-linear curve support.
 
-|||
-|:-:|:-:|
-|Inputs||
-|Outputs||
+|Control Output|Description|
+|:-:|---|
+|out	|Ramping control output|
 
-|Control Output|Value|Description|
-|:-:|:-:|---|
-|out	|	||
-
-|Register|Default|Description|
-|:-:|:-:|---|
-|target	|	||
-|mode	|	||
-|down	|	||
-|time	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|target	|0.0	|Yes	|Target level|
+|mode	|LINEAR	|No	|Ramping mode when target > current level|
+|down	|LINK	|No	|Ramping mode when target < current level|
+|time	|0.0	|No	|Ramp time override (0 to track 'target' ramp durations)|
 
 |Constant|Value|Description|
 |:-:|:-:|---|
-|IEXP7	|-8	||
-|IEXP6	|-7	||
-|IEXP5	|-6	||
-|IEXP4	|-5	||
-|IEXP3	|-4	||
-|IEXP2	|-3	||
-|IEXP1	|-2	||
-|SPLINE	|-1	||
-|LINK	|0	||
-|LINEAR	|1	||
-|EXP1	|2	||
-|EXP2	|3	||
-|EXP3	|4	||
-|EXP4	|5	||
-|EXP5	|6	||
-|EXP6	|7	||
-|EXP7	|8	||
+|IEXP7	|-8	|Inverse exponential curve, 1..1e-13; (extremely fast)|
+|IEXP6	|-7	|Inverse exponential curve, 1..1e-9|
+|IEXP5	|-6	|Inverse exponential curve, 1..1e-6|
+|IEXP4	|-5	|Inverse exponential curve, 1..1/10000|
+|IEXP3	|-4	|Inverse exponential curve, 1..1/1000|
+|IEXP2	|-3	|Inverse exponential curve, 1..1/100|
+|IEXP1	|-2	|Inverse exponential curve, 1..1/10 ("almost" linear)|
+|SPLINE	|-1	|Symmetric cosine spline curve (minimal transients)|
+|LINK	|0	|down: Copy setting from 'mode'|
+|LINEAR	|1	|Linear ramping (same as the normal control register ramping)|
+|EXP1	|2	|Exponential curve, 1/10..1 ("almost" linear)|
+|EXP2	|3	|Exponential curve, 1/100..1|
+|EXP3	|4	|Exponential curve, 1/1000..1|
+|EXP4	|5	|Exponential curve, 1/10000..1|
+|EXP5	|6	|Exponential curve, 1e-6..1|
+|EXP6	|7	|Exponential curve, 1e-9..1|
+|EXP7	|8	|Exponential curve, 1e-13..1|
