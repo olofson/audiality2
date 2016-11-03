@@ -252,13 +252,13 @@ Four operator FM chain. Operator 3 (p3/a3/fb3) modulates operator 2 (p2/a2/fb2),
 |a	|0.0	|Yes	|Amplitude|
 |fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
 |p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
-|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|a1	|0.0	|Yes	|O1 to O0 modulation depth|
 |fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 |p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
-|a2	|0.0	|Yes	|O2 to O3 modulation depth|
+|a2	|0.0	|Yes	|O2 to O1 modulation depth|
 |fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 |p3	|0.0	|No	|O3: Detune from 'p' (1.0/octave linear pitch)|
-|a3	|0.0	|Yes	|O3: Amplitude|
+|a3	|0.0	|Yes	|O3 to O2 modulation depth|
 |fb3	|0.0	|Yes	|O3: Feedback/recursive modulation|
 
 
@@ -284,7 +284,7 @@ Three operator FM tree. The summed output of operator 1 (p1/a1/fb1) and operator
 |a1	|0.0	|Yes	|O1 to O0 modulation depth|
 |fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 |p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
-|a2	|0.0	|Yes	|O2 to O1 modulation depth|
+|a2	|0.0	|Yes	|O2 to O0 modulation depth|
 |fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 
 
@@ -309,75 +309,84 @@ Quad operator FM tree. The summed output of operator 1 (p1/a1/fb1), operator 2 (
 |a	|0.0	|Yes	|Amplitude|
 |fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
 |p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
-|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|a1	|0.0	|Yes	|O1 to O0 modulation depth|
 |fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 |p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
-|a2	|0.0	|Yes	|O2 to O3 modulation depth|
+|a2	|0.0	|Yes	|O2 to O0 modulation depth|
 |fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 |p3	|0.0	|No	|O3: Detune from 'p' (1.0/octave linear pitch)|
-|a3	|0.0	|Yes	|O3: Amplitude|
+|a3	|0.0	|Yes	|O3 to O0 modulation depth|
 |fb3	|0.0	|Yes	|O3: Feedback/recursive modulation|
 
 
 #### fm2r
+Ring modulated FM oscillator pair. Operator 0 (p/a/fb) and operator 1 (p1/a1/fb1) are ring modulated (multiplied) to produce the output. Note that the final amplitude is (a * a1), which means envelopes and similar should typically only be applied to one of the amplitude registers.
 ```
+	O0 --.
+	     RM -->
+	O1 --'
 ```
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|O0: Amplitude|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1: Amplitude|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 
 
 #### fm4r
+Ring modulated pair of FM chains, each with two oscillators. Operator 2 (p2/a2/fb2) modulates operator 0, operator 3 (p3/a3/fb3) modulates operator 1 (p1/a1/fb1), and the outputs from operator 0 and 1 are then ring modulated (multiplied) to produce the output. Note that the final amplitude is (a * a1), which means envelopes and similar should typically only be applied to one of those amplitude registers.
 ```
+	O2 --> O0 --.
+	            RM -->
+	O3 --> O1 --'
 ```
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
-|p2	|	||
-|a2	|	||
-|fb2	|	||
-|p3	|	||
-|a3	|	||
-|fb3	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|O0: Amplitude|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1: Amplitude|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
+|p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
+|a2	|0.0	|Yes	|O2 to O0 modulation depth|
+|fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
+|p3	|0.0	|No	|O3: Detune from 'p' (1.0/octave linear pitch)|
+|a3	|0.0	|Yes	|O3 to O1 modulation depth|
+|fb3	|0.0	|Yes	|O3: Feedback/recursive modulation|
 
 
 #### dc
+DC and ramp generator, with selectable ramping modes.
 
 |||
 |:-:|:-:|
 |Outputs|1..2|
 
-|Register|Default|Description|
+|Register|Default|Ramping|Description|
 |:-:|:-:|---|
-|value	|	||
-|mode	|	||
+|value	|0.0	|Yes	|Target value (ramped control)|
+|mode	|LINEAR	|No	|Output ramping mode|
 
 |Constant|Value|Description|
 |:-:|:-:|---|
-|STEP	|0	||
-|LINEAR	|1	||
+|STEP	|0	|Output switches to the target value halfway through the 'value' ramp|
+|LINEAR	|1	|Output tracks the linear ramping of 'value'|
 
 
 #### env
