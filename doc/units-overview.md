@@ -179,72 +179,75 @@ Single feedback FM oscillator.
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
+|fb	|0.0	|Yes	|Feedback/recursive modulation|
 
 
 #### fm2
+Two operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1).
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1: Amplitude|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 
 
 #### fm3
+Three operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), which modulates operator 2 (p2/a2/fb2).
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
-|p2	|	||
-|a2	|	||
-|fb2	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
+|p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
+|a2	|0.0	|Yes	|O2: Amplitude|
+|fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 
 
 #### fm4
+Four operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), which modulates operator 2 (p2/a2/fb2), which modulates operator 3 (p3/a3/fb3).
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
-|p2	|	||
-|a2	|	||
-|fb2	|	||
-|p3	|	||
-|a3	|	||
-|fb3	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
+|p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
+|a2	|0.0	|Yes	|O2 to O3 modulation depth|
+|fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
+|p3	|0.0	|No	|O3: Detune from 'p' (1.0/octave linear pitch)|
+|a3	|0.0	|Yes	|O3: Amplitude|
+|fb3	|0.0	|Yes	|O3: Feedback/recursive modulation|
 
 
 #### fm3p
