@@ -174,6 +174,9 @@ y = ( (3*a + 1) * x - (2*a * x*abs(x)) ) / (x*x * a*a + 1)
 
 #### fm1
 Single feedback FM oscillator.
+```
+	O0 -->
+```
 
 |||
 |:-:|:-:|
@@ -188,7 +191,10 @@ Single feedback FM oscillator.
 
 
 #### fm2
-Two operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1).
+Two operator FM chain. Operator 1 (p1/a1/fb1) modulates operator 0 (p/a/fb).
+```
+	O1 --> O0 -->
+```
 
 |||
 |:-:|:-:|
@@ -197,16 +203,19 @@ Two operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1).
 |Register|Default|Ramping|Description|
 |:-:|:-:|:-:|---|
 |phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
-|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
-|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
 |fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
 |p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
-|a1	|0.0	|Yes	|O1: Amplitude|
+|a1	|0.0	|Yes	|O1 to O0 modulation depth|
 |fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 
 
 #### fm3
-Three operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), which modulates operator 2 (p2/a2/fb2).
+Three operator FM chain. Operator 2 (p2/a2/fb2) modulates operator 1 (p1/a1/fb1), which modulates operator 0 (p/a/fb).
+```
+	O2 --> O1 --> O0 -->
+```
 
 |||
 |:-:|:-:|
@@ -215,19 +224,22 @@ Three operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), w
 |Register|Default|Ramping|Description|
 |:-:|:-:|:-:|---|
 |phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
-|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
-|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
 |fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
 |p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
-|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|a1	|0.0	|Yes	|O1 to O0 modulation depth|
 |fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
 |p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
-|a2	|0.0	|Yes	|O2: Amplitude|
+|a2	|0.0	|Yes	|O2 to O1 modulation depth|
 |fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 
 
 #### fm4
-Four operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), which modulates operator 2 (p2/a2/fb2), which modulates operator 3 (p3/a3/fb3).
+Four operator FM chain. Operator 3 (p3/a3/fb3) modulates operator 2 (p2/a2/fb2), which modulates operator 1 (p1/a1/fb1), which modulates operator 0 (p/a/fb).
+```
+	O3 --> O2 --> O1 --> O0 -->
+```
 
 |||
 |:-:|:-:|
@@ -236,8 +248,8 @@ Four operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), wh
 |Register|Default|Ramping|Description|
 |:-:|:-:|:-:|---|
 |phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
-|p	|0.0	|No	|O0: Pitch (1.0/octave linear pitch)|
-|a	|0.0	|Yes	|O0 to O1 modulation depth|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
 |fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
 |p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
 |a1	|0.0	|Yes	|O1 to O2 modulation depth|
@@ -251,49 +263,65 @@ Four operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), wh
 
 
 #### fm3p
+Three operator FM tree. The summed output of operator 1 (p1/a1/fb1) and operator 2 (p2/a2/fb2) modulates operator 0 (p/a/fb).
+```
+	O1 --.
+	     +--> O0 -->
+	O2 --'
+```
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
-|p2	|	||
-|a2	|	||
-|fb2	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1 to O0 modulation depth|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
+|p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
+|a2	|0.0	|Yes	|O2 to O1 modulation depth|
+|fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
 
 
 #### fm4p
+Quad operator FM tree. The summed output of operator 1 (p1/a1/fb1), operator 2 (p2/a2/fb2), and operator 3 (p3/a3/fb3) modulates operator 0 (p/a/fb).
+```
+	O1 --.
+	     |
+	O2 --+--> O0 -->
+	     |
+	O3 --'
+```
 
 |||
 |:-:|:-:|
 |Outputs|1|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|phase	|	||
-|p	|	||
-|a	|	||
-|fb	|	||
-|p1	|	||
-|a1	|	||
-|fb1	|	||
-|p2	|	||
-|a2	|	||
-|fb2	|	||
-|p3	|	||
-|a3	|	||
-|fb3	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
+|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|a	|0.0	|Yes	|Amplitude|
+|fb	|0.0	|Yes	|O0: Feedback/recursive modulation|
+|p1	|0.0	|No	|O1: Detune from 'p' (1.0/octave linear pitch)|
+|a1	|0.0	|Yes	|O1 to O2 modulation depth|
+|fb1	|0.0	|Yes	|O1: Feedback/recursive modulation|
+|p2	|0.0	|No	|O2: Detune from 'p' (1.0/octave linear pitch)|
+|a2	|0.0	|Yes	|O2 to O3 modulation depth|
+|fb2	|0.0	|Yes	|O2: Feedback/recursive modulation|
+|p3	|0.0	|No	|O3: Detune from 'p' (1.0/octave linear pitch)|
+|a3	|0.0	|Yes	|O3: Amplitude|
+|fb3	|0.0	|Yes	|O3: Feedback/recursive modulation|
 
 
 #### fm2r
+```
+```
 
 |||
 |:-:|:-:|
@@ -311,6 +339,8 @@ Four operator FM chain. Operator 0 (p/a/fb) modulates operator 1 (p1/a1/fb1), wh
 
 
 #### fm4r
+```
+```
 
 |||
 |:-:|:-:|
