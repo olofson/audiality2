@@ -155,22 +155,28 @@ Stereo feedback delay.
 
 
 #### waveshaper
+Simple waveshaper that maintains what is perceived as a quite constant output power regardless of shaping amount, for input in the [-.5, .5] "0 dB" range. Note that the output can peak around [-1.5, 1.5], which is hard to avoid while maintaining the unity transfer function when the shaping amount is 0.
+
+Transfer function:
+```
+y = ( (3*a + 1) * x - (2*a * x*abs(x)) ) / (x*x * a*a + 1)
+```
 
 |||
 |:-:|:-:|
 |Inputs|1..2|
 |Outputs|1..2|
 
-|Register|Default|Description|
-|:-:|:-:|---|
-|amount	|	||
+|Register|Default|Ramping|Description|
+|:-:|:-:|:-:|---|
+|amount	|0.0	|Yes	|Waveshaping amount|
 
 
 #### fm1
+Single feedback FM oscillator.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -185,7 +191,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -203,7 +208,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -224,7 +228,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -248,7 +251,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -269,7 +271,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -293,7 +294,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -311,7 +311,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1|
 
 |Register|Default|Description|
@@ -335,7 +334,6 @@ Stereo feedback delay.
 
 |||
 |:-:|:-:|
-|Inputs||
 |Outputs|1..2|
 
 |Register|Default|Description|
