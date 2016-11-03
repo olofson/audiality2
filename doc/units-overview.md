@@ -379,7 +379,7 @@ DC and ramp generator, with selectable ramping modes.
 |Outputs|1..2|
 
 |Register|Default|Ramping|Description|
-|:-:|:-:|---|
+|:-:|:-:|:-:|---|
 |value	|0.0	|Yes	|Target value (ramped control)|
 |mode	|LINEAR	|No	|Output ramping mode|
 
