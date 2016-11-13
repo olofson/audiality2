@@ -26,6 +26,7 @@
 #include "a2_drivers.h"
 #include "a2_properties.h"
 #include "a2_waves.h"
+#include "a2_pitch.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,17 +43,11 @@ extern "C" {
 /* Current version */
 #define	A2_VERSION	A2_MAKE_VERSION(@VERSION_MAJOR@, @VERSION_MINOR@, @VERSION_PATCH@, @VERSION_BUILD@)
 
-/* Default reference frequency for linear pitch 0.0; "middle C" */
-#define	A2_MIDDLEC	261.626f
-
-/* Number of waveform mipmap levels */
-#define	A2_MIPLEVELS	10
-
 /* Maximum number of sample frames to process at a time */
-#define	A2_MAXFRAG	64
+#define	A2_MAXFRAG		64
 
 /* Maximum number of audio channels supported */
-#define	A2_MAXCHANNELS	8
+#define	A2_MAXCHANNELS		8
 
 /* Default seed for 'rand' instruction pseudo-random number generator */
 #define	A2_DEFAULT_RANDSEED	16576
@@ -661,9 +656,6 @@ A2_handle a2_OpenSource(A2_state *st, A2_handle voice,
 /*---------------------------------------------------------
 	Utilities
 ---------------------------------------------------------*/
-
-/* Convert Hz to linear pitch */
-float a2_F2P(float f);
 
 /* Return pseudo-random number in the range [0, max[ */
 float a2_Rand(A2_state *st, float max);

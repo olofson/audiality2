@@ -26,6 +26,7 @@ set(sources
 	rchm.c
 	sfifo.c
 	error.c
+	pitch.c
 )
 
 # Voice units

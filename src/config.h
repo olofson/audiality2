@@ -42,6 +42,7 @@
 #	define	DUMPSTRUCTRT(x)	x	/* Realtime voice structure dumping */
 #	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
+#	define	PITCHDEBUG(x)	x	/* a2_Pitch2PhI() table debugging */
 #	undef	CERRDIE			/* Die in assert(0) on compile errs */
 #	undef	DUMPTOKENS		/* Enable lexer token printout */
 #	define	THROWSOURCE		/* a2c_Throw() prints <file>:<line> */
@@ -64,6 +65,7 @@
 #	define	DUMPSTRUCTRT(x)
 #	define	DUMPCODERT(x)
 #	define	DUMPSIZES(x)
+#	define	PITCHDEBUG(x)
 #	undef	CERRDIE
 #	undef	DUMPTOKENS
 #	undef	THROWSOURCE

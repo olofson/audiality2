@@ -29,12 +29,8 @@
 extern "C" {
 #endif
 
-/* Default reference frequency for linear pitch 0.0; "middle C" */
-#define	A2_MIDDLEC	261.626f
-
 /* Number of waveform mipmap levels */
-#define	A2_MIPLEVELS	10
-
+#define	A2_MIPLEVELS		10
 
 /*
  * The definitions below define how the engine pads waves when preparing them.

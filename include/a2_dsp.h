@@ -1,7 +1,7 @@
 /*
  * a2_dsp.h - Handy DSP tools for Audiality 2 internals and units
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the

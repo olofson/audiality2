@@ -824,7 +824,7 @@ static A2_errors a2_GetNum(A2_compiler *c, int ch, double *v)
 	if(modifier == 'n')
 		val /= 12.0f;
 	else if(modifier == 'f')
-		val = a2_F2P(val);
+		val = a2_F2Pf(val, A2_MIDDLEC);
 	*v = val;
 	return A2_OK;
 }

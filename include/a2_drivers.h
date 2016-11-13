@@ -45,6 +45,7 @@ typedef enum A2_drivertypes
 /* Configuration struct for a2_Open() and a2_SubState() */
 struct A2_config
 {
+	/* Parameters */
 	A2_state	*state;		/* State using this config, if any */
 	A2_driver	*drivers;	/* Linked list of attached drivers */
 	int		samplerate;	/* Audio sample rate (Hz) */
@@ -55,12 +56,14 @@ struct A2_config
 	int		blockpool;	/* Initial block pool size */
 	int		voicepool;	/* Initial voice pool size */
 	int		eventpool;	/* Initial event pool size */
+
+	/* Information (read-only; valid only after a2_Open()!) */
+	int		basepitch;	/* Middle C pitch (1.0/oct, 16:16) */
 };
 
 /*
  * Create a configuration, initialized to sensible defaults based on the
- * arguments. Arguments set to -1 are interpreted as default values,
- * currently;
+ * arguments. Arguments set to -1 are interpreted as default values, currently;
  *	samplerate	48000
  *	buffer		1024
  *	channels	2
@@ -69,17 +72,18 @@ struct A2_config
  * If no drivers are added, default drivers will be instantiated as needed when
  * an engine state is opened. An application may add builtin drivers retrieved
  * with a2_GetDriver(), or custom drivers provided by the application. This
- * way, applications can interface Audiality 2 with practically any API,
- * engine or environment.
+ * way, applications can interface Audiality 2 with practically any API, engine
+ * or environment.
  *
  * NOTE:
  *	If left 0 (default), blockpool, voicepool, and eventpool are set to
  *	"reasonable" defaults automatically by a2_Open().
  *
  *	Also, if a realtime audio driver is used, a2_Open() automatically
- *	transfers the A2_REALTIME flag to the configuration. Applications should
- *	only set the A2_REALTIME flag when using a normally non-realtime driver,
- *	such as 'buffer', and calling a2_Run() from another thread.
+ *	transfers the A2_REALTIME flag to the configuration. Applications
+ *	should only set the A2_REALTIME flag when using a normally
+ *	non-realtime driver, such as 'buffer', and calling a2_Run() from
+ *	another thread.
  *
  * NOTE:
  *	The returned A2_config must be closed using a2_CloseConfig(), unless
@@ -178,7 +182,8 @@ void a2_CloseDriver(A2_driver *driver);
 ---------------------------------------------------------*/
 
 /* Callback for creating a driver instance */
-typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type, const char *nameopts);
+typedef A2_driver *(*A2_newdriver_cb)(A2_drivertypes type,
+		const char *nameopts);
 
 /* Opaque pointer representing a registered driver */
 typedef struct A2_regdriver A2_regdriver;

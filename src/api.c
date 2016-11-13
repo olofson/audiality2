@@ -28,6 +28,7 @@
 #include "internals.h"
 #include "compiler.h"
 #include "xinsert.h"
+#include "pitch.h"
 
 
 /*---------------------------------------------------------
@@ -50,7 +51,8 @@ A2_errors a2_add_api_user(void)
 		a2_api_error = A2_OK;
 		if((e = a2_time_open()) ||
 				(e = a2_drivers_open()) ||
-				(e = a2_units_open()))
+				(e = a2_units_open()) ||
+				(e = a2_pitch_open()))
 		{
 			a2_api_error = e;
 			a2_AtomicAdd(&a2_api_users, -1);
@@ -89,6 +91,7 @@ void a2_remove_api_user(void)
 		 * If someone tries to reopen now, a2_add_api_user() will wait
 		 * until we're done closing, before opening again.
 		 */
+		a2_pitch_close();
 		a2_units_close();
 		a2_drivers_close();
 		a2_time_close();
@@ -721,12 +724,6 @@ A2_errors a2_Release(A2_state *st, A2_handle handle)
 /*---------------------------------------------------------
 	Utilities
 ---------------------------------------------------------*/
-
-float a2_F2P(float f)
-{
-	return log2(f / A2_MIDDLEC);
-}
-
 
 float a2_Rand(A2_state *st, float max)
 {

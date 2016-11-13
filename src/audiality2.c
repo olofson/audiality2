@@ -376,6 +376,10 @@ static A2_state *a2_Open0(A2_config *config)
 		return NULL;
 	}
 
+	/* Initialize config info fields */
+	config->basepitch = a2_F2Pf(A2_MIDDLEC, config->samplerate) *
+			65536.0f + 0.5f;
+
 	return st;
 }
 
