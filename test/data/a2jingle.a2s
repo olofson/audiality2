@@ -2,7 +2,7 @@ def title	"Official Audiality 2 Jingle"
 def version	"1.0"
 def description	"Audiality 2 jingle, originally made for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2012 David Olofson"
+def copyright	"Copyright 2012, 2016 David Olofson"
 def license	"CC BY 3.0"
 def a2sversion	"1.9"
 
@@ -10,11 +10,11 @@ Sonar(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan
-	!max V; w square; a (max * .25); p P; d 30
+	!max V; w square; a (max * .25); @p P; d 30
 	a 0; d 15
 	w triangle
 	400 {
-		p (P + rand .2 - .1)
+		@p (P + rand .2 - .1)
 		rand a max; *max .98
 		d 15
 	}
@@ -27,7 +27,7 @@ Bell(V)
 	pan (rand 3 - 1.5)
 	w triangle
 	rand a V; set a
-	rand p 1.5; +p 4; quant p 2n
+	rand p 1.5; +p 4; quant p 2n; set p
 	*a .5; d 10
 	*a .5; d 15
 	*a .5; d 50
@@ -49,9 +49,9 @@ Str0(P V Attack Decay Detune S)
 	pan (Detune * 80)
 	w qsine; !aa 0; !Ta (V * .01); phase (rand 1)
 	+P Detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + aa - .0001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+aa (Ta - aa * er); Ta (V * rand .2); a (aa * S)
 		d (rand 5 + 2.5)
 	}
@@ -120,7 +120,7 @@ BackArp(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 3 - 1.5); set pan
-		p PP; a VV;	td .1
+		@p PP; a VV;	td .1
 		a 0;		td .4
 	}
 	2 {
@@ -157,7 +157,7 @@ SoftArp(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 1.5 - .75); set pan
-		p PP; a VV;	td .1
+		@p PP; a VV;	td .1
 		a 0;		td .4
 	}
 	wg (aa - .0001) {
@@ -177,14 +177,16 @@ Explo0(P V Wave Attack Period PP)
 	pan PP
 	+P tr; w Wave; !x 1; a V; -P 3; tr Attack; !DP (Period * .01)
 	200 {
-		*tr .98; p (P + rand x); +x .01; d Period; +Period DP
+		*tr .98; @p (P + rand x); +x .01
+		d Period; +Period DP
 	}
 	400 {
-		*tr .98; p (P + rand x); -x .0025; *a .995; d Period; +Period DP
+		*tr .98; @p (P + rand x); -x .0025; *a .995
+		d Period; +Period DP
 	}
 	tr P
 	600 {
-		rand p x; *a .993; d 2.5
+		rand p x; set p; *a .993; d 2.5
 	}
 }
 Explosion(P V=.2 Period=2)

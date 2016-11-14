@@ -20,7 +20,7 @@ PingEnv(P V Mode)
 		wire E.out a
 	}
 
-	w sine; p P
+	w sine; @p P
 	E.mode Mode
 	E.target V; ramp E.target ATTACK
 
@@ -45,7 +45,7 @@ PingEnvTime(P V Mode)
 		wire E.out a
 	}
 
-	w sine; p P
+	w sine; @p P
 	E.mode Mode
 	E.time ATTACK; E.target V
 

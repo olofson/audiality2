@@ -2,22 +2,21 @@ def title	"Test"
 def version	"1.0"
 def description	"Various Audiality 2 tests and demo code"
 def author	"David Olofson"
-def copyright	"Copyright 2010-2013 David Olofson"
+def copyright	"Copyright 2010-2013, 2016 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
-
-def SCALE_OCTAVES (12 * 3)
 
 SineScale(P V=1)
 {
 	struct { wtosc; panmix }
-	w sine; p (P - 3.5)
-	a (V * .5); d 10
+	def SCALE_OCTAVES 4
+	w sine; @p (P - 2.5)
+	a (V * .25); d 10
 	for {
-		+p 3
-		SCALE_OCTAVES {
+		+p SCALE_OCTAVES
+		(SCALE_OCTAVES * 12) {
 			debug (1000 / (p2d p))
-			-p 1n; d 200
+			-p 1n; set p; d 200
 		}
 	}
 	end
@@ -29,7 +28,7 @@ SineScale(P V=1)
 Sine(P V=1)
 {
 	struct { wtosc; panmix }
-	w sine; p P
+	w sine; @p P
 	a (V * .5); d 10
 	end
 .rel	a 0; d 10
@@ -41,7 +40,7 @@ Sine(P V=1)
 FilterPitch(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w noise; p (P + 1); lp 0; bp 0; hp 1
+	w noise; @p (P + 1); lp 0; bp 0; hp 1
 	q 2; set q; cutoff P; set cutoff
 	a (V * .01); set a
 	end
@@ -54,11 +53,11 @@ FilterPitch(P V=1)
 MusicBox(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w pulse1; p -2; lp 0; bp 1; hp .5
+	w pulse1; @p -2; lp 0; bp 1; hp .5
 	q (2 + P); ifl (q - 1) { q 1 }; set q
 	cutoff P; set cutoff
 	a (V * .1); set a; d 1
-	*a .5; set a; w noise; p 4; a 0; d 5
+	*a .5; set a; w noise; @p 4; a 0; d 5
 	d 4000
 }
 
@@ -67,10 +66,10 @@ MusicBox(P V=1)
 MusicBox2(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w pulse1; p -2; lp 0; bp 1; hp .5
+	w pulse1; @p -2; lp 0; bp 1; hp .5
 	q 3; set q; cutoff P; set cutoff
 	a (V * .1); set a; d 1
-	*a .5; set a; w noise; p 4; a 0; d 5
+	*a .5; set a; w noise; @p 4; a 0; d 5
 	end
 .rel	a (V * .01); set a; a 0; d 5
 	q 0; d 10
@@ -83,7 +82,7 @@ MusicBox2(P V=1)
 FSweep(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w saw; a (V * .1); set a; p P; lp 0; bp 1; hp 0
+	w saw; a (V * .1); set a; @p P; lp 0; bp 1; hp 0
 	q .1; set q
 	cutoff (P + 8); set cutoff
 	cutoff P;	d 5000
@@ -95,7 +94,7 @@ FSweep(P V=1)
 FSweepRef(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w saw; a (V * .1); set a; p P; lp 0; bp 1; hp 0
+	w saw; a (V * .1); set a; @p P; lp 0; bp 1; hp 0
 	q .1; set q
 	cutoff (P + 8); set cutoff
 	80 {
@@ -108,7 +107,7 @@ FSweepRef(P V=1)
 Pig(P V=1)
 {
 	struct { wtosc; filter12; panmix }
-	w saw; a (V * .2); set a; p P
+	w saw; a (V * .2); set a; @p P
 	lp 1; bp 1; hp 0; q 100; set q; cutoff (P + 6); set cutoff
 	cutoff (P + 1); q .01;	d 100
 	cutoff (P + .5);	d 500
@@ -125,8 +124,8 @@ PhattPig(P V=1)
 	struct { wtosc 0 1; wtosc o2 0 1; filter12; panmix }
 	!detune (.005 * (1 - P))
 	ifl (detune - .001) { detune .001 }
-	w pulse30; a (V * .1); set a; p (P - detune)
-	o2.w pulse20; o2.a (V * .1); set o2.a; o2.p (P + detune)
+	w pulse30; a (V * .1); set a; @p (P - detune)
+	o2.w pulse20; o2.a (V * .1); set o2.a; @o2.p (P + detune)
 	lp 1; bp 1; hp 0
 	q 3; set q; cutoff (P + 6); set cutoff
 	cutoff (P + 3); q .03; d 100
@@ -154,7 +153,7 @@ Unity()
 PanTest()
 {
 	struct { wtosc; panmix }
-	w noise; p 1
+	w noise; @p 1
 	vol .2; set vol
 	a 1;	d 100
 		d 1000
@@ -175,8 +174,8 @@ WaveXFade()
 	//	They're not getting handles in any particular order, so this
 	//	will just be trying to play all sorts of objects - not
 	//	just waves.
-	w 0; a 1; set a; p -1
-	o2.w 1; o2.p -1
+	w 0; @a 1; @p -1
+	o2.w 1; @o2.p -1
 	for {
 		o2.a 1; a 0; d 1000
 		+w 2
@@ -189,7 +188,7 @@ WaveXFade()
 RampTest(P V=1)
 {
 	struct { wtosc }
-	w sine; p P; a 1; d 1000
+	w sine; @p P; a 1; d 1000
 	for { d 1000 }
 .Decay	a 0; d 1000
 	1() { force Decay }

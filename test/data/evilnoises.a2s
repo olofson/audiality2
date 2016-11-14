@@ -2,14 +2,14 @@ def title	"Evil Noises"
 def version	"1.0"
 def description	"The second ChipSound song ever written (straight mono conversion)"
 def author	"David Olofson"
-def copyright	"Copyright 2011 David Olofson"
+def copyright	"Copyright 2011, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
 flute(pitch vel=1)
 {
 	struct { wtosc }
-	w triangle; p pitch; -p .05; a vel; d 50
+	w triangle; @p pitch; -p .05; a vel; d 50
 	10 {
 		5 {	+p .01; *a .95; d 10 }
 		5 {	-p .01; *a .95; d 10 }
@@ -37,12 +37,12 @@ DWVib(pitch)
 	!p1 (pitch - .5n); !p2 (pitch + .5n)
 	w triangle
 	20 {
-		p p1; +a .01; td 2
-		p p2; td 2
+		@p p1; +a .01; td 2
+		@p p2; td 2
 	}
 	40 {
-		p p1; -a .005; td 2
-		p p2; td 2
+		@p p1; -a .005; td 2
+		@p p2; td 2
 		-p2 .01n
 	}
 }
@@ -51,12 +51,12 @@ sonar()
 {
 	struct { wtosc }
 	!max .5
-	w square; a max; p 1000f; d 5
+	w square; a max; @p 1000f; d 5
 	a max; d 30
 	a 0; d 15
 	w triangle
 	300 {
-		p (rand .1 + 1000f)
+		@p (rand .1 + 1000f)
 		rand a max; *max .97
 		d 15
 	}
@@ -68,7 +68,7 @@ ResoBass(pitch vel=1 reso)
 	+reso pitch; +reso 2; w triangle
 	p2d pitch pitch
 	100 {
-		phase 0; p reso; a vel; set a
+		phase 0; @p reso; a vel; set a
 		a 0; d pitch
 		-reso 1n
 		*vel .8
@@ -117,15 +117,15 @@ EvilSyncBass(pitch vel=1 drive)
 	struct { wtosc }
 	!per (p2d pitch * .5)
 	a vel; set a
-	p 5; w noise; phase 0; d 2
-	p (pitch + 2); w square; d per
-	w saw; p (pitch + .5 + drive)
+	@p 5; w noise; phase 0; d 2
+	@p (pitch + 2); w square; d per
+	w saw; @p (pitch + .5 + drive)
 	10 {
-		+p .01; w saw; phase 0; d per
+		+p .01; set p; w saw; phase 0; d per
 		*a .97; w square; d per
 	}
 	for {
-		+p .01; w saw; phase 0; d per
+		+p .01; set p; w saw; phase 0; d per
 		*a .99; w square; d per
 	}
 }
@@ -265,12 +265,12 @@ heavy4(pitch)
 sdn(vel)
 {
 	struct { wtosc }
-	w noise; p 6; a vel; set a; d 5
+	w noise; @p 6; a vel; set a; d 5
 	p 5; *a .3; d 20
 	*a .2; d 200
 	100 {
 		!dl (rand 10 + 1)
-		p 4.5; *a .95; d dl
+		@p 4.5; *a .95; d dl
 		p 6; d dl
 	}
 }
@@ -278,23 +278,23 @@ sdrum(pitch vel=1)
 {
 	struct { wtosc }
 	sdn vel
-	w square; p (pitch + 2.1); a vel; set a
-	10 {	-p .2; d 1 }
+	w square; @p (pitch + 2.1); a vel; set a
+	10 {	-p .2; set p; d 1 }
 	d 10
-	-p .2; d 10
+	-p .2; set p; d 10
 	5 {
 		!dl (rand 2 + 3)
-		w saw; -p .51; d dl
-		w square; +p .5; *a .7; d dl
+		w saw; -p .51; set p; d dl
+		w square; +p .5; set p; *a .7; d dl
 	}
 	*a .5; !p0 (p - .8)
-	1000 {	p (rand 1.5 + p0); *a .99; d 1 }
+	1000 {	@p (rand 1.5 + p0); *a .99; d 1 }
 }
 
 bdnoise(pitch vel)
 {
 	struct { wtosc }
-	w noise; p (pitch + 4); a (vel * .2); set a
+	w noise; @p (pitch + 4); a (vel * .2); set a
 	*a .05; d 30
 	a 0; d 200
 }
@@ -302,12 +302,12 @@ bdrum(pitch vel=1)
 {
 	struct { wtosc }
 	bdnoise pitch vel
-	w sine; p (pitch + 4); a vel; set a
-	5 {	-p .9; d 1 }
+	w sine; @p (pitch + 4); a vel; set a
+	5 {	-p .9; set p; d 1 }
 	d 10
-	5 {	-p .2; d 2 }
+	5 {	-p .2; set p; d 2 }
 	d 20
-	10 {	-p .1; d 3 }
+	10 {	-p .1; set p; d 3 }
 	d 30
 	a 0; d 30
 	d 200
@@ -316,24 +316,24 @@ bdrum(pitch vel=1)
 tn(pitch)
 {
 	struct { wtosc }
-	w noise; p (pitch + 6); a .5; set a; d 10
+	w noise; @p (pitch + 6); a .5; set a; d 10
 	-p 2
-	100 {	-p .07; *a .8; d 10 }
+	100 {	-p .07; set p; *a .8; d 10 }
 }
 tom(pitch)
 {
 	struct { wtosc }
 	tn pitch
-	w saw; p (pitch + 3); a 1; set a
-	10 {	-p .35; d 1 }
+	w saw; @p (pitch + 3); a 1; set a
+	10 {	-p .35; set p; d 1 }
 	w triangle
 	7 {
-		-p .15; *a .9; d 10
-		+p 3n; d 10; -p 3n
+		-p .15; set p; *a .9; d 10
+		+p 3n; set p; d 10; -p 3n
 	}
 	20 {
-		-p .01; *a .8; d 10
-		+p 3n; d 10; -p 3n
+		-p .01; set p; *a .8; d 10
+		+p 3n; set p; d 10; -p 3n
 	}
 }
 
@@ -343,12 +343,12 @@ c0(P V W Rmax D)
 	w W; a V; set a; +tr P
 	!rmh (Rmax * .25)
 	200 {
-		p (rand Rmax - rmh); *Rmax .997; *rmh .997; *a .995
+		@p (rand Rmax - rmh); *Rmax .997; *rmh .997; *a .995
 		td D
 	}
 	40 {
 		100 {
-			p (rand Rmax - rmh); td D
+			@p (rand Rmax - rmh); td D
 		}
 		*a .85; *Rmax .99; *rmh .99
 	}
@@ -367,7 +367,7 @@ rd(P V W rpitch mrpitch per)
 	struct { wtosc }
 	w W; a V; set a
 	20 {
-		100 {	p (rand rpitch + P); d per }
+		100 {	@p (rand rpitch + P); d per }
 		*rpitch mrpitch; *a .7
 	}
 }
@@ -382,17 +382,17 @@ ride(pitch vel=1)
 hhclosed()
 {
 	struct { wtosc }
-	w square; a .3; set a; p 5.5
-	3 {	d 1; -p .5 }
-	100 {	p (rand .5 + 4.7); *a .95; d 1 }
+	w square; a .3; set a; @p 5.5
+	3 {	d 1; -p .5; set p }
+	100 {	@p (rand .5 + 4.7); *a .95; d 1 }
 }
 
 hhopen()
 {
 	struct { wtosc }
-	w square; a .3; set a; p 5.5
-	3 {	d 1; -p .5 }
-	300 {	p (rand .5 + 4.7); *a .993; d 1 }
+	w square; a .3; set a; @p 5.5
+	3 {	d 1; -p .5; set p }
+	300 {	@p (rand .5 + 4.7); *a .993; d 1 }
 }
 
 ridebeat()

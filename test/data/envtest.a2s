@@ -47,7 +47,7 @@ Ping(P V=1)
 		wtosc
 	}
 
-	w sine; p P
+	w sine; @p P
 	@a V
 	a 0;	d 2000
 	end
@@ -66,7 +66,7 @@ PingAsync(P V=1)
 		wtosc
 	}
 
-	w sine; p P
+	w sine; @p P
 	@a V
 	a 0; ramp a 2000
 	end
@@ -85,7 +85,7 @@ PingEnv(P V=1)
 		wire E.out a
 	}
 
-	w sine; p P
+	w sine; @p P
 	@E.target V
 	E.target 0; ramp E.target 2000
 	end

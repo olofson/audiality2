@@ -12,22 +12,22 @@ export Octaves(Pitch Gate=1)
 
 	// Attack
 	w triangle
-	p (Pitch + 3); td 1
-	-p 1; td 1
+	@p (Pitch + 3); td 1
+	-p 1; set p; td 1
 
 .retrig	// Sustain
 	w triangle
-.l	p Pitch;	td 2
-	+p 1;		td 2
+.l	@p Pitch;	td 2
+	+p 1; set p;	td 2
 	jnz Gate l	// Loop until gate off
 
-	!asave (a * .5); p Pitch; a 0;	td 2
-	w sine; +p 1; a asave;		td 2
+	!asave (a * .5); @p Pitch; a 0;	td 2
+	w sine; +p 1; set p; a asave;	td 2
 
 	// Release
 	!i 10
-.l2	p Pitch; *a .7;	td 2
-	+p 1;		td 2
+.l2	@p Pitch; *a .7;	td 2
+	+p 1; set p;		td 2
 	loop i l2
 
 	// Handler for message 1; "Gate"
@@ -43,6 +43,6 @@ export Octaves(Pitch Gate=1)
 	2(NewPitch)
 	{
 		Pitch NewPitch
-		p NewPitch
+		@p NewPitch
 	}
 }

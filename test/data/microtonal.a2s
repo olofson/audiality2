@@ -10,8 +10,8 @@ I(P)
 {
 	struct { wtosc; panmix }
 	w triangle
-	p P
-	a .3; set a
+	@p P
+	@a .3
 	a 0; d 1000
 }
 
