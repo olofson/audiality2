@@ -28,7 +28,7 @@ Wavetable oscillator for playing built-in or custom waves. It also contains a SI
 |Register|Default|Ramping|Description|
 |:-:|:-:|:-:|---|
 |w	|off	|No	|Wave|
-|p	|0.0	|No	|Pitch (1.0/octave linear pitch)|
+|p	|0.0	|Yes	|Pitch (1.0/octave linear pitch)|
 |a	|0.0	|Yes	|Amplitude|
 |phase	|0.0	|No	|Phase (write-only; will not read back current phase!)|
 

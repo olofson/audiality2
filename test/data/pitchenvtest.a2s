@@ -1,0 +1,106 @@
+def title	"PitchEnvelopeTest"
+def version	"1.0"
+def description	"Test of ramping the 'p' register of 'wtosc'"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+def BEND	3
+
+Sweep(P V=1)
+{
+	struct {
+		wtosc
+	}
+
+	w sine
+	a V; ramp a 100
+	@p P
+	+p BEND;	d 2000
+	end
+
+.rel	p P; a 0;	d 500
+
+	1() {
+		force rel
+	}
+}
+
+
+SweepAsync(P V=1)
+{
+	struct {
+		wtosc
+	}
+
+	w sine
+	a V; ramp a 100
+	@p P
+	+p BEND; ramp p 2000
+	end
+
+.rel	d 500
+
+	1() {
+		p P; ramp p 500
+		a 0; ramp a 500
+		force rel
+	}
+}
+
+
+SweepEnv(P V=1)
+{
+	struct {
+		env E
+		wtosc
+		wire E.out p
+	}
+
+	w sine
+	a V; ramp a 100
+	@E.target P
+	+E.target BEND; ramp E.target 2000
+	end
+
+.rel	d 500
+
+	1() {
+		E.target P; ramp E.target 500
+		a 0; ramp a 500
+		force rel
+	}
+}
+
+
+Test(P I Pan)
+{
+	struct {
+		inline
+		panmix
+	}
+	@pan Pan
+	1:I P .3;	td 12;	1<1;	td 4
+	1:I P .3;	td 8;	1<1;	td 8
+	1:I P .3;	td 4;	1<1;	td 12
+	1:I P .3;	td 2;	1<1;	td 14
+}
+
+
+export Song(P V=1 L=0)
+{
+	tempo 140 4
+	for {
+		// Left: Using asynchronous ramping
+		Test 0 SweepAsync -1
+
+		// Center: Reference, using synchronous ramping
+		Test 4n Sweep 0
+
+		// Right: Using 'env'
+		Test 7n SweepEnv 1
+
+		td 64
+	}
+}

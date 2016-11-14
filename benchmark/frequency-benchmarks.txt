@@ -1,0 +1,109 @@
+
+------------------------------------------------------------------------------
+Normal benchmark (fs: 44.1kHz)
+------------------------------------------------------------------------------
+
+wtosc frequency calculations.
+
+powf():
+
+k2epilogue.a2s	6.145
+k2intro.a2s	5.469
+k2loader.a2s	5.596
+k2trance.a2s	5.088
+pulsetronic.a2s	5.432
+
+
+LUT - with unintentional extra ramping!:
+
+k2epilogue.a2s	5.504
+k2intro.a2s	4.903
+k2loader.a2s	5.198
+k2trance.a2s	4.443
+pulsetronic.a2s	5.042
+
+
+LUT, function call:
+
+k2epilogue.a2s	5.512
+k2intro.a2s	4.889
+k2loader.a2s	5.129
+k2trance.a2s	4.439
+pulsetronic.a2s	5.011
+
+
+LUT, function call, wtosc p ramping disabled:
+
+k2epilogue.a2s	5.367
+k2intro.a2s	4.803
+k2loader.a2s	5.088
+k2trance.a2s	4.331
+pulsetronic.a2s	4.940
+
+
+------------------------------------------------------------------------------
+VM benchmark (fs: 100 Hz)
+------------------------------------------------------------------------------
+
+powf():
+
+k2epilogue.a2s	3.939
+k2intro.a2s	3.730
+k2loader.a2s	3.217
+k2trance.a2s	4.595
+pulsetronic.a2s	2.508
+
+
+LUT - with unintentional extra ramping!:
+
+k2epilogue.a2s	2.262
+k2intro.a2s	2.299
+k2loader.a2s	2.179
+k2trance.a2s	2.591
+pulsetronic.a2s	1.379
+
+
+LUT, function call:
+(WTF!? Why is this faster than inlined?)
+
+k2epilogue.a2s	2.008
+k2intro.a2s	1.966
+k2loader.a2s	2.039
+k2trance.a2s	2.216
+pulsetronic.a2s	1.228
+
+
+LUT, function call, wtosc p ramping disabled:
+
+k2epilogue.a2s	1.917
+k2intro.a2s	1.828
+k2loader.a2s	1.994
+k2trance.a2s	2.116
+pulsetronic.a2s	1.153
+
+
+Linear "pitch" calculation hack:
+
+k2epilogue.a2s	1.930
+k2intro.a2s	1.901
+k2loader.a2s	2.006
+k2trance.a2s	2.148
+pulsetronic.a2s	1.202
+
+
+Fixed pitch hack:
+
+k2epilogue.a2s	1.922
+k2intro.a2s	1.882
+k2loader.a2s	1.987
+k2trance.a2s	2.131
+pulsetronic.a2s	1.228
+
+
+Final version, with config->basepitch:
+
+k2epilogue.a2s	2.028
+k2intro.a2s	2.128
+k2loader.a2s	2.198
+k2trance.a2s	2.212
+pulsetronic.a2s	1.258
