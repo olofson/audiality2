@@ -2,7 +2,7 @@ def title	"Kobo II Trance"
 def version	"1.0"
 def description	"Uptempo ingame track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2012-2013 David Olofson"
+def copyright	"Copyright 2012-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -14,9 +14,9 @@ c0(P A W rmax dl)
 	pan (rand 1 - .5)
 	w W; a A; set a; +tr P
 	!rmh (rmax * .25)
-	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
+	200 {	@p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
 	wg (a - .0001) {
-		100 {	p (rand rmax - rmh); d dl }
+		100 {	@p (rand rmax - rmh); d dl }
 		*a .9; *rmax .99; *rmh .99
 	}
 }
@@ -34,9 +34,9 @@ Str0(P V Attack Decay Detune)
 	pan (Detune * 50)
 	w saw; a 0; !Ta (V * .1); phase (rand 1)
 	+P Detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + a - .001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+a (Ta - a * er); Ta (V * rand .2)
 		d (rand 5 + 2.5)
 	}
@@ -69,38 +69,38 @@ Strings(P V=1 Attack=.3 Decay=.2)
 HHClosed(V=1)
 {
 	struct { wtosc }
-	w square; a (V * .4); set a; p 5
-	3 {	d 1; -p .5 }
-	200 {	p (rand 1 + 4.5); *a .95; d .5 }
+	w square; a (V * .4); set a; @p 5
+	3 {	d 1; -p .5; set p }
+	200 {	@p (rand 1 + 4.5); *a .95; d .5 }
 }
 
 HHOpen(V=1)
 {
 	struct { wtosc }
-	w square; a (V * .4); set a; p 5
-	3 {	d 1; -p .5 }
-	200 {	p (rand 1 + 4.5); *a .995; d .5 }
-	300 {	p (rand 1 + 4.5); *a .992; d .5 }
+	w square; a (V * .4); set a; @p 5
+	3 {	d 1; -p .5; set p }
+	200 {	@p (rand 1 + 4.5); *a .995; d .5 }
+	300 {	@p (rand 1 + 4.5); *a .992; d .5 }
 }
 
 BD(V=1)
 {
 	struct { wtosc }
-	w sine; p 2; a V; set a
-	5 {	-p .45; d 1 }
+	w sine; @p 2; a V; set a
+	5 {	-p .45; set p; d 1 }
 	*a 1.5
-	7 {	-p .1; d 2 }
-	20 {	-p .1; d 5 }
+	7 {	-p .1; set p; d 2 }
+	20 {	-p .1; set p; d 5 }
 	a 0; d 30
 }
 
 clp(P V=1 D)
 {
 	struct { wtosc }
-	w square; a (V * .3); set a; p (P + 2)
-	5 {	d 2; -p .3 }
+	w square; a (V * .3); set a; @p (P + 2)
+	5 {	d 2; -p .3; set p }
 	wg (a - .001) {
-		p (P + rand 1.5 + 1.6); *a D; d .5
+		@p (P + rand 1.5 + 1.6); *a D; d .5
 	}
 }
 Clap(P V=1 D=.003)
@@ -108,41 +108,41 @@ Clap(P V=1 D=.003)
 	struct { wtosc }
 	clp P V (1 - D)
 	!d2 (1 - D - .002)
-	w square; a (V * .4); set a; p (P + 3)
-	5 {	d 2; -p .5 }
+	w square; a (V * .4); set a; @p (P + 3)
+	5 {	d 2; -p .5; set p }
 	wg (a - .001) {
-		p (P + rand 2.5 + 2.8); *a d2; d .5
+		@p (P + rand 2.5 + 2.8); *a d2; d .5
 	}
 }
 
 sdn(V)
 {
 	struct { wtosc }
-	w noise; p 5.5; a V; set a; d 2
-	p 5; *a .4; d 20
+	w noise; @p 5.5; a V; set a; d 2
+	@p 5; *a .4; d 20
 	*a .4; d 100
 	wg (a - .01) {
 		!D (rand 15 + 5)
-		p 4.5; *a .87; d D
-		p 6; d D
+		@p 4.5; *a .87; d D
+		@p 6; d D
 	}
 }
 SD(P V=1)
 {
 	struct { wtosc }
 	sdn V
-	w square; p (P + 2); a V; set a
-	10 {	-p .2; d 1 }
+	w square; @p (P + 2); a V; set a
+	10 {	-p .2; set p; d 1 }
 	d 5
-	-p .2; d 5
+	-p .2; set p; d 5
 	5 {
 		!D (rand 2 + 3)
-		w saw; -p .51; d D
-		w square; +p .5; *a .7; d D
+		w saw; -p .51; set p; d D
+		w square; +p .5; set p; *a .7; d D
 	}
 	!p0 (p + .1)
 	wg (a - .001) {
-		p (rand 2.5 + p0); *a .995; d 1
+		@p (rand 2.5 + p0); *a .995; d 1
 	}
 }
 
@@ -152,9 +152,9 @@ Saw0(P V Detune)
 	pan (Detune * 30)
 	w saw; a 0; !Ta (V * .1); phase (rand 1)
 	+P Detune
-	p P; !er .5
+	@p P; !er .5
 .rt	wg (V + a - .001) {
-		p (P + rand .02 - .01)
+		@p (P + rand .02 - .01)
 		+a (Ta - a * er); Ta (V * (.2 + rand .1))
 		d (rand 5 + 2.5)
 	}
@@ -191,11 +191,11 @@ Cute(P V=1)
 {
 	struct { wtosc }
 	def ATK .1; def REL .03
-	!P0 tr; +P tr; w saw; p P; a 0; !er ATK; !vib 0; !tvib .01
+	!P0 tr; +P tr; w saw; @p P; a 0; !er ATK; !vib 0; !tvib .01
 .rt	wg (V + a - .001) {
 		tr (vib * 5)
-		10 {	-tr vib; +p (P - p * .8); +a (V - a * er); d 7 }
-		10 {	+tr vib; +p (P - p * .8); +a (V - a * er); d 7 }
+		10 {	-tr vib; +p (P - p * .8); set p; +a (V - a * er); d 7 }
+		10 {	+tr vib; +p (P - p * .8); set p; +a (V - a * er); d 7 }
 		+vib (tvib - vib * .05)
 	}
 	a 0; d 5
@@ -207,21 +207,21 @@ Cute(P V=1)
 			tvib .005; er REL
 		}
 	}
-	2(NP) { P (P0 + NP); p P }
+	2(NP) { P (P0 + NP); @p P }
 }
 
 NoiseSweep(P=5 V=.5)
 {
 	struct { wtosc; panmix }
-	w noise; a V; p P
+	w noise; a V; @p P
 	30 {
-		-p .07; *a .96; d 30
+		-p .07; set p; *a .96; d 30
 	}
 	50 {
-		-p .03; *a .993; d 70
+		-p .03; set p; *a .993; d 70
 	}
 	wg (a - .001) {
-		-p .01; *a .98; d 70
+		-p .01; set p; *a .98; d 70
 	}
 }
 
@@ -231,7 +231,7 @@ ResoBass(P V=1 Reso Wave=sine)
 	a V; set a; w Wave
 	!per p2d (P + tr)
 	wg (V - .001) {
-		phase 0; p (P + Reso); a (V * 2.5); set a
+		phase 0; @p (P + Reso); a (V * 2.5); set a
 		a 0; d per
 		*Reso .97
 		*V .75

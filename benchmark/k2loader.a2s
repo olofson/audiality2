@@ -2,7 +2,7 @@ def title	"Kobo II Loader"
 def version	"1.1"
 def description	"Level loader track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2011-2013 David Olofson"
+def copyright	"Copyright 2011-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -11,10 +11,10 @@ Explo0(P V=1 Wave Attack)
 	struct { wtosc; panmix }
 	pan (rand 1 - .5); set pan
 	+P tr; w Wave; !x 1.5; a V; -P 3; tr Attack; !D 1
-	200 {	*tr .98; p (P + rand x); +x .01; d D; +D .005 }
-	800 {	*tr .98; p (P + rand x); -x .0025; *a .999; d D; +D .005 }
+	200 {	*tr .98; @p (P + rand x); +x .01; d D; +D .005 }
+	800 {	*tr .98; @p (P + rand x); -x .0025; *a .999; d D; +D .005 }
 	tr P
-	800 {	rand p x; *a .995; d 2.5 }
+	800 {	rand p x; set p; *a .995; d 2.5 }
 }
 Explosion(P V=1)
 {
@@ -31,8 +31,8 @@ nb(P V=1 Pan)
 	pan Pan; set pan
 	lp 1; bp 1; hp 0
 	cutoff (P + 5); set cutoff
-	w noise; p (P - 2); a V; set a
-	o2.w noise; o2.p (P + 3); o2.a (V * .2); set o2.a
+	w noise; @p (P - 2); a V; set a
+	o2.w noise; @o2.p (P + 3); o2.a (V * .2); set o2.a
 	20 {
 		-cutoff .3; +q .0003; d 15
 	}
@@ -56,9 +56,9 @@ Str0(P V Attack Decay detune)
 	pan (detune * 200)
 	w saw; a 0; !Ta (V * .1); phase (rand 1)
 	+P detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + a - .001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+a (Ta - a * er); Ta (V * rand .2)
 		d (rand 5 + 2.5)
 	}
@@ -94,14 +94,14 @@ ResoBass(P V=1 Reso)
 	a (V * .2); set a; +Reso P; w sine
 	P p2d (P + tr)
 	wg (V - .001) {
-		phase 0; p Reso; a V; set a
+		phase 0; @p Reso; a V; set a
 		a 0; d P
 		-Reso 1n
 		*V .7
 	}
 	!i (500 / P); !mv (1 - (1 / (.1 * i)))
 	i {
-		phase 0; p Reso; a V; set a; a 0; d P
+		phase 0; @p Reso; a V; set a; a 0; d P
 		-Reso .1n; *V mv
 	}
 }
@@ -125,8 +125,8 @@ Sonar(P V=1)
 	pm1.pan -.75
 	pm2.pan .75
 	!max (V * .75)
-	o1.w square; o1.a max; o1.p P
-	o2.w square; o2.a max; o2.p P
+	o1.w square; o1.a max; @o1.p P
+	o2.w square; o2.a max; @o2.p P
 	d 30
 	o1.a 0
 	o2.a 0
@@ -134,8 +134,8 @@ Sonar(P V=1)
 	o1.w triangle
 	o2.w triangle
 	300 {
-		o1.p (P + rand .2 - .1)
-		o2.p (P + rand .2 - .1)
+		@o1.p (P + rand .2 - .1)
+		@o2.p (P + rand .2 - .1)
 		rand o1.a max
 		rand o2.a max
 		*max .98
@@ -146,12 +146,12 @@ Sonar(P V=1)
 BD(V=1)
 {
 	struct { wtosc }
-	w sine; p 3.5; a (V * .8); set a
-	5 {	-p .9; d 1 }
+	w sine; @p 3.5; a (V * .8); set a
+	5 {	-p .9; set p; d 1 }
 	d 10
-	5 {	-p .2; d 2 }
+	5 {	-p .2; set p; d 2 }
 	d 20
-	20 {	-p .1; d 10 }
+	20 {	-p .1; set p; d 10 }
 	d 30
 	a 0; d 100
 	d 1000
@@ -160,7 +160,7 @@ BD(V=1)
 sdn(Vel Color)
 {
 	struct { wtosc }
-	w noise; p (5.5 + Color); a (Vel * .15); set a
+	w noise; @p (5.5 + Color); a (Vel * .15); set a
 	*a .5;	d 30
 	*a .5;	d 40
 	wg (a - .001) {
@@ -172,19 +172,19 @@ SD(Vel=1 Color)
 {
 	struct { wtosc }
 	sdn Vel Color
-	w square; p (1.25 + Color); a (Vel * .5); set a
+	w square; @p (1.25 + Color); a (Vel * .5); set a
 	5 {
-		-p .2; d 1
+		-p .2; set p; d 1
 	}
 	w square; *a .5
 	15 {
-		-p .1; d 2
+		-p .1; set p; d 2
 	}
 	a 0; d 10
 	w noise; a (Vel * .1); set a
 	wg (a - .01) {
-		p 5; d 20
-		p 3; d 20
+		@p 5; d 20
+		@p 3; d 20
 		*a .8
 	}
 	a 0; d 200
@@ -193,18 +193,18 @@ SD(Vel=1 Color)
 HHClosed(P V=1)
 {
 	struct { wtosc }
-	w square; a (V * .2); set a; p 6
-	3 {	d 1; -p .5 }
-	200 {	p (rand 1.5 + 4.5); *a .95; d .5 }
+	w square; a (V * .2); set a; @p 6
+	3 {	d 1; -p .5; set p }
+	200 {	@p (rand 1.5 + 4.5); *a .95; d .5 }
 	a 0; d 1
 }
 
 HHOpen(P V=1)
 {
 	struct { wtosc }
-	w square; a (V * .2); set a; p 6
-	3 {	d 1; -p .5 }
-	600 {	p (rand 1.5 + 4.5); *a .993; d .5 }
+	w square; a (V * .2); set a; @p 6
+	3 {	d 1; -p .5; set p }
+	600 {	@p (rand 1.5 + 4.5); *a .993; d .5 }
 	a 0; d 1
 }
 
@@ -260,9 +260,9 @@ PulseBass(P V=1)
 	struct { wtosc; wtosc o2; wtosc o3; filter12; panmix }
 	!detune (.005 * (1 - P))
 	ifl (detune - .002) { detune .002 }
-	w saw; a (V * .5); set a; p (P - detune)
-	o2.w saw; o2.a (V * .2); set o2.a; o2.p (P + detune + 1)
-	o3.w sine; o3.a (V * .8); set o3.a; o3.p (P)
+	w saw; a (V * .5); set a; @p (P - detune)
+	o2.w saw; o2.a (V * .2); set o2.a; @o2.p (P + detune + 1)
+	o3.w sine; o3.a (V * .8); set o3.a; @o3.p (P)
 	lp 1; bp 1; hp .3
 	q .2; set q; cutoff (P + 5); set cutoff
 	cutoff (P + 3); q .01;	d 30
@@ -299,7 +299,7 @@ SoftArp(P V=1 Maj=0)
 	pan -.5
 	sa0(PP VV)
 	{
-		p PP; a VV;	td .01
+		@p PP; a VV;	td .01
 		a 0;		td .49
 	}
 	w triangle
@@ -327,11 +327,11 @@ CuteSine(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
-	!P0 tr; +P tr; w asine; p P; a 0; !er .5; !vib 0; !tvib .005
+	!P0 tr; +P tr; w asine; @p P; a 0; !er .5; !vib 0; !tvib .005
 .rt	wg (V + a - .001) {
 		tr (vib * 6)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5

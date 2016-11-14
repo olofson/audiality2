@@ -2,18 +2,18 @@ def title	"Kobo II Intro + Title Song"
 def version	"1.1"
 def description	"(Slightly edited mono conversion)"
 def author	"David Olofson"
-def copyright	"Copyright 2011-2013 David Olofson"
+def copyright	"Copyright 2011-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
 Flute0(P V=1 Wave)
 {
 	struct { wtosc }
-	!P0 tr; +P tr; w Wave; p P; a 0; !er .05; !vib 0; !tvib .005
+	!P0 tr; +P tr; w Wave; @p P; a 0; !er .05; !vib 0; !tvib .005
 .rt	wg (V + a - .001) {
 		tr (vib * 6 + rand .01)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5
@@ -43,9 +43,9 @@ Str0(P V Attack Decay Detune)
 	pan (Detune * 100)
 	w saw; a 0; !Ta (V * .1); phase (rand 1)
 	+P Detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + a - .001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+a (Ta - a * er); Ta (V * rand .2)
 		d (rand 5 + 2.5)
 	}
@@ -87,9 +87,9 @@ nb(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
-	w noise; p (P + 6); a (V * .8); set a
-	50 {	*a .99; *p .96; d 2 }
-	40 {	*a .92; -p .01; d 50 }
+	w noise; @p (P + 6); a (V * .8); set a
+	50 {	*a .99; *p .96; set p; d 2 }
+	40 {	*a .92; -p .01; set p; d 50 }
 }
 NBurst(P V=1)
 {
@@ -100,54 +100,54 @@ NBurst(P V=1)
 NBurst2(P V=1)
 {
 	struct { wtosc }
-	w noise; p (P + 3.5); a V; set a; *a .5; d 10
-	-p 2
+	w noise; @p (P + 3.5); a V; set a; *a .5; d 10
+	-p 2; set p
 	60 {	*a .9; d 50 }
 }
 
 sdn(V)
 {
 	struct { wtosc }
-	w noise; p 5.5; a V; set a; d 2
-	p 5; *a .4; d 20
+	w noise; @p 5.5; a V; set a; d 2
+	@p 5; *a .4; d 20
 	*a .2; d 100
 	100 {
 		!D (rand 15 + 5)
-		p 4.5; *a .95; d D
-		p 6; d D
+		@p 4.5; *a .95; d D
+		@p 6; d D
 	}
 }
 SDrum(P V=1)
 {
 	struct { wtosc }
 	sdn V
-	w square; p (P + 2); a V; set a
-	10 {	-p .2; d 1 }
+	w square; @p (P + 2); a V; set a
+	10 {	-p .2; set p; d 1 }
 	d 5
-	-p .2; d 5
+	-p .2; set p; d 5
 	5 {
 		!D (rand 2 + 3)
-		w saw; -p .51; d D
-		w square; +p .5; *a .7; d D
+		w saw; -p .51; set p; d D
+		w square; +p .5; set p; *a .7; d D
 	}
 	*a .5; !p0 (p - .8)
-	1000 {	p (rand 1.5 + p0); *a .99; d 1 }
+	1000 {	@p (rand 1.5 + p0); *a .99; d 1 }
 }
 
 HHClosed(P V=1)
 {
 	struct { wtosc }
-	w square; a (V * .2); set a; p 6
-	3 {	d 1; -p .5 }
-	200 {	p (rand 1.5 + 4.5); *a .95; d .5 }
+	w square; a (V * .2); set a; @p 6
+	3 {	d 1; -p .5; set p }
+	200 {	@p (rand 1.5 + 4.5); *a .95; d .5 }
 }
 
 HHOpen(P V=1)
 {
 	struct { wtosc }
-	w square; a (V * .2); set a; p 6
-	3 {	d 1; -p .5 }
-	600 {	p (rand 1.5 + 4.5); *a .993; d .5 }
+	w square; a (V * .2); set a; @p 6
+	3 {	d 1; -p .5; set p }
+	600 {	@p (rand 1.5 + 4.5); *a .993; d .5 }
 }
 
 HH0()
@@ -200,20 +200,20 @@ HH2()
 bdnoise(P V)
 {
 	struct { wtosc }
-	w noise; p (P + 4); a (V * .2); set a
-	20 {	*a .95; -p .1; d 3 }
+	w noise; @p (P + 4); a (V * .2); set a
+	20 {	*a .95; -p .1; set p; d 3 }
 	a 0; d 1000
 }
 BDrum(P V=1)
 {
 	struct { wtosc }
 	bdnoise P V
-	w sine; p (P + 4); a V; set a
-	5 {	-p .9; d 1 }
+	w sine; @p (P + 4); a V; set a
+	5 {	-p .9; set p; d 1 }
 	d 10
-	5 {	-p .2; d 2 }
+	5 {	-p .2; set p; d 2 }
 	d 20
-	20 {	-p .1; d 10 }
+	20 {	-p .1; set p; d 10 }
 	d 30
 	a 0; d 100
 	d 1000
@@ -222,26 +222,26 @@ BDrum(P V=1)
 tn(P V)
 {
 	struct { wtosc }
-	w noise; p (P + 6); a (V * .5); set a; d 10
-	-p 2
-	100 {	-p .07; *a .8; d 10 }
+	w noise; @p (P + 6); a (V * .5); set a; d 10
+	-p 2; set p
+	100 {	-p .07; set p; *a .8; d 10 }
 }
 Tom(P V=1)
 {
 	struct { wtosc }
 	tn P V
-	w saw; p (P + 3); a V; set a
-	10 {	-p .35; d 1 }
+	w saw; @p (P + 3); a V; set a
+	10 {	-p .35; set p; d 1 }
 	w triangle
 	7 {
-		-p .15; *a .9; d 10
-		+p 3n; d 10
-		-p 3n
+		-p .15; set p; *a .9; d 10
+		+p 3n; set p; d 10
+		-p 3n; set p
 	}
 	20 {
-		-p .01; *a .8; d 10
-		+p 3n; d 10
-		-p 3n
+		-p .01; set p; *a .8; d 10
+		+p 3n; set p; d 10
+		-p 3n; set p
 	}
 }
 
@@ -251,7 +251,7 @@ SoftArp(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 1 - .5); set pan
-		a VV; p PP;	td .01
+		a VV; @p PP;	td .01
 		*a .25;		td .49
 	}
 	w triangle; a V; +tr P; !aa a
@@ -280,7 +280,7 @@ SoftArp2(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 1 - .5); set pan
-		a VV; p PP;	td .01
+		a VV; @p PP;	td .01
 		*a .25;		td .49
 	}
 	w triangle; a V; +tr P; !aa a
@@ -298,10 +298,10 @@ Explo0(P V=1 Wave Attack)
 	struct { wtosc; panmix }
 	pan (rand 1 - .5); set pan
 	+P tr; w Wave; !x 1.5; a V; -P 3; tr Attack; !D 1
-	200 {	*tr .98; p (P + rand x); +x .01; d D; +D .005 }
-	800 {	*tr .98; p (P + rand x); -x .0025; *a .999; d D; +D .005 }
+	200 {	*tr .98; @p (P + rand x); +x .01; d D; +D .005 }
+	800 {	*tr .98; @p (P + rand x); -x .0025; *a .999; d D; +D .005 }
 	tr P
-	800 {	rand p x; *a .995; d 2.5 }
+	800 {	rand p x; set p; *a .995; d 2.5 }
 }
 Explosion(P V=1)
 {
@@ -315,13 +315,13 @@ Explosion(P V=1)
 PulseOct(P V=1)
 {
 	struct { wtosc }
-	w saw; p P
+	w saw; @p P
 	wg V {
-		+p 1; a V; set a; a 0; td .5; *V .9
-		-p 1; a V; set a; a 0; td .5; *V .9
-		+p 3; a V; set a; a 0; td .5; *V .9
-		-p 1; a V; set a; a 0; td .5; *V .9
-		-p 2; -V .001
+		+p 1; set p; a V; set a; a 0; td .5; *V .9
+		-p 1; set p; a V; set a; a 0; td .5; *V .9
+		+p 3; set p; a V; set a; a 0; td .5; *V .9
+		-p 1; set p; a V; set a; a 0; td .5; *V .9
+		-p 2; set p; -V .001
 	}
 }
 
@@ -329,10 +329,10 @@ subs(P V W)
 {
 	struct { wtosc }
 	w W
-.rt	p (P + 2); a V; d 1
-	10 { -p .2; d 1 }
+.rt	@p (P + 2); a V; d 1
+	10 { -p .2; set p; d 1 }
 	wg (V + a - .001) {
-		+p (P - p * .1); +a ((V * .7) - a * .2); d 5
+		+p (P - p * .1); set p; +a ((V * .7) - a * .2); d 5
 	}
 	1(NV) { V NV; wake rt }
 	2(NP) { P NP }
@@ -355,8 +355,8 @@ SubPulse(P V=1 Dur=2)
 	lp 1; bp 1; hp 0
 .rt	while V {
 		q .02; set q; cutoff (P + 5); set cutoff
-		p (np + (oct % 3 % 2))
-		o2.p (p - 1)
+		@p (np + (oct % 3 % 2))
+		@o2.p (p - 1)
 		+oct 1; %oct 8
 		phase 0; o2.phase 0
 		a (V * .2); o2.a V; td .125
@@ -371,19 +371,19 @@ SubPulse(P V=1 Dur=2)
 ResoBass(P V=1 Reso)
 {
 	struct { wtosc }
-	p (P + 2); w square; a (V * .2); set a
+	@p (P + 2); w square; a (V * .2); set a
 	a 0; d 5
 	+Reso (P + 1.5); w sine
 	P p2d (P + tr)
 	10 {
-		phase 0; p Reso; a V; set a
+		phase 0; @p Reso; a V; set a
 		a 0; d P
 		-Reso 1n
 		*V .8
 	}
 	!i (500 / P); !mv (1 - (1 / (.1 * i)))
 	i {
-		phase 0; p Reso; a V; set a; a 0; d P
+		phase 0; @p Reso; a V; set a; a 0; d P
 		-Reso .1n; *V mv
 	}
 }
@@ -446,20 +446,20 @@ ResoOut(P V=1)
 EvilSyncBass(P V=1 Drive)
 {
 	struct { wtosc }
-	+P tr; tr 0; p P
+	+P tr; tr 0; @p P
 	*V .5
 	!per (p2d P * .5)
 	a V; set a
-	p 5; w noise; phase 0; d 2
-	p (P + 2); w square; d per
-	w saw; p (P + .5 + Drive)
+	@p 5; w noise; phase 0; d 2
+	@p (P + 2); w square; d per
+	w saw; @p (P + .5 + Drive)
 	!ma .99; !dp .01
 	wg (a - .01) {
-		+p dp; w saw; phase 0; d per
+		+p dp; set p; w saw; phase 0; d per
 		*a ma; w square; d per
 	}
 	a 0; set a
-	1() { *a .5; *ma .85; +p 1; /per 4; *<1 }
+	1() { *a .5; *ma .85; +p 1; set p; /per 4 }
 }
 
 c0(P V W rmax D)
@@ -468,9 +468,9 @@ c0(P V W rmax D)
 	pan (rand 1 - .5)
 	w W; a V; set a; +tr P
 	!rmh (rmax * .25)
-	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d D }
+	200 {	@p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d D }
 	40 {
-		100 {	p (rand rmax - rmh); d D }
+		100 {	@p (rand rmax - rmh); d D }
 		*a .85; *rmax .99; *rmh .99
 	}
 }
@@ -570,14 +570,14 @@ Fx1(Tr)
 {
 	td 8
 	+tr Tr; PulseOct -1 .5
-	td 8; *<1
+	td 8
 }
 
 Fx2(Tr)
 {
 	td 8
 	+tr Tr; PulseOct 1 .3
-	td 8; *<1
+	td 8
 }
 
 Perc2()
@@ -665,15 +665,15 @@ Drop(P V=1)
 {
 	struct { wtosc; panmix }
 	-P 3; !D 3
-	w sine; p (P + 3); a (V * .9)
+	w sine; @p (P + 3); a (V * .9)
 	100 {
-		+p (P - p * .023); d D; +D .2
+		+p (P - p * .023); set p; d D; +D .2
 	}
 	50 {
-		-p .01; d 70
+		-p .01; set p; d 70
 	}
 	50 {
-		+p .01; *a .95; d 100
+		+p .01; set p; *a .95; d 100
 	}
 	a 0; d 1000
 }

@@ -2,7 +2,7 @@ def title	"Kobo II Epilogue"
 def version	"1.1"
 def description	"\"Thank You\" outro track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2011-2013 David Olofson"
+def copyright	"Copyright 2011-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -17,11 +17,11 @@ Rumble(P V=1 attack=1 decay=3 Pan)
 	w sine; a 0; set a
 	!da (1 / attack)
 	attack {
-		p (P + rand 1); +a da; d 20
+		@p (P + rand 1); +a da; d 20
 	}
 	da (1 / decay)
 	decay {
-		p (P + rand 1); -a da; d 20
+		@p (P + rand 1); -a da; d 20
 	}
 }
 
@@ -31,9 +31,9 @@ Str0(P V Attack Decay Detune S)
 	pan (Detune * 50)
 	w qsine; !aa 0; !Ta (V * .1); phase (rand 1)
 	+P Detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + aa - .001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+aa (Ta - aa * er); Ta (V * rand .2); a (aa * S)
 		d (rand 5 + 2.5)
 	}
@@ -68,7 +68,7 @@ Strings(P V=1 Attack=.3 Decay=.2)
 sdn(Vel Color)
 {
 	struct { wtosc }
-	w noise; p (5.5 + Color); a (Vel * .15); set a
+	w noise; @p (5.5 + Color); a (Vel * .15); set a
 	*a .5;	d 30
 	*a .5;	d 40
 	wg (a - .001) {
@@ -80,19 +80,19 @@ SD(Vel=1 Color)
 {
 	struct { wtosc }
 	sdn Vel Color
-	w square; p (1.25 + Color); a (Vel * .5); set a
+	w square; @p (1.25 + Color); a (Vel * .5); set a
 	5 {
-		-p .2; d 1
+		-p .2; set p; d 1
 	}
 	w square; *a .5
 	15 {
-		-p .1; d 2
+		-p .1; set p; d 2
 	}
 	a 0; d 10
 	w noise; a (Vel * .1); set a
 	wg (a - .01) {
-		p 5; d 20
-		p 3; d 20
+		@p 5; d 20
+		@p 3; d 20
 		*a .8
 	}
 	a 0; d 200
@@ -101,16 +101,16 @@ SD(Vel=1 Color)
 BD(Vel=1)
 {
 	struct { wtosc }
-	w square; a (Vel * .4); p 1.5
+	w square; a (Vel * .4); @p 1.5
 	3 {
-		d 3; -p .8
+		d 3; -p .8; set p
 	}
 	w sine; a (Vel * .3)
 	7 {
-		d 16; -p .3
+		d 16; -p .3; set p
 	}
 	a 0; d 5
-	w noise; p 1.5; a (Vel * .02); d 50
+	w noise; @p 1.5; a (Vel * .02); d 50
 	a 0; d 300
 }
 
@@ -120,9 +120,9 @@ C0(P V W rmax dl)
 	pan (rand .25)
 	w W; a V; set a; +tr P
 	!rmh (rmax * .25)
-	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .997; d 1 }
+	200 {	@p (rand rmax - rmh); *rmax .997; *rmh .997; *a .997; d 1 }
 	40 {
-		100 {	p (rand rmax - rmh); d 1 }
+		100 {	@p (rand rmax - rmh); d 1 }
 		*a .85; *rmax .99; *rmh .99
 	}
 	a 0; d 10
@@ -142,16 +142,16 @@ Electro()
 	pan (rand 1 - .5)
 	w saw; a 0
 	3 {
-		p 5; +a .07
+		@p 5; +a .07
 		11 {
-			d 1; -p .2
+			d 1; -p .2; set p
 		}
 	}
 	*a .5
 	20 {
-		p 3.7; *a .8
+		@p 3.7; *a .8
 		10 {
-			d 1; -p .2
+			d 1; -p .2; set p
 		}
 	}
 	a 0; d 10
@@ -173,10 +173,10 @@ HatNoise(P V W spread decay)
 {
 	struct { wtosc }
 	!e V
-	w W; p P; a e
+	w W; @p P; a e
 	!da (V / decay)
 	decay {
-		p (rand spread + P); a e; -e da; d 1
+		@p (rand spread + P); a e; -e da; d 1
 	}
 }
 Hat(Vel=1 Len=1)
@@ -255,14 +255,14 @@ ResoBass(P V=1 Reso=1 Wave=triangle)
 	a (V * .2); set a; +Reso P; w Wave
 	P p2d (P + tr)
 	wg (V - .001) {
-		phase 0; p Reso; a V; set a
+		phase 0; @p Reso; a V; set a
 		a 0; d P
 		-Reso 1n
 		*V .7
 	}
 	!i (500 / P); !mv (1 - (1 / (.1 * i)))
 	i {
-		phase 0; p Reso; a V; set a; a 0; d P
+		phase 0; @p Reso; a V; set a; a 0; d P
 		-Reso .1n; *V mv
 	}
 }
@@ -330,7 +330,7 @@ SoftArp(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 1 - .5); set pan
-		p PP; a VV;	td .01
+		@p PP; a VV;	td .01
 		a 0;		td .49
 	}
 	7 {
@@ -360,9 +360,9 @@ Kl(Vel Decay Wave Base Period Pan)
 	!bend (rand .002 - .001)
 	w Wave; a Vel; set a; +tr (rand .2 + Base)
 	wg (a - .001) {
-		p 0
+		@p 0
 		10 {
-			+p warble; d Period
+			+p warble; set p; d Period
 		}
 		+warble bend
 		*a Decay
@@ -406,7 +406,7 @@ Pad()
 sbass(P V)
 {
 	struct { wtosc }
-	p P; w hsine; a V; d 10
+	@p P; w hsine; a V; d 10
 	a 0; d 1000
 	end
 .stop	a 0; d 100
@@ -425,7 +425,7 @@ Bass(P V=1 R=5.5)
 	P p2d (P + tr)
 	tr 0
 	wg (V - .001) {
-		phase 0; p R; a (V * .5); set a
+		phase 0; @p R; a (V * .5); set a
 		a 0; d P
 		-R .3
 		*V .8
@@ -486,11 +486,11 @@ CuteSaw(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
-	!P0 tr; +P tr; w saw; p P; a 0; !er .05; !vib 0; !tvib .01
+	!P0 tr; +P tr; w saw; @p P; a 0; !er .05; !vib 0; !tvib .01
 .rt	wg (V + a - .001) {
 		tr (vib * 6)
-		12 {	-tr vib; +p (P - p * .8); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .8); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .8); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .8); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5
@@ -502,7 +502,7 @@ CuteSaw(P V=1 Pan)
 			tvib .02; er .02
 		}
 	}
-	2(NP) { P (P0 + NP); p P }
+	2(NP) { P (P0 + NP); @p P }
 }
 BreakMelo(P V=1 Pan)
 {
@@ -724,11 +724,11 @@ CuteSine(P V=1 Pan)
 {
 	struct { wtosc; panmix }
 	pan Pan; set pan
-	!P0 tr; +P tr; w asine; p P; a 0; !er .01; !vib 0; !tvib .005
+	!P0 tr; +P tr; w asine; @p P; a 0; !er .01; !vib 0; !tvib .005
 .rt	wg (V + a - .001) {
 		tr (vib * 6)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5

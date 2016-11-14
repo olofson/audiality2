@@ -2,7 +2,7 @@ def title	"Kobo II PulseTronic"
 def version	"1.0"
 def description	"Uptempo ingame track for Kobo II"
 def author	"David Olofson"
-def copyright	"Copyright 2012-2013 David Olofson"
+def copyright	"Copyright 2012-2013, 2016 David Olofson"
 def license	"CC BY-NC-ND 3.0"
 def a2sversion	"1.9"
 
@@ -12,9 +12,9 @@ c0(P A W rmax dl)
 	pan (rand 1 - .5)
 	w W; a A; set a; tr P
 	!rmh (rmax * .25)
-	200 {	p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
+	200 {	@p (rand rmax - rmh); *rmax .997; *rmh .997; *a .995; d dl }
 	wg (a - .0001) {
-		100 {	p (rand rmax - rmh); d dl }
+		100 {	@p (rand rmax - rmh); d dl }
 		*a .9; *rmax .99; *rmh .99
 	}
 }
@@ -31,10 +31,10 @@ Explo0(P V=1 Wave Attack Decay)
 	struct { wtosc; panmix }
 	pan (rand 1 - .5)
 	+P tr; w Wave; !x 1.5; a V; -P 3; tr Attack; !D 1
-	200 {	*tr .98; p (P + rand x); +x .01; d D; +D .005 }
-	800 {	*tr .98; p (P + rand x); -x .0025; *a Decay; d D; +D .005 }
+	200 {	*tr .98; @p (P + rand x); +x .01; d D; +D .005 }
+	800 {	*tr .98; @p (P + rand x); -x .0025; *a Decay; d D; +D .005 }
 	tr P
-	wg (a - .001) {	rand p x; *a Decay; d 2.5 }
+	wg (a - .001) {	rand p x; set p; *a Decay; d 2.5 }
 }
 Explosion(P V=1)
 {
@@ -46,11 +46,11 @@ Explosion(P V=1)
 Reed0(P V=1 Wave)
 {
 	struct { wtosc }
-	!P0 tr; +P tr; w Wave; p P; a 0; !er .1; !vib 0; !tvib .005
+	!P0 tr; +P tr; w Wave; @p P; a 0; !er .1; !vib 0; !tvib .005
 .rt	wg (V + a - .001) {
 		tr (vib * 6 + rand .01)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .1)
 	}
 	a 0; d 5
@@ -77,11 +77,11 @@ Whistle(P V=1)
 {
 	struct { wtosc; panmix }
 	pan .5; set pan
-	!P0 tr; +P tr; w triangle; p P; a 0; !er .1; !vib 0; !tvib .005
+	!P0 tr; +P tr; w triangle; @p P; a 0; !er .1; !vib 0; !tvib .005
 .rt	wg (V + a - .001) {
 		tr (vib * 6 + rand .01)
-		12 {	-tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
-		12 {	+tr vib; +p (P - p * .3); +a (V - a * er); d 5 }
+		12 {	-tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
+		12 {	+tr vib; +p (P - p * .3); set p; +a (V - a * er); d 5 }
 		+vib (tvib - vib * .2)
 	}
 	a 0; d 5
@@ -102,7 +102,7 @@ SoftArp(P V=1 Maj=0)
 	sa0(PP VV)
 	{
 		pan (rand 1 - .5); set pan
-		p PP; a VV;	td .01
+		@p PP; a VV;	td .01
 		a 0;		td .49
 	}
 	w square
@@ -129,12 +129,12 @@ SoftArp(P V=1 Maj=0)
 Bleep2(P V=1 Wave)
 {
 	struct { wtosc }
-	w Wave; p (P - .5); phase (rand 1); a V; set a
+	w Wave; @p (P - .5); phase (rand 1); a V; set a
 	10 {
-		-p .05; d 3
+		-p .05; set p; d 3
 	}
 	wg 1 {
-		p (P + rand .02 - .01)
+		@p (P + rand .02 - .01)
 		d (50 + rand 50)
 	}
 .stop	a 0; td 1
@@ -164,9 +164,9 @@ Str0(P V Attack Decay Detune)
 	pan (Detune * 50)
 	w saw; a 0; !Ta (V * .1); phase (rand 1)
 	+P Detune
-	p P; !er (Attack * .1)
+	@p P; !er (Attack * .1)
 .rt	wg (V + a - .001) {
-		+p (P - p * .4 + rand .02 - .01)
+		+p (P - p * .4 + rand .02 - .01); set p
 		+a (Ta - a * er); Ta (V * rand .5)
 		d (rand 5 + 2.5)
 	}
@@ -202,9 +202,9 @@ Blepp(P V=1)
 	pan (rand .5 - .25)
 	lp 1; bp 1; hp .5
 	q .01; set q; cutoff (P + 3); set cutoff
-	w saw; a (V * 1.1); set a; p (P - 1);	cutoff (P + 2);	d 5
-	+p 1; *a .5;			cutoff (P + 1);	d 15
-	-p 1; a 0;			cutoff P;	d 100
+	w saw; a (V * 1.1); set a; @p (P - 1);	cutoff (P + 2);	d 5
+	+p 1; set p; *a .5;			cutoff (P + 1);	d 15
+	-p 1; set p; a 0;			cutoff P;	d 100
 }
 
 PulseBass(P V=1)
@@ -218,9 +218,9 @@ PulseBass(P V=1)
 	}
 	!detune (.005 * (1 - P))
 	ifl (detune - .002) { detune .002 }
-	w saw; a (V * .5); set a; p (P - detune)
-	o2.w saw; o2.a (V * .2); set o2.a; o2.p (P + detune + 1)
-	o3.w sine; o3.a (V * .8); set o3.a; o3.p (P)
+	w saw; a (V * .5); set a; @p (P - detune)
+	o2.w saw; o2.a (V * .2); set o2.a; @o2.p (P + detune + 1)
+	o3.w sine; o3.a (V * .8); set o3.a; @o3.p (P)
 	lp 1; bp 1; hp .3
 	q .1; set q; cutoff (P + 4); set cutoff
 	cutoff (P + 3); q .01;	d 30
@@ -236,19 +236,19 @@ PulseBass(P V=1)
 SD(Vel=1)
 {
 	struct { wtosc }
-	w square; p 1.7; a Vel; set a
+	w square; @p 1.7; a Vel; set a
 	5 {
-		-p .2; d 1
+		-p .2; set p; d 1
 	}
 	w square
 	8 {
-		-p .15; d 2
+		-p .15; set p; d 2
 	}
 	a 0; d 10
 	w noise; a (Vel * .3); set a
 	wg (a - .01) {
-		p 6; d 10
-		p 4; d 10
+		@p 6; d 10
+		@p 4; d 10
 		*a .7
 	}
 }
@@ -256,19 +256,19 @@ SD(Vel=1)
 SD2(Vel=1)
 {
 	struct { wtosc }
-	w square; p 1.5; a Vel; set a
+	w square; @p 1.5; a Vel; set a
 	5 {
-		-p .2; d 1
+		-p .2; set p; d 1
 	}
 	w square
 	10 {
-		-p .1; d 2
+		-p .1; set p; d 2
 	}
 	a 0; d 10
 	w noise; a (Vel * .4); set a
 	wg (a - .01) {
-		p 6; d 10
-		p 4; d 10
+		@p 6; d 10
+		@p 4; d 10
 		*a .85
 	}
 }
@@ -276,13 +276,13 @@ SD2(Vel=1)
 BD(Vel=1)
 {
 	struct { wtosc }
-	w square; a Vel; p 1.3
+	w square; a Vel; @p 1.3
 	3 {
-		d 3; -p .7
+		d 3; -p .7; set p
 	}
 	w sine; a (Vel * 1.5)
 	5 {
-		d 12; -p .35
+		d 12; -p .35; set p
 	}
 	d 40
 	a 0; d 20
@@ -292,10 +292,10 @@ HatNoise(P V W spread decay)
 {
 	struct { wtosc }
 	!e V
-	w W; p P; a e
+	w W; @p P; a e
 	!da (V / decay)
 	decay {
-		p (rand spread + P); a e; -e da; d 1
+		@p (rand spread + P); a e; -e da; d 1
 	}
 }
 Hat(V=1 L=1)
@@ -591,9 +591,9 @@ Kl(Vel Decay Wave Base Period)
 	!bend (rand .002 - .001)
 	w Wave; a Vel; set a; tr (rand .2 + Base)
 	wg (a - .001) {
-		p 0
+		@p 0
 		10 {
-			+p warble; d Period
+			+p warble; set p; d Period
 		}
 		+warble bend
 		*a Decay
@@ -613,14 +613,14 @@ ResoBass(P V=1 Reso Wave)
 	a (V * .5); set a; +Reso P; w Wave
 	P p2d (P + tr)
 	wg (V - .001) {
-		phase 0; p Reso; a V; set a
+		phase 0; @p Reso; a V; set a
 		a 0; d P
 		-Reso 1n
 		*V .8
 	}
 	!i (500 / P); !mv (1 - (1 / (.1 * i)))
 	i {
-		phase 0; p Reso; a V; set a; a 0; d P
+		phase 0; @p Reso; a V; set a; a 0; d P
 		-Reso .1n; *V mv
 	}
 }
