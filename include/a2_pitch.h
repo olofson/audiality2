@@ -36,8 +36,10 @@ extern "C" {
 #endif
 
 /* Default reference frequency for linear pitch 0.0; "middle C" */
-#define	A2_MIDDLEC	261.626f
+#define	A2_MIDDLEC		261.626f
 
+/* 1000 / A2_MIDDLEC (24:40 fixed point) */
+#define	A2_1K_DIV_MIDDLEC	4202608409623LL
 
 /* Convert frequency to linear pitch (SLOW!) */
 float a2_F2Pf(float f, float reference);
@@ -49,7 +51,7 @@ float a2_P2If(float pitch);
  * Fast fixed point version of a2_P2I(). 'pitch' is  16:16 fixed point, and the
  * result is 8:24 fixed point.
  */
-int a2_P2I(int pitch);
+unsigned a2_P2I(int pitch);
 
 #ifdef __cplusplus
 };

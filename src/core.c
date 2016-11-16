@@ -1330,9 +1330,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_P2DR:
-			r[ins->a1] = 65536000.0f / (powf(2.0f, r[ins->a2] *
-					(1.0f / 65536.0f)) * A2_MIDDLEC) +
-					0.5f;
+			r[ins->a1] = A2_1K_DIV_MIDDLEC / a2_P2I(r[ins->a2]);
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NEGR:

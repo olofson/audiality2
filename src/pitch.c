@@ -54,7 +54,7 @@ float a2_P2If(float pitch)
 }
 
 
-int a2_P2I(int pitch)
+unsigned a2_P2I(int pitch)
 {
 	/* (double)0x10000 * powf(2.0f, pitch * (1.0f / 65536.0f)) */
 	int n = pitch & 0xffff;

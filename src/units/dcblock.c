@@ -55,7 +55,7 @@ static inline A2_dcblock *dcb_cast(A2_unit *u)
 
 static inline int dcb_pitch2coeff(A2_dcblock *dcb)
 {
-	float f = powf(2.0f, dcb->cutoff * (1.0f / 65536.0f)) * A2_MIDDLEC;
+	float f = a2_P2I(dcb->cutoff) * (A2_MIDDLEC / 16777216.0f);
 	/* This filter explodes above Nyqvist / 2! (Needs oversampling...) */
 	if(f > dcb->samplerate >> 2)
 		return 362 << 16;

@@ -1540,7 +1540,7 @@ static double a2c_DoUnop(A2_compiler *c, A2_opcodes op, double v)
 	switch(op)
 	{
 	  case OP_P2DR:
-		return 1000.0f / (powf(2.0f, v) * A2_MIDDLEC);
+		return 1000.0f / (a2_P2If(v) * A2_MIDDLEC);
 	  case OP_NEGR:
 		return -v;
 	  case OP_NOTR:

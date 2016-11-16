@@ -201,13 +201,7 @@ TODO: -------------------------------------------------------------------------
 		  by the delay instructions.
 
 * wtosc:
-	* Pitch ramping!
-		* Linear pitch calculation per fragment
-		* Linear ramping of the phase delta per sample
-		* Quick hack: Update the ramping only once per fragment?
-	* Optimize the powf() when setting the pitch register?
-		* The old Audiality has code for this - but is it actually
-		  faster?
+	* Linear ramping of the phase delta per sample
 
 * Granular oscillator:
 	* Plays one-shot waveforms, triggering one repetition for

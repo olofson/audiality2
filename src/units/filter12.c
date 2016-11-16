@@ -64,9 +64,7 @@ static inline A2_filter12 *f12_cast(A2_unit *u)
 
 static inline int f12_pitch2coeff(A2_filter12 *f12)
 {
-/*FIXME: Fast fixed point approximation for this... */
-	float f = powf(2.0f, f12->cutoff.value * (1.0f / 65536.0f / 256.0f)) *
-			A2_MIDDLEC;
+	float f = a2_P2I(f12->cutoff.value >> 8) * (A2_MIDDLEC / 16777216.0f);
 	/* This filter explodes above Nyqvist / 2! (Needs oversampling...) */
 	if(f > f12->samplerate >> 2)
 		return 362 << 16;
