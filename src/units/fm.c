@@ -82,6 +82,8 @@ typedef struct A2_fmosc
 {
 	A2_ramper	a;		/* Amplitude/depth */
 	A2_ramper	fb;		/* Feedback modulation depth */
+	A2_ramper	p;		/* Linear pitch ramper */
+	int		last_pitch;	/* Previous pitch with detune */
 	unsigned	phase;		/* Phase (24:8 fixp, 1.0/sample) */
 	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/period) */
 	int		last;		/* Previous raw sine value */
@@ -92,8 +94,8 @@ typedef struct A2_fm
 	A2_unit		header;
 
 	/* Needed for op0 pitch calculations */
+	int		basepitch;	/* Pitch of middle C (1.0/octave) */
 	int		*transpose;
-	float		onedivfs;	/* Actually, 8:24... */
 
 	/* Oscillators/operators */
 	unsigned	nops;
@@ -120,15 +122,27 @@ static inline int32_t fm_osc(A2_fmosc *o, int mod)
 }
 
 
-static inline A2_fm *fm_cast(A2_unit *u)
+static inline void fm_run_pitch(A2_fmosc *o, unsigned frames, int detune)
 {
-	return (A2_fm *)u;
+	int newpitch;
+	a2_PrepareRamper(&o->p, frames);
+
+	/* Use halfway value while still ramping */
+	a2_RunRamper(&o->p, frames >> 1);
+
+	/* Calculate new phase delta */
+	newpitch = (o->p.value + detune) >> 8;
+	if(newpitch != o->last_pitch)
+	{
+		o->dphase = a2_P2I(newpitch);
+		o->last_pitch = newpitch;
+	}
 }
 
 
-static inline int fm_f2dphase(A2_fm *fm, float f)
+static inline A2_fm *fm_cast(A2_unit *u)
 {
-	return f * fm->onedivfs + 0.5f;
+	return (A2_fm *)u;
 }
 
 
@@ -186,10 +200,13 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 	unsigned oversample = 1 << osbits;
 	unsigned end = offset + frames;
 	int32_t *out = u->outputs[0];
+	int detune = 0;
 	for(i = 0; i < operators; ++i)
 	{
 		a2_PrepareRamper(&fm->op[i].a, frames);
 		a2_PrepareRamper(&fm->op[i].fb, frames);
+		fm_run_pitch(&fm->op[i], frames, detune);
+		detune = fm->op[0].p.value;
 	}
 	for(s = offset; s < end; ++s)
 	{
@@ -334,18 +351,19 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 		structure += 8;
 
 	/* Internal state initialization */
+	fm->basepitch = cfg->basepitch;
 	fm->transpose = vms->r + R_TRANSPOSE;
-	fm->onedivfs = 16777216.0f / cfg->samplerate;
 
 	for(i = 0; i < fm->nops; ++i)
 	{
 		a2_InitRamper(&fm->op[i].a, 0);
 		a2_InitRamper(&fm->op[i].fb, 0);
+		a2_InitRamper(&fm->op[i].p, *fm->transpose + fm->basepitch);
+		fm->op[i].last_pitch = 0;
 		fm->op[i].last = 0;
 	}
 
-	fm->op[0].dphase =  fm_f2dphase(fm, powf(2.0f,
-			(*fm->transpose) * (1.0f / 65536.0f)) * A2_MIDDLEC);
+	fm->op[0].dphase = a2_P2I(fm->op[0].p.value >> 8);
 	for(i = 1; i < fm->nops; ++i)
 		fm->op[i].dphase = fm->op[0].dphase;
 
@@ -398,17 +416,9 @@ static void fm_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
 
 static void fm_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 {
-	int i;
 	A2_fm *fm = fm_cast(u);
-	fm->op[0].dphase =  fm_f2dphase(fm, powf(2.0f,
-			(v + *fm->transpose) * (1.0f / 65536.0f)) *
-			A2_MIDDLEC);
-	for(i = 1; i < fm->nops; ++i)
-	{
-		int rv = u->registers[A2FMR_PITCH0 + i * A2FMR_OP_SIZE];
-		fm->op[i].dphase = fm->op[0].dphase *
-				powf(2.0f, rv * (1.0f / 65536.0f));
-	}
+	a2_SetRamper(&fm->op[0].p, v + *fm->transpose + fm->basepitch,
+			start, dur);
 }
 
 static void fm_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
@@ -425,8 +435,7 @@ static void fm_Feedback(A2_unit *u, int v, unsigned start, unsigned dur)
 static void fm_Pitch1(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
-	fm->op[1].dphase = fm->op[0].dphase *
-			powf(2.0f, v * (1.0f / 65536.0f));
+	a2_SetRamper(&fm->op[1].p, v, start, dur);
 }
 
 static void fm_Amplitude1(A2_unit *u, int v, unsigned start, unsigned dur)
@@ -443,8 +452,7 @@ static void fm_Feedback1(A2_unit *u, int v, unsigned start, unsigned dur)
 static void fm_Pitch2(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
-	fm->op[2].dphase = fm->op[0].dphase *
-			powf(2.0f, v * (1.0f / 65536.0f));
+	a2_SetRamper(&fm->op[2].p, v, start, dur);
 }
 
 static void fm_Amplitude2(A2_unit *u, int v, unsigned start, unsigned dur)
@@ -461,8 +469,7 @@ static void fm_Feedback2(A2_unit *u, int v, unsigned start, unsigned dur)
 static void fm_Pitch3(A2_unit *u, int v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
-	fm->op[3].dphase = fm->op[0].dphase *
-			powf(2.0f, v * (1.0f / 65536.0f));
+	a2_SetRamper(&fm->op[3].p, v, start, dur);
 }
 
 static void fm_Amplitude3(A2_unit *u, int v, unsigned start, unsigned dur)

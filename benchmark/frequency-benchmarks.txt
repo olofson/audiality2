@@ -1,4 +1,9 @@
 
+Comparative benchmarks, investigating the performance of different methods of
+translating linear pitch to frequency/period.
+
+Hardware: i7-4930K @ 4.4 GHz, quad channel DDR3 @ 2132MHz
+
 ------------------------------------------------------------------------------
 Normal benchmark (fs: 44.1kHz)
 ------------------------------------------------------------------------------

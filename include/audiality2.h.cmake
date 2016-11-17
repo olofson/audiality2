@@ -47,7 +47,7 @@ extern "C" {
 #define	A2_MAXFRAG		64
 
 /* Minimum size of the blocks allocated by a2_AllocBlock() */
-#define	A2_BLOCK_SIZE		256
+#define	A2_BLOCK_SIZE		384
 
 /* Maximum number of audio channels supported */
 #define	A2_MAXCHANNELS		8
