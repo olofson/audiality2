@@ -572,6 +572,7 @@ union A2_block
 	A2_unit		unit;			/* Voice unit instance */
 	int32_t		buffer[A2_MAXFRAG];	/* Audio buffer */
 	A2_bus		bus;			/* Audio bus */
+	char		minsize[A2_BLOCK_SIZE];
 };
 
 /* State resources that are shared by master states and substates */

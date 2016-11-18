@@ -1,0 +1,71 @@
+
+Comparative benchmarks, investigating the effects of the fixed size blocks used
+by a2_AllocBlock()/a2_FreeBlock().
+
+Hardware: i7-4930K @ 4.4 GHz, quad channel DDR3 @ 2132MHz
+
+Conclusion:
+	The differences in normal and VM benchmark results for 256, 512, and
+	1024 byte blocks are all below the measurement noise levels, so it's
+	hard to see if there actually has any impact.
+
+	This result is entirely expected, as the cache footprint should be
+	unaffected by the buffer size, as only the areas actually used are
+	ever touched by the CPU.
+
+
+------------------------------------------------------------------------------
+sizeof(A2_block) == 256 (original)
+------------------------------------------------------------------------------
+
+benchmark.sh:
+	k2epilogue.a2s	5.494
+	k2intro.a2s	4.858
+	k2loader.a2s	5.108
+	k2trance.a2s	4.416
+	pulsetronic.a2s	5.019
+
+vm-benchmark.sh:
+	k2epilogue.a2s	2.139
+	k2intro.a2s	1.987
+	k2loader.a2s	2.009
+	k2trance.a2s	2.462
+	pulsetronic.a2s	1.251
+
+
+------------------------------------------------------------------------------
+sizeof(A2_block) == 512
+------------------------------------------------------------------------------
+
+benchmark.sh:
+	k2epilogue.a2s	5.521
+	k2intro.a2s	4.882
+	k2loader.a2s	5.092
+	k2trance.a2s	4.459
+	pulsetronic.a2s	5.010
+
+vm-benchmark.sh:
+	k2epilogue.a2s	2.126
+	k2intro.a2s	2.216
+	k2loader.a2s	2.187
+	k2trance.a2s	2.313
+	pulsetronic.a2s	1.266
+
+
+------------------------------------------------------------------------------
+sizeof(A2_block) == 1024
+------------------------------------------------------------------------------
+
+benchmark.sh:
+	k2epilogue.a2s	5.533
+	k2intro.a2s	4.895
+	k2loader.a2s	5.151
+	k2trance.a2s	4.549
+	pulsetronic.a2s	5.027
+
+vm-benchmark.sh:
+	k2epilogue.a2s	2.128
+	k2intro.a2s	2.054
+	k2loader.a2s	2.247
+	k2trance.a2s	2.568
+	pulsetronic.a2s	1.241

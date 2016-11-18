@@ -46,6 +46,9 @@ extern "C" {
 /* Maximum number of sample frames to process at a time */
 #define	A2_MAXFRAG		64
 
+/* Minimum size of the blocks allocated by a2_AllocBlock() */
+#define	A2_BLOCK_SIZE		256
+
 /* Maximum number of audio channels supported */
 #define	A2_MAXCHANNELS		8
 
