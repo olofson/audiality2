@@ -2,7 +2,7 @@ def title	"FMTest"
 def version	"1.0"
 def description	"Test of the 'fm1' through 'fm4' oscillator units"
 def author	"David Olofson"
-def copyright	"Copyright 2014 David Olofson"
+def copyright	"Copyright 2014, 2016 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
 
@@ -16,7 +16,7 @@ FMBass1(P V=1 M=1)
 {
 	struct { fm2; panmix }
 	@a V;	@a1 (M * 4)
-	p P;	p1 0;
+	@p P;	@p1 0;
 	*a .7;	*a1 .4;	d 10
 	*a .7;	*a1 .7;	d 40
 	*a .7;	*a1 .8;	d 70
@@ -31,7 +31,7 @@ FMBass2(P V=1 M=1)
 {
 	struct { fm2; panmix }
 	@a (V * .8);	@a1 (M * 4)
-	p (P - .05);	p1 .05
+	@p (P - .05);	@p1 .05
 	@fb .5;		@fb1 .3
 	*a .7;	*a1 .7;	d 20
 	*a .7;	*a1 .8;	d 30
@@ -47,7 +47,7 @@ FMBass3(P V=1 M=1)
 {
 	struct { fm2; panmix }
 	@a (V * .7);	@a1 (M * 7)
-	p (P - .05);	p1 (1 + 7n + .05)
+	@p (P - .05);	@p1 (1 + 7n + .05)
 	*a .7;	*a1 .4;	d 10
 	*a .7;	*a1 .7;	d 40
 	*a .7;	*a1 .8;	d 70
@@ -62,7 +62,7 @@ FMBass4(P V=1 M=1)
 {
 	struct { fm2; panmix }
 	@a (V * .6);	@a1 (M * 3)
-	p (P + 1);	p1 3
+	@p (P + 1);	@p1 3
 	@fb .9;		@fb1 (M * .4)
 	30 {
 		*a .99
@@ -89,7 +89,7 @@ FMBass4(P V=1 M=1)
 FMPad1(P V=1)
 {
 	struct { fm3; panmix }
-	p P; p1 1.001; p2 1.999
+	@p P; @p1 1.001; @p2 1.999
 	@fb .5;		@fb2 .4
 	
 	a V;		a2 .1;	fb .1; fb1 .1; fb2 .2;	d 300

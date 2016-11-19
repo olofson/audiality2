@@ -2,7 +2,7 @@ def title	"FMTest4"
 def version	"1.0"
 def description	"Test of 'fm3', 'fm3p', 'fm2r' and 'fm4r'"
 def author	"David Olofson"
-def copyright	"Copyright 2014 David Olofson"
+def copyright	"Copyright 2014, 2016 David Olofson"
 def license	"Public domain. Do what you like with it. NO WARRANTY!"
 def a2sversion	"1.9"
 
@@ -11,9 +11,9 @@ import bassline;
 FMBass3(P V=1)
 {
 	struct { fm3; panmix }
-	a V;	p P;		fb .7
-	@a1 .5;	p1 .99;		fb1 .2
-	@a2 1;	p2 1.01;	fb2 .2
+	a V;	@p P;		fb .7
+	@a1 .5;	@p1 .99;	fb1 .2
+	@a2 1;	@p2 1.01;	fb2 .2
 	d 5
 	100 {
 		*a .9;	*a1 .8;	*a2 .9;	*fb .9;	d 10
@@ -28,9 +28,9 @@ FMBass3(P V=1)
 FMBass3P(P V=1)
 {
 	struct { fm3p; panmix }
-	a V;	p P;		fb .7
-	@a1 .5;	p1 .99;		fb1 .2
-	@a2 1;	p2 1.01;	fb2 .2
+	a V;	@p P;		fb .7
+	@a1 .5;	@p1 .99;	fb1 .2
+	@a2 1;	@p2 1.01;	fb2 .2
 	d 5
 	100 {
 		*a .9;	*a1 .8;	*a2 .9;	*fb .9;	d 10
@@ -45,8 +45,8 @@ FMBass3P(P V=1)
 FMBass2R(P V=1)
 {
 	struct { fm2r; panmix }
-	a V;	p (P - .01);	fb .9
-	@a1 1;	p1 1.01;	fb1 .8
+	a V;	@p (P - .01);	fb .9
+	@a1 1;	@p1 1.01;	fb1 .8
 	d 5
 	100 {
 		*a .95;	*fb .95; *fb1 .9;	d 10
@@ -61,10 +61,10 @@ FMBass2R(P V=1)
 FMBass4R(P V=1)
 {
 	struct { fm4r; panmix }
-	a V;	p P;		fb .6
-	@a1 1;	p1 1;		fb1 .7
-	@a2 .7;	p2 1.98;	fb2 .5
-	@a3 .5;	p3 3.02;	fb3 .3
+	a V;	@p P;		fb .6
+	@a1 1;	@p1 1;		fb1 .7
+	@a2 .7;	@p2 1.98;	fb2 .5
+	@a3 .5;	@p3 3.02;	fb3 .3
 	d 5
 	100 {
 		*a .95; *a2 .95; *a3 .9
