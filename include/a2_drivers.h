@@ -33,7 +33,8 @@ typedef enum A2_drivertypes
 {
 	A2_ANYDRIVER = 0,	/* Any driver type */
 	A2_SYSDRIVER,		/* System driver (memory manager etc) */
-	A2_AUDIODRIVER		/* Audio I/O driver */
+	A2_AUDIODRIVER,		/* Audio I/O driver */
+	A2_MIDIDRIVER		/* MIDI I/O driver */
 } A2_drivertypes;
 
 
@@ -301,6 +302,45 @@ struct A2_audiodriver
 
 	/* (Implementation specific data may follow) */
 };
+
+/*
+ * Public interface for A2_MIDIDRIVER
+ *
+ *	The Connect() call is used for wiring MIDI channels to voices, which
+ *	will receive MIDI events on the specified MIDI channel, translated to
+ *	voice messages. Connecting to voice 0 will disconnect the voice, and
+ *	subsequent messages on the MIDI channel will be dropped.
+ *
+ *	The Poll() entry point will be called from the engine context whenever
+ *	MIDI events are to be delivered to the engine, typically at the start
+ *	of each engine audio callback.
+ *
+ *	Timing of the Poll() calls well depend on the audio I/O configuration
+ *	of the engine context, which means that for accurate, low jitter MIDI
+ *	timing, a MIDI driver should either use a timestamping MIDI API, or
+ *	interface with the MIDI API via a dedicated high priority thread.
+ */
+typedef struct A2_mididriver A2_mididriver;
+struct A2_mididriver
+{
+	A2_driver	driver;
+
+	/* Operation */
+	A2_errors (*Connect)(A2_mididriver *driver, unsigned channel,
+			A2_handle voice);
+	A2_errors (*Poll)(A2_mididriver *driver, unsigned frames);
+
+	/* (Implementation specific data may follow) */
+};
+
+
+/*
+ * Wire MIDI input to a MIDI handler voice. Events from the specified MIDI
+ * channel are sent as messages to entry point 7 of the specified voice. The
+ * argument list is (Msg Ch Arg1 Arg2). See midi.a2s for MIDI messages and CC
+ * definitions, and miditest.a2s for an example of how to use this interface.
+ */
+A2_errors a2_MIDIHandler(A2_interface *i, int channel, A2_handle voice);
 
 #ifdef __cplusplus
 };

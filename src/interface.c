@@ -190,6 +190,13 @@ void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit)
 		  case A2MT_WAHP:
 			a2r_em_eocevent(st, &am);
 			break;
+		  case A2MT_MIDIHANDLER:
+		  {
+			A2_mididriver *md = am.b.midih.driver;
+			/* FIXME: Error handling! */
+			md->Connect(md, am.b.midih.channel, am.target);
+			break;
+		  }
 #ifdef DEBUG
 		  default:
 			fprintf(stderr, "Audiality 2: Unknown API message "

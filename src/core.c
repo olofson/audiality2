@@ -1866,6 +1866,23 @@ static void a2_ProcessMaster(A2_state *st, unsigned offset, unsigned frames)
 }
 
 
+/* Poll any open MIDI drivers */
+static void a2_PollMIDI(A2_state *st, unsigned frames)
+{
+	A2_driver *d;
+	for(d = st->config->drivers; d; d = d->next)
+	{
+		A2_mididriver *md;
+		if(d->type != A2_MIDIDRIVER)
+			continue;
+		if(!(d->flags & A2_ISOPEN))
+			continue;
+		md = (A2_mididriver *)d;
+		md->Poll(md, frames);
+	}
+}
+
+
 void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 {
 	A2_state *st = (A2_state *)driver->state;
@@ -1898,6 +1915,9 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 	/* Update API message stats */
 	if(st->tssamples)
 		st->tsavg = ((int64_t)st->tssum << 8) / st->tssamples;
+
+	/* MIDI input processing */
+	a2_PollMIDI(st, frames);
 
 	/* Audio processing */
 	while(remain)

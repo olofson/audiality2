@@ -55,6 +55,7 @@ set(sources ${sources}
 	drivers/jackdrv.c
 	drivers/bufferdrv.c
 	drivers/dummydrv.c
+	drivers/alsamididrv.c
 	drivers/mallocdrv.c
 )
 
@@ -69,11 +70,7 @@ endif(SDL_FOUND)
 CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
 find_package(Threads)
 
-#find_package(ALSA)
-#if(ALSA_FOUND)
-#	add_definitions(-DA2_HAVE_ALSA)
-#endif(ALSA_FOUND)
-
+find_package(ALSA)
 
 add_library(audiality2 ${sources})
 
@@ -92,6 +89,12 @@ if(HAVE_JACK_H AND CMAKE_DL_LIBS AND Threads_FOUND)
 	target_link_libraries(audiality2 ${CMAKE_DL_LIBS})
 	target_link_libraries(audiality2 ${CMAKE_THREAD_LIBS_INIT})
 endif()
+
+if(ALSA_FOUND)
+	add_definitions(-DA2_HAVE_ALSA)
+	include_directories(${ALSA_INCLUDE_DIRS})
+	target_link_libraries(audiality2 ${ALSA_LIBRARIES})
+endif(ALSA_FOUND)
 
 if(WIN32)
 	target_link_libraries(audiality2 -lwinmm -ldxguid)

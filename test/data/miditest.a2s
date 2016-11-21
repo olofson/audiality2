@@ -1,0 +1,107 @@
+def title	"MIDITest"
+def version	"1.0"
+def description	"Basic MIDI handler + FM instrument"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import midi as MIDI
+
+// Based on PadFM4R from fmtest3.a2s
+Pad(P V=1)
+{
+	struct { fm4r; panmix }
+
+	// Pitch and velocity "scaling"
+	!D (1.5 - P)
+	if (D < .25) D .25
+	if (D > 2.5) D 2.5
+	*D (V * V)
+	!FB0 (.1 - (P * .001))
+	if (FB0 < .1) FB0 .1
+	!DFB (D * .02 + .2 + FB0)
+
+	p (P - 1.01); p1 .01; p2 .993; p3 1.007
+//	p (P - .004); p1 .005; p2 .006; p3 -.007	// Classic
+//	p (P - 1.004); p1 .005; p2 .006; p3 -.007	// Smooth
+	a (V - (P * .1)); a1 1
+
+	fb DFB; fb1 DFB; fb2 DFB; fb3 DFB;
+	a2 D; a3 D
+
+	set
+
+	fb FB0; fb1 FB0; fb2 FB0; fb3 FB0
+	ramp fb 500; ramp fb1 500; ramp fb2 500; ramp fb3 500
+
+	for {
+		*a2 .9; *a3 .9
+		d 100
+	}
+	end
+
+.rel
+	10 {
+		*a .7; *a2 .7; *a3 .7
+		d 100
+	}
+	a 0; d 10
+	1() { force rel }
+}
+
+export Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay D * *
+		fbdelay D2 * *
+		panmix PM * >
+	}
+
+	!sustain 0
+
+	tempo 80 4
+	D.fbdelay (tick * 5.05);	D.fbgain .02
+	D.ldelay (tick * 6.05);		D.lgain .05
+	D.rdelay (tick * 8.03);		D.rgain .05
+	D2.fbdelay (tick * 6.95);	D2.fbgain .02
+	D2.ldelay (tick * 9.01);	D2.lgain .05
+	D2.rdelay (tick * 11.03);	D2.rgain .05
+	PM.vol .25
+	set
+
+	end
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill
+
+	1() {
+		force stop
+	}
+
+	// MIDI handler entry point
+	7(Msg Ch Arg1 Arg2) {
+		if Msg == MIDI.NOTEOFF {
+			if (not sustain) Arg1<1
+		} else if Msg == MIDI.NOTEON {
+			if Arg2 {
+				Arg1:Pad (Arg1 - 60 / 12) Arg2
+			} else {
+				// "Fake" NoteOff!
+				if (not sustain) Arg1<1
+			}
+		} else if Msg == MIDI.CONTROLCHANGE {
+			if Arg1 == MIDI.SUSTAIN {
+				sustain (Arg2 >= .5)
+				if not sustain {
+					*<1
+				}
+			}
+		}
+	}
+}

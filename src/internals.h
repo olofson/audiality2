@@ -465,6 +465,7 @@ typedef enum A2_evactions
 	A2MT_KILLSUB,	/* a2_KillSub() */
 	A2MT_ADDXIC,	/* Add xinsert client */
 	A2MT_REMOVEXIC,	/* Remove xinsert client */
+	A2MT_MIDIHANDLER,/* Set MIDI input handler */
 
 	/* Engine to API messages */
 	A2MT_DETACH,	/* Free handle if rc 0 otherwise type = A2_TDETACHED */
@@ -517,6 +518,12 @@ typedef union A2_eventbody
 		A2_EVENT_COMMON
 		A2_xinsert_client	*client;
 	} xic;
+	struct
+	{
+		A2_EVENT_COMMON
+		A2_mididriver	*driver;
+		int		channel;
+	} midih;
 } A2_eventbody;
 
 struct A2_event

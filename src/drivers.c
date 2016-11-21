@@ -36,6 +36,9 @@
 #include "dummydrv.h"
 #include "bufferdrv.h"
 
+/* Builtin MIDI drivers */
+#include "alsamididrv.h"
+
 #define A2_DEFAULT_SYSDRIVER	a2_malloc_sysdriver
 
 #ifdef A2_HAVE_SDL
@@ -44,6 +47,10 @@
 # define A2_DEFAULT_AUDIODRIVER	a2_jack_audiodriver
 #else
 # define A2_DEFAULT_AUDIODRIVER	a2_dummy_audiodriver
+#endif
+
+#ifdef A2_HAVE_ALSA
+# define A2_DEFAULT_MIDIDRIVER	a2_alsa_mididriver
 #endif
 
 static void a2_reset_driver_registry(void);
@@ -247,6 +254,9 @@ static A2_regdriver a2_builtin_drivers[] = {
 	{ NULL, A2_SYSDRIVER, 1, "malloc", a2_malloc_sysdriver },
 /*FIXME*/{ NULL, A2_SYSDRIVER, 1, "realtime", a2_malloc_sysdriver },
 	{ NULL, A2_AUDIODRIVER, 1, "default", A2_DEFAULT_AUDIODRIVER },
+#ifdef A2_DEFAULT_MIDIDRIVER
+	{ NULL, A2_MIDIDRIVER, 1, "default", A2_DEFAULT_MIDIDRIVER },
+#endif
 #ifdef A2_HAVE_SDL
 	{ NULL, A2_AUDIODRIVER, 1, "sdl", a2_sdl_audiodriver },
 #endif
@@ -255,6 +265,9 @@ static A2_regdriver a2_builtin_drivers[] = {
 #endif
 	{ NULL, A2_AUDIODRIVER, 1, "dummy", a2_dummy_audiodriver },
 	{ NULL, A2_AUDIODRIVER, 1, "buffer", a2_buffer_audiodriver },
+#ifdef A2_HAVE_ALSA
+	{ NULL, A2_MIDIDRIVER, 1, "alsa", a2_alsa_mididriver },
+#endif
 	{ NULL, 0, 1, NULL, NULL }
 };
 
@@ -608,6 +621,7 @@ const char *a2_DriverTypeName(A2_drivertypes dt)
 	  case A2_ANYDRIVER:	return "<any>";
 	  case A2_SYSDRIVER:	return "SYS";
 	  case A2_AUDIODRIVER:	return "AUDIO";
+	  case A2_MIDIDRIVER:	return "MIDI";
 	  default:		return "<unknown>";
 	}
 }

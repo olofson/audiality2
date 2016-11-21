@@ -43,6 +43,7 @@ static int samplerate = 48000;
 static int channels = 2;
 static int audiobuf = 4096;
 static int a2flags = A2_TIMESTAMP;
+static const char *mididriver = NULL;
 
 /* State and control */
 static A2_interface *iface = NULL;	/* Engine interface */
@@ -281,8 +282,8 @@ static void load_sounds(int argc, const char *argv[])
 	Playing
 -------------------------------------------------------------------*/
 
-/* Parse the body of a -p switch; <name>[,pitch[,vel[,mod[,...]]]] */
-static int play_sound(const char *cmd)
+/* Parse the body of a -p or -M switch; <name>[,pitch[,vel[,mod[,...]]]] */
+static int play_sound(const char *cmd, int midihandler)
 {
 	A2_handle h, vh;
 	int i;
@@ -290,12 +291,14 @@ static int play_sound(const char *cmd)
 	float a[A2_MAXARGS];
 	int ia[A2_MAXARGS];
 	int cnt;
-	printf("Playing %s/%s...\n", a2_Name(iface, module), cmd);
+	printf("Playing %s/%s%s...\n", a2_Name(iface, module), cmd,
+			midihandler ? "(MIDI handler)" : "");
 	cnt = sscanf(cmd, "%[A-Za-z0-9_.],%f,%f,%f,%f,%f,%f,%f,%f", program,
 			a, a + 1, a + 2, a + 3, a + 4, a + 5, a + 6, a + 7);
 	if(cnt <= 0)
 	{
-		fprintf(stderr, "a2play: -p switch with no arguments!\n");
+		fprintf(stderr, "a2play: %s switch with no arguments!\n",
+				midihandler ? "-M" : "-p");
 		return -1;
 	}
 	if((h = a2_Get(iface, module, program)) < 0)
@@ -312,13 +315,16 @@ static int play_sound(const char *cmd)
 				a2_ErrorString(-vh));
 		return -3;
 	}
+	if(midihandler)
+		a2_MIDIHandler(iface, 0, vh);
 	return 1;
 }
 
 
 /*
- * Handle any -p switches. If no -p switches are found, try the default entry
- * point "Song".
+ * Handle any -p or -M switches. If no such switches are found, try the
+ * default entry point "Song", and if a MIDI driver has been selected, also use
+ * this default entry point as a MIDI handler.
  *
  * Returns 1 if one or more programs were started, a negative value if there
  * was an error, otherwise 0.
@@ -333,7 +339,13 @@ static int play_sounds(int argc, const char *argv[])
 			continue;
 		if(strncmp(argv[i], "-p", 2) == 0)
 		{
-			if(play_sound(&argv[i][2]) < 0)
+			if(play_sound(&argv[i][2], 0) < 0)
+				return -1;
+			res = 1;
+		}
+		else if(strncmp(argv[i], "-M", 2) == 0)
+		{
+			if(play_sound(&argv[i][2], 1) < 0)
 				return -1;
 			res = 1;
 		}
@@ -343,7 +355,7 @@ static int play_sounds(int argc, const char *argv[])
 			print_info(0, NULL, module);
 	}
 	if(!res && (a2_Get(iface, module, "Song") >= 0))
-		res = play_sound("Song");
+		res = play_sound("Song", mididriver ? 1: 0);
 	return res;
 }
 
@@ -382,10 +394,17 @@ static void usage(const char *exename)
 			"           -b<n>       Audio buffer size (frames)\n"
 			"           -r<n>       Audio sample rate (Hz)\n"
 			"           -c<n>       Number of audio channels\n"
+			"           -m<name>[,opt[,opt[,...]]]\n"
+			"                       MIDI driver + options\n"
 			"           -s          Read input from stdin\n"
 			"           -p<name>[,arg[,arg[,...]]]\n"
 			"                       Run program <name> with the "
 			"specified arguments\n"
+			"           -M<name>[,arg[,arg[,...]]]\n"
+			"                       Like -p, but use program as "
+			"MIDI handler\n"
+			"                       (Implies '-mdefault' if -m is "
+			"not specified)\n"
 			"           -st<n>      Stop time (seconds)\n"
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
 			"           -x          Print module exports\n"
@@ -440,8 +459,18 @@ static void parse_args(int argc, const char *argv[])
 			channels = atoi(&argv[i][2]);
 			printf("[Audio channels: %d]\n", channels);
 		}
+		else if(strncmp(argv[i], "-m", 2) == 0)
+		{
+			mididriver = &argv[i][2];
+			printf("[MIDI driver: %s]\n", mididriver);
+		}
 		else if(strncmp(argv[i], "-p", 2) == 0)
 			;
+		else if(strncmp(argv[i], "-M", 2) == 0)
+		{
+			if(!mididriver)
+				mididriver = "default";
+		}
 		else if(strncmp(argv[i], "-s", 3) == 0)	/* No args! */
 		{
 			readstdin = 1;
@@ -561,13 +590,20 @@ int main(int argc, const char *argv[])
 	parse_args(argc, argv);
 
 	/* Configure and open engine */
-	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
-		fail(a2_LastError());
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
 			a2flags | A2_STATECLOSE)))
 		fail(a2_LastError());
+	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
+		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
+	if(mididriver)
+	{
+		if(!(drv = a2_NewDriver(A2_MIDIDRIVER, mididriver)))
+			fail(a2_LastError());
+		if(a2_AddDriver(cfg, drv))
+			fail(a2_LastError());
+	}
 	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(samplerate != cfg->samplerate)

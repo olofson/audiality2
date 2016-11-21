@@ -366,6 +366,28 @@ float a2_Rand(A2_interface *i, float max)
 }
 
 
+A2_errors a2_MIDIHandler(A2_interface *i, int channel, A2_handle voice)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	A2_apimessage am;
+	A2_driver *d;
+	for(d = st->config->drivers; d; d = d->next)
+		if((d->type == A2_MIDIDRIVER) && (d->flags & A2_ISOPEN))
+			break;
+	if(!d)
+		return A2_DRIVERNOTFOUND;
+	if(!(ii->flags & A2_TIMESTAMP))
+		a2_TimestampReset(i);
+	am.target = voice;
+	am.b.common.action = A2MT_MIDIHANDLER;
+	am.b.common.timestamp = ii->timestamp;
+	am.b.midih.driver = (A2_mididriver *)d;
+	am.b.midih.channel = channel;
+	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.midih));
+}
+
+
 /*---------------------------------------------------------
 	Handle types for API objects
 ---------------------------------------------------------*/
