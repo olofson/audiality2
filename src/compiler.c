@@ -1748,12 +1748,17 @@ static int a2c_IsBinOp(A2_opcodes op)
 static void a2c_SimplExp(A2_compiler *c, int r);
 
 /*
- * Expression, terminated with the token specified by 'delim'
+ * Parse expression, until an unexpected token is encountered. If 'delim' is
+ * non-zero, this unexpected token, which must equal 'delim', is dropped.
  * 
  * 'r' works the same way as with a2c_SimplExp().
+ *
+ * Returns 1 if the expression is simple; that is, either enclosed in
+ * parentheses, or consisting of a single term only.
  */
-static void a2c_Expression(A2_compiler *c, int r, int delim)
+static int a2c_Expression(A2_compiler *c, int r, int delim)
 {
+	int simple = 1;
 	int res_tk = TK_REGISTER;
 
 	a2c_SimplExp(c, r);
@@ -1773,12 +1778,6 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 		A2_lexvalue lopr;
 		switch(a2c_Lex(c, A2_LEX_WHITENEWLINE))
 		{
-		  case TK_INSTRUCTION:
-			op = a2c_GetIndex(c, c->l);
-			if(!a2c_IsBinOp(op))
-				a2c_Throw(c, A2_EXPBINOP);
-			break;
-
 		  /* Immediate/register operator instruction pairs */
 		  case '+':		op = OP_ADD;	break;
 		  case '*':		op = OP_MUL;	break;
@@ -1799,17 +1798,42 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 		  case KW_OR:		op = OP_ORR;	break;
 		  case KW_XOR:		op = OP_XORR;	break;
 
+		  case TK_INSTRUCTION:
+			op = a2c_GetIndex(c, c->l);
+			if(a2c_IsBinOp(op))
+				break;
+			if(!delim)
+			{
+				/*
+				 * Unary operator or something - but we have no
+				 * delimiter, so we leave that to the caller!
+				 */
+				a2c_Unlex(c);
+				return simple;
+			}
+			else
+				a2c_Throw(c, A2_EXPBINOP);
+			break;
+
 		  default:
 			/* We're either done, or there's a parse error! */
-			if(c->l[0].token != delim)
-				a2c_Throw(c, A2_EXPOP);
-			/*
-			 * Drop the delimiter token, leaving the previous token
-			 * as our final result!
-			 */
-			a2c_DropToken(c);
-			return;
+			if(delim)
+			{
+				if(c->l[0].token != delim)
+					a2c_Throw(c, A2_EXPOP);
+				/*
+				 * Drop the delimiter token, leaving the
+				 * previous token as our final result!
+				 */
+				a2c_DropToken(c);
+			}
+			else
+				a2c_Unlex(c);
+			return simple;
 		}
+
+		/* If we get here, this is not a simple expression! */
+		simple = 0;
 
 		/*
 		 * Grab the left operand, as further parsing may recursively
@@ -2486,7 +2510,8 @@ static void a2c_Def(A2_compiler *c, int export)
 }
 
 
-static void a2c_Body(A2_compiler *c, A2_tokens terminator);
+static void a2c_Body(A2_compiler *c);
+static int a2c_Statement(A2_compiler *c, A2_tokens terminator);
 
 
 static void a2c_ArgList(A2_compiler *c, A2_function *fn)
@@ -3076,7 +3101,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	c->inhandler = c->nocode = 0;
 	if(c->coder->program->units)
 		a2c_Code(c, OP_INITV, 0, 0);
-	a2c_Body(c, '}');
+	a2c_Body(c);
 	if(!c->nocode)
 		a2c_Code(c, OP_END, 0, 0);
 	a2c_EndScope(c, &sc);
@@ -3103,7 +3128,7 @@ static void a2c_FuncDef(A2_compiler *c, A2_symbol *s)
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
 	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
-	a2c_Body(c, '}');
+	a2c_Body(c);
 	a2c_Code(c, OP_RETURN, 0, 0);
 	a2c_EndScope(c, &sc);
 	a2c_PopCoder(c);
@@ -3127,7 +3152,7 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 	a2c_Expect(c, '{', A2_EXPBODY);
 	c->inhandler = 1;
 	c->nocode = 0;
-	a2c_Body(c, '}');
+	a2c_Body(c);
 	a2c_Code(c, OP_RETURN, 0, 0);
 	c->inhandler = 0;
 	a2c_EndScope(c, &sc);
@@ -3352,28 +3377,31 @@ static void a2c_WaveDef(A2_compiler *c, int export)
 
 static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 {
-	int fixpos, loopto = c->coder->pos;
-	if(a2c_Lex(c, 0) == '(')
+	int fixpos, simple, braced, loopto = c->coder->pos;
+	simple = a2c_Expression(c, -1, 0);
+	a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
+	if(!simple)
 	{
-		a2c_Unlex(c);
-		a2c_SimplExp(c, -1);
-		a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
-		a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 		a2c_Expect(c, '{', A2_EXPBODY);
+		a2c_Body(c);
 	}
 	else
 	{
+		if(a2c_Lex(c, 0) == TK_IF)
+			a2c_Throw(c, A2_BADIFNEST);
 		a2c_Unlex(c);
-		a2c_Expression(c, -1, '{');
-		a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
+		a2c_Statement(c, TK_EOS);
 	}
-	a2c_Body(c, '}');
+	braced = (c->l[0].token == '}');
 	if(a2c_Lex(c, A2_LEX_WHITENEWLINE) == KW_ELSE)
 	{
 		int fixelse = c->coder->pos;
 		if(loop)
 			a2c_Throw(c, A2_NEXPELSE);
-		a2c_Code(c, OP_JUMP, 0, A2_UNDEFJUMP);	/* To skip over 'else' body */
+		if(!braced)
+			a2c_Throw(c, A2_BADELSE);
+		a2c_Code(c, OP_JUMP, 0, A2_UNDEFJUMP);	/* Skip 'else' body */
 		if(fixpos >= 0)		/* False condition lands here! */
 		{
 			a2c_SetA2(c, fixpos, c->coder->pos);
@@ -3382,9 +3410,13 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 				a2_DumpIns(c->coder->code, fixpos);
 			)
 		}
-		a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
-		a2c_Expect(c, '{', A2_EXPBODY);
-		a2c_Body(c, '}');
+
+		/* Only allow newlines if the statement is a braced body! */
+		braced = (a2c_Lex(c, A2_LEX_WHITENEWLINE) == '{');
+		a2c_Unlex(c);
+		a2c_SkipWhite(c, braced ? A2_LEX_WHITENEWLINE : 0);
+
+		a2c_Statement(c, TK_EOS);
 		a2c_SetA2(c, fixelse, c->coder->pos);
 		DUMPCODE(
 			fprintf(stderr, "FIXUP: ");
@@ -3418,7 +3450,7 @@ static void a2c_TimesL(A2_compiler *c)
 	loopto = c->coder->pos;
 	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
-	a2c_Body(c, '}');
+	a2c_Body(c);
 	a2c_Code(c, OP_LOOP, r, loopto);
 	a2c_FreeReg(c, r);
 }
@@ -3429,11 +3461,15 @@ static void a2c_For(A2_compiler *c)
 	int loopto = c->coder->pos;
 	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
-	a2c_Body(c, '}');
+	a2c_Body(c);
 	a2c_Code(c, OP_JUMP, 0, loopto);
 }
 
 
+/*
+ * Attempt to parse exactly one statement. If 'terminator' is TK_EOS, empty
+ * statements are not allowed.
+ */
 static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 {
 	int setprefix = 0;
@@ -3723,19 +3759,21 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		a2c_For(c);
 		return 1;
 	  case '{':
-		a2c_Body(c, '}');
+		a2c_Body(c);
 		return 1;
 	  case TK_EOS:
+		if(terminator == TK_EOS)
+			a2c_Throw(c, A2_EXPSTATEMENT);
 		return 1;
 	  default:
-		if(c->l[0].token != terminator)
+		if(terminator && (c->l[0].token != terminator))
 			a2c_Throw(c, A2_NEXPTOKEN);
 		return 0;
 	}
 	/* Finalizer for statements that expect a terminator */
 	if(a2c_Lex(c, 0) == TK_EOS)
 		return 1;
-	if(c->l[0].token != terminator)
+	if(terminator && (c->l[0].token != terminator))
 		a2c_Throw(c, A2_EXPEOS);
 	return 0;
 }
@@ -3748,11 +3786,11 @@ static void a2c_Statements(A2_compiler *c, A2_tokens terminator)
 }
 
 
-static void a2c_Body(A2_compiler *c, A2_tokens terminator)
+static void a2c_Body(A2_compiler *c)
 {
 	A2_scope sc;
 	a2c_BeginScope(c, &sc);
-	a2c_Statements(c, terminator);
+	a2c_Statements(c, '}');
 	a2c_EndScope(c, &sc);
 }
 

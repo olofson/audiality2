@@ -171,6 +171,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(COUTWIRED,		"Control output is already wired")\
   \
   A2_DEFERR(EXPEOS,		"Expected end of statement")\
+  A2_DEFERR(EXPSTATEMENT,	"Expected a non-empty statement")\
   A2_DEFERR(EXPCLOSE,		"Expected closing brace")\
   A2_DEFERR(EXPNAME,		"Expected name")\
   A2_DEFERR(EXPVALUE,		"Expected value")\
@@ -220,6 +221,8 @@ typedef enum A2_sampleformats
   A2_DEFERR(BADOCTESCAPE,	"Bad octal escape format in string literal")\
   A2_DEFERR(BADDECESCAPE,	"Bad decimal escape format in string literal")\
   A2_DEFERR(BADHEXESCAPE,	"Bad hex escape format in string literal")\
+  A2_DEFERR(BADIFNEST,		"Nested 'if' without braces")\
+  A2_DEFERR(BADELSE,		"Use of 'else' after non-braced statement")\
   \
   A2_DEFERR(CANTEXPORT,		"Cannot export from this scope")\
   A2_DEFERR(CANTINPUT,		"Unit cannot have inputs")\
