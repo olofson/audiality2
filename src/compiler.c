@@ -1818,7 +1818,7 @@ static void a2c_Expression(A2_compiler *c, int r, int delim)
 		lopr = c->l[1];
 
 		/* Parse right hand operand */
-		a2c_SkipWhite(c, 1);
+		a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 		a2c_SimplExp(c, -1);
 		if(a2_IsHandle(c->l[0].token))
 			a2c_Throw(c, A2_NEXPHANDLE);
@@ -3070,7 +3070,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 		a2c_Throw(c, A2_INTERNAL + 131); /* Should be impossible! */
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[0]);
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_StructDef(c);
 	c->inhandler = c->nocode = 0;
@@ -3101,7 +3101,7 @@ static void a2c_FuncDef(A2_compiler *c, A2_symbol *s)
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_RETURN, 0, 0);
@@ -3123,7 +3123,7 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	c->inhandler = 1;
 	c->nocode = 0;
@@ -3324,7 +3324,7 @@ static void a2c_WaveDef(A2_compiler *c, int export)
 		wd.symbol->flags |= A2_SF_EXPORTED;
 	a2_PushSymbol(&c->symbols, wd.symbol);
 
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_BeginScope(c, &sc);
 
@@ -3358,7 +3358,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_Unlex(c);
 		a2c_SimplExp(c, -1);
 		a2c_Branch(c, op, A2_UNDEFJUMP, &fixpos);
-		a2c_SkipWhite(c, 1);
+		a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 		a2c_Expect(c, '{', A2_EXPBODY);
 	}
 	else
@@ -3382,7 +3382,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 				a2_DumpIns(c->coder->code, fixpos);
 			)
 		}
-		a2c_SkipWhite(c, 1);
+		a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 		a2c_Expect(c, '{', A2_EXPBODY);
 		a2c_Body(c, '}');
 		a2c_SetA2(c, fixelse, c->coder->pos);
@@ -3416,7 +3416,7 @@ static void a2c_TimesL(A2_compiler *c)
 	int loopto, r = a2c_AllocReg(c, A2RT_TEMPORARY);
 	a2c_CodeOpL(c, OP_LOAD, r, c->l);
 	loopto = c->coder->pos;
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_LOOP, r, loopto);
@@ -3427,7 +3427,7 @@ static void a2c_TimesL(A2_compiler *c)
 static void a2c_For(A2_compiler *c)
 {
 	int loopto = c->coder->pos;
-	a2c_SkipWhite(c, 1);
+	a2c_SkipWhite(c, A2_LEX_WHITENEWLINE);
 	a2c_Expect(c, '{', A2_EXPBODY);
 	a2c_Body(c, '}');
 	a2c_Code(c, OP_JUMP, 0, loopto);
