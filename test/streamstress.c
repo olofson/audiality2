@@ -62,27 +62,27 @@ typedef struct STREAMOSC
 
 
 /* Create and start streaming oscillator. Returns 0 (A2_OK) on success. */
-static A2_errors so_Start(A2_state *st, STREAMOSC *so)
+static A2_errors so_Start(A2_interface *iface, STREAMOSC *so)
 {
 	float f1, f2;
-	float dur = 200.0f + a2_Rand(st, 2000.0f);
-	A2_handle vh = a2_Start(st, a2_RootVoice(st), streamprogram,
+	float dur = 200.0f + a2_Rand(iface, 2000.0f);
+	A2_handle vh = a2_Start(iface, a2_RootVoice(iface), streamprogram,
 			0.1f,				/* velocity */
-			a2_Rand(st, 2.0f) - 1.0f,	/* pan */
+			a2_Rand(iface, 2.0f) - 1.0f,	/* pan */
 			dur);				/* duration */
 	if(vh < 0)
 		return vh;
-	so->stream = a2_OpenSource(st, vh, 0,
+	so->stream = a2_OpenSource(iface, vh, 0,
 			samplerate * STREAMBUFFER / 1000, 0);
 	if(so->stream < 0)
 		return so->stream;
 	so->ph1 = so->ph2 = 0.0f;
-	f1 = 100.0f + a2_Rand(st, 500.0f);
-	f2 = 100.0f + a2_Rand(st, 1000.0f);
+	f1 = 100.0f + a2_Rand(iface, 500.0f);
+	f2 = 100.0f + a2_Rand(iface, 1000.0f);
 	so->dph1 = 2.0f * M_PI * f1 / samplerate;
 	so->dph2 = 2.0f * M_PI * f2 / samplerate;
-	so->depth = a2_Rand(st, 7.0f);
-	a2_Release(st, vh);
+	so->depth = a2_Rand(iface, 7.0f);
+	a2_Release(iface, vh);
 	printf("f1: %f\tf2: %f\tdepth: %f\tduration: %f\n",
 			f1, f2, so->depth, dur);
 	return A2_OK;
@@ -94,17 +94,17 @@ static A2_errors so_Start(A2_state *st, STREAMOSC *so)
  * Returns 0 (A2_OK) on success. If the voice has terminated and closed the
  * stream on the engine side, a new voice is started, and a new stream set up.
  */
-static A2_errors so_Run(A2_state *st, STREAMOSC *so)
+static A2_errors so_Run(A2_interface *iface, STREAMOSC *so)
 {
 	A2_errors res;
 	int n;
-	if((so->stream <= 0) || ((n = a2_Space(st, so->stream)) < 0))
+	if((so->stream <= 0) || ((n = a2_Space(iface, so->stream)) < 0))
 	{
 		if(so->stream >= 0)
-			a2_Release(st, so->stream);
-		if((res = so_Start(st, so)))
+			a2_Release(iface, so->stream);
+		if((res = so_Start(iface, so)))
 			return res;
-		n = a2_Space(st, so->stream);
+		n = a2_Space(iface, so->stream);
 	}
 	while(n >= FRAGSIZE)
 	{
@@ -117,7 +117,8 @@ static A2_errors so_Run(A2_state *st, STREAMOSC *so)
 			so->ph1 += so->dph1;
 			so->ph2 += so->dph2;
 		}
-		if((res = a2_Write(st, so->stream, A2_I24, buf, sizeof(buf))))
+		if((res = a2_Write(iface, so->stream, A2_I24,
+				buf, sizeof(buf))))
 			return -res;
 		n -= FRAGSIZE;
 	}
@@ -187,7 +188,8 @@ static void breakhandler(int a)
 
 static void fail(A2_errors err)
 {
-	fprintf(stderr, "ERROR, Audiality 2 result: %s\n", a2_ErrorString(err));
+	fprintf(stderr, "ERROR, Audiality 2 result: %s\n",
+			a2_ErrorString(err));
 	exit(100);
 }
 
@@ -197,7 +199,7 @@ int main(int argc, const char *argv[])
 	A2_handle h;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 	STREAMOSC streams[STREAMS];
 	memset(streams, 0, sizeof(streams));
 	signal(SIGTERM, breakhandler);
@@ -214,16 +216,16 @@ int main(int argc, const char *argv[])
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load streaming voice program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(-h);
-	if((streamprogram = a2_Get(state, h, "StreamStressVoice")) < 0)
+	if((streamprogram = a2_Get(iface, h, "StreamStressVoice")) < 0)
 		fail(-streamprogram);
 
 	/* Start playing! */
@@ -233,18 +235,21 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		int i;
-		a2_TimestampReset(state);
+		A2_errors res;
+		a2_TimestampReset(iface);
 		for(i = 0; i < STREAMS; ++i)
-			so_Run(state, &streams[i]);
+			if((res = so_Run(iface, &streams[i])))
+				fprintf(stderr, "so_Run() failed: %s\n",
+						a2_ErrorString(res));
 		a2_Sleep(POLLPERIOD);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
 	/* Fade root voice down to 0. (It will do a 100 ms ramp!) */
-	a2_TimestampReset(state);
-	a2_Send(state, a2_RootVoice(state), 2, 0.0f);
+	a2_TimestampReset(iface);
+	a2_Send(iface, a2_RootVoice(iface), 2, 0.0f);
 	a2_Sleep(200);
 
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

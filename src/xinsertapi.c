@@ -1,7 +1,7 @@
 /*
  * xinsertapi.c - Audiality 2 xinsert callback and buffered stream APIs
  *
- * Copyright 2014 David Olofson <david@olofson.net>
+ * Copyright 2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -26,9 +26,11 @@
 
 
 /* Pass client to the engine context. Return a handle for the client. */
-static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
+static A2_handle a2_add_xic(A2_interface *i, A2_handle voice,
 		A2_xinsert_client *xic)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_errors res;
 	A2_apimessage am;
 
@@ -46,10 +48,10 @@ static A2_handle a2_add_xic(A2_state *st, A2_handle voice,
 
 	/* Tell engine context to install the client! */
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_TimestampReset(st);
+		a2_TimestampReset(i);
 	am.target = voice;
 	am.b.common.action = A2MT_ADDXIC;
-	am.b.common.timestamp = st->timestamp;
+	am.b.common.timestamp = ii->timestamp;
 	am.b.xic.client = xic;
 	res = a2_writemsg(st->fromapi, &am, A2_MSIZE(b.xic));
 	if(res)
@@ -109,9 +111,10 @@ A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
 }
 
 
-A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
+A2_errors a2_XinsertRemoveClient(A2_xinsert_client *xic)
 {
 	A2_errors res;
+	A2_state *st = xic->unit ? xic->unit->state : NULL;
 
 	if(xic->unit)
 	{
@@ -134,7 +137,7 @@ A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
 		a2r_Error(st, res, "xinsert client; removal notification");
 
 	/* Destroy entry in a suitable fashion for the engine context */
-	if(st->config->flags & A2_REALTIME)
+	if(st && (st->config->flags & A2_REALTIME))
 	{
 		A2_apimessage am;
 		am.b.common.action = A2MT_XICREMOVED;
@@ -154,7 +157,7 @@ A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic)
 	Callback xinsert interface
 ---------------------------------------------------------*/
 
-A2_handle a2_SinkCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SinkCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata)
 {
 	A2_handle h;
@@ -165,13 +168,13 @@ A2_handle a2_SinkCallback(A2_state *st, A2_handle voice,
 	xic->callback = callback;
 	xic->userdata = userdata;
 	xic->flags = A2_XI_READ;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
+	if((h = a2_add_xic(i, voice, xic)) < 0)
 		free(xic);
 	return h;
 }
 
 
-A2_handle a2_SourceCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SourceCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata)
 {
 	A2_handle h;
@@ -182,13 +185,13 @@ A2_handle a2_SourceCallback(A2_state *st, A2_handle voice,
 	xic->callback = callback;
 	xic->userdata = userdata;
 	xic->flags = A2_XI_WRITE;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
+	if((h = a2_add_xic(i, voice, xic)) < 0)
 		free(xic);
 	return h;
 }
 
 
-A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
+A2_handle a2_InsertCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata)
 {
 	A2_handle h;
@@ -199,7 +202,7 @@ A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
 	xic->callback = callback;
 	xic->userdata = userdata;
 	xic->flags = A2_XI_READ | A2_XI_WRITE;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
+	if((h = a2_add_xic(i, voice, xic)) < 0)
 		free(xic);
 	return h;
 }
@@ -209,7 +212,7 @@ A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
 	Buffered stream xinsert interface
 ---------------------------------------------------------*/
 
-static A2_handle a2_open_xic_stream(A2_state *st, A2_handle voice,
+static A2_handle a2_open_xic_stream(A2_interface *i, A2_handle voice,
 		int channel, int size, unsigned flags,
 		A2_xinsert_cb callback, unsigned xiflags)
 {
@@ -225,17 +228,17 @@ static A2_handle a2_open_xic_stream(A2_state *st, A2_handle voice,
 	xic->flags = A2_XI_STREAM | xiflags;
 	if(flags & A2_RTSILENT)
 		xic->flags |= A2_XI_SILENT;
-	if((h = a2_add_xic(st, voice, xic)) < 0)
+	if((h = a2_add_xic(i, voice, xic)) < 0)
 	{
 		free(xic);
 		return h;
 	}
 
 	/* Then open a stream on it! */
-	sh = a2_OpenStream(st, h, channel, size, flags);
+	sh = a2_OpenStream(i, h, channel, size, flags);
 
 	/* NOTE: This also does the right thing if a2_OpenStream() fails! */
-	a2_Release(st, h);	/* Owned only by the stream! */
+	a2_Release(i, h);	/* Owned only by the stream! */
 	return sh;
 }
 
@@ -273,10 +276,10 @@ static A2_errors a2_sinkstream_process(int **buffers, unsigned nbuffers,
 	return A2_OK;
 }
 
-A2_handle a2_OpenSink(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSink(A2_interface *i, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
-	return a2_open_xic_stream(st, voice, channel, size, flags,
+	return a2_open_xic_stream(i, voice, channel, size, flags,
 			a2_sinkstream_process, A2_XI_READ);
 }
 
@@ -315,10 +318,10 @@ static A2_errors a2_sourcestream_process(int **buffers, unsigned nbuffers,
 	return A2_OK;
 }
 
-A2_handle a2_OpenSource(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSource(A2_interface *i, A2_handle voice,
 		int channel, int size, unsigned flags)
 {
-	return a2_open_xic_stream(st, voice, channel, size, flags,
+	return a2_open_xic_stream(i, voice, channel, size, flags,
 			a2_sourcestream_process, A2_XI_WRITE);
 }
 
@@ -442,10 +445,10 @@ static RCHM_errors xi_destructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 	A2_xinsert_client *xic = (A2_xinsert_client *)hi->d.data;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
 	if(!(st->config->flags & A2_TIMESTAMP))
-		a2_TimestampReset(st);
+		a2_TimestampReset(&st->interfaces->interface);
 	am.target = xic->voice;
 	am.b.common.action = A2MT_REMOVEXIC;
-	am.b.common.timestamp = st->timestamp;
+	am.b.common.timestamp = st->interfaces->timestamp;
 	am.b.xic.client = xic;
 	a2_writemsg(st->fromapi, &am, A2_MSIZE(b.xic));
 	return RCHM_REFUSE;

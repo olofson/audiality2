@@ -219,7 +219,7 @@ static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms,
 	return A2_OK;
 }
 
-static void fbdelay_Deinitialize(A2_unit *u, A2_state *st)
+static void fbdelay_Deinitialize(A2_unit *u)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
 /*FIXME: Use realtime safe memory manager! */

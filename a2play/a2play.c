@@ -45,7 +45,7 @@ static int audiobuf = 4096;
 static int a2flags = A2_TIMESTAMP;
 
 /* State and control */
-static A2_state *state = NULL;	/* Engine state */
+static A2_interface *iface = NULL;	/* Engine interface */
 static A2_handle module = -1;	/* Handle of last loaded module */
 
 static double stoptime = 0.0f;	/* (Need final sample rate for stopframes!) */
@@ -56,8 +56,8 @@ static unsigned silencewindow;
 
 static int do_exit = 0;
 
-/* Silence detector state */
-static unsigned lastpeak = 0;	/* Frames since last peak > abs(silencelevel) */
+/* Silence detector state; frames since last peak > abs(silencelevel) */
+static unsigned lastpeak = 0;
 
 
 /*-------------------------------------------------------------------
@@ -106,10 +106,10 @@ static void print_info(int indent, const char *xname, A2_handle h)
 {
 	int i;
 	A2_handle x;
-	A2_otypes t = a2_TypeOf(state, h);
-	const char *name = a2_Name(state, h);
-	int has_exports = a2_GetExport(state, h, 0) >= 1;
-	int has_private = show_private && (a2_GetExport(state, h, -1) >= 1);
+	A2_otypes t = a2_TypeOf(iface, h);
+	const char *name = a2_Name(iface, h);
+	int has_exports = a2_GetExport(iface, h, 0) >= 1;
+	int has_private = show_private && (a2_GetExport(iface, h, -1) >= 1);
 	for(i = 0; i < indent; ++i)
 		printf("| ");
 	if(xname)
@@ -118,14 +118,14 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		printf("%-24s", name);
 	else
 		printf("%-24d", h);
-	printf("%-12s", a2_TypeName(state, t));
+	printf("%-12s", a2_TypeName(iface, t));
 	switch(t)
 	{
 	  case A2_TBANK:
 		break;
 	  case A2_TWAVE:
 	  {
-		A2_wave *w = a2_GetWave(state, h);
+		A2_wave *w = a2_GetWave(iface, h);
 		switch(w->type)
 		{
 		  case A2_WOFF:
@@ -163,7 +163,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	  case A2_TUNIT:
 	  {
-		const A2_unitdesc *ud = a2_GetUnitDescriptor(state, h);
+		const A2_unitdesc *ud = a2_GetUnitDescriptor(iface, h);
 
 		/* Inputs and outputs */
 		if(ud->maxinputs)
@@ -208,7 +208,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	  }
 	  case A2_TSTRING:
-		printf("%s", a2_String(state, h));
+		printf("%s", a2_String(iface, h));
 		break;
 	  case A2_TSTREAM:
 	  case A2_TDETACHED:
@@ -223,8 +223,8 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		for(i = 0; i < indent; ++i)
 			printf("| ");
 		printf("|----------------(exports)-------------------\n");
-		for(i = 0; (x = a2_GetExport(state, h, i)) >= 0; ++i)
-			print_info(indent + 1, a2_GetExportName(state, h, i),
+		for(i = 0; (x = a2_GetExport(iface, h, i)) >= 0; ++i)
+			print_info(indent + 1, a2_GetExportName(iface, h, i),
 					x);
 	}
 	if(has_private)
@@ -232,8 +232,8 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		for(i = 0; i < indent; ++i)
 			printf("| ");
 		printf("|-------------(private symbols)--------------\n");
-		for(i = -1; (x = a2_GetExport(state, h, i)) >= 0; --i)
-			print_info(indent + 1, a2_GetExportName(state, h, i),
+		for(i = -1; (x = a2_GetExport(iface, h, i)) >= 0; --i)
+			print_info(indent + 1, a2_GetExportName(iface, h, i),
 					x);
 	}
 	if(has_exports || has_private)
@@ -258,18 +258,18 @@ static void load_sounds(int argc, const char *argv[])
 		A2_handle h;
 		if(argv[i][0] == '-')
 			continue;
-		if((h = a2_Load(state, argv[i], 0)) < 0)
+		if((h = a2_Load(iface, argv[i], 0)) < 0)
 		{
 			fprintf(stderr, "Could not load \"%s\"! (%s)\n",
 					argv[i], a2_ErrorString(-h));
 			continue;
 		}
-		a2_Export(state, A2_ROOTBANK, h, NULL);
+		a2_Export(iface, A2_ROOTBANK, h, NULL);
 		module = h;
 		fprintf(stderr, "Loaded \"%s\" - %s - %s\n",
-				a2_Name(state, h),
-				a2_String(state, a2_Get(state, h, "author")),
-				a2_String(state, a2_Get(state, h, "title")));
+				a2_Name(iface, h),
+				a2_String(iface, a2_Get(iface, h, "author")),
+				a2_String(iface, a2_Get(iface, h, "title")));
 	}
 }
 
@@ -287,7 +287,7 @@ static int play_sound(const char *cmd)
 	float a[A2_MAXARGS];
 	int ia[A2_MAXARGS];
 	int cnt;
-	printf("Playing %s/%s...\n", a2_Name(state, module), cmd);
+	printf("Playing %s/%s...\n", a2_Name(iface, module), cmd);
 	cnt = sscanf(cmd, "%[A-Za-z0-9_.],%f,%f,%f,%f,%f,%f,%f,%f", program,
 			a, a + 1, a + 2, a + 3, a + 4, a + 5, a + 6, a + 7);
 	if(cnt <= 0)
@@ -295,7 +295,7 @@ static int play_sound(const char *cmd)
 		fprintf(stderr, "a2play: -p switch with no arguments!\n");
 		return -1;
 	}
-	if((h = a2_Get(state, module, program)) < 0)
+	if((h = a2_Get(iface, module, program)) < 0)
 	{
 		fprintf(stderr, "a2play: a2_Get(\"%s\"): %s\n", program,
 				a2_ErrorString(-h));
@@ -303,7 +303,7 @@ static int play_sound(const char *cmd)
 	}
 	for(i = 0; i < cnt - 1; ++i)
 		ia[i] = a[i] * 65536.0f;
-	if((vh = a2_Starta(state, a2_RootVoice(state), h, cnt - 1, ia)) < 0)
+	if((vh = a2_Starta(iface, a2_RootVoice(iface), h, cnt - 1, ia)) < 0)
 	{
 		fprintf(stderr, "a2play: a2_Starta(): %s\n",
 				a2_ErrorString(-vh));
@@ -339,7 +339,7 @@ static int play_sounds(int argc, const char *argv[])
 		else if(strncmp(argv[i], "-x", 3) == 0)
 			print_info(0, NULL, module);
 	}
-	if(!res && (a2_Get(state, module, "Song") >= 0))
+	if(!res && (a2_Get(iface, module, "Song") >= 0))
 		res = play_sound("Song");
 	return res;
 }
@@ -565,7 +565,7 @@ int main(int argc, const char *argv[])
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(samplerate != cfg->samplerate)
 		printf("a2play: Actual sample rate: %d (requested %d)\n",
@@ -582,29 +582,29 @@ int main(int argc, const char *argv[])
 		size_t len;
 		if(!read_until_eof(stdin, &buf, &len))
 		{
-			a2_Close(state);
+			a2_Close(iface);
 			return 1;
 		}
-		if((h = a2_LoadString(state, buf, "stdin")) < 0)
+		if((h = a2_LoadString(iface, buf, "stdin")) < 0)
 		{
 			fprintf(stderr, "Could not compile A2S from stdin!"
 					" (%s)\n", a2_ErrorString(-h));
-			a2_Close(state);
+			a2_Close(iface);
 			return 1;
 		}
-		a2_Export(state, A2_ROOTBANK, h, NULL);
+		a2_Export(iface, A2_ROOTBANK, h, NULL);
 		module = h;
 		free(buf);
 	}
 
 	/* Start playing! */
-	a2_TimestampReset(state);
-	tcb = a2_SinkCallback(state, a2_RootVoice(state), sink_process, NULL);
+	a2_TimestampReset(iface);
+	tcb = a2_SinkCallback(iface, a2_RootVoice(iface), sink_process, NULL);
 	if(tcb < 0)
 		fail(-tcb);
 	if(play_sounds(argc, argv) != 1)
 	{
-		a2_Close(state);
+		a2_Close(iface);
 		return 1;
 	}
 
@@ -615,15 +615,15 @@ int main(int argc, const char *argv[])
 		/* Wait for completion or abort */
 		while(!do_exit)
 		{
-			a2_PumpMessages(state);
+			a2_PumpMessages(iface);
 			a2_Sleep(10);
 		}
 
 		fprintf(stderr, "a2play: Stopping...\n");
 
 		/* Fade out */
-		a2_TimestampReset(state);
-		a2_Send(state, a2_RootVoice(state), 2, 0.0f);
+		a2_TimestampReset(iface);
+		a2_Send(iface, a2_RootVoice(iface), 2, 0.0f);
 		/* FIXME: Account for actual output latency! */
 		a2_Sleep(200);
 	}
@@ -632,14 +632,14 @@ int main(int argc, const char *argv[])
 		printf("a2play: Offline mode.\n");
 		while(!do_exit)
 		{
-			a2_Run(state, cfg->buffer);
-			a2_PumpMessages(state);
+			a2_Run(iface, cfg->buffer);
+			a2_PumpMessages(iface);
 		}
 	}
 	fprintf(stderr, "a2play: Stopped. %d sample frames played.\n", 
 			playedframes);
 
 	/* Close and clean up */
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

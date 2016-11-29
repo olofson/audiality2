@@ -38,14 +38,14 @@ static int testthread(void *data)
 	while(!do_exit)
 	{
 		A2_config *cfg;
-		A2_state *st;
+		A2_interface *iface;
 		if(!(cfg = a2_OpenConfig(48000, 1024, 2, A2_STATECLOSE)))
 			fail(a2_LastError());
 		if(a2_AddDriver(cfg, a2_NewDriver(A2_AUDIODRIVER, "dummy")))
 			fail(a2_LastError());
-		if(!(st = a2_Open(cfg)))
+		if(!(iface = a2_Open(cfg)))
 			fail(a2_LastError());
-		a2_Close(st);
+		a2_Close(iface);
 #ifdef SPARSE
 		SDL_Delay(10);
 #endif

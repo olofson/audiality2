@@ -92,19 +92,20 @@ FIXME: These don't really fit here, as states don't have handles.
 
 } A2_properties;
 
-A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v);
-A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v);
+A2_errors a2_GetProperty(A2_interface *i, A2_handle h, A2_properties p,
+		int *v);
+A2_errors a2_SetProperty(A2_interface *i, A2_handle h, A2_properties p, int v);
 
 typedef struct A2_property {
 	A2_properties	property;
 	int		value;
 } A2_property;
 
-A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props);
+A2_errors a2_SetProperties(A2_interface *i, A2_handle h, A2_property *props);
 
-A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v);
-A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v);
-A2_errors a2_SetStateProperties(A2_state *st, A2_property *props);
+A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v);
+A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v);
+A2_errors a2_SetStateProperties(A2_interface *i, A2_property *props);
 
 #if 0
 /* TODO: */
@@ -112,20 +113,15 @@ A2_errors a2_SetStateProperties(A2_state *st, A2_property *props);
  * Gets a range of properties. 'property' fields should be set by the caller,
  * and the 'value' fields will be filled in by the engine.
  */
-A2_errors a2_GetProperties(A2_state *st, A2_handle h, A2_property *props);
+A2_errors a2_GetProperties(A2_interface *i, A2_handle h, A2_property *props);
 
 /*
  * Asynchronously request a set of properties from the engine. This call will
  * never block.
  * TODO: Message system for receiving responses to these.
  */
-A2_errors a2_RequestProperties(A2_state *st, A2_handle h, A2_properties *props);
-#endif
-
-#if 0
-/* TODO: Maybe? It's really just syntax sugar for h == -1, isn't it? */
-int a2_GetStateProperty(A2_state *st, A2_properties p);
-A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v);
+A2_errors a2_RequestProperties(A2_interface *i, A2_handle h,
+		A2_properties *props);
 #endif
 
 #ifdef __cplusplus

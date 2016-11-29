@@ -34,15 +34,16 @@
 
 static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
 {
-	int i;
+	int j;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
+	A2_interface *i = &st->interfaces->interface;
 	A2_bank *b = (A2_bank *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
 		return RCHM_REFUSE;
 	a2nt_Cleanup(&b->exports);
 	a2nt_Cleanup(&b->private);
-	for(i = 0; i < b->deps.nitems; ++i)
-		a2_Release(st, b->deps.items[i]);
+	for(j = 0; j < b->deps.nitems; ++j)
+		a2_Release(i, b->deps.items[j]);
 	a2ht_Cleanup(&b->deps);
 	free(b->name);
 	free(b);
@@ -106,8 +107,10 @@ A2_errors a2_RegisterBankTypes(A2_state *st)
 	Bank management
 ---------------------------------------------------------*/
 
-A2_handle a2_NewBank(A2_state *st, const char *name, int flags)
+A2_handle a2_NewBank(A2_interface *i, const char *name, int flags)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_handle h;
 	char buf[64];
 	A2_bank *bank = (A2_bank *)calloc(1, sizeof(A2_bank));
@@ -124,7 +127,7 @@ A2_handle a2_NewBank(A2_state *st, const char *name, int flags)
 	bank->name = strdup(name);
 	if(!bank->name)
 	{
-		a2_Release(st, h);
+		a2_Release(i, h);
 		return -A2_OOMEMORY;
 	}
 	DBG(printf("created bank \"%s\", handle %d\n", name, h);)
@@ -136,14 +139,14 @@ A2_handle a2_NewBank(A2_state *st, const char *name, int flags)
 	Loading and compiling scripts
 ---------------------------------------------------------*/
 
-A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
+A2_handle a2_LoadString(A2_interface *i, const char *code, const char *name)
 {
 	int res;
 	A2_handle h;
 	A2_compiler *c;
-	if(!(c = a2_OpenCompiler(st, 0)))
+	if(!(c = a2_OpenCompiler(i, 0)))
 		return -A2_OOMEMORY;
-	if((h = a2_NewBank(st, name, A2_APIOWNED)) < 0)
+	if((h = a2_NewBank(i, name, A2_APIOWNED)) < 0)
 	{
 		a2_CloseCompiler(c);
 		return h;
@@ -151,7 +154,7 @@ A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
 	if((res = a2_CompileString(c, h, code, name)) != A2_OK)
 	{
 		a2_CloseCompiler(c);
-		a2_Release(st, h);
+		a2_Release(i, h);
 		return -res;
 	}
 	a2_CloseCompiler(c);
@@ -159,7 +162,7 @@ A2_handle a2_LoadString(A2_state *st, const char *code, const char *name)
 }
 
 
-A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
+A2_handle a2_Load(A2_interface *i, const char *fn, unsigned flags)
 {
 	int res;
 	A2_handle h;
@@ -182,12 +185,12 @@ A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 
 	}
 #endif
-	if(!(c = a2_OpenCompiler(st, 0)))
+	if(!(c = a2_OpenCompiler(i, 0)))
 	{
 		free(fnx);
 		return -A2_OOMEMORY;
 	}
-	if((h = a2_NewBank(st, fn, A2_APIOWNED)) < 0)
+	if((h = a2_NewBank(i, fn, A2_APIOWNED)) < 0)
 	{
 		free(fnx);
 		a2_CloseCompiler(c);
@@ -197,7 +200,7 @@ A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 	{
 		free(fnx);
 		a2_CloseCompiler(c);
-		a2_Release(st, h);
+		a2_Release(i, h);
 		return -res;
 	}
 	free(fnx);
@@ -210,8 +213,10 @@ A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags)
 	Strings
 ---------------------------------------------------------*/
 
-A2_handle a2_NewString(A2_state *st, const char *string)
+A2_handle a2_NewString(A2_interface *i, const char *string)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_handle h;
 	A2_string *s;
 	if(!(s = (A2_string *)calloc(1, sizeof(A2_string))))
@@ -233,8 +238,10 @@ A2_handle a2_NewString(A2_state *st, const char *string)
 	Objects and exports
 ---------------------------------------------------------*/
 
-A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
+A2_errors a2_Assign(A2_interface *i, A2_handle owner, A2_handle handle)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
 		return A2_INVALIDHANDLE;
@@ -265,9 +272,11 @@ A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle)
 }
 
 
-A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
+A2_errors a2_Export(A2_interface *i, A2_handle owner, A2_handle handle,
 		const char *name)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_errors res;
 	RCHM_handleinfo *hi;
 	if(!(hi = rchm_Get(&st->ss->hm, owner)))
@@ -275,7 +284,7 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
 	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
 		return A2_DEADHANDLE;
 	if(!name)
-		if(!(name = a2_Name(st, handle)))
+		if(!(name = a2_Name(i, handle)))
 			return A2_NONAME;
 	switch(hi->typecode)
 	{
@@ -285,7 +294,7 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
 		if((res = a2nt_AddItem(&b->exports, name, handle) < 0))
 			return -res;
 		/* Ensure that we have this object listed as a dependency! */
-		return a2_Assign(st, owner, handle);
+		return a2_Assign(i, owner, handle);
 	  }
 	  case A2_TWAVE:
 	  case A2_TUNIT:
@@ -298,8 +307,10 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
 }
 
 
-A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
+A2_handle a2_Get(A2_interface *i, A2_handle node, const char *path)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_handle h;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
@@ -323,13 +334,15 @@ A2_handle a2_Get(A2_state *st, A2_handle node, const char *path)
 		return -A2_WRONGTYPE;
 	}
 	if((path = strchr(path, '.')) && path[1])
-		return a2_Get(st, h, path + 1);	/* Recurse into containers! */
+		return a2_Get(i, h, path + 1);	/* Recurse into containers! */
 	return h;
 }
 
 
-A2_handle a2_GetExport(A2_state *st, A2_handle node, int i)
+A2_handle a2_GetExport(A2_interface *i, A2_handle node, int ind)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
 		return -A2_INVALIDHANDLE;
@@ -340,18 +353,18 @@ A2_handle a2_GetExport(A2_state *st, A2_handle node, int i)
 	  case A2_TBANK:
 	  {
 		A2_bank *b = (A2_bank *)hi->d.data;
-		if(i >= 0)
+		if(ind >= 0)
 		{
-			if(i >= b->exports.nitems)
+			if(ind >= b->exports.nitems)
 				return -A2_INDEXRANGE;
-			return b->exports.items[i].handle;
+			return b->exports.items[ind].handle;
 		}
 		else
 		{
-			i = -1 - i;
-			if(i >= b->private.nitems)
+			ind = -1 - ind;
+			if(ind >= b->private.nitems)
 				return -A2_INDEXRANGE;
-			return b->private.items[i].handle;
+			return b->private.items[ind].handle;
 		}
 	  }
 	  default:
@@ -360,8 +373,10 @@ A2_handle a2_GetExport(A2_state *st, A2_handle node, int i)
 }
 
 
-const char *a2_GetExportName(A2_state *st, A2_handle node, int i)
+const char *a2_GetExportName(A2_interface *i, A2_handle node, int ind)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, node);
 	if(!hi)
 		return NULL;
@@ -372,18 +387,18 @@ const char *a2_GetExportName(A2_state *st, A2_handle node, int i)
 	  case A2_TBANK:
 	  {
 		A2_bank *b = (A2_bank *)hi->d.data;
-		if(i >= 0)
+		if(ind >= 0)
 		{
-			if(i >= b->exports.nitems)
+			if(ind >= b->exports.nitems)
 				return NULL;
-			return b->exports.items[i].name;
+			return b->exports.items[ind].name;
 		}
 		else
 		{
-			i = -1 - i;
-			if(i >= b->private.nitems)
+			ind = -1 - ind;
+			if(ind >= b->private.nitems)
 				return NULL;
-			return b->private.items[i].name;
+			return b->private.items[ind].name;
 		}
 	  }
 	  default:

@@ -1,7 +1,7 @@
 /*
  * a2_waves.h - Audiality 2 waveform API and unit programming interface
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -145,7 +145,7 @@ typedef enum A2_waveflags
  *	the stream API (see a2_WaveNew()), but as the wave has been
  *	automatically prepared, it's not possible to change the length of it.
  */
-A2_handle a2_UploadWave(A2_state *st,
+A2_handle a2_UploadWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
@@ -173,14 +173,14 @@ A2_handle a2_UploadWave(A2_state *st,
  *
  * Returns the handle of the wave, or a negated A2_errors error code.
  */
-A2_handle a2_NewWave(A2_state *st, A2_wavetypes wt, unsigned period,
+A2_handle a2_NewWave(A2_interface *i, A2_wavetypes wt, unsigned period,
 		int flags);
 
 /*
  * Get A2_wave struct from handle. Returns NULL if the handle is invalid, or if
  * the object is not a wave.
  */
-A2_wave *a2_GetWave(A2_state *st, A2_handle handle);
+A2_wave *a2_GetWave(A2_interface *i, A2_handle handle);
 
 
 /*---------------------------------------------------------
@@ -201,7 +201,7 @@ A2_wave *a2_GetWave(A2_state *st, A2_handle handle);
  *
  * Returns the handle of the rendered wave, or a negated A2_errors error code.
  */
-A2_handle a2_RenderWave(A2_state *st,
+A2_handle a2_RenderWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length, A2_property *props,
 		A2_handle program, unsigned argc, int *argv);

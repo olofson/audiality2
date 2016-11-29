@@ -75,7 +75,7 @@ typedef struct A2_wtosc
 	A2_ramper	p;		/* Linear pitch ramper */
 	A2_ramper	a;		/* Amplitude ramper */
 	A2_wave		*wave;		/* Current waveform */
-	A2_state	*state;		/* Needed when switching waveforms */
+	A2_interface	*interface;	/* For changing waves */
 	int		*transpose;	/* Needed for pitch calculations */
 } A2_wtosc;
 
@@ -130,7 +130,8 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	A2_wtosc *o = wtosc_cast(u);
 	unsigned s, end = offset + frames;
 	int32_t *out = u->outputs[0];
-	uint32_t *nstate = &o->state->noisestate;
+	A2_state *st = ((A2_interface_i *)o->interface)->state;
+	uint32_t *nstate = &st->noisestate;
 	unsigned dph;
 	wtosc_run_pitch(o, frames);
 	dph = o->dphase >> 8;
@@ -361,7 +362,7 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	int *ur = u->registers;
 
 	/* Internal state initialization */
-	o->state = cfg->state;
+	o->interface = cfg->interface;
 	o->basepitch = cfg->basepitch;
 	o->transpose = vms->r + R_TRANSPOSE;
 	o->noise = 0;
@@ -400,7 +401,7 @@ static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 	A2_wtosc *o = wtosc_cast(u);
 	A2_wavetypes wt = A2_WOFF;
 	v >>= 16;
-	if((o->wave = a2_GetWave(o->state, v)))
+	if((o->wave = a2_GetWave(o->interface, v)))
 		wt = o->wave->type;
 	switch(wt)
 	{

@@ -1,7 +1,7 @@
 /*
  * units.c - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -76,8 +76,10 @@ void a2_UnitCloseState(A2_state *st, unsigned uindex)
 }
 
 
-A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
+A2_handle a2_RegisterUnit(A2_interface *i, const A2_unitdesc *ud)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	int uindex = st->ss->nunits;
 	A2_handle h;
 	const A2_unitdesc **uds;
@@ -157,8 +159,10 @@ A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud)
 }
 
 
-const A2_unitdesc *a2_GetUnitDescriptor(A2_state *st, A2_handle handle)
+const A2_unitdesc *a2_GetUnitDescriptor(A2_interface *i, A2_handle handle)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	int ui = a2_GetUnit(st, handle);
 	if(ui < 0)
 		return NULL;

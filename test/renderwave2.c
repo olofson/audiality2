@@ -119,7 +119,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, songh, ph, vh;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -134,31 +134,31 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	printf("Loading...\n");
 
 	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/a2jingle.a2s", 0)) < 0)
 		fail(5, -h);
-	if((songh = a2_Get(state, h, "Song")) < 0)
+	if((songh = a2_Get(iface, h, "Song")) < 0)
 		fail(6, -songh);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(7, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestWave")) < 0)
 		fail(8, -ph);
 
 	/* Render! */
 	printf("Rendering...\n");
 	if(!waverate)
 		waverate = samplerate;
-	if((h = a2_RenderWave(state,
+	if((h = a2_RenderWave(iface,
 			A2_WWAVE, 0, 0,	/* no MIP, auto period, no flags, */
 			waverate, 0,	/* sample rate, stop when silent, */
 			NULL,		/* no properties, */
@@ -167,8 +167,8 @@ int main(int argc, const char *argv[])
 
 	/* Start playing! */
 	printf("Playing...\n");
-	a2_TimestampReset(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
+	a2_TimestampReset(iface);
+	vh = a2_Start(iface, a2_RootVoice(iface), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
 		fail(10, -vh);
 
@@ -176,14 +176,14 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Sleep(100);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
-	a2_TimestampReset(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
+	a2_TimestampReset(iface);
+	a2_Send(iface, vh, 1);
+	a2_Release(iface, vh);
 	a2_Sleep(1000);
 
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

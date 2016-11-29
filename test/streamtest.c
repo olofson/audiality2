@@ -124,7 +124,7 @@ int main(int argc, const char *argv[])
 	A2_handle streamprogram;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *st;
+	A2_interface *iface;
 	int32_t *buffer;
 	unsigned length, position;
 	int n;
@@ -143,24 +143,24 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(st = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
 		printf("Actual master state sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load jingle */
-	if((h = a2_Load(st, "data/a2jingle.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/a2jingle.a2s", 0)) < 0)
 		fail(5, -h);
-	if((songh = a2_Get(st, h, "Song")) < 0)
+	if((songh = a2_Get(iface, h, "Song")) < 0)
 		fail(6, -songh);
 
 	/* Load test programs */
-	if((h = a2_Load(st, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(7, -h);
-	if((captureprogram = a2_Get(st, h, "CaptureVoice")) < 0)
+	if((captureprogram = a2_Get(iface, h, "CaptureVoice")) < 0)
 		fail(8, -captureprogram);
-	if((streamprogram = a2_Get(st, h, "StreamVoice")) < 0)
+	if((streamprogram = a2_Get(iface, h, "StreamVoice")) < 0)
 		fail(9, -streamprogram);
 
 	/* Allocate capture buffer */
@@ -172,17 +172,17 @@ int main(int argc, const char *argv[])
 	/* Record some audio from a CaptureVoice */
 	fprintf(stderr, "Capturing %d sample frames...\n", length);
 	position = 0;
-	a2_TimestampReset(st);
-	if((h = a2_Start(st, a2_RootVoice(st), captureprogram)) < 0)
+	a2_TimestampReset(iface);
+	if((h = a2_Start(iface, a2_RootVoice(iface), captureprogram)) < 0)
 		fail(11, -h);
-	if((streamh = a2_OpenSink(st, h, 0, samplerate * STREAMBUFFER / 1000,
-			0)) < 0)
+	if((streamh = a2_OpenSink(iface, h, 0,
+			 samplerate * STREAMBUFFER / 1000, 0)) < 0)
 		fail(12, -streamh);
-	a2_Play(st, h, songh);
+	a2_Play(iface, h, songh);
 	while(!do_exit && (position < length))
 	{
-		a2_TimestampReset(st);
-		while((n = a2_Available(st, streamh)) > 0)
+		a2_TimestampReset(iface);
+		while((n = a2_Available(iface, streamh)) > 0)
 		{
 			if(n > length - position)
 			{
@@ -190,7 +190,7 @@ int main(int argc, const char *argv[])
 				if(!n)
 					break;
 			}
-			if((res = a2_Read(st, streamh, A2_I24,
+			if((res = a2_Read(iface, streamh, A2_I24,
 					buffer + position,
 					n * sizeof(int32_t))))
 				fail(13, res);
@@ -200,24 +200,24 @@ int main(int argc, const char *argv[])
 			fail(14, -n);
 		fprintf(stderr, "[%d]\n", position);
 		a2_Sleep(POLLPERIOD);
-		a2_PumpMessages(st);
+		a2_PumpMessages(iface);
 	}
-	a2_TimestampReset(st);
-	a2_Kill(st, h);
+	a2_TimestampReset(iface);
+	a2_Kill(iface, h);
 
 	/* Play back through a StreamVoice */
 	fprintf(stderr, "Playing...\n");
 	position = 0;
-	a2_TimestampReset(st);
-	if((h = a2_Start(st, a2_RootVoice(st), streamprogram)) < 0)
+	a2_TimestampReset(iface);
+	if((h = a2_Start(iface, a2_RootVoice(iface), streamprogram)) < 0)
 		fail(15, -h);
-	if((streamh = a2_OpenSource(st, h, 0, samplerate * STREAMBUFFER / 1000,
-			0)) < 0)
+	if((streamh = a2_OpenSource(iface, h,
+			0, samplerate * STREAMBUFFER / 1000, 0)) < 0)
 		fail(16, -streamh);
 	while(!do_exit && (position < length))
 	{
-		a2_TimestampReset(st);
-		while((n = a2_Space(st, streamh)) > 0)
+		a2_TimestampReset(iface);
+		while((n = a2_Space(iface, streamh)) > 0)
 		{
 			if(n > length - position)
 			{
@@ -225,7 +225,7 @@ int main(int argc, const char *argv[])
 				if(!n)
 					break;
 			}
-			if((res = a2_Write(st, streamh, A2_I24,
+			if((res = a2_Write(iface, streamh, A2_I24,
 					buffer + position,
 					n * sizeof(int32_t))))
 				fail(17, res);
@@ -235,20 +235,20 @@ int main(int argc, const char *argv[])
 			fail(18, -n);
 		fprintf(stderr, "[%d]\n", position);
 		a2_Sleep(POLLPERIOD);
-		a2_PumpMessages(st);
+		a2_PumpMessages(iface);
 	}
 
 	fprintf(stderr, "Waiting for stream buffer to drain...\n");
-	while((n = a2_Available(st, streamh)))
+	while((n = a2_Available(iface, streamh)))
 	{
 		fprintf(stderr, "[%d]\n", n);
 		a2_Sleep(POLLPERIOD);
-		a2_PumpMessages(st);
+		a2_PumpMessages(iface);
 	}
 
 	fprintf(stderr, "Done!\n");
 
 	free(buffer);
-	a2_Close(st);
+	a2_Close(iface);
 	return 0;
 }

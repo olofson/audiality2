@@ -100,7 +100,7 @@ A2_errors a2_pitch_open(void)
 	for(i = 0; i < 65536; ++i)
 	{
 		float f = 16777216.0f * a2_P2If(i / 65536.0f);
-		float f2 = (float)a2_P2I(i);
+		float f2 = a2_P2I(i);
 		float err = f2 - f;
 		if(err > maxerr)
 			maxerr = err;
@@ -119,7 +119,7 @@ A2_errors a2_pitch_open(void)
 		{
 			int ij = i * 65536 / A2_PITCH_TABLE_SIZE + j;
 			float f = 16777216.0f * a2_P2If(ij / 65536.0f);
-			float f2 = (float)a2_P2I(ij);
+			float f2 = a2_P2I(ij);
 			float err = f2 - f;
 			if(err > maxerr)
 				maxerr = err;

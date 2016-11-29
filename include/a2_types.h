@@ -23,6 +23,8 @@
 #ifndef A2_TYPES_H
 #define A2_TYPES_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -36,7 +38,7 @@ typedef	int A2_handle;
 typedef	unsigned A2_timestamp;
 typedef struct A2_driver A2_driver;
 typedef struct A2_config A2_config;
-typedef struct A2_state A2_state;
+typedef struct A2_interface A2_interface;
 
 /* Object types (Also used for RCHM handle type tagging!) */
 typedef enum A2_otypes

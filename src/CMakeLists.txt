@@ -10,6 +10,7 @@ include_directories(${AUDIALITY2_SOURCE_DIR}/src/drivers)
 # Core files
 set(sources
 	audiality2.c
+	interface.c
 	platform.c
 	core.c
 	units.c

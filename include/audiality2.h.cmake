@@ -23,6 +23,7 @@
 #ifndef AUDIALITY2_H
 #define AUDIALITY2_H
 
+#include "a2_interface.h"
 #include "a2_drivers.h"
 #include "a2_properties.h"
 #include "a2_waves.h"
@@ -72,10 +73,9 @@ extern "C" {
 A2_errors a2_LastError(void);
 
 /*
- * Return and reset the last error code sent from the engine context of state
- * 'st'.
+ * Return and reset the last error code sent to interface 'i'.
  */
-A2_errors a2_LastRTError(A2_state *st);
+A2_errors a2_LastRTError(A2_interface *i);
 
 /* Return textual explanation of a Audiality 2 error code */
 const char *a2_ErrorString(A2_errors errorcode);
@@ -100,7 +100,7 @@ unsigned a2_LinkedVersion(void);
 
 
 /*---------------------------------------------------------
-	Open/close
+	Engine state and interface management
 ---------------------------------------------------------*/
 
 /*
@@ -117,41 +117,74 @@ unsigned a2_LinkedVersion(void);
  * the state is closed, unless the application sets the A2_STATEDESTROY flag in
  * the driver's 'flag' field.
  *
+ * Returns the master interface to the state, with timestamping and context
+ * behavior configured according to the specified 'config'.
+ *
  * NOTE:
  *	The 'flags' argument is only passed on to the driver 'flags' field when
  *	a driver is opened by the state! That is, flags are not passed on to a
  *	driver that is already open when a2_Open() is called.
  */
-A2_state *a2_Open(A2_config *config);
+A2_interface *a2_Open(A2_config *config);
 
 /*
- * Create a substate to state 'master'.
+ * Create a substate to the state behind interface 'master'.
  *
  * The substate shares waves, programs and other objects with the master state.
  * Making API calls that create or manipulate such on a substate is equivalent
  * to operating directly on the substate's master state.
  *
  * The substate has its own engine context, with its own set of groups and
- * voices, independent from and asynchrounous to those of the substate's master
+ * voices, independent from and asynchronous to those of the substate's master
  * state. Realtime control API calls on a substate operate on this local engine
  * context, allowing the substate to perform realtime or offline processing
  * independent of the master state.
+ *
+ * Returns the master interface to the substate, with timestamping and context
+ * behavior configured according to the specified 'config'.
  *
  * NOTE:
  *	Substates are NOT reentrant/thread safe in relation to each other, or
  *	their master states! To safely perform background rendering in another
  *	thread or similar, a separate master state must be used.
  */
-A2_state *a2_SubState(A2_state *master, A2_config *config);
+A2_interface *a2_SubState(A2_interface *master, A2_config *config);
 
 /*
- * Close an Audiality state or substate.
+ * Acquire an interface of the sort indicated by 'flags';
+ *
+ *	A2_REALTIME	Interface for use in the context of the realtime audio
+ *			thread/callback, as needed for use from within driver,
+ *			unit, or stream callback code. That is, an interface
+ *			that operates directly on the engine state, with no
+ *			buffering or synchronization.
+ *
+ *			If this flag is not specified, the returned interface
+ *			will be configured for use from the API context.
+ *
+ *			For non realtime engine states, such as ones set up for
+ *			off-line rendering, this flag has no effect; interfaces
+ *			will always operate directly on the engine state.
+ *
+ *	A2_TIMESTAMP	Enable timestamping in the play/control API of the
+ *			interface. (This guarantees a unique interface
+ *			instance, as the timestamping API is stateful.)
+ *
+ * NOTE:
+ *	Interfaces are reference counted, and all interfaces of an Audiality
+ *	state need to be closed in order to close the state!
+ */
+A2_interface *a2_Interface(A2_interface *master, int flags);
+
+/*
+ * Close an Audiality interface. If the interface is the last interface to its
+ * parent state or substate, the (sub)state is closed as well.
  *
  * NOTE:
  *	Substates CAN be closed manually, but if they aren't, they are closed
  *	automatically as their master state is closed.
  */
-void a2_Close(A2_state *st);
+void a2_Close(A2_interface *i);
 
 
 /*---------------------------------------------------------
@@ -165,7 +198,8 @@ void a2_Close(A2_state *st);
 
 
 /*
- * Returns the handle of the root voice of the specified (sub)state.
+ * Returns the handle of the root voice of the (sub)state behind the specified
+ * interface.
  *
  * NOTE:
  *	While substates share banks, waves, programs etc with their parent
@@ -173,7 +207,7 @@ void a2_Close(A2_state *st);
  *	these must not be mixed up! Bad Things(TM) will happen if you talk to
  *	a state about voices that belong to another state...
  */
-A2_handle a2_RootVoice(A2_state *st);
+A2_handle a2_RootVoice(A2_interface *i);
 
 
 /*
@@ -184,27 +218,27 @@ A2_handle a2_RootVoice(A2_state *st);
  * Return type of object with 'handle', or a negated error code if 'handle' is
  * invalid, or the operation failed for other reasons.
  */
-A2_otypes a2_TypeOf(A2_state *st, A2_handle handle);
+A2_otypes a2_TypeOf(A2_interface *i, A2_handle handle);
 
 /* Return name string of 'type'. */
-const char *a2_TypeName(A2_state *st, A2_otypes typecode);
+const char *a2_TypeName(A2_interface *i, A2_otypes typecode);
 
 /* Return a string representation of the object assigned to 'handle' */
-const char *a2_String(A2_state *st, A2_handle handle);
+const char *a2_String(A2_interface *i, A2_handle handle);
 
 /* Return the name of the object assigned to 'handle', if any is defined */
-const char *a2_Name(A2_state *st, A2_handle handle);
+const char *a2_Name(A2_interface *i, A2_handle handle);
 
 /*
  * Returns the size of the object assigned to 'handle', or a negated error
  * code if the operation failed, or isn't applicable to the object.
  */
-int a2_Size(A2_state *st, A2_handle handle);
+int a2_Size(A2_interface *i, A2_handle handle);
 
 /*
  * Attempt to increase the reference count of 'handle' by one.
  */
-A2_errors a2_Retain(A2_state *st, A2_handle handle);
+A2_errors a2_Retain(A2_interface *i, A2_handle handle);
 
 /*
  * Decrease the reference count of 'handle' by one. If the reference count
@@ -218,8 +252,16 @@ A2_errors a2_Retain(A2_state *st, A2_handle handle);
  * NOTE:
  *	Voices will return A2_REFUSE here, as they need a roundtrip to the
  *	engine context before the handle can safely be returned to the pool!
+ *
+ *	Also note that when dealing with objects referenced by timestamped
+ *	messages, it's important to use a2_Release() with the right interface,
+ *	as handles may otherwise be invalid by the time those messages are
+ *	processed.
  */
-A2_errors a2_Release(A2_state *st, A2_handle handle);
+static inline A2_errors a2_Release(A2_interface *i, A2_handle handle)
+{
+	return i->Release(i, handle);
+}
 
 /*
  * Have 'owner' claim ownership of 'handle'.
@@ -231,14 +273,14 @@ A2_errors a2_Release(A2_state *st, A2_handle handle);
  *	This does NOT increase the reference count of 'handle'! The logic is
  *	that the caller owns the object, and hands it over to 'owner'.
  */
-A2_errors a2_Assign(A2_state *st, A2_handle owner, A2_handle handle);
+A2_errors a2_Assign(A2_interface *i, A2_handle owner, A2_handle handle);
 
 /*
  * Have 'owner' claim ownership of 'handle' and add it to 'owner's exports as
  * 'name'. If 'name' is NULL, an attempt is made at getting a name from
  * a2_Name().
  */
-A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
+A2_errors a2_Export(A2_interface *i, A2_handle owner, A2_handle handle,
 		const char *name);
 
 
@@ -250,7 +292,7 @@ A2_errors a2_Export(A2_state *st, A2_handle owner, A2_handle handle,
  * Create a new, empty bank. 'name' is the import name for scripts to use;
  * NULL results in a unique name being generated automatically.
  */
-A2_handle a2_NewBank(A2_state *st, const char *name, int flags);
+A2_handle a2_NewBank(A2_interface *i, const char *name, int flags);
 
 /*
  * Load .a2s file 'fn' or null terminated string 'code' as a bank.
@@ -262,14 +304,14 @@ A2_handle a2_NewBank(A2_state *st, const char *name, int flags);
  * Returns the handle of the resulting bank, or if the operation fails, a
  * negative error code. (Use (-result) to get the A2_errors code.)
  */
-A2_handle a2_LoadString(A2_state *st, const char *code, const char *name);
-A2_handle a2_Load(A2_state *st, const char *fn, unsigned flags);
+A2_handle a2_LoadString(A2_interface *i, const char *code, const char *name);
+A2_handle a2_Load(A2_interface *i, const char *fn, unsigned flags);
 
 /*
  * Create a string object from the null terminated 'string'. Returns the handle
  * of the string object, or a negative error code.
  */
-A2_handle a2_NewString(A2_state *st, const char *string);
+A2_handle a2_NewString(A2_interface *i, const char *string);
 
 /*
  * Decreases the reference count of all objects that have been created as
@@ -283,7 +325,7 @@ A2_handle a2_NewString(A2_state *st, const char *string);
  *	objects explicitly! It still affects objects after a2_Retain() has been
  *	used on them.
  */
-int a2_UnloadAll(A2_state *st);
+int a2_UnloadAll(A2_interface *i);
 
 
 /*---------------------------------------------------------
@@ -304,7 +346,7 @@ int a2_UnloadAll(A2_state *st);
  * Returns the number of sample frames (not bytes!) actually rendered, or a
  * negated A2_errors error code.
  */
-int a2_Run(A2_state *st, unsigned frames);
+int a2_Run(A2_interface *i, unsigned frames);
 
 /*
  * Run 'program' off-line with the specified arguments, rendering at
@@ -315,7 +357,7 @@ int a2_Run(A2_state *st, unsigned frames);
  *
  * Returns number of sample frames rendered, or a negated A2_errors error code.
  */
-int a2_Render(A2_state *st,
+int a2_Render(A2_interface *i,
 		A2_handle stream,
 		unsigned samplerate, unsigned length, A2_property *props,
 		A2_handle program, unsigned argc, int *argv);
@@ -335,115 +377,35 @@ int a2_Render(A2_state *st,
  *
  * Returns a negative A2_errors error code if no object was found.
  */
-A2_handle a2_Get(A2_state *st, A2_handle node, const char *path);
+A2_handle a2_Get(A2_interface *i, A2_handle node, const char *path);
 
 /*
- * Get handle of export 'i' of object 'node'. Positive (including zero) indexes
+ * Get handle of export 'x' of object 'node'. Positive (including zero) indexes
  * address exported symbols, while negative indexes address private symbols.
  *
  * Returns -A2_WRONGTYPE if 'node' cannot have exports, or -A2_INDEXRANGE if
- * 'i' is out of range.
+ * 'x' is out of range.
  */
-A2_handle a2_GetExport(A2_state *st, A2_handle node, int i);
+A2_handle a2_GetExport(A2_interface *i, A2_handle node, int x);
 
 /*
- * Get name of export 'i' of object 'node'. Positive (including zero) indexes
+ * Get name of export 'x' of object 'node'. Positive (including zero) indexes
  * address exported symbols, while negative indexes address private symbols.
  *
- * Returns NULL if 'node' cannot have exports, or if 'i' is out of range.
+ * Returns NULL if 'node' cannot have exports, or if 'x' is out of range.
  */
-const char *a2_GetExportName(A2_state *st, A2_handle node, int i);
+const char *a2_GetExportName(A2_interface *i, A2_handle node, int x);
 
 
 /*---------------------------------------------------------
-	Timestamping
+	Background processing
 ---------------------------------------------------------*/
 
 /*
- * Compare two timestamps. Returns (a - b) with correct handling of timestamp
- * wrapping.
- *
- * NOTE:
- *	This will assume that b is BEFORE a if the difference is more than half
- *	of the "wrap period"! This is to allow proper handling of messages that
- *	arrive late.
- */
-static inline int a2_TSDiff(A2_timestamp a, A2_timestamp b)
-{
-	return (int)(a - b);
-}
-
-/*
- * Calculates a timestamp that would have commands sent right away applied as
- * soon as possible with constant latency.
- */
-A2_timestamp a2_TimestampNow(A2_state *st);
-
-/*
- * Get the current API timestamp.
- */
-A2_timestamp a2_TimestampGet(A2_state *st);
-
-/*
- * Set new API timestamp for subsequent commands. Returns the previous
- * timestamp.
- */
-A2_timestamp a2_TimestampSet(A2_state *st, A2_timestamp ts);
-
-/*
- * Convert from milliseconds to engine timestamp (fixed point fractional audio
- * frames).
- */
-int a2_ms2Timestamp(A2_state *st, double t);
-
-/*
- * Convert from engine timestamp (fixed point fractional audio frames) to
- * milliseconds.
- */
-double a2_Timestamp2ms(A2_state *st, int ts);
-
-/*
- * Set the API timestamp so that subsequent commands are executed as soon as
- * possible with constant latency. Returns the previous value of the API
- * timestamp.
- */
-A2_timestamp a2_TimestampReset(A2_state *st);
-
-/*
- * Bump the timestamp for subsequent commands by the specified amount, adjusted
- * by any nudge amount calculated by the last a2_TimestampNudge() call. The
- * nudge amount is clamped so that the API timestamp is never moved backwards,
- * and any remainder is pushed to the next a2_TimestampBump() call.
- *
- * Returns the previous timestamp.
- */
-A2_timestamp a2_TimestampBump(A2_state *st, int dt);
-
-/*
- * Calculate a full ('amount' == 1.0f) or partial ('amount' < 1.0f) adjustment
- * that would bring the API timestamp towards (a2_TimestampNow() - offset).
- *
- * Returns the calculated value, which is also stored internally, and applied
- * by the next call to, or next few calls to, a2_TimestampBump().
- *
- * NOTE:
- *	This call does NOT change the API timestamp. Any necessary adjustments
- *	are handled by subsequent a2_TimestampBump() calls.
- */
-int a2_TimestampNudge(A2_state *st, int offset, float amount);
-
-
-/*---------------------------------------------------------
-	Playing and controlling
----------------------------------------------------------*/
-
-/*
- * Background processing
- *
- *	Due to the lock-free nature of Audiality 2, there are asynchronous jobs
- *	that need to be performed in the API context. This is done by running
- *	the API message pump inside API calls that typically deal with
- *	timestamped messages, namely:
+ * Due to the lock-free nature of Audiality 2, there are asynchronous jobs that
+ * need to be performed in the API context. This is done by running the API
+ * message pump inside API calls that typically deal with timestamped
+ * messages, namely:
  *		a2_Start*()
  *		a2_Play*()
  *		a2_Send*()
@@ -451,104 +413,19 @@ int a2_TimestampNudge(A2_state *st, int offset, float amount);
  *		a2_Kill()
  *		a2_KillSub()
  *
- *	If none of the above are called regularly, the application should call
- *	a2_PumpMessages(), to explicitly process API messages.
+ * If none of the above are called regularly, the application should call
+ * a2_PumpMessages(), to explicitly process API messages.
  *
- *	a2_Release(), a2_*Callback(), a2_OpenSink(), a2_OpenSource() and other
- *	calls may pump API messages as well in certain situations, but that is
- *	not to be relied upon in any way.
+ * a2_Release(), a2_*Callback(), a2_OpenSink(), a2_OpenSource() and other calls
+ * may pump API messages as well in certain situations, but that is not to be
+ * relied upon in any way.
  */
-void a2_PumpMessages(A2_state *st);
+void a2_PumpMessages(A2_interface *i);
 
-/*
- * Create a new voice under voice 'parent', running the default group program,
- * "a2_groupdriver", featuring volume and pan controls, and support for
- * a2_Tap() and a2_Insert().
- */
-A2_handle a2_NewGroup(A2_state *st, A2_handle parent);
 
-/*
- * Start 'program' on a new subvoice of 'parent'.
- *
- * The a2_Starta() versions expect arrays of 16:16 fixed point values.
- *
- * The a2_Start() macro converts and passes any number of floating point
- * arguments.
- *
- * Returns a handle, or a negative error code.
- */
-A2_handle a2_Starta(A2_state *st, A2_handle parent, A2_handle program,
-		unsigned argc, int *argv);
-#define a2_Start(st, p, prg, args...)					\
-	({								\
-		float fa[] = { args };					\
-		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
-			ia[i] = fa[i] * 65536.0f;			\
-		a2_Starta(st, p, prg, sizeof(ia) / sizeof(int), ia);	\
-	})
-
-/*
- * Start 'program' on a new subvoice of 'parent', without attaching the new
- * voice to a handle.
- *
- * NOTE:
- *	Although detached voices cannot be addressed directly, they still
- *	recieve messages sent to all voices in the group!
- */
-A2_errors a2_Playa(A2_state *st, A2_handle parent, A2_handle program,
-		unsigned argc, int *argv);
-#define a2_Play(st, p, prg, args...)					\
-	({								\
-		float fa[] = { args };					\
-		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
-			ia[i] = fa[i] * 65536.0f;			\
-		a2_Playa(st, p, prg, sizeof(ia) / sizeof(int), ia);	\
-	})
-
-/* Send a message to entry point 'ep' of the program running on 'voice'. */
-A2_errors a2_Senda(A2_state *st, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv);
-#define a2_Send(st, v, ep, args...)					\
-	({								\
-		float fa[] = { args };					\
-		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
-			ia[i] = fa[i] * 65536.0f;			\
-		a2_Senda(st, v, ep, sizeof(ia) / sizeof(int), ia);	\
-	})
-
-/* Send a message to entry point 'ep' of all subvoices of 'voice'. */
-A2_errors a2_SendSuba(A2_state *st, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv);
-#define a2_SendSub(st, v, ep, args...)					\
-	({								\
-		float fa[] = { args };					\
-		int i, ia[sizeof(fa) / sizeof(float)];			\
-		for(i = 0; i < (int)(sizeof(ia) / sizeof(int)); ++i)	\
-			ia[i] = fa[i] * 65536.0f;			\
-		a2_SendSuba(st, v, ep, sizeof(ia) / sizeof(int), ia);	\
-	})
-
-/*
- * Instantly stop 'voice' and any subvoices running under it. The handles of
- * the voice and any subvoices running under it will be released.
- *
- * NOTE:
- *	Care should be taken to not use the 'voice' handle, or any subvoice
- *	handles after this call, as they're all released! (Using invalid
- *	handles is technically safe, but may have "interesting" effects...)
- *
- * WARNING:
- *	There is no fadeout or anything, so this will most definitely result in
- *	a nasty click or pop if done to voices that are still audible!
- */
-A2_errors a2_Kill(A2_state *st, A2_handle voice);
-
-/* Kill all subvoices of 'voice', but not 'voice' itself */
-A2_errors a2_KillSub(A2_state *st, A2_handle voice);
-
+/*---------------------------------------------------------
+	Callback xinsert interface
+---------------------------------------------------------*/
 
 /*
  * Callback prototype for a2_SinkCallback(), a2_SourceCallback() and
@@ -588,7 +465,7 @@ typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
  * Set up 'callback' to receive audio from the first 'xsink' or 'xinsert' unit
  * of 'voice'.
  */
-A2_handle a2_SinkCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SinkCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata);
 
 /*
@@ -597,7 +474,7 @@ A2_handle a2_SinkCallback(A2_state *st, A2_handle voice,
  * contents!), and the audio in these buffers will be mixed into the output of
  * the 'xsource' or 'xinsert' unit.
  */
-A2_handle a2_SourceCallback(A2_state *st, A2_handle voice,
+A2_handle a2_SourceCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata);
 
 /*
@@ -609,7 +486,7 @@ A2_handle a2_SourceCallback(A2_state *st, A2_handle voice,
  * respective outputs of the unit. This is essentially a quick and dirty way of
  * implementing custom DSP effects without implementing voice units.
  */
-A2_handle a2_InsertCallback(A2_state *st, A2_handle voice,
+A2_handle a2_InsertCallback(A2_interface *i, A2_handle voice,
 		A2_xinsert_cb callback, void *userdata);
 
 
@@ -637,7 +514,7 @@ TODO:
  *
  * Returns a stream handle for use with a2_Read(), or a negated error code.
  */
-A2_handle a2_OpenSink(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSink(A2_interface *i, A2_handle voice,
 		int channel, int size, unsigned flags);
 
 /*
@@ -652,7 +529,7 @@ TODO:
  *
  * Returns a stream handle for use with a2_Write(), or a negated error code.
  */
-A2_handle a2_OpenSource(A2_state *st, A2_handle voice,
+A2_handle a2_OpenSource(A2_interface *i, A2_handle voice,
 		int channel, int size, unsigned flags);
 
 
@@ -661,7 +538,7 @@ A2_handle a2_OpenSource(A2_state *st, A2_handle voice,
 ---------------------------------------------------------*/
 
 /* Return pseudo-random number in the range [0, max[ */
-float a2_Rand(A2_state *st, float max);
+float a2_Rand(A2_interface *i, float max);
 
 /* Returns the number of milliseconds elapsed since A2 API initialization */
 unsigned a2_GetTicks(void);
@@ -674,12 +551,12 @@ unsigned a2_Sleep(unsigned milliseconds);
 
 /*TODO*/
 /* Calculate size of converted data */
-int a2_ConvertSize(A2_state *st, A2_sampleformats infmt,
+int a2_ConvertSize(A2_interface *i, A2_sampleformats infmt,
 		A2_sampleformats outfmt, unsigned size);
 
 /*TODO*/
 /* Convert audio data from one format to another */
-A2_errors a2_Convert(A2_state *st,
+A2_errors a2_Convert(A2_interface *i,
 		A2_sampleformats infmt, const void *indata, unsigned insize,
 		A2_sampleformats outfmt, void *outdata, unsigned flags);
 

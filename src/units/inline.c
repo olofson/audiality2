@@ -41,7 +41,7 @@ static A2_errors a2i_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 
 static A2_errors a2i_OpenState(A2_config *cfg, void **statedata)
 {
-	*statedata = cfg->state;
+	*statedata = ((A2_interface_i *)cfg->interface)->state;
 	return A2_OK;
 }
 

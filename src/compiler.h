@@ -267,6 +267,7 @@ typedef struct A2_lexvalue
 struct A2_compiler
 {
 	A2_state	*state;		/* Parent engine state */
+	A2_interface	*interface;	/* Owner interface */
 	A2_coder	*coder;		/* Current code generator */
 	A2_symbol	*symbols;	/* Symbol stack */
 	A2_handletab	imports;	/* Imported objects (root namespace) */
@@ -297,7 +298,7 @@ struct A2_compiler
 ---------------------------------------------------------*/
 
 /* Compiler open/close */
-A2_compiler *a2_OpenCompiler(A2_state *st, int flags);
+A2_compiler *a2_OpenCompiler(A2_interface *i, int flags);
 void a2_CloseCompiler(A2_compiler *c);
 
 /* Compile Audiality 2 Script source code into VM code. */

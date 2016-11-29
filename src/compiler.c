@@ -689,7 +689,7 @@ static inline A2_handle a2_find_import(A2_compiler *c, const char *name)
 	A2_handle h;
 	int i;
 	for(i = 0; i < c->imports.nitems; ++i)
-		if((h = a2_Get(c->state, c->imports.items[i], name)) >= 0)
+		if((h = a2_Get(c->interface, c->imports.items[i], name)) >= 0)
 			return h;
 	return -1;
 }
@@ -959,7 +959,7 @@ static int a2c_LexString(A2_compiler *c)
 	if(!(s = a2c_ndup(c->lexbuf, c->lexbufpos)))
 		a2c_Throw(c, A2_OOMEMORY);
 	c->l[0].token = TK_STRING;
-	c->l[0].v.i = a2_NewString(c->state, s);
+	c->l[0].v.i = a2_NewString(c->interface, s);
 	free(s);
 	if(c->l[0].v.i < 0)
 		a2c_Throw(c, -c->l[0].v.i);
@@ -1077,7 +1077,7 @@ static void a2c_SetTokenf(A2_compiler *c, int tk, double f)
 static int a2c_Handle2Token(A2_compiler *c, int h)
 {
 	int tk = 0;
-	switch(a2_TypeOf(c->state, h))
+	switch(a2_TypeOf(c->interface, h))
 	{
 	  /* Valid types */
 	  case A2_TBANK:	tk = TK_BANK;		break;
@@ -1414,8 +1414,8 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			h = s->v.i;
 			SCOPEDBG(fprintf(stderr, "h: %d\t", h);)
 			SCOPEDBG(fprintf(stderr, "t: %s\t",
-					a2_TypeName(c->state,
-					a2_TypeOf(c->state, h)));)
+					a2_TypeName(c->interface,
+					a2_TypeOf(c->interface, h)));)
 			break;
 		  default:
 			h = -1;
@@ -1937,7 +1937,7 @@ static int a2c_Namespace(A2_compiler *c)
 		in_namespace = 1;
 		if(a2c_LexNamespace(c, NULL) != TK_NAME)
 			a2c_Throw(c, A2_EXPNAME);
-		if((h = a2_Get(c->state, bh, c->l[0].v.sym->name)) < 0)
+		if((h = a2_Get(c->interface, bh, c->l[0].v.sym->name)) < 0)
 			a2c_Throw(c, -h);
 		a2c_Handle2Token(c, h);
 	}
@@ -2369,8 +2369,8 @@ static void a2c_ForwardExports(A2_compiler *c, A2_handle m)
 	A2_nametab *x = &c->target->exports;
 	A2_handle h;
 	int i;
-	for(i = 0; (h = a2_GetExport(c->state, m, i)) >= 0; ++i)
-		a2nt_AddItem(x, a2_GetExportName(c->state, m, i), h);
+	for(i = 0; (h = a2_GetExport(c->interface, m, i)) >= 0; ++i)
+		a2nt_AddItem(x, a2_GetExportName(c->interface, m, i), h);
 }
 
 
@@ -2383,7 +2383,7 @@ static void a2c_Import(A2_compiler *c, int export)
 	{
 	  case TK_STRING:
 		nameh = c->l[0].v.i;
-		name = a2_String(c->state, nameh);
+		name = a2_String(c->interface, nameh);
 		break;
 	  case TK_NAME:
 		name = c->l[0].v.sym->name;
@@ -2399,7 +2399,7 @@ static void a2c_Import(A2_compiler *c, int export)
 		if(!buf)
 		{
 			if(nameh)
-				a2_Release(c->state, nameh);
+				a2_Release(c->interface, nameh);
 			a2c_Throw(c, -A2_OOMEMORY);
 		}
 #ifdef WIN32
@@ -2412,13 +2412,13 @@ static void a2c_Import(A2_compiler *c, int export)
 		snprintf(buf, bufsize, "%s/%s", c->path, name);
 #endif
 		buf[bufsize - 1] = 0;
-		h = a2_Load(c->state, buf, 0);
+		h = a2_Load(c->interface, buf, 0);
 		free(buf);
 		switch(-h)
 		{
 		  case A2_OPEN:
 		  case A2_READ:
-			h = a2_Load(c->state, name, 0);
+			h = a2_Load(c->interface, name, 0);
 			break;
 		  default:
 			/*
@@ -2430,21 +2430,21 @@ static void a2c_Import(A2_compiler *c, int export)
 		}
 	}
 	else
-		h = a2_Load(c->state, name, 0);
+		h = a2_Load(c->interface, name, 0);
 	if(h < 0)
 	{
 		fprintf(stderr, "Could not import \"%s\"! (%s)\n",
 				name, a2_ErrorString(-h));
 		if(nameh)
-			a2_Release(c->state, nameh);
+			a2_Release(c->interface, nameh);
 		a2c_Throw(c, -h);
 	}
 	if(nameh)
-		a2_Release(c->state, nameh);
+		a2_Release(c->interface, nameh);
 
 	if((res = a2ht_AddItem(&c->target->deps, h)) < 0)
 	{
-		a2_Release(c->state, h);
+		a2_Release(c->interface, h);
 		a2c_Throw(c, -res);
 	}
 
@@ -2463,7 +2463,7 @@ static void a2c_Import(A2_compiler *c, int export)
 	{
 		if((res = a2ht_AddItem(&c->imports, h)) < 0)
 		{
-			a2_Release(c->state, h);
+			a2_Release(c->interface, h);
 			a2c_Throw(c, -res);
 		}
 		if(export)
@@ -3215,7 +3215,7 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 		fprintf(stderr, "|    randseed: %d\n", wd->randseed);
 		fprintf(stderr, "|   noiseseed: %d\n", wd->noiseseed);
 	)
-	if((wd->symbol->v.i = a2_RenderWave(c->state,
+	if((wd->symbol->v.i = a2_RenderWave(c->interface,
 			wd->type, wd->period, wd->flags,
 			wd->samplerate, wd->length, props,
 			wd->program, wd->argc, wd->argv)) < 0)
@@ -3869,13 +3869,15 @@ static struct
 };
 
 
-A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
+A2_compiler *a2_OpenCompiler(A2_interface *i, int flags)
 {
-	int i;
+	int j;
 	A2_compiler *c = (A2_compiler *)calloc(1, sizeof(A2_compiler));
 	if(!c)
 		return NULL;
-	flags |= st->config->flags & A2_INITFLAGS;
+	c->interface = i;
+	c->state = ((A2_interface_i *)i)->state;
+	flags |= c->state->config->flags & A2_INITFLAGS;
 	c->lexbufpos = 0;
 	c->lexbufsize = 64;
 	if(!(c->lexbuf = (char *)malloc(c->lexbufsize)))
@@ -3883,25 +3885,24 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 		a2_CloseCompiler(c);
 		return NULL;
 	}
-	c->state = st;
-	for(i = 0; i < A2_CREGISTERS; ++i)
+	for(j = 0; j < A2_CREGISTERS; ++j)
 		a2c_AllocReg(c, A2RT_CONTROL);
-	c->tabsize = st->ss->tabsize;
+	c->tabsize = c->state->ss->tabsize;
 
 	/* Add built-in symbols (keywords, directives, hardwired regs etc) */
-	for(i = 0; a2c_rootsyms[i].n; ++i)
+	for(j = 0; a2c_rootsyms[j].n; ++j)
 	{
-		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[i].n,
-				a2c_rootsyms[i].tk);
+		A2_symbol *s = a2_NewSymbol(a2c_rootsyms[j].n,
+				a2c_rootsyms[j].tk);
 		if(!s)
 		{
 			a2_CloseCompiler(c);
 			return NULL;
 		}
-		if(a2_IsValue(a2c_rootsyms[i].tk))
-			s->v.f = a2c_rootsyms[i].v;
+		if(a2_IsValue(a2c_rootsyms[j].tk))
+			s->v.f = a2c_rootsyms[j].v;
 		else
-			s->v.i = a2c_rootsyms[i].v;
+			s->v.i = a2c_rootsyms[j].v;
 		a2_PushSymbol(&c->symbols, s);
 	}
 
@@ -3916,10 +3917,10 @@ A2_compiler *a2_OpenCompiler(A2_state *st, int flags)
 	a2c_Try(c)
 	{
 		A2_symbol **uns = a2c_CreateNamespace(c, NULL, "units");
-		for(i = 0; i < st->ss->nunits; ++i)
+		for(j = 0; j < c->state->ss->nunits; ++j)
 		{
 			A2_symbol **s;
-			const A2_unitdesc *ud = c->state->ss->units[i];
+			const A2_unitdesc *ud = c->state->ss->units[j];
 			if(!ud->constants || !ud->constants[0].name)
 				continue;
 			s = a2c_CreateNamespace(c, uns, ud->name);

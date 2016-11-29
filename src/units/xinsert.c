@@ -201,19 +201,19 @@ static A2_errors xi_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 }
 
 
-static void xi_Deinitialize(A2_unit *u, A2_state *st)
+static void xi_Deinitialize(A2_unit *u)
 {
 	A2_xinsert *xi = a2_xinsert_cast(u);
 
 	/* Remove all clients! */
 	while(xi->clients)
-		a2_XinsertRemoveClient(st, xi->clients);
+		a2_XinsertRemoveClient(xi->clients);
 }
 
 
 static A2_errors xi_OpenState(A2_config *cfg, void **statedata)
 {
-	*statedata = cfg->state;
+	*statedata = ((A2_interface_i *)cfg->interface)->state;
 	return A2_OK;
 }
 

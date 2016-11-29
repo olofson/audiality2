@@ -1,9 +1,9 @@
 /*
  * renderwave.c - Audiality 2 render-to-wave via low level API
  *
- *	This test sets up a realtime state with an off-line substate, uses the
+ *	This test sets up a realtime iface with an off-line substate, uses the
  *	latter to render sound into a wave, and then plays that on the realtime
- *	state.
+ *	iface.
  *
  * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
@@ -60,7 +60,7 @@ static void usage(const char *exename)
 			"           -r[s]<n>    Audio sample rate (Hz)\n"
 			"           -c[s]<n>    Number of audio channels\n\n"
 			"                       's' is 1 or unpsecified for\n"
-			"                       the master state, and 2 for\n"
+			"                       the master iface, and 2 for\n"
 			"                       the substate.\n\n"
 			"           -h          Help\n\n");
 }
@@ -133,13 +133,13 @@ static void fail(unsigned where, A2_errors err)
 }
 
 
-static A2_handle render_wave(A2_state *st, A2_handle h)
+static A2_handle render_wave(A2_interface *iface, A2_handle h)
 {
 	int res;
 	A2_handle wh, sh;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *ss;
+	A2_interface *ssiface;
 	int frames = 0;
 
 	/* Configure and open substate */
@@ -150,31 +150,31 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 		return -a2_LastError();
 	if(drv && a2_AddDriver(cfg, drv))
 		return -a2_LastError();
-	if(!(ss = a2_SubState(st, cfg)))
+	if(!(ssiface = a2_SubState(iface, cfg)))
 		return -a2_LastError();
 	if(settings[1].samplerate != cfg->samplerate)
 		printf("Actual substate sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[1].samplerate);
 
 	/* Create target wave */
-	wh = a2_NewWave(st, A2_WWAVE, cfg->samplerate / A2_MIDDLEC, 0);
+	wh = a2_NewWave(iface, A2_WWAVE, cfg->samplerate / A2_MIDDLEC, 0);
 	if(wh < 0)
 	{
 		fprintf(stderr, "a2_WaveNew() failed!\n");
-		a2_Close(ss);
+		a2_Close(ssiface);
 		return wh;
 	}
 
 	/* Open stream to write to the target wave */
-	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
+	if((sh = a2_OpenStream(iface, wh, 0, 0, 0)) < 0)
 	{
-		a2_Close(ss);
-		a2_Release(st, wh);
+		a2_Close(ssiface);
+		a2_Release(iface, wh);
 		return sh;
 	}
 
 	/* Start sound! */
-	a2_Play(ss, a2_RootVoice(ss), h);
+	a2_Play(ssiface, a2_RootVoice(ssiface), h);
 
 	/* Render... */
 	while(1)
@@ -182,11 +182,11 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 		int i;
 		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
 		int32_t max = 0x80000000;
-		if((res = a2_Run(ss, cfg->buffer)) < 0)
+		if((res = a2_Run(ssiface, cfg->buffer)) < 0)
 		{
 			fprintf(stderr, "a2_Run() failed!\n");
-			a2_Close(ss);
-			a2_Release(st, wh);
+			a2_Close(ssiface);
+			a2_Release(iface, wh);
 			return res;
 		}
 		for(i = 0; i < cfg->buffer; ++i)
@@ -197,19 +197,19 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 		if((frames > 1000) && (max < 256))
 			break;
 		frames += cfg->buffer;
-		if((res = a2_Write(st, sh, A2_I24, buf,
+		if((res = a2_Write(iface, sh, A2_I24, buf,
 				cfg->buffer * sizeof(int32_t))))
 		{
 			fprintf(stderr, "a2_Write() failed!\n");
-			a2_Close(ss);
-			a2_Release(st, sh);
-			a2_Release(st, wh);
+			a2_Close(ssiface);
+			a2_Release(iface, sh);
+			a2_Release(iface, wh);
 			return -res;
 		}
 	}
 
 	/* Close substate */
-	a2_Close(ss);
+	a2_Close(ssiface);
 
 	/*
 	 * Prepare and return wave.
@@ -218,15 +218,15 @@ static A2_handle render_wave(A2_state *st, A2_handle h)
 	 *       as a stream is closed. a2_Flush() is really for when you
 	 *       want to keep the stream open to modify the wave later.
 	 */
-	if((res = a2_Flush(st, sh)))
+	if((res = a2_Flush(iface, sh)))
 	{
 		fprintf(stderr, "a2_Flush() failed!\n");
-		a2_Release(st, sh);
-		a2_Release(st, wh);
+		a2_Release(iface, sh);
+		a2_Release(iface, wh);
 		return -res;
 	}	
 
-	a2_Release(st, sh);
+	a2_Release(iface, sh);
 	return wh;
 }
 
@@ -236,7 +236,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, songh, ph, vh;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -252,35 +252,35 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(settings[0].samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[0].samplerate);
 
 	printf("Loading...\n");
 	
 	/* Load jingle */
-	if((h = a2_Load(state, "data/a2jingle.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/a2jingle.a2s", 0)) < 0)
 		fail(5, -h);
-	if((songh = a2_Get(state, h, "Song")) < 0)
+	if((songh = a2_Get(iface, h, "Song")) < 0)
 		fail(6, -songh);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(7, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestWave")) < 0)
 		fail(8, -ph);
 
 	/* Render */
 	printf("Rendering...\n");
-	if((h = render_wave(state, songh)) < 0)
+	if((h = render_wave(iface, songh)) < 0)
 		fail(9, -h);
 
 	/* Start playing! */
 	printf("Playing...\n");
-	a2_TimestampReset(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
+	a2_TimestampReset(iface);
+	vh = a2_Start(iface, a2_RootVoice(iface), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
 		fail(10, -vh);
 
@@ -288,18 +288,18 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Sleep(100);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
-	a2_TimestampReset(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
+	a2_TimestampReset(iface);
+	a2_Send(iface, vh, 1);
+	a2_Release(iface, vh);
 	a2_Sleep(1000);
 
 	/*
 	 * Not very nice at all - just butcher everything! But this is supposed
 	 * to work without memory leaks or anything, so we may as well test it.
 	 */
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

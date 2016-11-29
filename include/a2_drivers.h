@@ -23,7 +23,6 @@
 #ifndef A2_DRIVERS_H
 #define A2_DRIVERS_H
 
-#include <stdint.h>
 #include "a2_types.h"
 
 #ifdef __cplusplus
@@ -46,7 +45,8 @@ typedef enum A2_drivertypes
 struct A2_config
 {
 	/* Parameters */
-	A2_state	*state;		/* State using this config, if any */
+	A2_interface	*interface;	/* Master interface of state using
+					 * this config, if any */
 	A2_driver	*drivers;	/* Linked list of attached drivers */
 	int		samplerate;	/* Audio sample rate (Hz) */
 	int		buffer;		/* I/O buffer size (sample frames) */

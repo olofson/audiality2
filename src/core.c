@@ -319,7 +319,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 static inline void a2_DestroyUnit(A2_state *st, A2_unit *u)
 {
 	if(u->descriptor->Deinitialize)
-		u->descriptor->Deinitialize(u, st);
+		u->descriptor->Deinitialize(u);
 /*HACK*/
 	if(u->coutputs)
 		a2_FreeBlock(st, u->coutputs);
@@ -485,9 +485,10 @@ A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent, unsigned when)
 /* Special constructor for the root voice, which doesn't have a parent. */
 A2_errors a2_init_root_voice(A2_state *st)
 {
-	int i, res;
+	int j, res;
 	A2_voice *v;
 	A2_program *rootdriver;
+	A2_interface *i = &st->interfaces->interface;
 	/*
 	 * FIXME: We can't handle arbitrary channel counts very well at this
 	 * FIXME: point, so we actually mix stereo internally at all times.
@@ -495,7 +496,7 @@ A2_errors a2_init_root_voice(A2_state *st)
 	const char *rd = "a2_rootdriver";
 	if(st->config->channels < 2)
 		rd = "a2_rootdriver_mono";
-	rootdriver = a2_GetProgram(st, a2_Get(st, A2_ROOTBANK, rd));
+	rootdriver = a2_GetProgram(st, a2_Get(i, A2_ROOTBANK, rd));
 	if(!rootdriver)
 		return A2_INTERNAL + 400;
 	if(!(v = a2_VoiceAlloc(st)))
@@ -515,8 +516,8 @@ A2_errors a2_init_root_voice(A2_state *st)
 	v->s.r[R_TRANSPOSE] = 0;
 	v->noutputs = st->master->channels;
 	v->outputs = st->master->buffers;
-	for(i = A2_FIRSTCONTROLREG; i < v->ncregs; ++i)
-		a2_VoiceControl(st, v, i, 0, 0);
+	for(j = A2_FIRSTCONTROLREG; j < v->ncregs; ++j)
+		a2_VoiceControl(st, v, j, 0, 0);
 	if((res = a2_VoiceStart(st, v, rootdriver, 0, NULL)))
 	{
 		a2_VoiceFree(st, &v);
@@ -1035,7 +1036,7 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			break;
 		  case A2MT_REMOVEXIC:
 			DUMPMSGS(fprintf(stderr, "REMOVEXIC\n");)
-			if((res = a2_XinsertRemoveClient(st, e->b.xic.client)))
+			if((res = a2_XinsertRemoveClient(e->b.xic.client)))
 				a2r_Error(st, res, "A2MT_REMOVEXIC");
 			break;
 		  case A2MT_RELEASE:
@@ -1130,9 +1131,10 @@ static inline unsigned a2_ms2t(A2_state *st, int d)
 static int a2_sizeof_object(A2_state *st, int handle)
 {
 	A2_wave *w;
+	A2_interface *i = &st->interfaces->interface;
 	if(handle < 0)
 		return -A2_INVALIDHANDLE << 16;
-	if(!(w = a2_GetWave(st, handle)))
+	if(!(w = a2_GetWave(i, handle)))
 		return -A2_WRONGTYPE << 16;
 	switch(w->type)
 	{
@@ -1938,8 +1940,10 @@ void a2_AudioCallback(A2_audiodriver *driver, unsigned frames)
 }
 
 
-int a2_Run(A2_state *st, unsigned frames)
+int a2_Run(A2_interface *i, unsigned frames)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	if(!st->audio->Run)
 		return -A2_NOTIMPLEMENTED;
 	return st->audio->Run(st->audio, frames);

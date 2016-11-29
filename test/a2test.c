@@ -50,7 +50,7 @@ static int a2flags = 0;
 static int do_exit = 0;
 
 /* Playing and control */
-static A2_state *state = NULL;
+static A2_interface *iface = NULL;
 static A2_handle songbank = -1;
 static A2_handle rootvoice = -1;
 static A2_handle legatovoice = -1;
@@ -111,22 +111,22 @@ static void clamp_selection(void)
 {
 	if(bankindex < 0)
 		bankindex = 0;
-	while((a2_GetExport(state, songbank, bankindex) < 0) && bankindex)
+	while((a2_GetExport(iface, songbank, bankindex) < 0) && bankindex)
 		--bankindex;
-	selbank = a2_GetExport(state, songbank, bankindex);
+	selbank = a2_GetExport(iface, songbank, bankindex);
 	while((exportindex > 0) &&
-			(a2_GetExport(state, selbank, exportindex) < 0))
+			(a2_GetExport(iface, selbank, exportindex) < 0))
 		--exportindex;
 	while((exportindex < 0) &&
-			(a2_GetExport(state, selbank, exportindex) < 0))
+			(a2_GetExport(iface, selbank, exportindex) < 0))
 		++exportindex;
-	selected = a2_GetExport(state, selbank, exportindex);
+	selected = a2_GetExport(iface, selbank, exportindex);
 }
 
 static void bankinfo(int row, const char *key)
 {
-	A2_handle kh = a2_Get(state, selbank, key);
-	const char *txt = a2_String(state, kh);
+	A2_handle kh = a2_Get(iface, selbank, key);
+	const char *txt = a2_String(iface, kh);
 	if(!txt)
 		txt = "<undefined>";
 	gui_bankinfo(row, key, txt);
@@ -137,9 +137,9 @@ static void select_object(void)
 	char buf[128];
 	const char *bxname, *xname, *tname;
 	clamp_selection();
-	bxname = a2_GetExportName(state, songbank, bankindex);
-	xname = a2_GetExportName(state, selbank, exportindex);
-	tname = a2_TypeName(state, a2_TypeOf(state, selected));
+	bxname = a2_GetExportName(iface, songbank, bankindex);
+	xname = a2_GetExportName(iface, selbank, exportindex);
+	tname = a2_TypeName(iface, a2_TypeOf(iface, selected));
 	if(exportindex >= 0)
 		snprintf(buf, sizeof(buf), "B%d:%s X%d:%s (%s)\n",
 				bankindex, bxname, exportindex, xname, tname);
@@ -176,8 +176,8 @@ static void load_sounds(int argc, const char *argv[])
 	}
 
 	/* Release all songs and create a new song bank */
-	a2_Release(state, songbank);
-	songbank = a2_NewBank(state, "songbank", 0);
+	a2_Release(iface, songbank);
+	songbank = a2_NewBank(iface, "songbank", 0);
 	if(songbank < 0)
 	{
 		fprintf(stderr, "Couldn't create 'songbank'!\n");
@@ -190,7 +190,7 @@ static void load_sounds(int argc, const char *argv[])
 		A2_handle h;
 		if(argv[i][0] == '-')
 			continue;
-		h = a2_Load(state, argv[i], 0);
+		h = a2_Load(iface, argv[i], 0);
 		if(h < 0)
 		{
 			snprintf(buf, sizeof(buf), "Could not load \"%s\"!"
@@ -201,9 +201,9 @@ static void load_sounds(int argc, const char *argv[])
 			continue;
 		}
 		snprintf(buf, sizeof(buf), "%d: \"%s\" - %s - %s\n",
-				h, a2_Name(state, h),
-				a2_String(state, a2_Get(state, h, "author")),
-				a2_String(state, a2_Get(state, h, "title")));
+				h, a2_Name(iface, h),
+				a2_String(iface, a2_Get(iface, h, "author")),
+				a2_String(iface, a2_Get(iface, h, "title")));
 		fputs(buf, stdout);
 		gui_message(buf, -1);
 		/*
@@ -212,7 +212,7 @@ static void load_sounds(int argc, const char *argv[])
 		 * also assigns ownership to the bank, so we don't have to
 		 * explicitly release each song we've loaded.
 		 */
-		a2_Export(state, songbank, h, a2_Name(state, h));
+		a2_Export(iface, songbank, h, a2_Name(iface, h));
 	}
 	select_object();
 }
@@ -223,17 +223,21 @@ static void note_on(int note)
 	if(legato)
 	{
 		if(legatovoice < 0)
-			legatovoice = a2_Start(state, rootvoice,
+		{
+			legatovoice = a2_Start(iface, rootvoice,
 					selected, note / 12.0f + oct, 1, mod);
+		}
 		else
 		{
-			a2_Send(state, legatovoice, 2, note / 12.0f + oct);
-			a2_Send(state, legatovoice, 1, 1);
+			a2_Send(iface, legatovoice, 2, note / 12.0f + oct);
+			a2_Send(iface, legatovoice, 1, 1);
 		}
 	}
 	else
-		chrovoices[note] = a2_Start(state, rootvoice,
+	{
+		chrovoices[note] = a2_Start(iface, rootvoice,
 				selected, note / 12.0f + oct, 1, mod);
+	}
 }
 
 
@@ -241,8 +245,8 @@ static void note_off(int note)
 {
 	if(!legato)
 	{
-		a2_Send(state, chrovoices[note], 1);
-		a2_Release(state, chrovoices[note]);
+		a2_Send(iface, chrovoices[note], 1);
+		a2_Release(iface, chrovoices[note]);
 		/*
 		 * Just to make sure we don't have don't have stray invalid
 		 * handles in case keyboard events run out of sync.
@@ -303,20 +307,20 @@ static void handle_events(int argc, const char *argv[])
 			  case SDLK_p:
 				NO_KEY_REPEAT
 				if(legatovoice >= 0)
-					a2_Release(state, legatovoice);
-				legatovoice = a2_Start(state, rootvoice,
+					a2_Release(iface, legatovoice);
+				legatovoice = a2_Start(iface, rootvoice,
 						selected, oct, 1, mod);
 				break;
 
 			  /* Killing voices */
 			  case SDLK_y:
 				NO_KEY_REPEAT
-				a2_Kill(state, legatovoice);
+				a2_Kill(iface, legatovoice);
 				legatovoice = -1;
 				break;
 			  case SDLK_k:
 				NO_KEY_REPEAT
-				a2_KillSub(state, rootvoice);
+				a2_KillSub(iface, rootvoice);
 				legatovoice = -1;
 				memset(chrovoices, -1, sizeof(chrovoices));
 				break;
@@ -365,13 +369,13 @@ static void handle_events(int argc, const char *argv[])
 			  /* Modulation control */
 			  case SDLK_KP_MULTIPLY:
 				mod += .1;
-				a2_SendSub(state, rootvoice, 3, mod);
+				a2_SendSub(iface, rootvoice, 3, mod);
 				snprintf(buf, sizeof(buf), "Modulation: %f\n", mod);
 				gui_message(buf, -1);
 				break;
 			  case SDLK_KP_DIVIDE:
 				mod -= .1;
-				a2_SendSub(state, rootvoice, 3, mod);
+				a2_SendSub(iface, rootvoice, 3, mod);
 				snprintf(buf, sizeof(buf), "Modulation: %f\n", mod);
 				gui_message(buf, -1);
 				break;
@@ -387,8 +391,8 @@ static void handle_events(int argc, const char *argv[])
 			  case SDLK_LSHIFT:
 			  case SDLK_RSHIFT:
 				legato = 0;
-				a2_Send(state, legatovoice, 1, 0);
-				a2_Release(state, legatovoice);
+				a2_Send(iface, legatovoice, 1, 0);
+				a2_Release(iface, legatovoice);
 				legatovoice = -1;
 				break;
 			  case SDLK_F1:
@@ -424,15 +428,15 @@ static void update_main(int dt)
 	gui_oscilloscope(osc_right, dbuffer, plotpos, 270 + w + 8, 8, w, 128);
 	if(now - lastreset > 300)
 	{
-		a2_GetStateProperty(state, A2_PCPULOADAVG, &v);
+		a2_GetStateProperty(iface, A2_PCPULOADAVG, &v);
 		gui_cpuload(v);
-		a2_GetStateProperty(state, A2_PACTIVEVOICESMAX, &v);
+		a2_GetStateProperty(iface, A2_PACTIVEVOICESMAX, &v);
 		gui_voices(v);
-		a2_GetStateProperty(state, A2_PINSTRUCTIONS, &v);
+		a2_GetStateProperty(iface, A2_PINSTRUCTIONS, &v);
 		gui_instructions(v * 1000 / (now - lastreset));
-		a2_SetStateProperty(state, A2_PCPULOADAVG, 0);
-		a2_SetStateProperty(state, A2_PACTIVEVOICESMAX, 0);
-		a2_SetStateProperty(state, A2_PINSTRUCTIONS, 0);
+		a2_SetStateProperty(iface, A2_PCPULOADAVG, 0);
+		a2_SetStateProperty(iface, A2_PACTIVEVOICESMAX, 0);
+		a2_SetStateProperty(iface, A2_PINSTRUCTIONS, 0);
 		lastreset = now;
 	}
 }
@@ -516,7 +520,7 @@ static void do_frame(void)
 	int dt = tick - lasttick;
 	now += dt;
 	lasttick = tick;
-	a2_PumpMessages(state);
+	a2_PumpMessages(iface);
 	handle_events(main_argc, main_argv);
 	update_main(dt);
 	gui_refresh();
@@ -557,7 +561,7 @@ int main(int argc, char *argv[])
 	/*
 	 * Set up an Audiality 2 configuration with the desired drivers.
 	 *
-	 * Note the A2_STATECLOSE flag, that causes the engine state to take
+	 * Note the A2_STATECLOSE flag, that causes the engine iface to take
 	 * responsibility for closing the config.
 	 */
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, 2,
@@ -567,10 +571,10 @@ int main(int argc, char *argv[])
 		if(a2_AddDriver(cfg, a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 			fail(a2_LastError());
 
-	/* Open an Audiality 2 engine state! */
-	if(!(state = a2_Open(cfg)))
+	/* Open an Audiality 2 engine iface! */
+	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
-	rootvoice = a2_RootVoice(state);
+	rootvoice = a2_RootVoice(iface);
 
 	/* Set up the oscilloscopes */
 	if(dbuffer < 0)
@@ -582,7 +586,7 @@ int main(int argc, char *argv[])
 		fprintf(stderr, "Couldn't allocate visualization buffers!\n");
 		exit(4);
 	}
-	if((tcb = a2_SinkCallback(state, rootvoice, grab_process, NULL)) < 0)
+	if((tcb = a2_SinkCallback(iface, rootvoice, grab_process, NULL)) < 0)
 		fail(-tcb);
 
 	gui_draw_screen();
@@ -603,9 +607,9 @@ int main(int argc, char *argv[])
 	}
 #endif
 
-	a2_Release(state, tcb);
-	a2_Release(state, songbank);
-	a2_Close(state);
+	a2_Release(iface, tcb);
+	a2_Release(iface, songbank);
+	a2_Close(iface);
 	gui_close();
 	SDL_Quit();
 	free(audiodriver);

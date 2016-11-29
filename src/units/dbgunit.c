@@ -133,7 +133,7 @@ static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms,
 }
 
 
-static void dbgunit_Deinitialize(A2_unit *u, A2_state *st)
+static void dbgunit_Deinitialize(A2_unit *u)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
 	fprintf(stderr, "dbgunit[%u]: Deinitialize()\n", du->instance);
@@ -142,7 +142,7 @@ static void dbgunit_Deinitialize(A2_unit *u, A2_state *st)
 
 static A2_errors dbgunit_OpenState(A2_config *cfg, void **statedata)
 {
-	*statedata = cfg->state;
+	*statedata = ((A2_interface_i *)cfg->interface)->state;
 	return A2_OK;
 }
 

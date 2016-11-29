@@ -41,18 +41,18 @@ int audiobuf = 4096;
 static int do_exit = 0;
 
 
-static A2_handle upload_wave(A2_state *st, unsigned len)
+static A2_handle upload_wave(A2_interface *iface, unsigned len)
 {
 	A2_errors res;
 	A2_handle wh, sh;
 	int i;
 	int s = 0;
 	int16_t buf[FRAGSIZE];
-	if((wh = a2_NewWave(st, A2_WMIPWAVE, 128, 0)) < 0)
+	if((wh = a2_NewWave(iface, A2_WMIPWAVE, 128, 0)) < 0)
 		return wh;
-	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
+	if((sh = a2_OpenStream(iface, wh, 0, 0, 0)) < 0)
 	{
-		a2_Release(st, wh);
+		a2_Release(iface, wh);
 		return sh;
 	}
 	while(s < len)
@@ -61,16 +61,17 @@ static A2_handle upload_wave(A2_state *st, unsigned len)
 			buf[i] = sin(s * 2.0f * M_PI / 100 +
 					sin(s * .0013) * sin(s * .002) * 10) *
 					32767.0f;
-		if((res = a2_Write(st, sh, A2_I16, buf, i * sizeof(int16_t))))
+		if((res = a2_Write(iface, sh, A2_I16,
+				buf, i * sizeof(int16_t))))
 		{
-			a2_Release(st, sh);
-			a2_Release(st, wh);
+			a2_Release(iface, sh);
+			a2_Release(iface, wh);
 			return -res;
 		}
 	}
-	if((res = a2_Release(st, sh)))
+	if((res = a2_Release(iface, sh)))
 	{
-		a2_Release(st, wh);
+		a2_Release(iface, wh);
 		return -res;
 	}
 	return wh;
@@ -149,7 +150,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, ph, vh;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
 
@@ -164,27 +165,27 @@ int main(int argc, const char *argv[])
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(-h);
-	if((ph = a2_Get(state, h, "PlayTestWave")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestWave")) < 0)
 		fail(-ph);
 
 	/* Generate wave */
 	fprintf(stderr, "Generating wave...\n");
-	if((h = upload_wave(state, 100000)) < 0)
+	if((h = upload_wave(iface, 100000)) < 0)
 		fail(-h);
 
 	/* Start playing! */
 	fprintf(stderr, "Playing...\n");
-	a2_TimestampReset(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, 0.0f, 1.0f, h);
+	a2_TimestampReset(iface);
+	vh = a2_Start(iface, a2_RootVoice(iface), ph, 0.0f, 1.0f, h);
 	if(vh < 0)
 		fail(-vh);
 
@@ -192,17 +193,17 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Sleep(100);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
-	a2_TimestampReset(state);
-	a2_Send(state, vh, 1);
+	a2_TimestampReset(iface);
+	a2_Send(iface, vh, 1);
 	a2_Sleep(1000);
 
 	/*
 	 * Not very nice at all - just butcher everything! But this is supposed
 	 * to work without memory leaks or anything, so we may as well test it.
 	 */
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

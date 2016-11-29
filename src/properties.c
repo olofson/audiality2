@@ -1,7 +1,7 @@
 /*
  * properties.c - Audiality 2 Object property interface
  *
- * Copyright 2010-2015 David Olofson <david@olofson.net>
+ * Copyright 2010-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -29,8 +29,10 @@
 #include "compiler.h"
 
 
-A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v)
+A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	switch(p)
 	{
 	  /* A2_PGENERAL */
@@ -49,7 +51,7 @@ A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v)
 		*v = st->config->buffer;
 		return A2_OK;
 	  case A2_PTIMESTAMPMARGIN:
-		*v = st->tsmargin;
+		*v = ii->tsmargin;
 		return A2_OK;
 	  case A2_PTABSIZE:
 		*v = st->ss->tabsize;
@@ -139,8 +141,10 @@ A2_errors a2_GetStateProperty(A2_state *st, A2_properties p, int *v)
 }
 
 
-A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
+A2_errors a2_GetProperty(A2_interface *i, A2_handle h, A2_properties p, int *v)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, h);
 	if(!hi)
 		return A2_INVALIDHANDLE;
@@ -191,7 +195,7 @@ A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
 		  }
 		  case A2_TUNIT:
 		  {
-			const A2_unitdesc *ud = a2_GetUnitDescriptor(st, h);
+			const A2_unitdesc *ud = a2_GetUnitDescriptor(i, h);
 			*v = ud->flags;
 			return A2_OK;
 		  }
@@ -228,16 +232,16 @@ A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
 		return A2_OK;
 
 	  case A2_PSIZE:
-		*v = a2_Size(st, h);
+		*v = a2_Size(i, h);
 		return A2_OK;
 	  case A2_PPOSITION:
-		*v = a2_GetPosition(st, h);
+		*v = a2_GetPosition(i, h);
 		return A2_OK;
 	  case A2_PAVAILABLE:
-		*v = a2_Available(st, h);
+		*v = a2_Available(i, h);
 		return A2_OK;
 	  case A2_PSPACE:
-		*v = a2_Space(st, h);
+		*v = a2_Space(i, h);
 		return A2_OK;
 
 	  default:
@@ -246,8 +250,10 @@ A2_errors a2_GetProperty(A2_state *st, A2_handle h, A2_properties p, int *v)
 }
 
 
-A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v)
+A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	switch(p)
 	{
 	  /* A2_PGENERAL */
@@ -260,7 +266,7 @@ A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v)
 	  case A2_PBUFFER:
 		return A2_READONLY;
 	  case A2_PTIMESTAMPMARGIN:
-		st->tsmargin = v;
+		ii->tsmargin = v;
 		return A2_OK;
 	  case A2_PTABSIZE:
 		if(v < 1)
@@ -318,8 +324,10 @@ A2_errors a2_SetStateProperty(A2_state *st, A2_properties p, int v)
 }
 
 
-A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
+A2_errors a2_SetProperty(A2_interface *i, A2_handle h, A2_properties p, int v)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, h);
 	if(!hi)
 		return A2_INVALIDHANDLE;
@@ -337,7 +345,7 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 	  case A2_PSPACE:
 		return A2_READONLY;
 	  case A2_PPOSITION:
-		return a2_SetPosition(st, h, v);
+		return a2_SetPosition(i, h, v);
 
 	  default:
 		return A2_NOTFOUND;
@@ -345,12 +353,12 @@ A2_errors a2_SetProperty(A2_state *st, A2_handle h, A2_properties p, int v)
 }
 
 
-A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props)
+A2_errors a2_SetProperties(A2_interface *i, A2_handle h, A2_property *props)
 {
 	int p;
 	for(p = 0; props[p].property; ++p)
 	{
-		A2_errors res = a2_SetProperty(st, h, props[p].property,
+		A2_errors res = a2_SetProperty(i, h, props[p].property,
 				props[p].value);
 		if(res)
 			return res;
@@ -359,12 +367,12 @@ A2_errors a2_SetProperties(A2_state *st, A2_handle h, A2_property *props)
 }
 
 
-A2_errors a2_SetStateProperties(A2_state *st, A2_property *props)
+A2_errors a2_SetStateProperties(A2_interface *i, A2_property *props)
 {
 	int p;
 	for(p = 0; props[p].property; ++p)
 	{
-		A2_errors res = a2_SetStateProperty(st, props[p].property,
+		A2_errors res = a2_SetStateProperty(i, props[p].property,
 				props[p].value);
 		if(res)
 			return res;

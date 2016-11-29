@@ -1,7 +1,7 @@
 /*
  * render.c - Audiality 2 off-line and asynchronous rendering
  *
- * Copyright 2013-2015 David Olofson <david@olofson.net>
+ * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -31,7 +31,7 @@
  *
  * Returns number of sample frames rendered, or a negated A2_errors error code.
  */
-int a2_Render(A2_state *st,
+int a2_Render(A2_interface *i,
 		A2_handle stream,
 		unsigned samplerate, unsigned length, A2_property *props,
 		A2_handle program, unsigned argc, int *argv)
@@ -40,15 +40,15 @@ int a2_Render(A2_state *st,
 	A2_handle h;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *ss;
+	A2_interface *ssi;
 	int frames = 0;
 	unsigned lastpeak = 0; /* Frames since last peak > abs(silencelevel) */
 	int offlinebuffer, silencelevel, silencewindow, silencegrace;
 
-	a2_GetStateProperty(st, A2_POFFLINEBUFFER, &offlinebuffer);
-	a2_GetStateProperty(st, A2_PSILENCELEVEL, &silencelevel);
-	a2_GetStateProperty(st, A2_PSILENCEWINDOW, &silencewindow);
-	a2_GetStateProperty(st, A2_PSILENCEGRACE, &silencegrace);
+	a2_GetStateProperty(i, A2_POFFLINEBUFFER, &offlinebuffer);
+	a2_GetStateProperty(i, A2_PSILENCELEVEL, &silencelevel);
+	a2_GetStateProperty(i, A2_PSILENCEWINDOW, &silencewindow);
+	a2_GetStateProperty(i, A2_PSILENCEGRACE, &silencegrace);
 
 	/* Open off-line substate for rendering */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, "buffer")))
@@ -57,44 +57,44 @@ int a2_Render(A2_state *st,
 		return -a2_LastError();
 	if(drv && a2_AddDriver(cfg, drv))
 		return -a2_LastError();
-	if(!(ss = a2_SubState(st, cfg)))
+	if(!(ssi = a2_SubState(i, cfg)))
 		return -a2_LastError();
 
 	/* Parse the property table, if one was provided */
 	if(props)
-		a2_SetStateProperties(ss, props);
+		a2_SetStateProperties(ssi, props);
 
 	/* Start program! */
-	if((h = a2_Starta(ss, a2_RootVoice(ss), program, argc, argv)) < 0)
+	if((h = a2_Starta(ssi, a2_RootVoice(ssi), program, argc, argv)) < 0)
 		return h;
 
 	/* Render... */
 	while(1)
 	{
-		int i;
+		int j;
 		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
 		unsigned frag = cfg->buffer;
 		if(length && (frag > length - frames))
 			frag = length - frames;
 		if(!frag)
 			break;
-		if((res = a2_Run(ss, frag)) < 0)
+		if((res = a2_Run(ssi, frag)) < 0)
 		{
-			a2_Close(ss);
+			a2_Close(ssi);
 			return res;
 		}
 		if(!length)
 		{
 			lastpeak += frag;
-			for(i = 0; i < frag; ++i)
-				if((buf[i] > silencelevel) ||
-						(-buf[i] > silencelevel))
-					lastpeak = frag - i;
+			for(j = 0; j < frag; ++j)
+				if((buf[j] > silencelevel) ||
+						(-buf[j] > silencelevel))
+					lastpeak = frag - j;
 		}
-		if((res = a2_Write(st, stream, A2_I24, buf,
+		if((res = a2_Write(i, stream, A2_I24, buf,
 				frag * sizeof(int32_t))))
 		{
-			a2_Close(ss);
+			a2_Close(ssi);
 			return -res;
 		}
 		frames += frag;
@@ -111,14 +111,14 @@ int a2_Render(A2_state *st,
 		}
 	}
 
-	res = a2_LastRTError(ss);
+	res = a2_LastRTError(ssi);
 
-	a2_TimestampReset(ss);
-	a2_Send(ss, h, 1);
-	a2_Release(ss, h);
+	a2_TimestampReset(ssi);
+	a2_Send(ssi, h, 1);
+	a2_Release(ssi, h);
 
 	/* Close substate */
-	a2_Close(ss);
+	a2_Close(ssi);
 
 	if(res)
 		return -res;
@@ -141,7 +141,7 @@ int a2_Render(A2_state *st,
  *
  * Returns the handle of the rendered wave, or a negated A2_errors error code.
  */
-A2_handle a2_RenderWave(A2_state *st,
+A2_handle a2_RenderWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length, A2_property *props,
 		A2_handle program, unsigned argc, int *argv)
@@ -150,26 +150,26 @@ A2_handle a2_RenderWave(A2_state *st,
 	A2_handle wh, sh;
 	if(!period)
 		period = samplerate / A2_MIDDLEC;
-	if((wh = a2_NewWave(st, wt, period, flags)) < 0)
+	if((wh = a2_NewWave(i, wt, period, flags)) < 0)
 		return wh;
-	if((sh = a2_OpenStream(st, wh, 0, 0, 0)) < 0)
+	if((sh = a2_OpenStream(i, wh, 0, 0, 0)) < 0)
 	{
-		a2_Release(st, wh);
+		a2_Release(i, wh);
 		return sh;
 	}
 
-	res = a2_Render(st, sh, samplerate, length, props,
+	res = a2_Render(i, sh, samplerate, length, props,
 			program, argc, argv);
 	if(res < 0)
 	{
-		a2_Release(st, sh);
-		a2_Release(st, wh);
+		a2_Release(i, sh);
+		a2_Release(i, wh);
 		return res;
 	}
 
-	if((res = a2_Release(st, sh)))
+	if((res = a2_Release(i, sh)))
 	{
-		a2_Release(st, wh);
+		a2_Release(i, wh);
 		return -res;
 	}
 

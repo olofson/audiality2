@@ -1,7 +1,7 @@
 /*
  * waves.c - Audiality 2 waveform management
  *
- * Copyright 2010-2014 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -537,26 +537,26 @@ static A2_errors a2_wave_stream_open(A2_stream *str, A2_handle h)
 }
 
 
-static A2_handle a2_upload_export(A2_state *st, A2_handle bank,
+static A2_handle a2_upload_export(A2_interface *i, A2_handle bank,
 		const char *name,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
 	A2_errors res;
-	A2_handle h = a2_UploadWave(st, wt, period, flags | A2_LOCKED,
+	A2_handle h = a2_UploadWave(i, wt, period, flags | A2_LOCKED,
 			fmt, data, size);
 	if(h < 0)
 		return h;
-	if((res = a2_Export(st, bank, h, name)))
+	if((res = a2_Export(i, bank, h, name)))
 	{
-		a2_Release(st, h);
+		a2_Release(i, h);
 		return -res;
 	}
 	return h;
 }
 
 
-A2_handle a2_UploadWave(A2_state *st,
+A2_handle a2_UploadWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		A2_sampleformats fmt, const void *data, unsigned size)
 {
@@ -568,9 +568,9 @@ A2_handle a2_UploadWave(A2_state *st,
 	if(!ss)
 		return -A2_BADFORMAT;
 	size /= ss;
-	if((h = a2_NewWave(st, wt, period, flags)) < 0)
+	if((h = a2_NewWave(i, wt, period, flags)) < 0)
 		return h;
-	if(!(w = a2_GetWave(st, h)))
+	if(!(w = a2_GetWave(i, h)))
 		return A2_INTERNAL + 300; /* Wut!? We just created it...! */
 	w->flags &= ~A2_UNPREPARED;	/* Shortcut! We alloc manually here. */
 	if(!ss || !data || !size)
@@ -582,7 +582,7 @@ A2_handle a2_UploadWave(A2_state *st,
 	if((res = a2_wave_alloc(w, size)) ||
 			(res = a2_do_write(w, 0, gain, fmt, data, size)))
 	{
-		a2_Release(st, h);
+		a2_Release(i, h);
 		return res;
 	}
 	a2_postprocess(w);
@@ -591,8 +591,11 @@ A2_handle a2_UploadWave(A2_state *st,
 }
 
 
-A2_handle a2_NewWave(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
+A2_handle a2_NewWave(A2_interface *i, A2_wavetypes wt, unsigned period,
+		int flags)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	A2_handle h;
 	A2_wave *w = (A2_wave *)calloc(1, sizeof(A2_wave));
 	if(!w)
@@ -623,27 +626,27 @@ A2_handle a2_NewWave(A2_state *st, A2_wavetypes wt, unsigned period, int flags)
 }
 
 
-A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
+A2_errors a2_InitWaves(A2_interface *i, A2_handle bank)
 {
-	int i, s, h;
+	int j, s, h;
 	int16_t buf[A2_WAVEPERIOD];
 
 	/* "off" wave - dummy oscillator */
-	h = a2_upload_export(st, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
+	h = a2_upload_export(i, bank, "off", A2_WOFF, 0, 0, 0, NULL, 0);
 	if(h < 0)
 		return -h;
 
 	/* 1..50% duty cycle pulse waves. ("square" is "pulse50") */
-	for(i = 1; i <= 50; i += i < 10 ? 1 : 5)
+	for(j = 1; j <= 50; j += j < 10 ? 1 : 5)
 	{
 		char name[16];
-		int s1 = (A2_WAVEPERIOD * i + 50) / 100;
+		int s1 = (A2_WAVEPERIOD * j + 50) / 100;
 		for(s = 0; s < s1; ++s)
 			buf[s] = 32767;
 		for(++s; s < A2_WAVEPERIOD; ++s)
 			buf[s] = -32767;
-		snprintf(name, sizeof(name), "pulse%d", i);
-		h = a2_upload_export(st, bank, name, A2_WMIPWAVE, A2_WAVEPERIOD,
+		snprintf(name, sizeof(name), "pulse%d", j);
+		h = a2_upload_export(i, bank, name, A2_WMIPWAVE, A2_WAVEPERIOD,
 				A2_LOOPED, A2_I16, buf, sizeof(buf));
 		if(h < 0)
 			return -h;
@@ -652,7 +655,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	/* Sawtooth wave */
 	for(s = 0; s < A2_WAVEPERIOD; ++s)
 		buf[s] = s * 65534 / A2_WAVEPERIOD - 32767;
-	h = a2_upload_export(st, bank, "saw", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "saw", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
@@ -662,7 +665,7 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 		buf[(5 * A2_WAVEPERIOD / 4 - s - 1) % A2_WAVEPERIOD] =
 				buf[s + A2_WAVEPERIOD / 4] =
 				s * 65534 * 2 / A2_WAVEPERIOD - 32767;
-	h = a2_upload_export(st, bank, "triangle", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "triangle", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
@@ -670,34 +673,34 @@ A2_errors a2_InitWaves(A2_state *st, A2_handle bank)
 	/* Sine wave, absolute sine, half sine and quarter sine */
 	for(s = 0; s < A2_WAVEPERIOD; ++s)
 		buf[s] = sin(s * 2.0f * M_PI / A2_WAVEPERIOD) * 32767.0f;
-	h = a2_upload_export(st, bank, "sine", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "sine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = A2_WAVEPERIOD / 2; s < A2_WAVEPERIOD; ++s)
 		buf[s] = -buf[s];
-	h = a2_upload_export(st, bank, "asine", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "asine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = A2_WAVEPERIOD / 2; s < A2_WAVEPERIOD; ++s)
 		buf[s] = 0;
-	h = a2_upload_export(st, bank, "hsine", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "hsine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	for(s = 0; s < A2_WAVEPERIOD / 4; ++s)
 		buf[s + A2_WAVEPERIOD / 2] = buf[s];
-	h = a2_upload_export(st, bank, "qsine", A2_WMIPWAVE, A2_WAVEPERIOD,
+	h = a2_upload_export(i, bank, "qsine", A2_WMIPWAVE, A2_WAVEPERIOD,
 			A2_LOOPED, A2_I16, buf, sizeof(buf));
 	if(h < 0)
 		return -h;
 
 	/* SID style noise generator - special oscillator */
-	h = a2_upload_export(st, bank, "noise", A2_WNOISE, 256,
+	h = a2_upload_export(i, bank, "noise", A2_WNOISE, 256,
 			A2_LOOPED, 0, NULL, 0);
 	if(h < 0)
 		return -h;
@@ -753,8 +756,10 @@ A2_errors a2_RegisterWaveTypes(A2_state *st)
 }
 
 
-A2_wave *a2_GetWave(A2_state *st, A2_handle handle)
+A2_wave *a2_GetWave(A2_interface *i, A2_handle handle)
 {
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
 	RCHM_handleinfo *hi = rchm_Get(&st->ss->hm, handle);
 	if(!hi || (hi->typecode != A2_TWAVE))
 		return NULL;

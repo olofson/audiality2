@@ -139,7 +139,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, ph, vh[VOICES];
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
@@ -155,16 +155,16 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(5, -h);
-	if((ph = a2_Get(state, h, "PlayTestNote")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestNote")) < 0)
 		fail(6, -ph);
 
 	/* Abuse! */
@@ -172,24 +172,24 @@ int main(int argc, const char *argv[])
 	vhi = 0;
 	t = a2_GetTicks();
 	fprintf(stderr, "Starting!\n");
-	a2_TimestampReset(state);
+	a2_TimestampReset(iface);
 	while(!do_exit)
 	{
 		/* Stop and detach! */
 		if(vh[vhi])
 		{
-			a2_Send(state, vh[vhi], 1);
-			a2_Release(state, vh[vhi]);
+			a2_Send(iface, vh[vhi], 1);
+			a2_Release(iface, vh[vhi]);
 		}
 
 		/* Play! */
-		vh[vhi] = a2_Start(state, a2_RootVoice(state), ph,
-				a2_Rand(state, 2.0f), 0.5f);
+		vh[vhi] = a2_Start(iface, a2_RootVoice(iface), ph,
+				a2_Rand(iface, 2.0f), 0.5f);
 		if(vh[vhi] < 0)
 			fail(10, -vh[vhi]);
 
 		/* Timing... */
-		a2_TimestampBump(state, a2_ms2Timestamp(state, DELAY));
+		a2_TimestampBump(iface, a2_ms2Timestamp(iface, DELAY));
 		vhi = (vhi + 1) % VOICES;
 		if(vhi == 0)
 		{
@@ -197,12 +197,12 @@ int main(int argc, const char *argv[])
 			t += DELAY * VOICES;
 			while((t - (int)a2_GetTicks() > 0) && !do_exit)
 				a2_Sleep(1);
-			corr = a2_TimestampNudge(state, 0, CORRECTION);
+			corr = a2_TimestampNudge(iface, 0, CORRECTION);
 			fprintf(stderr, "(nudge %f)\n", corr / 256.0f);
-			a2_PumpMessages(state);
+			a2_PumpMessages(iface);
 		}
 	}
 
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

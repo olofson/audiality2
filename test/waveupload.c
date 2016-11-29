@@ -128,7 +128,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, ph, wh, vh;
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
@@ -144,16 +144,16 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(5, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave2")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestWave2")) < 0)
 		fail(6, -ph);
 
 	/* Render! */
@@ -172,15 +172,15 @@ int main(int argc, const char *argv[])
 	}
 
 	fprintf(stderr, "Uploading...\n");
-	wh = a2_UploadWave(state, A2_WWAVE, WAVEPER, 0,
+	wh = a2_UploadWave(iface, A2_WWAVE, WAVEPER, 0,
 			A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
 	if(wh < 0)
 		fail(8, -wh);
 
 	/* Start playing! */
 	fprintf(stderr, "Playing...\n");
-	a2_TimestampReset(state);
-	vh = a2_Start(state, a2_RootVoice(state), ph, -2.0f, 0.5f, wh);
+	a2_TimestampReset(iface);
+	vh = a2_Start(iface, a2_RootVoice(iface), ph, -2.0f, 0.5f, wh);
 	if(vh < 0)
 		fail(10, -vh);
 
@@ -188,15 +188,15 @@ int main(int argc, const char *argv[])
 	while(!do_exit)
 	{
 		a2_Sleep(100);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
-	a2_TimestampReset(state);
-	a2_Send(state, vh, 1);
-	a2_Release(state, vh);
+	a2_TimestampReset(iface);
+	a2_Send(iface, vh, 1);
+	a2_Release(iface, vh);
 	a2_Sleep(1000);
 
-	a2_Close(state);
+	a2_Close(iface);
 	free(wbuf);
 	return 0;
 }

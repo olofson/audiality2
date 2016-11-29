@@ -139,7 +139,7 @@ typedef A2_errors (*A2_uinit_cb)(A2_unit *u, A2_vmstate *vms, void *statedata,
  *	the A2_unit block as a unit is destroyed. (The A2_unit block is freed
  *	by Audiality 2.) This normally happens whenever a voice terminates.
  */
-typedef void (*A2_udeinit_cb)(A2_unit *u, A2_state *st);
+typedef void (*A2_udeinit_cb)(A2_unit *u);
 
 /*
  * Shared state management
@@ -324,11 +324,11 @@ struct A2_unit
  *	just lock these in place! The official way of unloading units is to
  *	close the engine state.
  */
-A2_handle a2_RegisterUnit(A2_state *st, const A2_unitdesc *ud);
+A2_handle a2_RegisterUnit(A2_interface *i, const A2_unitdesc *ud);
 
 
 /* Get the A2_unitdesc from the handle of a A2_TUNIT object. */
-const A2_unitdesc *a2_GetUnitDescriptor(A2_state *st, A2_handle handle);
+const A2_unitdesc *a2_GetUnitDescriptor(A2_interface *i, A2_handle handle);
 
 #ifdef __cplusplus
 };

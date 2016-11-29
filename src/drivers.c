@@ -195,8 +195,8 @@ void a2_CloseConfig(A2_config *config)
 {
 	a2_CloseDrivers(config, 0);
 	a2_destroy_drivers(config);
-	if(config->state)
-		config->state->config = NULL;	/* Detach from state! */
+	if(config->interface)
+		((A2_interface_i *)config->interface)->state->config = NULL;
 	free(config);
 }
 

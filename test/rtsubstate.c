@@ -1,7 +1,7 @@
 /*
  * rtsubstate.c - Audiality 2 realtime substate test
  *
- *	This test runs a master realtime state with a substate that also runs
+ *	This test runs a master realtime iface with a substate that also runs
  *	a realtime driver. That is, two asynchronous realtime states sharing
  *	banks, programs, waves etc.
  *
@@ -52,8 +52,8 @@ static TEST_settings settings[2] = {
 };
 
 /* State and control */
-static A2_state *state = NULL;		/* Engine state */
-static A2_state *substate = NULL;	/* Substate of 'state' */
+static A2_interface *iface = NULL;	/* Engine interface */
+static A2_interface *ssiface = NULL;	/* Substate interface */
 
 static int do_exit = 0;
 
@@ -67,7 +67,7 @@ static void usage(const char *exename)
 			"           -r[s]<n>    Audio sample rate (Hz)\n"
 			"           -c[s]<n>    Number of audio channels\n\n"
 			"                       's' is 1 or unpsecified for\n"
-			"                       the master state, and 2 for\n"
+			"                       the master iface, and 2 for\n"
 			"                       the substate.\n\n"
 			"           -h          Help\n\n");
 }
@@ -136,8 +136,8 @@ static void breakhandler(int a)
 static void fail(A2_errors err)
 {
 	fprintf(stderr, "ERROR: %s\n", a2_ErrorString(err));
-	if(state)
-		a2_Close(state);
+	if(iface)
+		a2_Close(iface);
 	exit(100);
 }
 
@@ -162,10 +162,10 @@ int main(int argc, const char *argv[])
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(a2_LastError());
 	if(settings[0].samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[0].samplerate);
 
 	/* Configure and open substate */
@@ -176,33 +176,33 @@ int main(int argc, const char *argv[])
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());
-	if(!(substate = a2_SubState(state, cfg)))
+	if(!(ssiface = a2_SubState(iface, cfg)))
 		fail(a2_LastError());
 	if(settings[1].samplerate != cfg->samplerate)
 		printf("Actual substate sample rate: %d (requested %d)\n",
 				cfg->samplerate, settings[1].samplerate);
 
 	/* Load sounds */
-	h = a2_Load(state, "data/k2intro.a2s", 0);
-	songh = a2_Get(state, h, "Song");
+	h = a2_Load(iface, "data/k2intro.a2s", 0);
+	songh = a2_Get(iface, h, "Song");
 
 	/* Start playing! */
-	a2_TimestampReset(state);
-	a2_TimestampReset(substate);
-	a2_Play(state, a2_RootVoice(state), songh);
-	a2_Play(substate, a2_RootVoice(substate), songh);
+	a2_TimestampReset(iface);
+	a2_TimestampReset(ssiface);
+	a2_Play(iface, a2_RootVoice(iface), songh);
+	a2_Play(ssiface, a2_RootVoice(ssiface), songh);
 
 	/* Wait for completion or abort */
 	while(!do_exit)
 	{
 		a2_Sleep(100);
-		a2_PumpMessages(state);
+		a2_PumpMessages(iface);
 	}
 
 	/*
 	 * Not very nice at all - just butcher everything! But this is supposed
 	 * to work without memory leaks or anything, so we may as well test it.
 	 */
-	a2_Close(state);
+	a2_Close(iface);
 	return 0;
 }

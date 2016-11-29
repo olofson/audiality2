@@ -39,6 +39,9 @@
 #include "env.h"
 
 
+static void a2_CloseState(A2_state *st);
+
+
 /*---------------------------------------------------------
 	Error handling
 ---------------------------------------------------------*/
@@ -50,8 +53,9 @@ A2_errors a2_LastError(void)
 	return a2_last_error;
 }
 
-A2_errors a2_LastRTError(A2_state *st)
+A2_errors a2_LastRTError(A2_interface *i)
 {
+	A2_state *st = ((A2_interface_i *)i)->state;
 	/*
 	 * This "should" be synchronized, but if we have multiple errors coming
 	 * in, this isn't really going to work reliably anyway.
@@ -111,8 +115,9 @@ static void type_registry_cleanup(A2_state *st)
 	API owned and locked objects
 ---------------------------------------------------------*/
 
-int a2_UnloadAll(A2_state *st)
+int a2_UnloadAll(A2_interface *i)
 {
+	A2_state *st = ((A2_interface_i *)i)->state;
 	RCHM_manager *hm;
 	RCHM_handle h;
 	int count = 0;
@@ -124,7 +129,7 @@ int a2_UnloadAll(A2_state *st)
 		RCHM_handleinfo *hi = rchm_Get(hm, h);
 		if(hi && (hi->userbits & A2_APIOWNED))
 		{
-			DBG(const char *s = a2_String(st, h);)
+			DBG(const char *s = a2_String(i, h);)
 			hi->userbits &= ~A2_APIOWNED;
 			if(rchm_Release(hm, h) == 0)
 			{
@@ -141,6 +146,8 @@ int a2_UnloadAll(A2_state *st)
 /* Removed all A2_LOCKED flags and release any objects with refcount 0 */
 static int a2_unlock_all(A2_state *st)
 {
+	DBG(A2_interface *i = st->interfaces ?
+			&(st->interfaces->interface): NULL;)
 	RCHM_manager *hm;
 	RCHM_handle h;
 	int count = 0;
@@ -150,7 +157,7 @@ static int a2_unlock_all(A2_state *st)
 	DBG(fprintf(stderr, "=== a2_unlock_all() ===\n");)
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
-		DBG(const char *s = a2_String(st, h);)
+		DBG(const char *s = i ? a2_String(i, h) : "<no interface>";)
 		RCHM_handleinfo *hi = rchm_Get(hm, h);
 		if(hi && (hi->userbits & A2_LOCKED))
 		{
@@ -201,8 +208,9 @@ static const A2_unitdesc *a2_core_units[] = {
 
 static A2_errors a2_OpenSharedState(A2_state *st)
 {
+	A2_interface *i = &st->interfaces->interface;
 	A2_errors res;
-	int i;
+	int j;
 	A2_compiler *c;
 	st->ss = (A2_sharedstate *)calloc(1, sizeof(A2_sharedstate));
 	if(!st->ss)
@@ -236,26 +244,26 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 		return res;
 
 	/* Set up the root bank (MUST get handle 0!) */
-	res = a2_NewBank(st, "root", A2_LOCKED);
+	res = a2_NewBank(i, "root", A2_LOCKED);
 	if(res != A2_ROOTBANK)
 		return A2_INTERNAL + 3;	/* Houston, we have a problem...! */
 
 	/* Render builtin waves */
-	if((res = a2_InitWaves(st, A2_ROOTBANK)))
+	if((res = a2_InitWaves(i, A2_ROOTBANK)))
 		return res;
 
 	/* Register the builtin voice units */
-	for(i = 0; a2_core_units[i]; ++i)
+	for(j = 0; a2_core_units[j]; ++j)
 	{
-		A2_handle h = a2_RegisterUnit(st, a2_core_units[i]);
+		A2_handle h = a2_RegisterUnit(i, a2_core_units[j]);
 		if(h < 0)
 			return -h;
-		if((res = a2_Export(st, A2_ROOTBANK, h, NULL)))
+		if((res = a2_Export(i, A2_ROOTBANK, h, NULL)))
 			return res;
 	}
 
 	/* Compile builtin programs */
-	if(!(c = a2_OpenCompiler(st, 0)))
+	if(!(c = a2_OpenCompiler(i, 0)))
 		return A2_OOMEMORY;
 	if((res = a2_CompileString(c, A2_ROOTBANK,
 			"export def square pulse50\n"
@@ -300,8 +308,11 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 
 	/* Grab frequently used objects, so we don't have to do that "live" */
 	if(!(st->ss->terminator = a2_GetProgram(st,
-			a2_Get(st, A2_ROOTBANK, "a2_terminator"))))
+			a2_Get(i, A2_ROOTBANK, "a2_terminator"))))
 		return A2_INTERNAL + 5;
+	if(!(st->ss->groupdriver = a2_Get(i, A2_ROOTBANK,
+			"a2_groupdriver")))
+		return A2_INTERNAL + 6;
 
 	return A2_OK;
 }
@@ -339,13 +350,12 @@ static A2_state *a2_Open0(A2_config *config)
 	}
 
 	st->config = config;
-	config->state = st;
 
 	if(!(st->config->flags & A2_SUBSTATE))
 	{
 		if(a2_add_api_user() != A2_OK)
 		{
-			a2_Close(st);
+			a2_CloseState(st);
 			return NULL;
 		}
 		st->is_api_user = 1;
@@ -356,7 +366,7 @@ static A2_state *a2_Open0(A2_config *config)
 	st->audio = (A2_audiodriver *)a2_GetDriver(config, A2_AUDIODRIVER);
 	if(!st->sys || !st->audio)
 	{
-		a2_Close(st);
+		a2_CloseState(st);
 		return NULL;
 	}
 
@@ -371,7 +381,7 @@ static A2_state *a2_Open0(A2_config *config)
 	/* Open drivers */
 	if((res = a2_OpenDrivers(st->config, A2_STATECLOSE)))
 	{
-		a2_Close(st);
+		a2_CloseState(st);
 		a2_last_error = res;
 		return NULL;
 	}
@@ -417,6 +427,39 @@ static A2_errors a2_Open2(A2_state *st)
 		st->blockpool = b;
 	}
 
+	/* Set up master audio bus */
+	if(!(st->master = a2_AllocBus(st, st->config->channels)))
+		return A2_OOMEMORY;
+
+	/* Prepare initial voice pool */
+	for(i = 0; i < st->config->voicepool; ++i)
+	{
+		A2_voice *v = a2_VoiceAlloc(st);
+		if(!v)
+			return A2_OOMEMORY;
+		v->next = st->voicepool;
+		st->voicepool = v;
+	}
+
+	/* Initialize the realtime control API */
+	if((res = a2_OpenAPI(st)))
+		return res;
+	st->now_ticks = a2_GetTicks();
+	st->now_micros = st->avgstart = a2_GetMicros();
+
+	/* Add "master" interface; the one returned by a2_Open(). */
+	if(!a2_AddInterface(st, st->config->flags & ~A2_REALTIME))
+	{
+		a2_CloseState(st);
+		return A2_OOMEMORY;
+	}
+
+	/*
+	 * Link config to "master" interface, now that we have one. (Needed
+	 * by some units, when they're registered in 2_OpenSharedState()!)
+	 */
+	st->config->interface = &st->interfaces->interface;
+
 	/*
 	 * For master states, initialize the bank, builtin waves and a2s
 	 * compiler.
@@ -437,34 +480,6 @@ static A2_errors a2_Open2(A2_state *st)
 			a2_UnitOpenState(st, i);
 	}
 
-	/* Set up master audio bus */
-	if(!(st->master = a2_AllocBus(st, st->config->channels)))
-		return A2_OOMEMORY;
-
-	/* Prepare initial voice pool */
-	for(i = 0; i < st->config->voicepool; ++i)
-	{
-		A2_voice *v = a2_VoiceAlloc(st);
-		if(!v)
-			return A2_OOMEMORY;
-		v->next = st->voicepool;
-		st->voicepool = v;
-	}
-
-	/* Start the root voice! */
-	st->msdur = st->config->samplerate * 65.536f + .5f;
-	if((res = a2_init_root_voice(st)))
-		return res;
-
-	/* Initialize the realtime control API */
-	if((res = a2_OpenAPI(st)))
-		return res;
-	st->now_ticks = a2_GetTicks();
-	st->now_micros = st->avgstart = a2_GetMicros();
-
-	/* Set default timestamp jitter margin */
-	st->tsmargin = st->config->buffer * 1000 / st->config->samplerate;
-
 	/* Initialize RNGs for noise and RAND instructions */
 	st->randstate = A2_DEFAULT_RANDSEED;
 	st->noisestate = A2_DEFAULT_NOISESEED;
@@ -474,6 +489,11 @@ static A2_errors a2_Open2(A2_state *st)
 	st->tsmin = INT32_MAX;
 	st->tsmax = INT32_MIN;
 	st->statreset = 1;
+
+	/* Start the root voice! */
+	st->msdur = st->config->samplerate * 65.536f + .5f;
+	if((res = a2_init_root_voice(st)))
+		return res;
 
 	/* Install the master process callback! */
 	st->audio->Lock(st->audio);
@@ -485,10 +505,11 @@ static A2_errors a2_Open2(A2_state *st)
 }
 
 
-A2_state *a2_Open(A2_config *config)
+A2_interface *a2_Open(A2_config *config)
 {
 	A2_errors res;
 	A2_state *st;
+	A2_interface_i *j;
 	a2_last_error = A2_OK;
 	DUMPSIZES(
 		printf("A2_wave:\t%d\n", sizeof(A2_wave));
@@ -520,7 +541,7 @@ A2_state *a2_Open(A2_config *config)
 		return NULL;
 	if((res = a2_Open2(st)))
 	{
-		a2_Close(st);
+		a2_CloseState(st);
 		fprintf(stderr, "Audiality 2: Initialization failed; %s!\n",
 				a2_ErrorString(res));
 		a2_last_error = res;
@@ -531,24 +552,29 @@ A2_state *a2_Open(A2_config *config)
 	a2_DumpConfig(st->config);
 	printf("------\n");
 #endif
-	a2_PumpMessages(st);
-	a2_TimestampReset(st);
-	return st;
+	for(j = st->interfaces; j; j = j->next)
+	{
+		A2_interface *i = &j->interface;
+		a2_PumpMessages(i);
+		a2_TimestampReset(i);
+	}
+	return &st->interfaces->interface;
 }
 
 
-A2_state *a2_SubState(A2_state *parent, A2_config *config)
+A2_interface *a2_SubState(A2_interface *parent, A2_config *config)
 {
 	A2_errors res;
 	A2_state *st;
+	A2_state *pst = ((A2_interface_i *)parent)->state;
 	a2_last_error = A2_OK;
 
 	/*
 	 * Substate of substate is "ok", but becomes another substate of the
 	 * same master state.
 	 */
-	if(parent->parent)
-		parent = parent->parent;
+	if(pst->parent)
+		pst = pst->parent;
 
 	/*
 	 * If no config is provided, create a typical offline streaming setup
@@ -556,9 +582,9 @@ A2_state *a2_SubState(A2_state *parent, A2_config *config)
 	 */
 	if(!config)
 	{
-		config = a2_OpenConfig(parent->config->samplerate,
-				parent->ss->offlinebuffer,
-				parent->config->channels, 0);
+		config = a2_OpenConfig(pst->config->samplerate,
+				pst->ss->offlinebuffer,
+				pst->config->channels, 0);
 		if(!config)
 			return NULL;	/* Most likely not going to work! --> */
 		if((res = a2_AddDriver(config,
@@ -583,25 +609,43 @@ A2_state *a2_SubState(A2_state *parent, A2_config *config)
 		return NULL;
 
 	/* Link the substate to the master state */
-	st->parent = parent;
-	st->next = parent->next;
-	parent->next = st;
+	st->parent = pst;
+	st->next = pst->next;
+	pst->next = st;
 
 	if((res = a2_Open2(st)))
 	{
-		a2_Close(st);
+		a2_CloseState(st);
 		fprintf(stderr, "Audiality 2: Initialization failed; %s!\n",
 				a2_ErrorString(res));
 		a2_last_error = res;
 		return NULL;
 	}
-	return st;
+	return &st->interfaces->interface;
 }
 
 
-void a2_Close(A2_state *st)
+void a2_Close(A2_interface *i)
 {
-	int i;
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+
+	if(--ii->refcount > 0)
+		return;
+
+	/* Last interface removed! Close the state. */
+	if(!st->interfaces)
+		a2_CloseState(st);
+
+	/* Remove *after* a2_CloseState(), because it's needed for cleanup! */
+	a2_RemoveInterface(ii);
+}
+
+
+static void a2_CloseState(A2_state *st)
+{
+	A2_interface *i = st->interfaces ? &(st->interfaces->interface): NULL;
+	int j;
 
 	/* Detach the audio callack */
 	if(st->audio)
@@ -621,14 +665,16 @@ void a2_Close(A2_state *st)
 	{
 		/* Unload the root bank and any other A2_LOCKed objects! */
 		a2_unlock_all(st);
-		a2_Release(st, A2_ROOTBANK);
+		if(i)
+			a2_Release(i, A2_ROOTBANK);
 
 		/* Close all substates! */
 		while(st->next)
-			a2_Close(st->next);
+			a2_CloseState(st->next);
 
 		/* Unload any "forgotten" API created objects... */
-		a2_UnloadAll(st);
+		if(i)
+			a2_UnloadAll(i);
 	}
 
 	/* Handle engine/RT error messages, handle release notifications etc */
@@ -654,13 +700,13 @@ void a2_Close(A2_state *st)
 	 * Must do this last thing, because destroying the root voice may
 	 * result in xinsert clients and whatnot being disposed of.
 	 */
-	if(st->toapi)
-		a2_PumpMessages(st);
+	if(i && st->toapi)
+		a2_PumpMessages(i);
 
 	a2_CloseAPI(st);
-	for(i = 0; i < A2_NESTLIMIT; ++i)
-		if(st->scratch[i])
-			a2_FreeBus(st, st->scratch[i]);
+	for(j = 0; j < A2_NESTLIMIT; ++j)
+		if(st->scratch[j])
+			a2_FreeBus(st, st->scratch[j]);
 	if(st->master)
 		a2_FreeBus(st, st->master);
 	while(st->voicepool)
@@ -679,8 +725,8 @@ void a2_Close(A2_state *st)
 	/* Close any unit shared state for this engine state */
 	if(st->unitstate)
 	{
-		for(i = 0; i < st->ss->nunits; ++i)
-			a2_UnitCloseState(st, i);
+		for(j = 0; j < st->ss->nunits; ++j)
+			a2_UnitCloseState(st, j);
 		free(st->unitstate);
 	}
 
@@ -702,7 +748,7 @@ void a2_Close(A2_state *st)
 		else
 		{
 			/* Just detach it from the state! */
-			st->config->state = NULL;
+			st->config->interface = NULL;
 			st->config = NULL;
 		}
 	}
@@ -725,6 +771,15 @@ void a2_Close(A2_state *st)
 			ps = s;
 			s = s->next;
 		}
+	}
+
+	/* Detach from interfaces, if any */
+	while(st->interfaces)
+	{
+		A2_interface_i *ii = st->interfaces;
+		st->interfaces = ii->next;
+		ii->state = NULL;
+		ii->next = NULL;
 	}
 
 	free(st);

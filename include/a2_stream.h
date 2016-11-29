@@ -1,7 +1,7 @@
 /*
  * a2_stream.h - Audiality 2 stream interface
  *
- * Copyright 2013-2015 David Olofson <david@olofson.net>
+ * Copyright 2013-2016 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -35,7 +35,7 @@ extern "C" {
  *
  * Returns the stream handle, or a negated error code.
  */
-A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
+A2_handle a2_OpenStream(A2_interface *i, A2_handle handle,
 		int channel, int size, unsigned flags);
 
 
@@ -44,27 +44,27 @@ A2_handle a2_OpenStream(A2_state *st, A2_handle handle,
  *
  * Returns A2_OK, or an error code.
  */
-A2_errors a2_SetPosition(A2_state *st, A2_handle stream, unsigned offset);
+A2_errors a2_SetPosition(A2_interface *i, A2_handle stream, unsigned offset);
 
 /*
  * Read the current read/write position of 'stream'.
  *
  * Returns the current offset, or a negated error code.
  */
-int a2_GetPosition(A2_state *st, A2_handle stream);
+int a2_GetPosition(A2_interface *i, A2_handle stream);
 
 /*
  * Returns number of sample frames currently available for reading from
  * 'stream', or -A2_NOTIMPLEMENTED if this feature is not implemented on this
  * object.
  */
-int a2_Available(A2_state *st, A2_handle stream);
+int a2_Available(A2_interface *i, A2_handle stream);
 
 /*
  * Returns the available space (sample frames) for writing to 'stream', or
  * -A2_NOTIMPLEMENTED if this feature is not implemented on this object.
  */
-int a2_Space(A2_state *st, A2_handle stream);
+int a2_Space(A2_interface *i, A2_handle stream);
 
 /*
  * Read 'size' bytes of audio from 'stream', converting it into the format
@@ -75,7 +75,7 @@ int a2_Space(A2_state *st, A2_handle stream);
  *
 FIXME: Do we want support for blocking I/O in this API?
  */
-A2_errors a2_Read(A2_state *st, A2_handle stream,
+A2_errors a2_Read(A2_interface *i, A2_handle stream,
 		A2_sampleformats fmt, void *buffer, unsigned size);
 
 /*
@@ -95,7 +95,7 @@ A2_errors a2_Read(A2_state *st, A2_handle stream,
  *
 FIXME: Do we want support for blocking I/O in this API?
  */
-A2_errors a2_Write(A2_state *st, A2_handle stream,
+A2_errors a2_Write(A2_interface *i, A2_handle stream,
 		A2_sampleformats fmt, const void *data, unsigned size);
 
 /*
@@ -104,7 +104,7 @@ A2_errors a2_Write(A2_state *st, A2_handle stream,
  *
  * Returns A2_OK, or an error code.
  */
-A2_errors a2_Flush(A2_state *st, A2_handle stream);
+A2_errors a2_Flush(A2_interface *i, A2_handle stream);
 
 #ifdef __cplusplus
 };

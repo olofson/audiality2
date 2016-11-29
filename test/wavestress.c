@@ -161,7 +161,7 @@ int main(int argc, const char *argv[])
 	A2_handle h, ph, wh[WAVES * 2];
 	A2_driver *drv;
 	A2_config *cfg;
-	A2_state *state;
+	A2_interface *iface;
 
 	signal(SIGTERM, breakhandler);
 	signal(SIGINT, breakhandler);
@@ -177,16 +177,16 @@ int main(int argc, const char *argv[])
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());
-	if(!(state = a2_Open(cfg)))
+	if(!(iface = a2_Open(cfg)))
 		fail(4, a2_LastError());
 	if(samplerate != cfg->samplerate)
-		printf("Actual master state sample rate: %d (requested %d)\n",
+		printf("Actual master iface sample rate: %d (requested %d)\n",
 				cfg->samplerate, samplerate);
 
 	/* Load wave player program */
-	if((h = a2_Load(state, "data/testprograms.a2s", 0)) < 0)
+	if((h = a2_Load(iface, "data/testprograms.a2s", 0)) < 0)
 		fail(5, -h);
-	if((ph = a2_Get(state, h, "PlayTestWave3")) < 0)
+	if((ph = a2_Get(iface, h, "PlayTestWave3")) < 0)
 		fail(6, -ph);
 
 	/* Allocate wave render buffer */
@@ -198,7 +198,7 @@ int main(int argc, const char *argv[])
 	whi = 0;
 	t = a2_GetTicks();
 	fprintf(stderr, "Starting!\n");
-	a2_TimestampReset(state);
+	a2_TimestampReset(iface);
 	while(!do_exit)
 	{
 		A2_errors res;
@@ -206,11 +206,11 @@ int main(int argc, const char *argv[])
 
 		/* Unload! */
 		if(wh[whi])
-			a2_Release(state, wh[whi]);
+			a2_Release(iface, wh[whi]);
 
 		/* Render! */
 		a = 32767.0f;
-		fmd = a2_Rand(state, FMDEPTH);
+		fmd = a2_Rand(iface, FMDEPTH);
 		for(s = 0; s < WAVELEN; ++s)
 		{
 			float phase = s * 2.0f * M_PI / WAVEPER;
@@ -220,19 +220,19 @@ int main(int argc, const char *argv[])
 			fmd *= FMDECAY;
 		}
 
-		wh[whi] = a2_UploadWave(state, A2_WWAVE, WAVEPER, 0,
+		wh[whi] = a2_UploadWave(iface, A2_WWAVE, WAVEPER, 0,
 				A2_I16, wbuf, sizeof(int16_t) * WAVELEN);
 		if(wh[whi] < 0)
 			fail(8, -wh[whi]);
 
 		/* Play! */
-		res = a2_Play(state, a2_RootVoice(state), ph,
-				a2_Rand(state, 1.0f), 0.5f, wh[whi]);
+		res = a2_Play(iface, a2_RootVoice(iface), ph,
+				a2_Rand(iface, 1.0f), 0.5f, wh[whi]);
 		if(res)
 			fail(10, res);
 
 		/* Timing... */
-		a2_TimestampBump(state, a2_ms2Timestamp(state, DELAY));
+		a2_TimestampBump(iface, a2_ms2Timestamp(iface, DELAY));
 		whi = (whi + 1) % (WAVES * 2);
 		if((whi % WAVES) == 0)
 		{
@@ -240,13 +240,13 @@ int main(int argc, const char *argv[])
 			t += DELAY * WAVES;
 			while((t - (int)a2_GetTicks() > 0) && !do_exit)
 				a2_Sleep(1);
-			corr = a2_TimestampNudge(state, 0, CORRECTION);
+			corr = a2_TimestampNudge(iface, 0, CORRECTION);
 			fprintf(stderr, "(nudge %f)\n", corr / 256.0f);
-			a2_PumpMessages(state);
+			a2_PumpMessages(iface);
 		}
 	}
 
-	a2_Close(state);
+	a2_Close(iface);
 	free(wbuf);
 	return 0;
 }

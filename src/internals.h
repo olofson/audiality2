@@ -48,6 +48,8 @@ typedef struct A2_compiler A2_compiler;
 typedef struct A2_sharedstate A2_sharedstate;
 typedef struct A2_stream A2_stream;
 typedef struct A2_wahp_entry A2_wahp_entry;
+typedef struct A2_interface_i A2_interface_i;
+typedef struct A2_state A2_state;
 
 
 /*
@@ -580,6 +582,7 @@ struct A2_sharedstate
 {
 	RCHM_manager	hm;		/* Handle manager */
 	A2_program	*terminator;	/* Dummy program for killed voices */
+	A2_handle	groupdriver;	/* Program handle for a2_NewGroup() */
 	char		strbuf[A2_TMPSTRINGSIZE]; /* For API return strings */
 
 	unsigned	offlinebuffer;	/* A2_POFFLINEBUFFER */
@@ -594,12 +597,26 @@ struct A2_sharedstate
 	const A2_unitdesc **units;	/* All registered units */
 };
 
+/* Interface implementation */
+struct A2_interface_i
+{
+	A2_interface	interface;
+	A2_interface_i	*next;
+	A2_state	*state;		/* Parent state */
+	unsigned	timestamp;	/* Current timestamp for async API */
+	int		nudge_adjust;	/* TS nudge from a2_TimestampNudge() */
+	int		tsmargin;	/* TS jitter margin (ms) */
+	int		refcount;
+	int		flags;
+};
+
 /* Audiality 2 state */
 struct A2_state
 {
 	A2_state	*parent;	/* Parent state, if substate */
 	A2_state	*next;		/* First or next substate */
 	A2_sharedstate	*ss;		/* Objects, banks etc */
+	A2_interface_i	*interfaces;	/* List of interfaces; master first */
 
 	A2_unitstate	*unitstate;	/* Shared state data for all units */
 
@@ -617,9 +634,6 @@ struct A2_state
 	volatile unsigned now_ticks;	/* Tick of last audio callback (ms) */
 	volatile unsigned now_guard;	/* Guard, matching now_frames */
 
-	unsigned	timestamp;	/* Current timestamp for async API */
-	int		nudge_adjust;	/* TS nudge from a2_TimestampNudge() */
-	int		tsmargin;	/* TS jitter margin (ms) */
 	SFIFO		*fromapi;	/* Messages from async. API calls */
 	SFIFO		*toapi;		/* Responses to the API context */
 	A2_event	*eocevents;	/* To be sent to API at end of cycle */
@@ -958,7 +972,7 @@ A2_errors a2_RegisterXICTypes(A2_state *st);
 	Waves
 ---------------------------------------------------------*/
 
-A2_errors a2_InitWaves(A2_state *st, A2_handle bank);
+A2_errors a2_InitWaves(A2_interface *i, A2_handle bank);
 A2_errors a2_RegisterWaveTypes(A2_state *st);
 
 
@@ -968,6 +982,8 @@ A2_errors a2_RegisterWaveTypes(A2_state *st);
 
 A2_errors a2_OpenAPI(A2_state *st);
 A2_errors a2_RegisterAPITypes(A2_state *st);
+A2_interface_i *a2_AddInterface(A2_state *st, int flags);
+void a2_RemoveInterface(A2_interface_i *ii);
 void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit);
 void a2r_ProcessEOCEvents(A2_state *st, unsigned frames);
 void a2_CloseAPI(A2_state *st);
@@ -1088,7 +1104,7 @@ A2_errors a2_XinsertAddClient(A2_state *st, A2_voice *v,
  *
  * Use from engine context only!
  */
-A2_errors a2_XinsertRemoveClient(A2_state *st, A2_xinsert_client *xic);
+A2_errors a2_XinsertRemoveClient(A2_xinsert_client *xic);
 
 
 /*---------------------------------------------------------
