@@ -48,7 +48,7 @@ char *strndup(const char *s, size_t size)
 /* Static data for a2_GetTicks() and a2_GetMicros() */
 #ifdef _WIN32
 DWORD a2_start_time;
-LARGE_INTEGER a2_perfc_frequency = { 0 };
+LARGE_INTEGER a2_perfc_frequency;
 #else
 struct timeval a2_start_time;
 #endif
