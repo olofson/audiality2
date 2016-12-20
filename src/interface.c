@@ -980,3 +980,15 @@ void a2_RemoveInterface(A2_interface_i *ii)
 	}
 	free(ii);
 }
+
+
+/* Public API wrapper */
+A2_interface *a2_Interface(A2_interface *master, int flags)
+{
+	A2_interface_i *ii = (A2_interface_i *)master;
+	A2_state *st = ii->state;
+	A2_interface_i *nii = a2_AddInterface(st, flags);
+	if(!nii)
+		return NULL;
+	return &nii->interface;
+}
