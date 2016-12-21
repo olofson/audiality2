@@ -162,7 +162,8 @@ A2_errors a2_OpenDrivers(A2_config *config, int flags)
 	a2_last_error = A2_OK;
 	for(d = config->drivers; d; d = d->next)
 		if((res = a2_OpenDriver(d, flags)))
-			return res;
+			if(res != A2_ALREADYOPEN)
+				return res;
 	return A2_OK;
 }
 

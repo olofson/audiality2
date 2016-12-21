@@ -345,7 +345,10 @@ static A2_state *a2_Open0(A2_config *config)
 	{
 		/* No config! Create a default one. */
 		if(!(config = a2_OpenConfig(-1, -1, -1, -1)))
+		{
+			free(st);
 			return NULL;
+		}
 		config->flags |= A2_STATECLOSE;
 	}
 
@@ -378,8 +381,14 @@ static A2_state *a2_Open0(A2_config *config)
 	 */
 	st->config->flags |= st->audio->driver.flags & A2_REALTIME;
 
-	/* Open drivers */
-	if((res = a2_OpenDrivers(st->config, A2_STATECLOSE)))
+	/* Open the system and audio drivers */
+	if((res = a2_OpenDriver(&st->sys->driver, A2_STATECLOSE)))
+	{
+		a2_CloseState(st);
+		a2_last_error = res;
+		return NULL;
+	}
+	if((res = a2_OpenDriver(&st->audio->driver, A2_STATECLOSE)))
 	{
 		a2_CloseState(st);
 		a2_last_error = res;
@@ -449,10 +458,7 @@ static A2_errors a2_Open2(A2_state *st)
 
 	/* Add "master" interface; the one returned by a2_Open(). */
 	if(!a2_AddInterface(st, st->config->flags & ~A2_REALTIME))
-	{
-		a2_CloseState(st);
 		return A2_OOMEMORY;
-	}
 
 	/*
 	 * Link config to "master" interface, now that we have one. (Needed
@@ -493,6 +499,10 @@ static A2_errors a2_Open2(A2_state *st)
 	/* Start the root voice! */
 	st->msdur = st->config->samplerate * 65.536f + .5f;
 	if((res = a2_init_root_voice(st)))
+		return res;
+
+	/* Open remaining drivers, if any. */
+	if((res = a2_OpenDrivers(st->config, A2_STATECLOSE)))
 		return res;
 
 	/* Install the master process callback! */
