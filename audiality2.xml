@@ -53,6 +53,10 @@
 			<item> ramp </item>
 			<item> debug </item>
 			<item> sizeof </item>
+			<item> and </item>
+			<item> or </item>
+			<item> xor </item>
+			<item> not </item>
 		</list>
 		<list name="cregs">
 			<item> tick </item>
