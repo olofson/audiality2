@@ -448,6 +448,7 @@ static A2_errors a2_API_Release(A2_interface *i, A2_handle handle)
 		  case A2_TUNIT:
 		  case A2_TWAVE:
 		  case A2_TPROGRAM:
+		  case A2_TCONSTANT:
 		  case A2_TSTRING:
 		  case A2_TSTREAM:
 		  case A2_TDETACHED:

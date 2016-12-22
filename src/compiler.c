@@ -1073,6 +1073,8 @@ static void a2c_SetTokenf(A2_compiler *c, int tk, double f)
  *
  * NOTE: No dependency on 'h' is added! It is assumed that the object is owned
  *       by an imported bank, or somehow managed by the caller.
+ *
+ *       An A2_TCONSTANT handle is translated to a normal TK_VALUE token.
  */
 static int a2c_Handle2Token(A2_compiler *c, int h)
 {
@@ -1084,6 +1086,7 @@ static int a2c_Handle2Token(A2_compiler *c, int h)
 	  case A2_TWAVE:	tk = TK_WAVE;		break;
 	  case A2_TUNIT:	tk = TK_UNIT;		break;
 	  case A2_TPROGRAM:	tk = TK_PROGRAM;	break;
+	  case A2_TCONSTANT:	tk = TK_VALUE;		break;
 	  case A2_TSTRING:	tk = TK_STRING;		break;
 	  /* Warning eliminator */
 	  case A2_TDETACHED:
@@ -1095,7 +1098,10 @@ static int a2c_Handle2Token(A2_compiler *c, int h)
 	}
 	if(!tk)
 		a2c_Throw(c, A2_INTERNAL + 146);
-	a2c_SetToken(c, tk, h);
+	if(tk == TK_VALUE)
+		a2c_SetTokenf(c, tk, a2_Value(c->interface, h));
+	else
+		a2c_SetToken(c, tk, h);
 	DUMPLSTRINGS(fprintf(stderr, "token %s (%d)] ", a2c_T2S(tk), tk);)
 	return tk;
 }
@@ -1417,6 +1423,15 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 					a2_TypeName(c->interface,
 					a2_TypeOf(c->interface, h)));)
 			break;
+		  case TK_VALUE:
+			if(s->flags & A2_SF_EXPORTED)
+			{
+				h = a2_NewConstant(c->interface, s->v.f);
+				if(h < 0)
+					a2c_Throw(c, -h);
+				break;
+			}
+			/* Fall-through! */
 		  default:
 			h = -1;
 			SCOPEDBG(fprintf(stderr, "(unsupported)\t");)

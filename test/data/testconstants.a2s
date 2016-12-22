@@ -1,0 +1,10 @@
+def title	"TestConstants"
+def version	"1.0"
+def description	"Test module exporting a numeric constant"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+export def THE_CONSTANT 42
+export def PI 3.141593

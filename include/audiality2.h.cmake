@@ -223,6 +223,9 @@ A2_otypes a2_TypeOf(A2_interface *i, A2_handle handle);
 /* Return name string of 'type'. */
 const char *a2_TypeName(A2_interface *i, A2_otypes typecode);
 
+/* Return real value representation of the object assigned to 'handle' */
+double a2_Value(A2_interface *i, A2_handle handle);
+
 /* Return a string representation of the object assigned to 'handle' */
 const char *a2_String(A2_interface *i, A2_handle handle);
 
@@ -306,6 +309,12 @@ A2_handle a2_NewBank(A2_interface *i, const char *name, int flags);
  */
 A2_handle a2_LoadString(A2_interface *i, const char *code, const char *name);
 A2_handle a2_Load(A2_interface *i, const char *fn, unsigned flags);
+
+/*
+ * Create a constant object of 'value'. Returns the handle of the constant
+ * object, or a negative error code.
+ */
+A2_handle a2_NewConstant(A2_interface *i, double value);
 
 /*
  * Create a string object from the null terminated 'string'. Returns the handle

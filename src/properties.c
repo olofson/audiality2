@@ -159,6 +159,7 @@ A2_errors a2_GetProperty(A2_interface *i, A2_handle h, A2_properties p, int *v)
 		{
 		  case A2_TBANK:
 		  case A2_TPROGRAM:
+		  case A2_TCONSTANT:
 		  case A2_TSTRING:
 		  case A2_TDETACHED:
 		  case A2_TNEWVOICE:
@@ -183,6 +184,7 @@ A2_errors a2_GetProperty(A2_interface *i, A2_handle h, A2_properties p, int *v)
 		switch((A2_otypes)hi->typecode)
 		{
 		  case A2_TBANK:
+		  case A2_TCONSTANT:
 		  case A2_TSTRING:
 		  case A2_TDETACHED:
 		  case A2_TNEWVOICE:

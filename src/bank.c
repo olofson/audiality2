@@ -32,7 +32,8 @@
 	Object/handle management
 ---------------------------------------------------------*/
 
-static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
+static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti,
+		RCHM_handle h)
 {
 	int j;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
@@ -50,7 +51,8 @@ static RCHM_errors a2_BankDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle 
 	return 0;
 }
 
-static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
+static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti,
+		RCHM_handle h)
 {
 	int i;
 	A2_state *st = ((A2_typeinfo *)ti)->state;
@@ -77,7 +79,18 @@ static RCHM_errors a2_ProgramDestructor(RCHM_handleinfo *hi, void *ti, RCHM_hand
 	return RCHM_OK;
 }
 
-static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *ti, RCHM_handle h)
+static RCHM_errors a2_ConstantDestructor(RCHM_handleinfo *hi, void *ti,
+		RCHM_handle h)
+{
+	A2_constant *c = (A2_constant *)hi->d.data;
+	if(hi->userbits & A2_LOCKED)
+		return RCHM_REFUSE;
+	free(c);
+	return RCHM_OK;
+}
+
+static RCHM_errors a2_StringDestructor(RCHM_handleinfo *hi, void *ti,
+		RCHM_handle h)
 {
 	A2_string *s = (A2_string *)hi->d.data;
 	if(hi->userbits & A2_LOCKED)
@@ -94,6 +107,9 @@ A2_errors a2_RegisterBankTypes(A2_state *st)
 	if(!res)
 		res = a2_RegisterType(st, A2_TPROGRAM, "program",
 				a2_ProgramDestructor, NULL);
+	if(!res)
+		res = a2_RegisterType(st, A2_TCONSTANT, "constant",
+				a2_ConstantDestructor, NULL);
 	if(!res)
 		res = a2_RegisterType(st, A2_TSTRING, "string",
 				a2_StringDestructor, NULL);
@@ -210,6 +226,26 @@ A2_handle a2_Load(A2_interface *i, const char *fn, unsigned flags)
 
 
 /*---------------------------------------------------------
+	Constants
+---------------------------------------------------------*/
+
+A2_handle a2_NewConstant(A2_interface *i, double value)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	A2_handle h;
+	A2_constant *c;
+	if(!(c = (A2_constant *)malloc(sizeof(A2_constant))))
+		return -A2_OOMEMORY;
+	c->value = value;
+	if((h = rchm_New(&st->ss->hm, c, A2_TCONSTANT)) < 0)
+		return h;
+	DBG(printf("created constant \"%f\", handle %d\n", value, h);)
+	return h;
+}
+
+
+/*---------------------------------------------------------
 	Strings
 ---------------------------------------------------------*/
 
@@ -264,6 +300,7 @@ A2_errors a2_Assign(A2_interface *i, A2_handle owner, A2_handle handle)
 	  case A2_TWAVE:
 	  case A2_TUNIT:
 	  case A2_TPROGRAM:
+	  case A2_TCONSTANT:
 	  case A2_TSTRING:
 	  case A2_TVOICE:
 		return A2_WRONGTYPE;
@@ -299,6 +336,7 @@ A2_errors a2_Export(A2_interface *i, A2_handle owner, A2_handle handle,
 	  case A2_TWAVE:
 	  case A2_TUNIT:
 	  case A2_TPROGRAM:
+	  case A2_TCONSTANT:
 	  case A2_TSTRING:
 	  case A2_TVOICE:
 		return A2_WRONGTYPE;

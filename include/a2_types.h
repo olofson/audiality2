@@ -48,6 +48,7 @@ typedef enum A2_otypes
 	A2_TWAVE,	/* Sampled mipmapped wave for oscillators like wtosc */
 	A2_TPROGRAM,	/* Instrument/sound/song program (compiled script) */
 	A2_TUNIT,	/* Voice structure unit ("class" - not instance!) */
+	A2_TCONSTANT,	/* Constant real value */
 	A2_TSTRING,	/* Simple C string */
 	A2_TSTREAM,	/* Audio stream (see stream.h) */
 	A2_TXICLIENT,	/* xinsert client (stream target or callback) */

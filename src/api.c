@@ -140,6 +140,36 @@ const char *a2_TypeName(A2_interface *i, A2_otypes type)
 }
 
 
+double a2_Value(A2_interface *i, A2_handle handle)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	RCHM_handleinfo *hi;
+	if(!(hi = rchm_Get(&st->ss->hm, handle)))
+		return 0.0f;
+	if(!hi->refcount && !(hi->userbits & A2_LOCKED))
+		return 0.0f;
+	switch((A2_otypes)hi->typecode)
+	{
+	  case A2_TCONSTANT:
+		return ((A2_constant *)hi->d.data)->value;
+	  case A2_TBANK:
+	  case A2_TWAVE:
+	  case A2_TPROGRAM:
+	  case A2_TSTRING:
+	  case A2_TSTREAM:
+		return a2_Size(i, handle);
+	  case A2_TUNIT:
+	  case A2_TXICLIENT:
+	  case A2_TDETACHED:
+	  case A2_TNEWVOICE:
+	  case A2_TVOICE:
+		break;
+	}
+	return 0.0f;
+}
+
+
 const char *a2_String(A2_interface *i, A2_handle handle)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
@@ -174,6 +204,13 @@ const char *a2_String(A2_interface *i, A2_handle handle)
 	  {
 		A2_program *p = (A2_program *)hi->d.data;
 		snprintf(sb, A2_TMPSTRINGSIZE, "<program %p>", p);
+		return sb;
+	  }
+	  case A2_TCONSTANT:
+	  {
+		A2_constant *c = (A2_constant *)hi->d.data;
+		snprintf(sb, A2_TMPSTRINGSIZE, "<constant value %f>",
+				c->value);
 		return sb;
 	  }
 	  case A2_TSTRING:
@@ -233,6 +270,7 @@ const char *a2_Name(A2_interface *i, A2_handle handle)
 	  }
 	  case A2_TWAVE:
 	  case A2_TPROGRAM:
+	  case A2_TCONSTANT:
 	  case A2_TSTRING:
 	  case A2_TSTREAM:
 	  case A2_TXICLIENT:
@@ -301,6 +339,7 @@ int a2_Size(A2_interface *i, A2_handle handle)
 	  case A2_TDETACHED:
 	  case A2_TNEWVOICE:
 	  case A2_TVOICE:
+	  case A2_TCONSTANT:
 		return -A2_NOTIMPLEMENTED;
 	}
 	return -(A2_INTERNAL + 31);

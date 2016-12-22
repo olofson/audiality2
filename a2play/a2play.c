@@ -207,6 +207,9 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		}
 		break;
 	  }
+	  case A2_TCONSTANT:
+		printf("%f", a2_Value(iface, h));
+		break;
 	  case A2_TSTRING:
 		printf("%s", a2_String(iface, h));
 		break;

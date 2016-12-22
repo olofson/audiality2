@@ -37,6 +37,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 
 
 typedef struct A2_typeinfo A2_typeinfo;
+typedef struct A2_constant A2_constant;
 typedef struct A2_string A2_string;
 typedef struct A2_bank A2_bank;
 typedef struct A2_program A2_program;
@@ -330,6 +331,11 @@ A2_errors a2_RegisterUnitTypes(A2_state *st);
 /*---------------------------------------------------------
 	Engine structures
 ---------------------------------------------------------*/
+
+struct A2_constant
+{
+	double		value;
+};
 
 struct A2_string
 {
