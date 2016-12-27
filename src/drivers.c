@@ -73,8 +73,7 @@ void a2_DumpConfig(A2_config *c)
 	if(c->flags & A2_REALTIME) printf(" REALTIME");
 	if(c->flags & A2_SUBSTATE) printf(" SUBSTATE");
 	if(c->flags & A2_ISOPEN) printf(" ISOPEN");
-	if(c->flags & A2_STATECLOSE) printf(" STATECLOSE");
-	if(c->flags & A2_CFGCLOSE) printf(" CFGCLOSE");
+	if(c->flags & A2_AUTOCLOSE) printf(" AUTOCLOSE");
 	printf("\n");
 	printf("      poolsize: %d\n", c->poolsize);
 	printf("     blockpool: %d\n", c->blockpool);
@@ -180,7 +179,7 @@ A2_errors a2_CloseDrivers(A2_config *config, int mask)
 	A2_driver *d;
 	for(d = config->drivers; d; d = d->next)
 	{
-		if(mask & !(mask & d->flags))
+		if(mask && !(mask & d->flags))
 			continue;	/* Not a match! */
 		a2_CloseDriver(d);
 	}
@@ -201,7 +200,7 @@ static void a2_destroy_drivers(A2_config *config)
 
 void a2_CloseConfig(A2_config *config)
 {
-	a2_CloseDrivers(config, 0);
+	a2_CloseDrivers(config, A2_AUTOCLOSE);
 	a2_destroy_drivers(config);
 	if(config->interface)
 		((A2_interface_i *)config->interface)->state->config = NULL;

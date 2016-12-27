@@ -293,7 +293,7 @@ static A2_errors alsamd_Open(A2_driver *driver)
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
 	const char *label = "Audiality 2";
 	if(!(amd->interface = a2_Interface(driver->config->interface,
-			A2_REALTIME)))
+			A2_REALTIME | A2_AUTOCLOSE)))
 	{
 		fprintf(stderr, "Audiality 2; Could not create realtime "
 				"interface!\n");
@@ -329,6 +329,11 @@ static A2_errors alsamd_Open(A2_driver *driver)
 static void alsamd_Close(A2_driver *driver)
 {
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
+	/*
+	 * A2_AUTOCLOSE for interfaces is handled last thing when a state is
+	 * closed, so it should be safe to close it here, even if we get here
+	 * as a result of the state closing.
+	 */
 	if(amd->interface)
 		a2_Close(amd->interface);
 	if(amd->seq_handle)

@@ -591,7 +591,7 @@ int main(int argc, const char *argv[])
 
 	/* Configure and open engine */
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
-			a2flags | A2_STATECLOSE)))
+			a2flags | A2_AUTOCLOSE)))
 		fail(a2_LastError());
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(a2_LastError());

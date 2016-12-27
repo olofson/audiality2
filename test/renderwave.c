@@ -146,7 +146,7 @@ static A2_handle render_wave(A2_interface *iface, A2_handle h)
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, settings[1].audiodriver)))
 		return -a2_LastError();
 	if(!(cfg = a2_OpenConfig(settings[1].samplerate, settings[1].audiobuf,
-			settings[1].channels, A2_STATECLOSE)))
+			settings[1].channels, A2_AUTOCLOSE)))
 		return -a2_LastError();
 	if(drv && a2_AddDriver(cfg, drv))
 		return -a2_LastError();
@@ -248,7 +248,7 @@ int main(int argc, const char *argv[])
 		fail(1, a2_LastError());
 	if(!(cfg = a2_OpenConfig(settings[0].samplerate, settings[0].audiobuf,
 			settings[0].channels,
-			A2_TIMESTAMP | A2_STATECLOSE)))
+			A2_TIMESTAMP | A2_AUTOCLOSE)))
 		fail(2, a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(3, a2_LastError());

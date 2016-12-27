@@ -278,8 +278,7 @@ typedef enum A2_initflags
 
 	/* Flags for drivers and configurations */
 	A2_ISOPEN =	0x10000000,	/* Object is open/in use */
-	A2_STATECLOSE =	0x20000000,	/* Will be closed by engine state */
-	A2_CFGCLOSE =	0x40000000,	/* Will be closed by configuration */
+	A2_AUTOCLOSE =	0x20000000	/* Will be closed by parent object */
 } A2_initflags;
 
 #ifdef __cplusplus

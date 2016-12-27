@@ -561,11 +561,11 @@ int main(int argc, char *argv[])
 	/*
 	 * Set up an Audiality 2 configuration with the desired drivers.
 	 *
-	 * Note the A2_STATECLOSE flag, that causes the engine iface to take
-	 * responsibility for closing the config.
+	 * Note the A2_AUTOCLOSE flag, that causes the config to be closed by
+	 * the engine state as it's closed.
 	 */
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, 2,
-			a2flags | A2_STATECLOSE)))
+			a2flags | A2_AUTOCLOSE)))
 		fail(a2_LastError());
 	if(audiodriver)
 		if(a2_AddDriver(cfg, a2_NewDriver(A2_AUDIODRIVER, audiodriver)))

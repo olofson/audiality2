@@ -212,7 +212,7 @@ int main(int argc, const char *argv[])
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, audiodriver)))
 		fail(a2_LastError());
 	if(!(cfg = a2_OpenConfig(samplerate, audiobuf, channels,
-			A2_TIMESTAMP | A2_STATECLOSE)))
+			A2_TIMESTAMP | A2_AUTOCLOSE)))
 		fail(a2_LastError());
 	if(drv && a2_AddDriver(cfg, drv))
 		fail(a2_LastError());

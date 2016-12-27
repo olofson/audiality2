@@ -53,7 +53,7 @@ int a2_Render(A2_interface *i,
 	/* Open off-line substate for rendering */
 	if(!(drv = a2_NewDriver(A2_AUDIODRIVER, "buffer")))
 		return -a2_LastError();
-	if(!(cfg = a2_OpenConfig(samplerate, offlinebuffer, 1, A2_STATECLOSE)))
+	if(!(cfg = a2_OpenConfig(samplerate, offlinebuffer, 1, A2_AUTOCLOSE)))
 		return -a2_LastError();
 	if(drv && a2_AddDriver(cfg, drv))
 		return -a2_LastError();

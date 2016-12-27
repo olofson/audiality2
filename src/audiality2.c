@@ -349,7 +349,7 @@ static A2_state *a2_Open0(A2_config *config)
 			free(st);
 			return NULL;
 		}
-		config->flags |= A2_STATECLOSE;
+		config->flags |= A2_AUTOCLOSE;
 	}
 
 	st->config = config;
@@ -382,13 +382,13 @@ static A2_state *a2_Open0(A2_config *config)
 	st->config->flags |= st->audio->driver.flags & A2_REALTIME;
 
 	/* Open the system and audio drivers */
-	if((res = a2_OpenDriver(&st->sys->driver, A2_STATECLOSE)))
+	if((res = a2_OpenDriver(&st->sys->driver, A2_AUTOCLOSE)))
 	{
 		a2_CloseState(st);
 		a2_last_error = res;
 		return NULL;
 	}
-	if((res = a2_OpenDriver(&st->audio->driver, A2_STATECLOSE)))
+	if((res = a2_OpenDriver(&st->audio->driver, A2_AUTOCLOSE)))
 	{
 		a2_CloseState(st);
 		a2_last_error = res;
@@ -502,7 +502,7 @@ static A2_errors a2_Open2(A2_state *st)
 		return res;
 
 	/* Open remaining drivers, if any. */
-	if((res = a2_OpenDrivers(st->config, A2_STATECLOSE)))
+	if((res = a2_OpenDrivers(st->config, A2_AUTOCLOSE)))
 		return res;
 
 	/* Install the master process callback! */
@@ -604,7 +604,7 @@ A2_interface *a2_SubState(A2_interface *parent, A2_config *config)
 			a2_last_error = res;
 			return NULL;
 		}
-		config->flags |= A2_STATECLOSE;	/* We close what we open! */
+		config->flags |= A2_AUTOCLOSE;	/* We close what we open! */
 	}
 	if(!config)
 		return NULL;	/* Most likely not going to work! --> */
@@ -639,16 +639,29 @@ void a2_Close(A2_interface *i)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
+	int refs = 0;
 
 	if(--ii->refcount > 0)
 		return;
 
-	/* Last interface removed! Close the state. */
-	if(!st->interfaces)
-		a2_CloseState(st);
+	/* Count remaining non-autoclose interfaces using this state */
+	if(st)
+	{
+		A2_interface_i *iii;
+		for(iii = st->interfaces; iii; iii = iii->next)
+		{
+			if(iii == ii)
+				continue;	/* About to be closed. */
+			if(iii->flags & A2_AUTOCLOSE)
+				continue;	/* These don't count! */
+			++refs;
+		}
+	}
 
-	/* Remove *after* a2_CloseState(), because it's needed for cleanup! */
-	a2_RemoveInterface(ii);
+	if(refs)
+		a2_RemoveInterface(ii);	/* Close interface only */
+	else
+		a2_CloseState(st);	/* Close everything! */
 }
 
 
@@ -713,7 +726,6 @@ static void a2_CloseState(A2_state *st)
 	if(i && st->toapi)
 		a2_PumpMessages(i);
 
-	a2_CloseAPI(st);
 	for(j = 0; j < A2_NESTLIMIT; ++j)
 		if(st->scratch[j])
 			a2_FreeBus(st, st->scratch[j]);
@@ -743,25 +755,14 @@ static void a2_CloseState(A2_state *st)
 	if(!(st->config->flags & A2_SUBSTATE))
 		a2_CloseSharedState(st);
 
-	if(st->is_api_user)
-		a2_remove_api_user();
+	a2_CloseAPI(st);
 
-	/* Close the A2_config, if we created it! */
-	if(st->config)
-	{
-		/* Close any drivers that we're supposed to close */
-		a2_CloseDrivers(st->config, A2_STATECLOSE);
-
-		/* Close if we're supposed to, otherwise, detach from state! */
-		if(st->config->flags & A2_STATECLOSE)
-			a2_CloseConfig(st->config);
-		else
-		{
-			/* Just detach it from the state! */
-			st->config->interface = NULL;
-			st->config = NULL;
-		}
-	}
+	/* Close if we're supposed to, otherwise, detach from state! */
+	if(st->config->flags & A2_AUTOCLOSE)
+		a2_CloseConfig(st->config);
+	else
+		st->config->interface = NULL;
+	st->config = NULL;
 
 	/* Detach from master state, if any */
 	if(st->parent)
@@ -783,14 +784,19 @@ static void a2_CloseState(A2_state *st)
 		}
 	}
 
-	/* Detach from interfaces, if any */
+	/* Detach from interfaces, if any, and close any A2_AUTOCLOSE ones */
 	while(st->interfaces)
 	{
 		A2_interface_i *ii = st->interfaces;
 		st->interfaces = ii->next;
 		ii->state = NULL;
 		ii->next = NULL;
+		if(ii->flags & A2_AUTOCLOSE)
+			a2_RemoveInterface(ii);
 	}
+
+	if(st->is_api_user)
+		a2_remove_api_user();
 
 	free(st);
 }

@@ -89,8 +89,6 @@ void a2_CloseAPI(A2_state *st)
 	EVLEAKTRACK(if(st->numevents)
 		fprintf(stderr, "Audiality 2: %d events leaked!\n",
 				st->numevents);)
-	while(st->interfaces)
-		a2_RemoveInterface(st->interfaces);
 }
 
 
