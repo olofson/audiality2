@@ -9,6 +9,52 @@ def a2sversion	"1.9"
 import midi as MIDI
 import megastrings as MS
 
+SineBeep(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; @p P
+	a V;	d 20
+	end
+.rel	a 0;	d 20
+	1() { force rel }
+}
+
+SinePluck(P V=1)
+{
+	struct { wtosc; panmix }
+	w sine; @p P
+	a V;	d 1
+	for {
+		*a .93
+		d 10
+	}
+.rel	a 0;	d 100
+	1() { force rel }
+}
+
+SawBeep(P V=1)
+{
+	struct { wtosc; panmix }
+	w saw; @p P
+	a V;	d 100
+	end
+.rel	a 0;	d 100
+	1() { force rel }
+}
+
+SawPluck(P V=1)
+{
+	struct { wtosc; panmix }
+	w saw; @p P
+	a V;	d 1
+	for {
+		*a .9
+		d 10
+	}
+.rel	a 0;	d 100
+	1() { force rel }
+}
+
 Bass1(P V=1)
 {
 	struct { fm2; panmix }
@@ -99,6 +145,14 @@ export Song(P V=1 L=0)
 			Inst MS.GatedStrings
 		} else if Ch == 4 {
 			Inst MS.Hit
+		} else if Ch == 5 {
+			Inst SineBeep
+		} else if Ch == 6 {
+			Inst SinePluck
+		} else if Ch == 7 {
+			Inst SawBeep
+		} else if Ch == 8 {
+			Inst SawPluck
 		}
 
 		// MIDI message handling
