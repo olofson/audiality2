@@ -235,6 +235,41 @@ void a2_CloseDriver(A2_driver *driver)
 
 
 /*---------------------------------------------------------
+	Connections
+---------------------------------------------------------*/
+
+A2_errors a2_MIDIHandler(A2_interface *i, A2_driver *driver, int channel,
+		A2_handle voice)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	A2_apimessage am;
+	if(!driver)
+		for(driver = st->config->drivers; driver;
+				driver = driver->next)
+		{
+			if(driver->type != A2_MIDIDRIVER)
+				continue;
+			if(!(driver->flags & A2_ISOPEN))
+				continue;
+			break;
+		}
+	if(!driver)
+		return A2_DRIVERNOTFOUND;
+	if(driver->type != A2_MIDIDRIVER)
+		return A2_WRONGTYPE;
+	if(!(ii->flags & A2_TIMESTAMP))
+		a2_TimestampReset(i);
+	am.target = voice;
+	am.b.common.action = A2MT_MIDIHANDLER;
+	am.b.common.timestamp = ii->timestamp;
+	am.b.midih.driver = (A2_mididriver *)driver;
+	am.b.midih.channels = channel;
+	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.midih));
+}
+
+
+/*---------------------------------------------------------
 	Driver registry
 ---------------------------------------------------------*/
 

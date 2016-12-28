@@ -192,7 +192,7 @@ void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit)
 		  {
 			A2_mididriver *md = am.b.midih.driver;
 			/* FIXME: Error handling! */
-			md->Connect(md, am.b.midih.channel, am.target);
+			md->Connect(md, am.b.midih.channels, am.target);
 			break;
 		  }
 #ifdef DEBUG

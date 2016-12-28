@@ -316,7 +316,7 @@ static int play_sound(const char *cmd, int midihandler)
 		return -3;
 	}
 	if(midihandler)
-		a2_MIDIHandler(iface, 0, vh);
+		a2_MIDIHandler(iface, NULL, -1, vh);
 	return 1;
 }
 

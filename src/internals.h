@@ -522,7 +522,7 @@ typedef union A2_eventbody
 	{
 		A2_EVENT_COMMON
 		A2_mididriver	*driver;
-		int		channel;
+		int		channels;
 	} midih;
 } A2_eventbody;
 
@@ -641,6 +641,7 @@ struct A2_state
 
 	A2_errors	last_rt_error;	/* Last error posted via a2r_Error() */
 	int		is_api_user;	/* 1 if this state owns an API ref */
+	int		is_closing;	/* We're already in a2_CloseState()! */
 
 /*FIXME: These should really be used with read/write barriers to be safe... */
 	volatile unsigned now_frames;	/* Audio time of last cb (frames, 24:8) */

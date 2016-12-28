@@ -27,6 +27,7 @@
 #include <alsa/asoundlib.h>
 #include "alsamididrv.h"
 
+#define	A2_MIDI_CHANNELS	16
 
 /*
  * MIDI event types/program entry points
@@ -70,7 +71,7 @@ typedef struct ALSA_mididriver
 	int		port_id;
 	snd_seq_t	*seq_handle;
 
-	ALSAMD_chstate	channels[16];
+	ALSAMD_chstate	channels[A2_MIDI_CHANNELS];
 } ALSA_mididriver;
 
 
@@ -169,7 +170,7 @@ static void alsamd_handle_event(ALSA_mididriver *amd, snd_seq_event_t *ev)
 	  case SND_SEQ_EVENT_CONTROLLER:
 	  {
 		ALSAMD_chstate *chs;
-		if(ev->data.control.channel >= 16)
+		if(ev->data.control.channel >= A2_MIDI_CHANNELS)
 		{
 			alsamd_control(amd, ev->data.control.channel,
 					ev->data.control.param,
@@ -276,14 +277,20 @@ static A2_errors alsamd_Poll(A2_mididriver *driver, unsigned frames)
 }
 
 
-static A2_errors alsamd_Connect(A2_mididriver *driver, unsigned channel,
+static A2_errors alsamd_Connect(A2_mididriver *driver, int channel,
 			A2_handle voice)
 {
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
-	if(channel >= 16)
+	if(channel == -1)
+	{
+		int i;
+		for(i = 0; i < A2_MIDI_CHANNELS; ++i)
+			amd->channels[i].voice = voice;
+	}
+	else if((channel < 0) || (channel >= A2_MIDI_CHANNELS))
 		return A2_INDEXRANGE;
-// TODO: Attach/detach...?
-	amd->channels[channel].voice = voice;
+	else
+		amd->channels[channel].voice = voice;
 	return A2_OK;
 }
 
@@ -292,8 +299,14 @@ static A2_errors alsamd_Open(A2_driver *driver)
 {
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
 	const char *label = "Audiality 2";
+	/*
+	 * We use A2_NOREF instead of A2_AUTOCLOSE here, because we can't tell
+	 * if the application closes this driver explicitly, or relies on the
+	 * state cleanup to do it. In the latter case, A2_AUTOCLOSE would have
+	 * us trying to close a stale pointer.
+	 */
 	if(!(amd->interface = a2_Interface(driver->config->interface,
-			A2_REALTIME | A2_AUTOCLOSE)))
+			A2_REALTIME | A2_NOREF)))
 	{
 		fprintf(stderr, "Audiality 2; Could not create realtime "
 				"interface!\n");
@@ -329,11 +342,6 @@ static A2_errors alsamd_Open(A2_driver *driver)
 static void alsamd_Close(A2_driver *driver)
 {
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
-	/*
-	 * A2_AUTOCLOSE for interfaces is handled last thing when a state is
-	 * closed, so it should be safe to close it here, even if we get here
-	 * as a result of the state closing.
-	 */
 	if(amd->interface)
 		a2_Close(amd->interface);
 	if(amd->seq_handle)

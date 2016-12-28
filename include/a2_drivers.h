@@ -326,7 +326,7 @@ struct A2_mididriver
 	A2_driver	driver;
 
 	/* Operation */
-	A2_errors (*Connect)(A2_mididriver *driver, unsigned channel,
+	A2_errors (*Connect)(A2_mididriver *driver, int channel,
 			A2_handle voice);
 	A2_errors (*Poll)(A2_mididriver *driver, unsigned frames);
 
@@ -336,11 +336,43 @@ struct A2_mididriver
 
 /*
  * Wire MIDI input to a MIDI handler voice. Events from the specified MIDI
- * channel are sent as messages to entry point 7 of the specified voice. The
- * argument list is (Msg Ch Arg1 Arg2). See midi.a2s for MIDI messages and CC
- * definitions, and miditest.a2s for an example of how to use this interface.
+ * channel are sent as messages to entry point 7 of the specified voice.
+ *
+ * 'driver' is the driver to connect, and needs to be of type A2_MIDIDRIVER. If
+ * NULL is passed, the first open MIDI driver is used.
+ *
+ * 'channel' specifies the MIDI channel (0..15) to connect. If it is -1, all
+ * available channels are connected to the voice.
+ *
+ * The argument list is (Msg Ch Arg1 Arg2), where 'Msg' is the MIDI message
+ * type (NOTEOFF, NOTEON etc in midi.a2s), and 'Ch' is the MIDI channel. 'Arg1'
+ * and 'Arg2' are used (or unused) depending on 'Msg';
+ *
+ *	Msg		Arg1			Arg2
+ *	NOTEOFF		Note pitch		Release velocity
+ *	NOTEON		Note pitch		Velocity
+ *	AFTERTOUCH	Note pitch		Pressure
+ *	CONTROLCHANGE	Control (see midi.a2s)	Value
+ *	PROGRAMCHANGE	Program (0..127)	<unused>
+ *	CHANNELPRESSURE	Pressure		<unused>
+ *	PITCHBEND	Amount			<unused>
+ *	RPN		Parameter (0..16343)	Value
+ *	NRPN		Parameter (0..16343)	Value
+ *
+ *		Note pitch is corresponds to MIDI pitch, where 60 is middle C.
+ *		Subtract 60 and divide by 12 to convert to A2 linear pitch.
+ *
+ *		Velocities, control values etc, are transformed to real values
+ *		in the [0, 1] range, except for PITCHBEND, which is [-1, 1].
+ *
+ *		SYSTEM messages are not supported, and will not be passed on
+ *		to MIDI handlers.
+ *
+ * See midi.a2s for MIDI messages and CC definitions, and miditest.a2s for an
+ * example of how to use this interface.
  */
-A2_errors a2_MIDIHandler(A2_interface *i, int channel, A2_handle voice);
+A2_errors a2_MIDIHandler(A2_interface *i, A2_driver *driver, int channel,
+		A2_handle voice);
 
 #ifdef __cplusplus
 };

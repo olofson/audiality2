@@ -652,13 +652,13 @@ void a2_Close(A2_interface *i)
 		{
 			if(iii == ii)
 				continue;	/* About to be closed. */
-			if(iii->flags & A2_AUTOCLOSE)
+			if(iii->flags & (A2_AUTOCLOSE | A2_NOREF))
 				continue;	/* These don't count! */
 			++refs;
 		}
 	}
 
-	if(refs)
+	if(refs || !st)
 		a2_RemoveInterface(ii);	/* Close interface only */
 	else
 		a2_CloseState(st);	/* Close everything! */
@@ -669,6 +669,12 @@ static void a2_CloseState(A2_state *st)
 {
 	A2_interface *i = st->interfaces ? &(st->interfaces->interface): NULL;
 	int j;
+
+	/* Driver and interface cleanup may send us in here recursively! */
+	if(st->is_closing)
+		return;
+
+	st->is_closing = 1;
 
 	/* Detach the audio callack */
 	if(st->audio)

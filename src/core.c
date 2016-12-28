@@ -989,7 +989,9 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			)
 			if((ep = v->program->eps[e->b.play.program]) < 0)
 			{
+#ifdef DEBUG
 				a2r_Error(st, A2_BADENTRY, "A2MT_SEND[1]");
+#endif
 				break;
 			}
 			if((res = a2_VoiceCall(st, v, ep, e->b.common.argc,

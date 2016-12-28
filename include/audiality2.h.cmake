@@ -111,11 +111,7 @@ unsigned a2_LinkedVersion(void);
  * 'buffer', 'channels' and 'flags' arguments are ignored, and the
  * corresponding values are instead retrieved from the driver. In this case,
  * the driver will NOT be closed with the state, unless the application sets
- * the A2_STATECLOSE flag in the driver's 'flag' field.
- *
- * A driver provided by the application will NOT be destroyed by Audiality as
- * the state is closed, unless the application sets the A2_STATEDESTROY flag in
- * the driver's 'flag' field.
+ * the A2_AUTOCLOSE flag in the driver's 'flag' field.
  *
  * Returns the master interface to the state, with timestamping and context
  * behavior configured according to the specified 'config'.
@@ -169,6 +165,24 @@ A2_interface *a2_SubState(A2_interface *master, A2_config *config);
  *	A2_TIMESTAMP	Enable timestamping in the play/control API of the
  *			interface. (This guarantees a unique interface
  *			instance, as the timestamping API is stateful.)
+ *
+ *	A2_NOREF	The new interface will not count as a reference to the
+ *			underlying engine state, and as a result, the engine
+ *			state will be closed once all other interfaces have
+ *			been closed, leaving this interface detached.
+ *
+ *			A2_NOREF suitable for creating interfaces that should
+ *			not lock the engine state in place, but there is a risk
+ *			of code attempting to use or close the interface after
+ *			the engine state has been closed.
+ *
+ *	A2_AUTOCLOSE	Like A2_NOREF, but instead of being left detached, the
+ *			interface created will be be closed automatically when
+ *			the engine state is closed.
+ *
+ *			A2_AUTOCLOSE is suitable when it can be guaranteed that
+ *			the interface will not be accessed after the engine
+ *			state has been closed.
  *
  * NOTE:
  *	Interfaces are reference counted, and all interfaces of an Audiality

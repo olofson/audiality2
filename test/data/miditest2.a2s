@@ -1,0 +1,123 @@
+def title	"MIDITest 2"
+def version	"1.0"
+def description	"Multitimbral MIDI handler"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import midi as MIDI
+import megastrings as MS
+
+Bass1(P V=1)
+{
+	struct { fm2; panmix }
+	@a V;			@a1 (V * 2 + 1)
+	@fb (V * .3 + .3)
+	!detune (2 - P / 200)
+	if (detune < 0) detune 0
+	@p (P - detune);	@p1 detune;
+
+	for {
+		*a .99
+		*a1 .97
+		*fb .9
+		d 10
+	}
+
+.rel	a 0;			a1 0;		d 250
+	1() { force rel }
+}
+
+Bass2(P V=1)
+{
+	struct { fm2; panmix }
+	@a V;			@a1 (V * 1 + 1)
+	@fb (V * .2 + .2);	@fb1 .1
+	!detune (2 - P / 200)
+	if (detune < 0) detune 0
+	@p (P - detune);	@p1 (detune + 1);
+
+	for {
+		*a .99
+		*a1 .97
+		*fb .95
+		*fb1 .95
+		d 10
+	}
+
+.rel	a 0;			a1 0;		d 250
+	1() { force rel }
+}
+
+export Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay D * *
+		fbdelay D2 * *
+		panmix PM * >
+	}
+
+	!sustain 0
+
+	tempo 80 4
+	D.fbdelay (tick * 2.05);	D.fbgain .02
+	D.ldelay (tick * 3.05);		D.lgain .05
+	D.rdelay (tick * 4.53);		D.rgain .05
+	D2.fbdelay (tick * 5.95);	D2.fbgain .02
+	D2.ldelay (tick * 6.51);	D2.lgain .05
+	D2.rdelay (tick * 7.03);	D2.rgain .05
+	PM.vol .25
+	set
+
+	end
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill
+
+	1() {
+		force stop
+	}
+
+	// MIDI handler entry point
+	7(Msg Ch Arg1 Arg2) {
+		// Select voice ID and instrument based on MIDI channel
+		!VID (Ch * 128 + Arg1)	// Only valid for certain messages!
+		!Inst Bass1
+		if Ch == 0 {
+			Inst Bass1
+		} else if Ch == 1 {
+			Inst Bass2
+		} else if Ch == 2 {
+			Inst MS.Strings
+		} else if Ch == 3 {
+			Inst MS.GatedStrings
+		} else if Ch == 4 {
+			Inst MS.Hit
+		}
+
+		// MIDI message handling
+		if Msg == MIDI.NOTEOFF {
+			if (not sustain) VID<1
+		} else if Msg == MIDI.NOTEON {
+			if Arg2 {
+				VID:Inst (Arg1 - 60 / 12) Arg2
+			} else {
+				// "Fake" NoteOff!
+				if (not sustain) VID<1
+			}
+		} else if Msg == MIDI.CONTROLCHANGE {
+			if Arg1 == MIDI.SUSTAIN {
+				sustain (Arg2 >= .5)
+				if not sustain {
+					*<1
+				}
+			}
+		}
+	}
+}
