@@ -11,6 +11,10 @@ set(AUDIALITY2_LIBRARY audiality2)
 
 add_executable(a2play WIN32 MACOSX_BUNDLE a2play.c)
 target_link_libraries(a2play ${AUDIALITY2_LIBRARY})
+if(FORCE_32BIT)
+	set_target_properties(a2play PROPERTIES
+		COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif(FORCE_32BIT)
 
 # Release build: full optimization, no debug features, no debug info
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")

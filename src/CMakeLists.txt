@@ -67,12 +67,21 @@ elseif(SDL2_FOUND)
 	include_directories(${SDL2_INCLUDE_DIRS})
 endif(SDL_FOUND)
 
-CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
+if(USE_JACK)
+	CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
+endif(USE_JACK)
+
 find_package(Threads)
 
-find_package(ALSA)
+if(USE_ALSA)
+	find_package(ALSA)
+endif(USE_ALSA)
 
 add_library(audiality2 ${sources})
+if(FORCE_32BIT)
+	set_target_properties(audiality2 PROPERTIES
+		COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+endif(FORCE_32BIT)
 
 if(UNIX)
 	target_link_libraries(audiality2 m)

@@ -15,7 +15,7 @@ fi
 create_build_dir() {
 	local dname=$1
 	local btype=$2
-	local desc=$3
+	local desc="$3"
 	echo
 	echo "=== build/$dname ($btype, $desc) ==="
 	if [ ! -e $BUILDDIR/$dname ]; then
@@ -32,24 +32,24 @@ create_build_dir() {
 setup_native() {
 	local dname=$1
 	local btype=$2
-	local desc=$3
-	local prefix=$4
-	local opts=$5
+	local desc="$3"
+	local prefix="$4"
+	local opts="$5"
 	create_build_dir $dname $btype $desc
 	cd $BUILDDIR/$dname
-	cmake "$opts" $SOURCEDIR -DCMAKE_INSTALL_PREFIX=$prefix -DCMAKE_BUILD_TYPE="$btype"
+	cmake $opts $SOURCEDIR -DCMAKE_INSTALL_PREFIX=$prefix -DCMAKE_BUILD_TYPE="$btype"
 	cd $SOURCEDIR
 }
 
 setup_cross() {
 	local dname=$1
 	local btype=$2
-	local desc=$3
+	local desc="$3"
 	local target=$4
-	local opts=$5
+	local opts="$5"
 	create_build_dir $dname $btype $desc
 	cd $BUILDDIR/$dname
-	cmake "$opts" -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=ON
+	cmake $opts -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake $SOURCEDIR -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=ON
 	cd $SOURCEDIR
 }
 
@@ -62,6 +62,11 @@ echo "=========================================================="
 setup_native release Release "host native" /usr
 setup_native maintainer Maintainer "host native" /usr
 setup_native debug Debug "host native" /usr
+
+# Explicitly disabling SDL and ALSA here, because I can't get package
+# detection to care about architecture, and the 32 bit SDL2 packages on Ubuntu
+# 16.04 seem to be broken right now...
+setup_native release32 Release "host native 32 bit" /usr "-DFORCE_32BIT=ON -DUSE_SDL=OFF -DUSE_ALSA=OFF"
 
 echo
 echo "=========================================================="

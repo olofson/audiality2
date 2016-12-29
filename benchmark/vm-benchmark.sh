@@ -1,5 +1,7 @@
 #/bin/sh
 
+player=${1:-a2play}
+
 usage()
 {
 cat << EOF
@@ -45,9 +47,9 @@ do
    do
       echo Pass $i
       if [ ! -z $VERBOSE ]; then
-         time a2play -dbuffer -r100 $SONGNAME -pSong -st2500
+         time ${player} -dbuffer -r100 $SONGNAME -pSong -st2500
       else
-         time $(a2play -dbuffer -r100 $SONGNAME -pSong -st2500 > /dev/null 2>&1)
+         time $(${player} -dbuffer -r100 $SONGNAME -pSong -st2500 > /dev/null 2>&1)
       fi
       echo
    done

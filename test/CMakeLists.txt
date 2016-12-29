@@ -9,55 +9,37 @@ link_directories(${AUDIALITY2_BINARY_DIR})
 
 set(AUDIALITY2_LIBRARY audiality2)
 
-add_executable(waveupload WIN32 MACOSX_BUNDLE waveupload.c)
-target_link_libraries(waveupload ${AUDIALITY2_LIBRARY})
+function(a2_add_test testname)
+	add_executable(${testname} WIN32 MACOSX_BUNDLE ${testname}.c ${ARGN})
+	target_link_libraries(${testname} ${AUDIALITY2_LIBRARY})
+	if(FORCE_32BIT)
+		set_target_properties(${testname} PROPERTIES
+			COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
+	endif(FORCE_32BIT)
+endfunction(a2_add_test)
 
-add_executable(rtsubstate WIN32 MACOSX_BUNDLE rtsubstate.c)
-target_link_libraries(rtsubstate ${AUDIALITY2_LIBRARY})
-
-add_executable(renderwave WIN32 MACOSX_BUNDLE renderwave.c)
-target_link_libraries(renderwave ${AUDIALITY2_LIBRARY})
-
-add_executable(renderwave2 WIN32 MACOSX_BUNDLE renderwave2.c)
-target_link_libraries(renderwave2 ${AUDIALITY2_LIBRARY})
-
-add_executable(streamupload WIN32 MACOSX_BUNDLE streamupload.c)
-target_link_libraries(streamupload ${AUDIALITY2_LIBRARY})
-
-add_executable(wavestress WIN32 MACOSX_BUNDLE wavestress.c)
-target_link_libraries(wavestress ${AUDIALITY2_LIBRARY})
-
-add_executable(wavestress2 WIN32 MACOSX_BUNDLE wavestress2.c)
-target_link_libraries(wavestress2 ${AUDIALITY2_LIBRARY})
-
-add_executable(voicestress WIN32 MACOSX_BUNDLE voicestress.c)
-target_link_libraries(voicestress ${AUDIALITY2_LIBRARY})
-
-add_executable(streamtest WIN32 MACOSX_BUNDLE streamtest.c)
-target_link_libraries(streamtest ${AUDIALITY2_LIBRARY})
-
-add_executable(streamstress WIN32 MACOSX_BUNDLE streamstress.c)
-target_link_libraries(streamstress ${AUDIALITY2_LIBRARY})
-
-add_executable(timingtest WIN32 MACOSX_BUNDLE timingtest.c)
-target_link_libraries(timingtest ${AUDIALITY2_LIBRARY})
+a2_add_test(waveupload)
+a2_add_test(rtsubstate)
+a2_add_test(renderwave)
+a2_add_test(renderwave2)
+a2_add_test(streamupload)
+a2_add_test(wavestress)
+a2_add_test(wavestress2)
+a2_add_test(voicestress)
+a2_add_test(streamtest)
+a2_add_test(streamstress)
+a2_add_test(timingtest)
 
 if(SDL_FOUND)
 	include_directories(${SDL_INCLUDE_DIR})
-
-	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
-	target_link_libraries(a2test ${AUDIALITY2_LIBRARY} SDLmain)
-
-	add_executable(apistress WIN32 MACOSX_BUNDLE apistress.c)
-	target_link_libraries(apistress ${AUDIALITY2_LIBRARY} SDLmain)
+	a2_add_test(a2test gui.c)
+	target_link_libraries(a2test SDLmain)
+	a2_add_test(apistress)
+	target_link_libraries(apistress SDLmain)
 elseif(SDL2_FOUND)
 	include_directories(${SDL2_INCLUDE_DIRS})
-
-	add_executable(a2test WIN32 MACOSX_BUNDLE a2test.c gui.c)
-	target_link_libraries(a2test ${AUDIALITY2_LIBRARY})
-
-	add_executable(apistress WIN32 MACOSX_BUNDLE apistress.c)
-	target_link_libraries(apistress ${AUDIALITY2_LIBRARY})
+	a2_add_test(a2test gui.c)
+	a2_add_test(apistress)
 endif(SDL_FOUND)
 
 # Release build: full optimization, no debug features, no debug info
