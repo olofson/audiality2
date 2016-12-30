@@ -1,0 +1,37 @@
+def title	"RampTest2"
+def version	"1.0"
+def description	"Test of control ramping accuracy: Slow ramps"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+// This test should produce a low sine tone, slowly fading in and out, while
+// also sliding up and down in pitch. There should be no audible clicks, or
+// pitch discontinuities.
+
+export Song(P V=1 L=0)
+{
+	struct {
+		wtosc
+		panmix
+	}
+
+	w sine; p 50f; set
+
+	a .5; d 100
+
+	100 {
+		// Fade in, while sliding to 200 Hz
+		a .05;	p 200f;		d 4000
+
+		// Set volume and pitch. Should have no audible effect!
+		@a .05;	@p 200f;	d 1000
+
+		// Fade out, while sliding to 50 Hz
+		a .5;	p 50f;		d 4000
+
+		// Set volume and pitch. Should have no audible effect!
+		@a .5;	@p 50f;		d 1000
+	}
+}

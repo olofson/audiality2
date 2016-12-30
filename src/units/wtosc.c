@@ -88,18 +88,20 @@ static inline A2_wtosc *wtosc_cast(A2_unit *u)
 
 static inline void wtosc_run_pitch(A2_wtosc *o, unsigned frames)
 {
+	unsigned lastv;
 	a2_PrepareRamper(&o->p, frames);
 	if(o->dphase && (!o->p.timer && !o->p_ramping))
 		return;	/* No update needed */
 
 	/* Use halfway value while still ramping */
-	a2_RunRamper(&o->p, frames >> 1);
+	lastv = o->p.value;
+	a2_RunRamper(&o->p, frames);
 
 	/* We'll need an extra update after the end of a ramp! */
 	o->p_ramping = o->p.delta;
 
 	/* Calculate new phase delta */
-	o->dphase = a2_P2I(o->p.value >> 8);
+	o->dphase = a2_P2I((lastv + o->p.value) >> 9);
 }
 
 
