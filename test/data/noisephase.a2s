@@ -1,0 +1,32 @@
+def title	"NoisePhase"
+def version	"1.0"
+def description	"wtosc noise generator frequency and phase accuracy test"
+def author	"David Olofson"
+def copyright	"Copyright 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+// This test is probably best verified by recording the output and observing it
+// in an audio editor. The correct output is a "fractured" sine wave that's
+// fractured exactly at zero crossings - never anywhere else. This result
+// indicates that the noise generator is issuing two sample-and-hold levels for
+// each period, at the same frequency as the sine oscillator.
+
+export Song()
+{
+	struct {
+		wtosc o1
+		wtosc o2
+		panmix
+	}
+
+	o1.p 100f;	o2.p 100f
+	o1.a .5;	o2.a .1
+	o1.w sine;	o2.w noise
+	set
+
+	for {
+		o1.p 200f;	o2.p 200f;	d 1000
+		o1.p 100f;	o2.p 100f;	d 1000
+	}
+}
