@@ -1,0 +1,12 @@
+#!/bin/sh
+SOURCEDIR=$(pwd)
+BUILDDIR=$SOURCEDIR/build
+for i in $BUILDDIR/* ; do
+	echo
+	echo "[ Building $(basename $i) ]"
+	echo $i
+	cd $i
+	make -j20
+	echo "[ Leaving $(basename $i) ]"
+	echo
+done
