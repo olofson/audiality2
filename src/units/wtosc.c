@@ -67,8 +67,8 @@ typedef struct A2_wtosc
 {
 	A2_unit		header;
 	unsigned	flags;		/* Init flags (for wave changing) */
-	unsigned	phase;		/* Phase (24:8 fixp, 1.0/sample) */
 	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/period) */
+	uint64_t	phase;		/* Phase (48:24 fixp, 1.0/sample) */
 	int		noise;		/* Current noise sample (S&H) */
 	int		p_ramping;	/* Previous state of 'p' ramper */
 	int		basepitch;	/* Pitch of middle C (1.0/octave) */
@@ -134,14 +134,13 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	int32_t *out = u->outputs[0];
 	A2_state *st = ((A2_interface_i *)o->interface)->state;
 	uint32_t *nstate = &st->noisestate;
-	unsigned dph;
 	wtosc_run_pitch(o, frames);
-	dph = o->dphase >> 8;
 	a2_PrepareRamper(&o->a, frames);
+
 	for(s = offset; s < end; ++s)
 	{
-		unsigned nph = o->phase + dph;
-		if((dph >= 32768) || ((nph ^ o->phase) >> 15))
+		uint64_t nph = o->phase + o->dphase;
+		if((o->dphase >= (1 << 23)) || ((nph ^ o->phase) >> 23))
 			o->noise = a2_Noise(nstate) - 32767;
 		o->phase = nph;
 		if(add)
@@ -183,50 +182,49 @@ static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
 	return 1;
 }
 
-
-static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
-		unsigned frames, int add)
+/*
+ * Inner loop inline.
+ *	o	Oscillator struct
+ *	d	Wave data
+ *	out	Output buffer
+ *	offset	Start index in output buffer
+ *	frames	Number of output samples to render
+ *	ph	Phase accumulator
+ *	dph	Per output sample frame phase increment
+ *	add	(flag) Adding mode
+ *	looped	(flag) Wave is looped (ignored if wsize == 0)
+ *	wsize	Size of wave. Pass 0 to disable loop/end checks.
+ *
+ * Returns the final state of the phase accumulator.
+ */
+static inline uint64_t wtosc_do_fragment(A2_wtosc *o, int16_t *d, int32_t *out,
+		unsigned offset, unsigned frames, uint64_t ph, unsigned dph,
+		int add, int looped, unsigned wsize)
 {
-	A2_wtosc *o = wtosc_cast(u);
-	unsigned s, mm, ph, dph;
+	unsigned s;
 	unsigned end = offset + frames;
-	int32_t *out = u->outputs[0];
-	A2_wave *w = o->wave;
-	int16_t *d;
-	if(wtosc_check_unloaded(u, w))
-		return;
-
-	wtosc_run_pitch(o, frames);
-	if(o->dphase > 0x000fffff)
-		dph = (o->dphase >> 8) * w->period >> 8;
-	else
-		dph = o->dphase * w->period >> 16;
-	a2_PrepareRamper(&o->a, frames);
-	/* FIXME: Cache, or do something smarter... */
-	for(mm = 0; (dph > A2_MAXPHINC) && (mm < A2_MIPLEVELS - 1); ++mm)
-		dph >>= 1;
-	ph = o->phase >> mm;
-	if(w->flags & A2_LOOPED)
-		ph %= w->d.wave.size[mm] << 8;
-	else if((ph >> 8) > (w->d.wave.size[mm] + A2_WAVEPRE))
-	{
-		if(!add)
-			memset(out + offset, 0, frames * sizeof(int));
-		return;		/* All played! */
-	}
-	if(dph > A2_MAXPHINC)
-	{
-		if(!add)
-			memset(out + offset, 0, frames * sizeof(int));
-		ph += dph * frames;
-		o->phase = ph << mm;
-		a2_RunRamper(&o->a, frames);
-		return;
-	}
-	d = w->d.wave.data[mm] + A2_WAVEPRE;
 	for(s = offset; s < end; ++s)
 	{
-		int v = wtosc_Inter(d, ph, dph);
+		int v;
+		if(wsize)
+		{
+			if(looped)
+			{
+				ph %= (uint64_t)wsize << 24;
+			}
+			else if((ph >> 24) >= wsize)
+			{
+				/*
+				 * End of wave! Clear the rest of the output
+				 * buffer, unless we're in adding mode.
+				 */
+				if(!add)
+					memset(out + s, 0,
+						(end - s) * sizeof(int));
+				break;
+			}
+		}
+		v = wtosc_Inter(d, ph >> 16, dph >> 16);
 		if(add)
 			out[s] += (int64_t)v * o->a.value >> (16 + 1);
 		else
@@ -234,13 +232,65 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
 		ph += dph;
 		a2_RunRamper(&o->a, 1);
 	}
-	o->phase = ph << mm;
+	return ph;
 }
+
+
+static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
+		unsigned frames, int add)
+{
+	A2_wtosc *o = wtosc_cast(u);
+	unsigned mm, dph;
+	uint64_t ph;
+	int32_t *out = u->outputs[0];
+	A2_wave *w = o->wave;
+	if(wtosc_check_unloaded(u, w))
+		return;
+
+	wtosc_run_pitch(o, frames);
+	dph = ((o->dphase + 255) >> 8) * w->period;
+	a2_PrepareRamper(&o->a, frames);
+	/* FIXME: Cache, or do something smarter... */
+	for(mm = 0; (dph > (A2_MAXPHINC << 8)) &&
+			(mm < A2_MIPLEVELS - 1); ++mm)
+		dph >>= 1;
+	ph = o->phase >> mm;
+	dph = (uint64_t)o->dphase * w->period >> mm;
+
+	if(w->flags & A2_LOOPED)
+	{
+		ph %= (uint64_t)w->d.wave.size[mm] << 24;
+	}
+	else if((ph >> 24) > (w->d.wave.size[mm] + A2_WAVEPRE))
+	{
+		if(!add)
+			memset(out + offset, 0, frames * sizeof(int));
+		return;		/* All played! */
+	}
+
+	if(dph > (A2_MAXPHINC << 16))
+	{
+		/* Pitch out of range! Output silence. */
+		if(!add)
+			memset(out + offset, 0, frames * sizeof(int));
+		ph += (uint64_t)dph * frames;
+		o->phase = ph << mm;
+		a2_RunRamper(&o->a, frames);
+	}
+	else
+	{
+		o->phase = wtosc_do_fragment(o,
+				w->d.wave.data[mm] + A2_WAVEPRE, out,
+				offset, frames, ph, dph, add, 0, 0) << mm;
+	}
+}
+
 
 static void wtosc_WavetableAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
 	wtosc_wavetable(u, offset, frames, 1);
 }
+
 
 static void wtosc_Wavetable(A2_unit *u, unsigned offset, unsigned frames)
 {
@@ -252,31 +302,26 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 		unsigned frames, int add)
 {
 	A2_wtosc *o = wtosc_cast(u);
-	unsigned s, ph, dph;
-	unsigned end = offset + frames;
+	uint64_t dph;
 	int32_t *out = u->outputs[0];
 	A2_wave *w = o->wave;
-	unsigned perfixp = w->d.wave.size[0] << 8;
 	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
 	if(wtosc_check_unloaded(u, w))
 		return;
 
 	wtosc_run_pitch(o, frames);
-	if(o->dphase > 0x000fffff)
-		dph = (o->dphase >> 8) * w->period >> 8;
-	else
-		dph = o->dphase * w->period >> 16;
+	dph = (uint64_t)o->dphase * w->period;
 	a2_PrepareRamper(&o->a, frames);
-	ph = o->phase;
-	if(w->flags & A2_LOOPED)
-		ph %= perfixp;
-	else if((ph >> 8) > (w->d.wave.size[0] + A2_WAVEPRE))
+
+	if(dph >> 32)
 	{
+		/* Pitch out of range! Output silence. */
 		if(!add)
 			memset(out + offset, 0, frames * sizeof(int));
-		return;		/* All played! */
+		o->phase += dph * frames;
+		a2_RunRamper(&o->a, frames);
 	}
-	if(dph > A2_MAXPHINC)
+	else if(dph > (A2_MAXPHINC << 16))
 	{
 		/*
 		 * Too high pitch, so we need some extra logic to avoid reading
@@ -285,45 +330,31 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 		 * above the output sample rate, and are muted above that.)
 		 */
 		if(w->flags & A2_LOOPED)
-			for(s = offset; s < end; ++s)
-			{
-				int v = wtosc_Inter(d, ph, dph);
-				if(add)
-					out[s] += (int64_t)v * o->a.value >>
-							(16 + 1);
-				else
-					out[s] = (int64_t)v * o->a.value >>
-							(16 + 1);
-				ph += dph;
-				ph %= perfixp;
-				a2_RunRamper(&o->a, 1);
-			}
+			o->phase = wtosc_do_fragment(o, d, out, offset, frames,
+					o->phase, dph,
+					add, 1, w->d.wave.size[0]);
 		else
-			for(s = offset; (s < end) && (ph < perfixp); ++s)
-			{
-				int v = wtosc_Inter(d, ph, dph);
-				if(add)
-					out[s] += (int64_t)v * o->a.value >>
-							(16 + 1);
-				else
-					out[s] = (int64_t)v * o->a.value >>
-							(16 + 1);
-				ph += dph;
-				a2_RunRamper(&o->a, 1);
-			}
+			o->phase = wtosc_do_fragment(o, d, out, offset, frames,
+					o->phase, dph,
+					add, 0, w->d.wave.size[0]);
 	}
 	else
-		for(s = offset; s < end; ++s)
+	{
+		/* This inner loop won't check, so we need to check first! */
+		if(w->flags & A2_LOOPED)
 		{
-			int v = wtosc_Inter(d, ph, dph);
-			if(add)
-				out[s] += (int64_t)v * o->a.value >> (16 + 1);
-			else
-				out[s] = (int64_t)v * o->a.value >> (16 + 1);
-			ph += dph;
-			a2_RunRamper(&o->a, 1);
+			o->phase %= w->d.wave.size[0] << 24;
 		}
-	o->phase = ph;
+		else if((o->phase >> 24) > (w->d.wave.size[0] + A2_WAVEPRE))
+		{
+			if(!add)
+				memset(out + offset, 0, frames * sizeof(int));
+			return;		/* All played! */
+		}
+		o->phase = wtosc_do_fragment(o, d, out, offset, frames,
+				o->phase, dph,
+				add, 0, 0);
+	}
 }
 
 
@@ -341,7 +372,7 @@ static void wtosc_WavetableNoMip(A2_unit *u, unsigned offset, unsigned frames)
 
 
 /*
- *	ph	desired phase, [0, 1], (16):16 fixp
+ *	ph	desired phase, 16:16 fixp; 1.0/period
  *	sst	SubSample Time, [0, 1], (24):8 fixp
  */
 static inline void wtosc_set_phase(A2_wtosc *o, int ph, unsigned sst)
@@ -352,7 +383,7 @@ static inline void wtosc_set_phase(A2_wtosc *o, int ph, unsigned sst)
 		return;
 	}
 	ph += sst * (o->dphase >> 8) >> 8;
-	o->phase = ph * o->wave->period >> 8;
+	o->phase = (int64_t)ph * o->wave->period << 8;
 }
 
 

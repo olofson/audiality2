@@ -1,0 +1,120 @@
+Benchmarks with and without the wtosc pitch accuracy fix using 64 bit phase
+accumulators; issue #272.
+
+Original 32 bit phase accumulator version
+===========================================================
+
+1: x86_64, maintainer, original
+---------------------------------------------------
+k2epilogue.a2s	5.812
+k2intro.a2s	5.259
+k2loader.a2s	5.529
+k2trance.a2s	4.831
+pulsetronic.a2s	5.308
+Average		5.348
+
+2: x86_64, release, original
+---------------------------------------------------
+k2epilogue.a2s	5.465
+k2intro.a2s	4.870
+k2loader.a2s	5.064
+k2trance.a2s	4.362
+pulsetronic.a2s	4.961
+Average		4.944
+
+3: i386, release32, original
+---------------------------------------------------
+k2epilogue.a2s	6.787
+k2intro.a2s	6.026
+k2loader.a2s	6.230
+k2trance.a2s	5.449
+pulsetronic.a2s	6.253
+Average		6.149
+
+
+Fixed version; 64 bit phase accumulator
+===========================================================
+
+4: x86_64, maintainer
+---------------------------------------------------
+k2epilogue.a2s	5.957
+k2intro.a2s	5.388
+k2loader.a2s	5.641
+k2trance.a2s	4.937
+pulsetronic.a2s	5.449
+Average		5.474
+
+5: x86_64, release
+---------------------------------------------------
+k2epilogue.a2s	5.323
+k2intro.a2s	4.722
+k2loader.a2s	4.978
+k2trance.a2s	4.268
+pulsetronic.a2s	4.831
+Average		4.824
+
+6: i386, release32
+---------------------------------------------------
+k2epilogue.a2s	7.055
+k2intro.a2s	6.295
+k2loader.a2s	6.408
+k2trance.a2s	5.752
+pulsetronic.a2s	6.442
+Average		6.390
+
+
+Comparison
+===========================================================
+
+Impact of 64 bit phase accumulators:
+	maintainer	-2.3%
+	release		+2.5%
+	release32	-3.8%
+
+Impact of i386 build vs x86_64:
+	Original	-19.6%
+	64 bit ph acc	-24.5%
+
+Looks like we're going to have to do some profiling and investigation on 32 bit
+builds, because that's a pretty massive slowdown... But, the objective here was
+to verify that the wtosc pitch accuracy fix doesn't render 32 bit builds
+practically useless, and at least, it's not that bad.
+
+
+Pitch overflow issues
+=====================
+
+A new problem occurred: The phase increment calculation would overflow, because
+now there are only 8 bits of headroom, and A2_MAXPHINC is 512! 64 bit works,
+but is overkill, since legal phase increments are always below
+A2_MAXPHINC << 16 for mipmapped waves, and for non-awful output, won't be too
+far from that with non-mipmapped waves either.
+
+All 64 bit phase, x86_64, release
+===========================================================
+k2epilogue.a2s	5.384
+k2intro.a2s	4.746
+k2loader.a2s	4.987
+k2trance.a2s	4.259
+pulsetronic.a2s	4.860
+Average		4.847
+
+However, as we can see here, the performance is very close to 64/32! Actually,
+the results are probably skewed in favor of the broken version, as we're now
+feeling the impact of playing plenty of waves at higher (correct) rates. The
+all 64 bit version may well be faster in a fair comparison, as it avoids a few
+casts.
+
+64 bit phase accu + 32 bit increment, x86_64, release
+===========================================================
+k2epilogue.a2s	5.275
+k2intro.a2s	4.725
+k2loader.a2s	4.878
+k2trance.a2s	4.256
+pulsetronic.a2s	4.767
+Average		4.780
+
+Nope! Now selecting mipmap first, and then calculating a 32 but phase increment
+with the mipmap shift included, thus avoiding overflow in the calculation - and
+it looks like this is ever so slightly faster. This is the solution we're going
+with for now; 64 bit phase accumulators + 32 bit phase increments.
