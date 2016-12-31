@@ -2695,9 +2695,9 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 
 
 /*
- * Add an A2_structitem to the currently compiling program. The 'index' argument
- * can be used for returning the unit instance index (when adding units), or it
- * can be left NULL.
+ * Add an A2_structitem to the currently compiling program. The 'index'
+ * argument can be used for returning the unit instance index (when adding
+ * units), or it can be left NULL.
  */
 static A2_structitem *a2c_AddStructItem(A2_compiler *c, A2_structitem **list,
 		int *index)
@@ -2712,15 +2712,19 @@ static A2_structitem *a2c_AddStructItem(A2_compiler *c, A2_structitem **list,
 	{
 		/* Attach as last unit */
 		A2_structitem *li = *list;
-		for( ; li->next; li = li->next)
+		while(1)
+		{
 			if(index && (li->kind >= 0))	/* Count only units! */
 				++*index;
+			if(!li->next)
+				break;
+			li = li->next;
+		}
 		li->next = ni;
 	}
 	else
 		*list = ni;	/* First! */
 	ni->next = NULL;
-
 	return ni;
 }
 
