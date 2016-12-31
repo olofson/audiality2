@@ -2378,6 +2378,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		}
 		else if(a2_IsRegister(c->l[0].token))
 		{
+			++op;	// KILLR
 			r = a2c_GetIndex(c, c->l);
 			a2c_Code(c, op, r, 0);
 			if(c->l[0].token == TK_TEMPREG)
