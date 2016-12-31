@@ -403,6 +403,7 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	a2_InitRamper(&o->a, 0);
 	a2_InitRamper(&o->p, *o->transpose + o->basepitch);
 	o->dphase = a2_P2I(o->p.value >> 8);
+	o->p_ramping = 0;
 	wtosc_set_phase(o, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
