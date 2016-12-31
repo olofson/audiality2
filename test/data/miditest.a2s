@@ -87,19 +87,26 @@ export Song(P V=1 L=0)
 	// MIDI handler entry point
 	7(Msg Ch Arg1 Arg2) {
 		if Msg == MIDI.NOTEOFF {
-			if (not sustain) Arg1<1
+			if (not sustain) {
+				Arg1<1
+				detach Arg1
+			}
 		} else if Msg == MIDI.NOTEON {
 			if Arg2 {
 				Arg1:Pad (Arg1 - 60 / 12) Arg2
 			} else {
 				// "Fake" NoteOff!
-				if (not sustain) Arg1<1
+				if (not sustain) {
+					Arg1<1
+					detach Arg1
+				}
 			}
 		} else if Msg == MIDI.CONTROLCHANGE {
 			if Arg1 == MIDI.SUSTAIN {
 				sustain (Arg2 >= .5)
 				if not sustain {
 					*<1
+					detach
 				}
 			}
 		}

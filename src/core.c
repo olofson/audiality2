@@ -1604,6 +1604,25 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 #endif
 			break;
 		  }
+		  case OP_DETACHR:
+		  {
+			unsigned vid = r[ins->a1] >> 16;
+			a2_DetachSubvoice(v, vid);
+			break;
+		  }
+		  case OP_DETACH:
+			a2_DetachSubvoice(v, ins->a1);
+			break;
+		  case OP_DETACHA:
+		  {
+			A2_voice *sv;
+			for(sv = v->sub; sv; sv = sv->next)
+				a2_VoiceDetach(sv, v->s.waketime);
+#if A2_SV_LUT_SIZE
+			memset(v->sv, 0, sizeof(v->sv));
+#endif
+			break;
+		  }
 
 		/* Message handling */
 		  case OP_SLEEP:

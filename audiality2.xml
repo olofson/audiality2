@@ -43,6 +43,7 @@
 			<item> wle </item>
 			<item> wge </item>
 			<item> kill </item>
+			<item> detach </item>
 			<item> d </item>
 			<item> td </item>
 			<item> quant </item>

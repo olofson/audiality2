@@ -142,6 +142,7 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 	  case OP_RETURN:
 	  case OP_SLEEP:
 	  case OP_KILLA:
+	  case OP_DETACHA:
 	  case OP_INITV:
 	  case OP_SETALL:
 	  case A2_OPCODES:	/* (Warning eliminator) */
@@ -174,6 +175,7 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 	  case OP_DEBUGR:
 	  case OP_SIZEOFR:
 	  case OP_KILLR:
+	  case OP_DETACHR:
 	  case OP_SPAWNDR:
 	  case OP_SPAWNAR:
 	  case OP_RAMPALLR:
@@ -204,6 +206,7 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 		break;
 	  /* <index(a1)> */
 	  case OP_KILL:
+	  case OP_DETACH:
 	  case OP_WAIT:
 		fprintf(stream, "%d", ins->a1);
 		break;
@@ -598,6 +601,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_SEND:
 	  case OP_WAIT:
 	  case OP_KILL:
+	  case OP_DETACH:
 		if(reg > 255)
 			a2c_Throw(c, A2_INTERNAL + 106);
 		break;
@@ -718,6 +722,9 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_KILL:
 	  case OP_KILLR:
 	  case OP_KILLA:
+	  case OP_DETACH:
+	  case OP_DETACHR:
+	  case OP_DETACHA:
 	  case OP_DEBUGR:
 	  case OP_INITV:
 	  case OP_SIZEOF:
@@ -2354,11 +2361,13 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			a2c_Code(c, op, r, p);
 		return;
 	  case OP_KILL:
+	  case OP_DETACH:
 		a2c_Lex(c, 0);
 		if(a2_IsEOS(c->l[0].token))
 		{
+			// KILLA/DETACHA
 			a2c_Unlex(c);
-			a2c_Code(c, OP_KILLA, 0, 0);
+			a2c_Code(c, op + 2, 0, 0);
 			return;
 		}
 		a2c_Unlex(c);
@@ -2378,7 +2387,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		}
 		else if(a2_IsRegister(c->l[0].token))
 		{
-			++op;	// KILLR
+			++op;	// KILLR/DETACHR
 			r = a2c_GetIndex(c, c->l);
 			a2c_Code(c, op, r, 0);
 			if(c->l[0].token == TK_TEMPREG)
@@ -3964,6 +3973,7 @@ static struct
 	{ "wait",	TK_INSTRUCTION,	OP_WAIT		},
 	{ "loop",	TK_INSTRUCTION,	OP_LOOP		},
 	{ "kill",	TK_INSTRUCTION,	OP_KILL		},
+	{ "detach",	TK_INSTRUCTION,	OP_DETACH	},
 	{ "d",		TK_INSTRUCTION,	OP_DELAY	},
 	{ "td",		TK_INSTRUCTION,	OP_TDELAY	},
 	{ "quant",	TK_INSTRUCTION,	OP_QUANT	},

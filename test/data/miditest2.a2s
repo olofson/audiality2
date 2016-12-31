@@ -108,11 +108,11 @@ export Song(P V=1 L=0)
 	!sustain 0
 
 	tempo 80 4
-	D.fbdelay (tick * 2.05);	D.fbgain .02
+	D.fbdelay (tick * 2.05);	D.fbgain .1
 	D.ldelay (tick * 3.05);		D.lgain .05
 	D.rdelay (tick * 4.53);		D.rgain .05
-	D2.fbdelay (tick * 5.95);	D2.fbgain .02
-	D2.ldelay (tick * 6.51);	D2.lgain .05
+	D2.fbdelay (tick * 1.35);	D2.fbgain .1
+	D2.ldelay (tick * 4.51);	D2.lgain .05
 	D2.rdelay (tick * 7.03);	D2.rgain .05
 	PM.vol .25
 	set
@@ -157,19 +157,26 @@ export Song(P V=1 L=0)
 
 		// MIDI message handling
 		if Msg == MIDI.NOTEOFF {
-			if (not sustain) VID<1
+			if (not sustain) {
+				VID<1
+				detach VID
+			}
 		} else if Msg == MIDI.NOTEON {
 			if Arg2 {
 				VID:Inst (Arg1 - 60 / 12) Arg2
 			} else {
 				// "Fake" NoteOff!
-				if (not sustain) VID<1
+				if (not sustain) {
+					VID<1
+					detach VID
+				}
 			}
 		} else if Msg == MIDI.CONTROLCHANGE {
 			if Arg1 == MIDI.SUSTAIN {
 				sustain (Arg2 >= .5)
 				if not sustain {
 					*<1
+					detach
 				}
 			}
 		}

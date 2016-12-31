@@ -12,7 +12,7 @@ patterns:
 
 - comment: Keywords and instructions
   name: keyword.control
-  match: \b(end|return|run|wait|sleep|wake|force|jump|loop|jz|jnz|jg|jl|jge|jle|if|ifz|ifl|ifg|ifle|ifge|for|else|while|wz|wl|wg|wle|wge|kill|d|td|quant|rand|p2d|neg|set|ramp|debug|sizeof|and|or|xor|not)\b
+  match: \b(end|return|run|wait|sleep|wake|force|jump|loop|jz|jnz|jg|jl|jge|jle|if|ifz|ifl|ifg|ifle|ifge|for|else|while|wz|wl|wg|wle|wge|kill|detach|d|td|quant|rand|p2d|neg|set|ramp|debug|sizeof|and|or|xor|not)\b
 
 - comment: Fixed VM control registers
   name: storage.type
