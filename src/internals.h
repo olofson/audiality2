@@ -483,9 +483,15 @@ typedef enum A2_evactions
 	A2MT_WAHP,	/* When-All-Have-Processed callback */
 } A2_evactions;
 
+typedef enum A2_evflags
+{
+	A2EF_TIMESTAMP =	0x01	/* Timestamp field is valid */
+} A2_evflags;
+
 /* Fields common to all event actions */
 #define	A2_EVENT_COMMON							\
-	uint16_t	action;		/* Message action code */	\
+	uint8_t		action;		/* Message action code */	\
+	uint8_t		flags;		/* A2EF_TIMESTAMP etc */	\
 	uint16_t	argc;		/* Argument count */		\
 	unsigned	timestamp;	/* When to apply (frames, 24:8 fixp) */
 

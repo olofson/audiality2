@@ -93,13 +93,43 @@ void a2_CloseAPI(A2_state *st)
 
 
 /*---------------------------------------------------------
+	Timestamping utilities
+---------------------------------------------------------*/
+
+/* NOTE: This overwrites the 'flags' field! Use as message initializer. */
+static inline void a2_API_SetTimestamp(A2_interface_i *ii, A2_apimessage *am)
+{
+	if(ii->flags & A2_TIMESTAMP)
+	{
+		am->b.common.timestamp = ii->timestamp;
+		am->b.common.flags = A2EF_TIMESTAMP;
+	}
+	else
+		am->b.common.flags = 0;
+}
+
+
+/*
+ * NOTE:
+ *	This one leaves the 'flags' field uninitialized, as we're currently
+ *	only using that for API messages. (See a2_API_SetTimestamp().)
+ */
+static inline void a2_RT_SetTimestamp(A2_interface_i *ii, A2_event *e)
+{
+	if(ii->flags & A2_TIMESTAMP)
+		e->b.common.timestamp = ii->timestamp;
+	else
+		e->b.common.timestamp = ii->state->now_fragstart;
+}
+
+
+/*---------------------------------------------------------
 	Engine side message pump
 ---------------------------------------------------------*/
 
 static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 		unsigned latelimit)
 {
-	int tsdiff;
 	A2_event *e;
 	A2_event **eq = a2_GetEventQueue(st, am->target);
 	if(!eq)
@@ -115,23 +145,30 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 	memcpy(&e->b, &am->b, am->size - offsetof(A2_apimessage, b));
 	if(am->size < A2_MSIZE(b.common.argc))
 		e->b.common.argc = 0;
-	tsdiff = a2_TSDiff(e->b.common.timestamp, latelimit);
-	if(tsdiff < st->tsmin)
-		st->tsmin = tsdiff;
-	if(tsdiff > st->tsmax)
-		st->tsmax = tsdiff;
-	st->tssum += tsdiff >> 8;
-	++st->tssamples;
-	if(tsdiff < 0)
+	if(e->b.common.flags & A2EF_TIMESTAMP)
 	{
+		int tsdiff = a2_TSDiff(e->b.common.timestamp, latelimit);
+		if(tsdiff < st->tsmin)
+			st->tsmin = tsdiff;
+		if(tsdiff > st->tsmax)
+			st->tsmax = tsdiff;
+		st->tssum += tsdiff >> 8;
+		++st->tssamples;
+		if(tsdiff < 0)
+		{
 #ifdef DEBUG
-		fprintf(stderr, "Audiality 2: API message deliverad "
-				"%f frames late!\n",
-				(latelimit - e->b.common.timestamp) / 256.0f);
+			fprintf(stderr, "Audiality 2: API message deliverad "
+					"%f frames late!\n",
+					(latelimit - e->b.common.timestamp) /
+					256.0f);
 #endif
-		a2r_Error(st, A2_LATEMESSAGE, "a2r_em_forwardevent()[3]");
-		e->b.common.timestamp = latelimit;
+			a2r_Error(st, A2_LATEMESSAGE,
+					"a2r_em_forwardevent()[3]");
+			e->b.common.timestamp = latelimit;
+		}
 	}
+	else
+		e->b.common.timestamp = latelimit;
 	MSGTRACK(e->source = "a2r_em_forwardevent()";)
 	a2_SendEvent(eq, e);
 }
@@ -438,9 +475,7 @@ static A2_errors a2_API_Release(A2_interface *i, A2_handle handle)
 		  {
 			A2_apimessage am;
 			a2_PumpMessages(i);
-			if(!(ii->flags & A2_TIMESTAMP))
-				a2_TimestampReset(i);
-			am.b.common.timestamp = ii->timestamp;
+			a2_API_SetTimestamp(ii, &am);
 			am.target = handle;
 			if(hi->typecode == A2_TXICLIENT)
 				am.b.common.action = A2MT_REMOVEXIC;
@@ -617,11 +652,9 @@ static A2_handle a2_API_Starta(A2_interface *i, A2_handle parent,
 	A2_state *st = ii->state;
 	A2_errors res;
 	A2_apimessage am;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = parent;
 	am.b.common.action = A2MT_START;
-	am.b.common.timestamp = ii->timestamp;
 	am.b.start.program = program;
 	if((am.b.start.voice = rchm_New(&st->ss->hm, NULL, A2_TNEWVOICE)) < 0)
 		return am.b.start.voice;
@@ -638,11 +671,9 @@ static A2_errors a2_API_Playa(A2_interface *i, A2_handle parent,
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
 	A2_apimessage am;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = parent;
 	am.b.common.action = A2MT_PLAY;
-	am.b.common.timestamp = ii->timestamp;
 	am.b.play.program = program;
 	if(argc)
 		return a2_writemsgargs(st->fromapi, &am, argc, argv,
@@ -660,11 +691,9 @@ static A2_errors a2_API_Senda(A2_interface *i, A2_handle voice, unsigned ep,
 	A2_apimessage am;
 	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = voice;
 	am.b.common.action = A2MT_SEND;
-	am.b.common.timestamp = ii->timestamp;
 	am.b.play.program = ep;
 	if(argc)
 		return a2_writemsgargs(st->fromapi, &am, argc, argv,
@@ -682,11 +711,9 @@ static A2_errors a2_API_SendSuba(A2_interface *i, A2_handle voice, unsigned ep,
 	A2_apimessage am;
 	if(ep >= A2_MAXEPS)
 		return A2_INDEXRANGE;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = voice;
 	am.b.common.action = A2MT_SENDSUB;
-	am.b.common.timestamp = ii->timestamp;
 	am.b.play.program = ep;
 	if(argc)
 		return a2_writemsgargs(st->fromapi, &am, argc, argv,
@@ -701,11 +728,9 @@ static A2_errors a2_API_Kill(A2_interface *i, A2_handle voice)
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
 	A2_apimessage am;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = voice;
 	am.b.common.action = A2MT_KILL;
-	am.b.common.timestamp = ii->timestamp;
 	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.common));
 }
 
@@ -715,11 +740,9 @@ static A2_errors a2_API_KillSub(A2_interface *i, A2_handle voice)
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
 	A2_apimessage am;
-	if(!(ii->flags & A2_TIMESTAMP))
-		a2_TimestampReset(i);
+	a2_API_SetTimestamp(ii, &am);
 	am.target = voice;
 	am.b.common.action = A2MT_KILLSUB;
-	am.b.common.timestamp = ii->timestamp;
 	return a2_writemsg(st->fromapi, &am, A2_MSIZE(b.common));
 }
 
@@ -748,11 +771,8 @@ static A2_handle a2_RT_Starta(A2_interface *i, A2_handle parent,
 		return vh;
 	if(!(e = a2_AllocEvent(st)))
 		return -A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_START;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	e->b.common.argc = argc;
 	e->b.start.program = program;
 	e->b.start.voice = vh;
@@ -775,11 +795,8 @@ static A2_errors a2_RT_Playa(A2_interface *i, A2_handle parent,
 		return A2_MANYARGS;
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_PLAY;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	e->b.common.argc = argc;
 	e->b.play.program = program;
 	memcpy(&e->b.play.a, argv, argc * sizeof(int));
@@ -803,11 +820,8 @@ static A2_errors a2_RT_Senda(A2_interface *i, A2_handle voice, unsigned ep,
 		return A2_MANYARGS;
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_SEND;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	e->b.common.argc = argc;
 	e->b.play.program = ep;
 	memcpy(&e->b.play.a, argv, argc * sizeof(int));
@@ -831,11 +845,8 @@ static A2_errors a2_RT_SendSuba(A2_interface *i, A2_handle voice, unsigned ep,
 		return A2_MANYARGS;
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_SENDSUB;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	e->b.common.argc = argc;
 	e->b.play.program = ep;
 	memcpy(&e->b.play.a, argv, argc * sizeof(int));
@@ -854,11 +865,8 @@ static A2_errors a2_RT_Kill(A2_interface *i, A2_handle voice)
 		return A2_BADVOICE;
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_KILL;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	a2_SendEvent(eq, e);
 	return A2_OK;
 }
@@ -874,11 +882,8 @@ static A2_errors a2_RT_KillSub(A2_interface *i, A2_handle voice)
 		return A2_BADVOICE;
 	if(!(e = a2_AllocEvent(st)))
 		return A2_OOMEMORY;
+	a2_RT_SetTimestamp(ii, e);
 	e->b.common.action = A2MT_KILLSUB;
-	if(ii->flags & A2_TIMESTAMP)
-		e->b.common.timestamp = ii->timestamp;
-	else
-		e->b.common.timestamp = st->now_fragstart;
 	a2_SendEvent(eq, e);
 	return A2_OK;
 }
