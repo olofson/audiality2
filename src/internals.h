@@ -138,10 +138,15 @@ void a2_DumpConfig(A2_config *c);
 
 /*
  * VM instructions.
- * NOTE: *R versions MUST be right after their non-R counterparts!
  *
- * NOTE: The END instruction, opcode 0, is left out here, as it needs special
- *       treatment in enums for safely portable code.
+ * NOTE:
+ *	*R versions MUST be right after their non-R counterparts! Similar rules
+ *	apply to some *A instructions; check the compiler implementation before
+ *	reordering anything here.
+ *
+ * NOTE:
+ *	The END instruction, opcode 0, is left out here, as it needs special
+ *	treatment in enums for safely portable code.
  */
 #define A2_ALLINSTRUCTIONS						\
 	/* Program flow control */					\
@@ -215,7 +220,8 @@ typedef struct A2_instruction
 	int32_t		a3;
 } A2_instruction;
 
-void a2_DumpIns(unsigned *code, unsigned pc);
+unsigned a2_InsSize(A2_opcodes op);
+void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream);
 
 
 /*---------------------------------------------------------

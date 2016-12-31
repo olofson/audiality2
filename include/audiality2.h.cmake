@@ -33,6 +33,8 @@
 extern "C" {
 #endif
 
+#include <stdio.h>
+
 /* Versioning */
 #define	A2_MAKE_VERSION(major, minor, micro, build)	\
 		(((major) << 24) | ((minor) << 16) | ((micro) << 8) | (build))
@@ -571,6 +573,10 @@ unsigned a2_GetTicks(void);
  * number of milliseconds actually slept.
  */
 unsigned a2_Sleep(unsigned milliseconds);
+
+/* Dump VM assembly code of the specified object, where applicable */
+A2_errors a2_DumpCode(A2_interface *i, A2_handle h, FILE *stream,
+		const char *prefix);
 
 /*TODO*/
 /* Calculate size of converted data */

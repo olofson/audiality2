@@ -36,6 +36,7 @@
 
 static int readstdin = 0;
 static int show_private = 0;
+static int dump_code = 0;
 
 /* Configuration */
 static const char *audiodriver = "default";
@@ -103,6 +104,8 @@ static A2_errors sink_process(int **buffers, unsigned nbuffers,
 	Object info printouts
 -------------------------------------------------------------------*/
 
+#define	MAXINDENT	32
+
 static void print_info(int indent, const char *xname, A2_handle h)
 {
 	int i;
@@ -111,8 +114,16 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	const char *name = a2_Name(iface, h);
 	int has_exports = a2_GetExport(iface, h, 0) >= 1;
 	int has_private = show_private && (a2_GetExport(iface, h, -1) >= 1);
+	char prefix[MAXINDENT * 2 + 1];
+	if(indent > MAXINDENT)
+		indent = MAXINDENT;
 	for(i = 0; i < indent; ++i)
-		printf("| ");
+	{
+		prefix[i * 2] = '|';
+		prefix[i * 2 + 1] = ' ';
+	}
+	prefix[indent * 2] = 0;
+	fputs(prefix, stdout);
 	if(xname)
 		printf("%-24s", xname);
 	else if(name)
@@ -160,7 +171,6 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	  }
 	  case A2_TPROGRAM:
-		/* TODO: New properties for argument count, defaults etc! */
 		break;
 	  case A2_TUNIT:
 	  {
@@ -222,10 +232,11 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	}
 	printf("\n");
+	if(dump_code && (t == A2_TPROGRAM))
+		a2_DumpCode(iface, h, stdout, prefix);
 	if(has_exports || has_private)
 	{
-		for(i = 0; i < indent; ++i)
-			printf("| ");
+		fputs(prefix, stdout);
 		printf("|----------------(exports)-------------------\n");
 		for(i = 0; (x = a2_GetExport(iface, h, i)) >= 0; ++i)
 			print_info(indent + 1, a2_GetExportName(iface, h, i),
@@ -233,8 +244,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	}
 	if(has_private)
 	{
-		for(i = 0; i < indent; ++i)
-			printf("| ");
+		fputs(prefix, stdout);
 		printf("|-------------(private symbols)--------------\n");
 		for(i = -1; (x = a2_GetExport(iface, h, i)) >= 0; --i)
 			print_info(indent + 1, a2_GetExportName(iface, h, i),
@@ -242,8 +252,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	}
 	if(has_exports || has_private)
 	{
-		for(i = 0; i < indent; ++i)
-			printf("| ");
+		fputs(prefix, stdout);
 		printf("'--------------------------------------------\n");
 	}
 }
@@ -496,6 +505,8 @@ static void parse_args(int argc, const char *argv[])
 			;
 		else if(strncmp(argv[i], "-x", 3) == 0)
 			;
+		else if(strncmp(argv[i], "-a", 3) == 0)
+			dump_code = 1;
 		else if(strncmp(argv[i], "-h", 3) == 0)	/* No args! */
 		{
 			usage(argv[0]);

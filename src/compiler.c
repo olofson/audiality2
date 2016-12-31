@@ -29,7 +29,6 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2_Try()!
 #undef	A2_OUT_A2B
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <math.h>
 #include "compiler.h"
@@ -94,22 +93,48 @@ static const char *a2_insnames[A2_OPCODES] = {
 };
 #undef	A2_DI
 
+
 static const char *a2_regnames[A2_CREGISTERS] = {
 	"TICK",	"TR"
 };
 
-static void a2_PrintRegName(unsigned r)
+
+static void a2_PrintRegName(unsigned r, FILE *stream)
 {
 	if(r < A2_CREGISTERS)
-		fputs(a2_regnames[r], stderr);
+		fputs(a2_regnames[r], stream);
 	else
-		fprintf(stderr, "R%d", r);
+		fprintf(stream, "R%d", r);
 }
 
-void a2_DumpIns(unsigned *code, unsigned pc)
+
+unsigned a2_InsSize(A2_opcodes op)
+{
+	switch(op)
+	{
+	  case OP_DELAY:
+	  case OP_TDELAY:
+	  case OP_LOAD:
+	  case OP_ADD:
+	  case OP_MUL:
+	  case OP_MOD:
+	  case OP_QUANT:
+	  case OP_RAND:
+	  case OP_PUSH:
+	  case OP_DEBUG:
+	  case OP_RAMP:
+	  case OP_RAMPALL:
+		return 2;
+	  default:
+		return 1;
+	}
+}
+
+
+void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 {
 	A2_instruction *ins = (A2_instruction *)(code + pc);
-	fprintf(stderr, "%d:\t%-8.8s", pc, a2_insnames[ins->opcode]);
+	fprintf(stream, "%6d: %-8.8s", pc, a2_insnames[ins->opcode]);
 	switch((A2_opcodes)ins->opcode)
 	{
 	  /* No arguments */
@@ -131,7 +156,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SPAWND:
 	  case OP_SPAWNA:
 	  case OP_SIZEOF:
-		fprintf(stderr, "%d", ins->a2);
+		fprintf(stream, "%d", ins->a2);
 		break;
 	  /* <16:16(a3)> */
 	  case OP_DELAY:
@@ -139,7 +164,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_PUSH:
 	  case OP_DEBUG:
 	  case OP_RAMPALL:
-		fprintf(stderr, "%f", ins->a3 / 65536.0f);
+		fprintf(stream, "%f", ins->a3 / 65536.0f);
 		break;
 	  /* <register(a1)> */
 	  case OP_DELAYR:
@@ -152,7 +177,7 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_SPAWNDR:
 	  case OP_SPAWNAR:
 	  case OP_RAMPALLR:
-		a2_PrintRegName(ins->a1);
+		a2_PrintRegName(ins->a1, stream);
 		break;
 	  /* <register(a1), 16:16(a3)> */
 	  case OP_LOAD:
@@ -162,8 +187,8 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_QUANT:
 	  case OP_RAND:
 	  case OP_RAMP:
-		a2_PrintRegName(ins->a1);
-		fprintf(stderr, " %f", ins->a3 / 65536.0f);
+		a2_PrintRegName(ins->a1, stream);
+		fprintf(stream, " %f", ins->a3 / 65536.0f);
 		break;
 	  /* <register(a1), integer(a2)> */
 	  case OP_LOOP:
@@ -174,18 +199,18 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_JGE:
 	  case OP_JLE:
 	  case OP_SPAWNV:
-		a2_PrintRegName(ins->a1);
-		fprintf(stderr, " %d", ins->a2);
+		a2_PrintRegName(ins->a1, stream);
+		fprintf(stream, " %d", ins->a2);
 		break;
 	  /* <index(a1)> */
 	  case OP_KILL:
 	  case OP_WAIT:
-		fprintf(stderr, "%d", ins->a1);
+		fprintf(stream, "%d", ins->a1);
 		break;
 	  /* <index(a1), integer(a2)> */
 	  case OP_SPAWN:
 	  case OP_SEND:
-		fprintf(stderr, "%d %d", ins->a1, ins->a2);
+		fprintf(stream, "%d %d", ins->a1, ins->a2);
 		break;
 	  /* <register(a1), register(a2)> */
 	  case OP_LOADR:
@@ -212,12 +237,87 @@ void a2_DumpIns(unsigned *code, unsigned pc)
 	  case OP_XORR:
 	  case OP_NOTR:
 	  case OP_RAMPR:
-		a2_PrintRegName(ins->a1);
-		fprintf(stderr, " ");
-		a2_PrintRegName(ins->a2);
+		a2_PrintRegName(ins->a1, stream);
+		fprintf(stream, " ");
+		a2_PrintRegName(ins->a2, stream);
 		break;
 	}
-	fprintf(stderr, "\n");
+	fprintf(stream, "\n");
+}
+
+
+static int a2_Func2EP(A2_program *p, unsigned fn)
+{
+	int i;
+	for(i = 0; i < A2_MAXEPS; ++i)
+		if(p->eps[i] == fn)
+			return i;
+	return -1;
+}
+
+
+static inline void a2_DumpFunction(A2_program *p, unsigned fn, FILE *stream,
+		const char *prefix)
+{
+	int j;
+	A2_function *f = &p->funcs[fn];
+	if(f->argc)
+	{
+		fprintf(stream, "%s | %d args; defaults: ", prefix, f->argc);
+		for(j = 0; j < f->argc; j++)
+			fprintf(stream, "%g ", f->argdefs[j] / 65536.0f);
+		fprintf(stream, "\n");
+	}
+	fprintf(stream, "%s | size: %d; topreg: %d\n", prefix,
+			f->size, f->topreg);
+	fprintf(stream, "%s |\n", prefix);
+	for(j = 0; j < f->size; )
+	{
+		A2_instruction *ins = (A2_instruction *)(f->code + j);
+		fprintf(stream, "%s | ", prefix);
+		a2_DumpIns(f->code, j, stream);
+		j += a2_InsSize(ins->opcode);
+	}
+	fprintf(stream, "%s '--------------------------------\n", prefix);
+}
+
+
+A2_errors a2_DumpCode(A2_interface *i, A2_handle h, FILE *stream,
+		const char *prefix)
+{
+	int j;
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	A2_program *p;
+	int res = a2_TypeOf(i, h);
+	if(res < 0)
+		return -res;
+	if(res != A2_TPROGRAM)
+		return A2_WRONGTYPE;
+	if(!(p = a2_GetProgram(st, h)))
+		return A2_BADPROGRAM;
+	if(!p->funcs)
+	{
+		fprintf(stream, "%s  WARNING: No functions!\n", prefix);
+		return A2_BADENTRY;
+	}
+	fprintf(stream, "%s .-[ Main EP ]----------------\n", prefix);
+	a2_DumpFunction(p, 0, stream, prefix);
+	for(j = 1; j < A2_MAXEPS; ++j)
+		if(p->eps[j] >= 0)
+		{
+			fprintf(stream, "%s .-[ EP %d ]-------------------\n",
+					prefix, j);
+			a2_DumpFunction(p, p->eps[j], stream, prefix);
+		}
+	for(j = 1; j < p->nfuncs; ++j)
+		if(a2_Func2EP(p, j) < 0)
+		{
+			fprintf(stream, "%s .-[ Function %d ]--------------\n",
+					prefix, j);
+			a2_DumpFunction(p, j, stream, prefix);
+		}
+	return A2_OK;
 }
 
 
@@ -294,6 +394,7 @@ static A2_symbol *a2_NewSymbol(const char *name, A2_tokens token)
 	return s;
 }
 
+
 static void a2_FreeSymbol(A2_symbol *s)
 {
 	free(s->name);
@@ -305,6 +406,7 @@ static void a2_FreeSymbol(A2_symbol *s)
 	}
 	free(s);
 }
+
 
 static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 {
@@ -328,6 +430,7 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 	s->next = *stack;
 	*stack = s;
 }
+
 
 static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 {
@@ -375,12 +478,12 @@ static void a2c_AddDependency(A2_compiler *c, A2_handle h)
 
 
 /*---------------------------------------------------------
-	Coder
+	VM code generator
 ---------------------------------------------------------*/
 
 /*
- * Convert a double precision value into 16:16 fixed point for the VM. May throw
- * the following exceptions:
+ * Convert a double precision value into 16:16 fixed point for the VM. May
+ * throw the following exceptions:
  *	A2_OVERFLOW if the parsed value is too large to fit in a 16:16 fixp
  *	A2_UNDERFLOW if a non-zero parsed value is truncated to zero
  */
@@ -439,8 +542,8 @@ static void a2c_PopCoder(A2_compiler *c)
 	if(!cdr)
 		a2c_Throw(c, A2_INTERNAL + 130);	/* No coder!? */
 	fn = cdr->program->funcs + cdr->func;
-	fn->code = (unsigned *)realloc(cdr->code,
-			(cdr->pos + 1) * sizeof(unsigned));
+	fn->size = cdr->pos + 1;
+	fn->code = (unsigned *)realloc(cdr->code, fn->size * sizeof(unsigned));
 	if(!fn->code)
 		a2c_Throw(c, A2_OOMEMORY);
 	ins = (A2_instruction *)(fn->code + cdr->pos);
@@ -462,7 +565,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 {
 	A2_instruction *ins;
 	A2_coder *cdr = c->coder;
-	int longins = 0;
+	unsigned inssize = a2_InsSize(op);
 	if(c->nocode)
 		a2c_Throw(c, A2_NOCODE);
 	if(cdr->pos + 3 >= cdr->size)
@@ -605,8 +708,6 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	  case OP_DEBUG:
 	  case OP_RAMP:
 	  case OP_RAMPALL:
-		longins = 1;
-		break;
 	  case OP_SET:
 	  case OP_WAIT:
 	  case OP_DELAYR:
@@ -630,7 +731,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 	}
 	ins->opcode = op;
 	ins->a1 = reg;
-	if(longins)
+	if(inssize == 2)
 	{
 		ins->a2 = 0;
 		ins->a3 = arg;
@@ -642,7 +743,7 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 		ins->a2 = arg;
 	}
 	DUMPCODE(a2_DumpIns(cdr->code, cdr->pos);)
-	cdr->pos += longins ? 2 : 1;
+	cdr->pos += inssize;
 }
 
 
@@ -694,6 +795,7 @@ static inline A2_handle a2_find_import(A2_compiler *c, const char *name)
 	return -1;
 }
 
+
 /*
  * Grab 'n' characters from s, and append a 'nul' byte.
  * (NOT equivalent to strndup())
@@ -706,6 +808,7 @@ static inline char *a2c_ndup(const char *s, size_t n)
 	new[n] = '\0';
 	return memcpy(new, s, n);
 }
+
 
 static inline int a2_GetChar(A2_compiler *c)
 {
@@ -725,6 +828,7 @@ static inline int a2_GetChar(A2_compiler *c)
 	return ch;
 }
 
+
 static inline void a2_UngetChar(A2_compiler *c)
 {
 #ifdef DEBUG
@@ -733,6 +837,7 @@ static inline void a2_UngetChar(A2_compiler *c)
 #endif
 	--c->l[0].pos;
 }
+
 
 static void a2_LexBufAdd(A2_compiler *c, int ch)
 {
@@ -854,6 +959,7 @@ static inline int get_figure(A2_compiler *c, int base)
 		return -1;
 	return n;
 }
+
 
 static int a2_GetIntNum(A2_compiler *c, int base, int figures)
 {
@@ -1059,6 +1165,7 @@ static void a2c_SetToken(A2_compiler *c, int tk, int i)
 	c->l[0].token = tk;
 	c->l[0].v.i = i;
 }
+
 
 static void a2c_SetTokenf(A2_compiler *c, int tk, double f)
 {
@@ -1271,6 +1378,7 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 	return c->l[0].token;
 }
 
+
 #ifdef DUMPTOKENS
 static void a2c_DumpToken(A2_compiler *c, A2_lexvalue *l)
 {
@@ -1281,6 +1389,8 @@ static void a2c_DumpToken(A2_compiler *c, A2_lexvalue *l)
 	if(l->token == TK_INSTRUCTION)
 		fprintf(stderr, " %s", a2_insnames[a2c_GetIndex(c, l)]);
 }
+
+
 static int a2c_Lex(A2_compiler *c, unsigned flags)
 {
 	int i;
@@ -1386,6 +1496,7 @@ typedef struct A2_scope
 	int		canexport;
 } A2_scope;
 
+
 static void a2c_BeginScope(A2_compiler *c, A2_scope *sc)
 {
 	sc->symbols = c->symbols;
@@ -1393,6 +1504,7 @@ static void a2c_BeginScope(A2_compiler *c, A2_scope *sc)
 	sc->canexport = c->canexport;
 	c->canexport = 0;	/* Only top level scope can export normally! */
 }
+
 
 static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 {
@@ -1467,6 +1579,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		a2c_Throw(c, res);
 	c->canexport = sc->canexport;
 }
+
 
 /* Like a2r_EndScope(), except we don't check or export anything! */
 static void a2c_CleanScope(A2_compiler *c, A2_scope *sc)
@@ -1655,6 +1768,7 @@ static void a2c_code_op_r(A2_compiler *c, A2_opcodes op, int to, unsigned r)
 	}
 }
 
+
 /* Issue code to perform an operation involving a constant value. */
 static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 {
@@ -1703,6 +1817,7 @@ static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 	}
 }
 
+
 /* Issue code to perform operation on a handle. */
 static void a2c_code_op_h(A2_compiler *c, A2_opcodes op, int to, unsigned h)
 {
@@ -1718,6 +1833,7 @@ static void a2c_code_op_h(A2_compiler *c, A2_opcodes op, int to, unsigned h)
 		a2c_Throw(c, A2_INTERNAL + 105);
 	}
 }
+
 
 /* Issue code '<op> <to> <from>', where <from> is derived lex state 'l' */
 static void a2c_CodeOpL(A2_compiler *c, A2_opcodes op, int to, A2_lexvalue *l)
@@ -1958,6 +2074,7 @@ static int a2c_Namespace(A2_compiler *c)
 	}
 	return in_namespace;
 }
+
 
 /*
  * Variable, that is, a named register, including:
@@ -2865,6 +2982,7 @@ static int a2c_DownstreamInputs(A2_compiler *c, A2_structitem *si)
 	return 0;
 }
 
+
 static void a2c_StructDef(A2_compiler *c)
 {
 	A2_program *p = c->coder->program;
@@ -3080,7 +3198,7 @@ static int a2c_AddFunction(A2_compiler *c)
 
 static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 {
-	int i;
+	int i, f;
 	A2_program *p;
 	A2_scope sc;
 	if(s->token != TK_NAME)
@@ -3106,7 +3224,8 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 	fprintf(stderr, "\nprogram %s(): ------------------------\n", s->name);
 #endif
 	a2c_PushCoder(c, p, 0);
-	if(a2c_AddFunction(c) != 0)
+	f = c->coder->program->eps[0] = a2c_AddFunction(c);
+	if(f != 0)
 		a2c_Throw(c, A2_INTERNAL + 131); /* Should be impossible! */
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[0]);
@@ -3192,6 +3311,7 @@ typedef struct A2_wavedef {
 	uint32_t	noiseseed;
 } A2_wavedef;
 
+
 static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 {
 	int set = 1;
@@ -3204,6 +3324,7 @@ static void a2c_wd_flagattr(A2_compiler *c, A2_wavedef *wd, unsigned flag)
 	else
 		wd->flags &= ~flag;
 }
+
 
 static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 		A2_tokens terminator)
@@ -3245,6 +3366,7 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 			a2c_Throw(c, A2_EXPEOS);
 	RENDERDBG(fprintf(stderr, "'--------------------------------\n");)
 }
+
 
 static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 		A2_tokens terminator)
@@ -3312,6 +3434,7 @@ static int a2c_WaveDefStatement(A2_compiler *c, A2_wavedef *wd,
 	return 0;
 }
 
+
 static struct
 {
 	const char	*n;
@@ -3340,6 +3463,7 @@ static struct
 
 	{ NULL, 0, 0 }
 };
+
 
 static void a2c_WaveDef(A2_compiler *c, int export)
 {
