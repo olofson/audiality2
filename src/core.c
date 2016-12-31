@@ -1689,9 +1689,7 @@ TODO:
 			break;
 
 		  case A2_OPCODES:
-#ifdef DEBUG
 		  default:
-#endif
 			A2_VMABORT(A2_ILLEGALOP, "VM:ILLEGALOP");
 		}
 		++v->s.pc;
