@@ -2938,8 +2938,10 @@ static void a2c_WireSpec(A2_compiler *c)
 			a2c_Throw(c, A2_COUTWIRED);
 		}
 
+		a2c_Lex(c, 0);
 		a2c_Namespace(c);
-		a2c_Expect(c, TK_REGISTER, A2_EXPCTRLREGISTER);
+		if(c->l[0].token != TK_REGISTER)
+			a2c_Throw(c, A2_EXPCTRLREGISTER);
 		si = a2c_AddStructItem(c, &c->coder->program->wires, NULL);
 		si->kind = A2_SI_CONTROL_WIRE;
 		si->p.wire.from_unit = from->v.port.instance;
