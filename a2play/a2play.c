@@ -41,7 +41,8 @@ typedef enum {
 	DF_MODULE =	0x01,	// Dump "work" module
 	DF_ROOT =	0x02,	// Dump root (implies A2P_DF_MODULE)
 	DF_PRIVATE =	0x04,	// Include private symbols
-	DF_ASM =	0x08	// Include VM asm code for programs
+	DF_ASM =	0x08,	// Include VM asm code for programs
+	DF_HANDLES =	0x10	// Include object handles
 } DUMPFLAGS;
 
 static DUMPFLAGS dump = 0;
@@ -121,7 +122,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	A2_otypes t = a2_TypeOf(iface, h);
 	const char *name = a2_Name(iface, h);
 	int has_exports = a2_GetExport(iface, h, 0) >= 1;
-	int has_private = (dump & DF_PRIVATE) &&
+	int show_private = (dump & DF_PRIVATE) &&
 			(a2_GetExport(iface, h, -1) >= 1);
 	char prefix[MAXINDENT * 2 + 1];
 	if(indent > MAXINDENT)
@@ -137,8 +138,12 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		printf("%-24s", xname);
 	else if(name)
 		printf("%-24s", name);
+	else if(dump & DF_HANDLES)
+		printf("%-24s", "<unnamed>");
 	else
 		printf("%-24d", h);
+	if(dump & DF_HANDLES)
+		printf("%-8d", h);
 	printf("%-12s", a2_TypeName(iface, t));
 	switch(t)
 	{
@@ -243,7 +248,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	printf("\n");
 	if((dump & DF_ASM) && (t == A2_TPROGRAM))
 		a2_DumpCode(iface, h, stdout, prefix);
-	if(has_exports || has_private)
+	if(has_exports || show_private)
 	{
 		fputs(prefix, stdout);
 		printf("|----------------(exports)-------------------\n");
@@ -251,7 +256,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 			print_info(indent + 1, a2_GetExportName(iface, h, i),
 					x);
 	}
-	if(has_private)
+	if(show_private)
 	{
 		fputs(prefix, stdout);
 		printf("|-------------(private symbols)--------------\n");
@@ -259,7 +264,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 			print_info(indent + 1, a2_GetExportName(iface, h, i),
 					x);
 	}
-	if(has_exports || has_private)
+	if(has_exports || show_private)
 	{
 		fputs(prefix, stdout);
 		printf("'--------------------------------------------\n");
@@ -432,8 +437,9 @@ static void usage(const char *exename)
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
 			"           -x          Dump module exports\n"
 			"           -xr         Dump engine root exports\n"
-			"           -xp         Dump private symbols\n"
-			"           -xa         Dump VM assembly code\n"
+			"           -xp         Dump with private symbols\n"
+			"           -xa         Dump with VM assembly code\n"
+			"           -xh         Dump with object handles\n"
 			"           -v          Print engine and header "
 			"versions\n"
 			"           -h          Help\n\n");
@@ -522,6 +528,8 @@ static void parse_args(int argc, const char *argv[])
 			dump |= DF_MODULE | DF_PRIVATE;
 		else if(strncmp(argv[i], "-xa", 3) == 0)
 			dump |= DF_MODULE | DF_ASM;
+		else if(strncmp(argv[i], "-xh", 3) == 0)
+			dump |= DF_MODULE | DF_HANDLES;
 		else if(strncmp(argv[i], "-h", 3) == 0)	/* No args! */
 		{
 			usage(argv[0]);
