@@ -1,7 +1,7 @@
 /*
  * a2play.c - Audiality 2 command line player
  *
- * Copyright 2013-2016 David Olofson <david@olofson.net>
+ * Copyright 2013-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -35,8 +35,16 @@
 #define	READ_CHUNK_SIZE	256
 
 static int readstdin = 0;
-static int show_private = 0;
-static int dump_code = 0;
+
+/* Dumping of exports, code etc */
+typedef enum {
+	DF_MODULE =	0x01,	// Dump "work" module
+	DF_ROOT =	0x02,	// Dump root (implies A2P_DF_MODULE)
+	DF_PRIVATE =	0x04,	// Include private symbols
+	DF_ASM =	0x08	// Include VM asm code for programs
+} DUMPFLAGS;
+
+static DUMPFLAGS dump = 0;
 
 /* Configuration */
 static const char *audiodriver = "default";
@@ -113,7 +121,8 @@ static void print_info(int indent, const char *xname, A2_handle h)
 	A2_otypes t = a2_TypeOf(iface, h);
 	const char *name = a2_Name(iface, h);
 	int has_exports = a2_GetExport(iface, h, 0) >= 1;
-	int has_private = show_private && (a2_GetExport(iface, h, -1) >= 1);
+	int has_private = (dump & DF_PRIVATE) &&
+			(a2_GetExport(iface, h, -1) >= 1);
 	char prefix[MAXINDENT * 2 + 1];
 	if(indent > MAXINDENT)
 		indent = MAXINDENT;
@@ -232,7 +241,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		break;
 	}
 	printf("\n");
-	if(dump_code && (t == A2_TPROGRAM))
+	if((dump & DF_ASM) && (t == A2_TPROGRAM))
 		a2_DumpCode(iface, h, stdout, prefix);
 	if(has_exports || has_private)
 	{
@@ -255,6 +264,15 @@ static void print_info(int indent, const char *xname, A2_handle h)
 		fputs(prefix, stdout);
 		printf("'--------------------------------------------\n");
 	}
+}
+
+
+static void dump_exports(void)
+{
+	if(dump & DF_ROOT)
+		print_info(0, NULL, A2_ROOTBANK);
+	else if(dump)
+		print_info(0, NULL, module);
 }
 
 
@@ -358,10 +376,6 @@ static int play_sounds(int argc, const char *argv[])
 				return -1;
 			res = 1;
 		}
-		else if(strncmp(argv[i], "-xr", 4) == 0)
-			print_info(0, NULL, A2_ROOTBANK);
-		else if(strncmp(argv[i], "-x", 3) == 0)
-			print_info(0, NULL, module);
 	}
 	if(!res && (a2_Get(iface, module, "Song") >= 0))
 		res = play_sound("Song", mididriver ? 1: 0);
@@ -416,9 +430,10 @@ static void usage(const char *exename)
 			"not specified)\n"
 			"           -st<n>      Stop time (seconds)\n"
 			"           -sl<n>      Stop level (1.0 <==> clip)\n"
-			"           -x          Print module exports\n"
-			"           -xr         Print engine root exports\n"
-			"           -xp         Show private symbols (x/xr)\n"
+			"           -x          Dump module exports\n"
+			"           -xr         Dump engine root exports\n"
+			"           -xp         Dump private symbols\n"
+			"           -xa         Dump VM assembly code\n"
 			"           -v          Print engine and header "
 			"versions\n"
 			"           -h          Help\n\n");
@@ -499,14 +514,14 @@ static void parse_args(int argc, const char *argv[])
 				silencelevel = 1;
 			printf("[Stop below: %f]\n", sl);
 		}
-		else if(strncmp(argv[i], "-xp", 4) == 0)
-			show_private = 1;
-		else if(strncmp(argv[i], "-xr", 4) == 0)
-			;
 		else if(strncmp(argv[i], "-x", 3) == 0)
-			;
-		else if(strncmp(argv[i], "-a", 3) == 0)
-			dump_code = 1;
+			dump |= DF_MODULE;
+		else if(strncmp(argv[i], "-xr", 4) == 0)
+			dump |= DF_ROOT;
+		else if(strncmp(argv[i], "-xp", 4) == 0)
+			dump |= DF_MODULE | DF_PRIVATE;
+		else if(strncmp(argv[i], "-xa", 3) == 0)
+			dump |= DF_MODULE | DF_ASM;
 		else if(strncmp(argv[i], "-h", 3) == 0)	/* No args! */
 		{
 			usage(argv[0]);
@@ -646,6 +661,9 @@ int main(int argc, const char *argv[])
 		module = h;
 		free(buf);
 	}
+
+	/* Dump exports, code etc, if requested */
+	dump_exports();
 
 	/* Start playing! */
 	a2_TimestampReset(iface);
