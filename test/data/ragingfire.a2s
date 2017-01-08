@@ -1,0 +1,68 @@
+def title	"RagingFire"
+def version	"0.7.0"
+def description	"Raging fire using offline rendered waves and waveshapers"
+def author	"David Olofson"
+def copyright	"Copyright 2017 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9.1"
+
+Rumble0(pP pV Wave Spread Period)
+{
+	struct { wtosc }
+	+pP tr; w Wave; !x 1; @a pV; -pP 3
+	for {
+		p (rand  2 - 1 * Spread + pP);	d Period
+	}
+}
+
+Rumble(pP pV=1 Period=.5)
+{
+	Rumble0 -.5	pV		triangle	2	Period
+	Rumble0 0	(pV * .5)	sine		2	Period
+	Rumble0 .5	(pV * .5)	triangle	2	Period
+	Rumble0 1	(pV * .5)	triangle	3	Period
+	Rumble0 2	(pV * .3)	triangle	3	(Period * .5)
+}
+
+Rattle(pP pV=1 Spacing=100 Duration=10)
+{
+	struct { wtosc }
+	w noise; tr pP
+	!a0 pV
+	for {
+		@a a0; a 0; @p (rand 3); d (Duration + rand Duration * .5)
+		d (rand Spacing)
+	}
+}
+
+RenderFire()
+{
+	Rumble .25 1 1
+	Rattle 0 .2 100 5
+	Rattle 2 .1 50 10
+}
+
+wave FireWave
+{
+	wavetype MIPWAVE; samplerate 48000
+	duration 3; looped; xfade
+	normalize
+	RenderFire
+}
+
+export Song(P V=1 L=0)
+{
+	struct {
+		wtosc	O1
+		wtosc	O2
+		waveshaper
+		panmix
+	}
+	amount .7
+	vol V
+	set
+	+tr P
+	O1.w FireWave; O1.a .5; @O1.p 0
+	O2.w FireWave; O2.a .5; @O2.p -.3; O2.phase 1000
+	d 100
+}
