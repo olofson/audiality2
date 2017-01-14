@@ -297,7 +297,6 @@ static A2_errors a2_OpenSharedState(A2_state *st)
 			"		panmix * *\n"
 			"		xinsert * >\n"
 			"	}\n"
-			".restart\n"
 			"	2(V) { vol V; ramp vol 100 }\n"
 			"	3(PX PY PZ) { pan PX; ramp pan 100 }\n"
 			"}\n"
