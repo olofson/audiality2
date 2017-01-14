@@ -314,6 +314,36 @@ static void load_sounds(int argc, const char *argv[])
 	Playing
 -------------------------------------------------------------------*/
 
+#define	A2P_WPNAME	"a2play_waveplayer"
+
+static const char *waveplayer =
+	"export " A2P_WPNAME "(P V=1)\n"
+	"{\n"
+	"	struct {\n"
+	"		wtosc\n"
+	"		panmix\n"
+	"	}\n"
+	"	w %d\n"
+	"	@p P\n"
+	"	@a V\n"
+	"	1() { a 0; ramp a 100 }\n"
+	"}\n";
+
+/* Generate and compile a player program for a wave */
+static A2_handle wrap_wave(A2_handle wave)
+{
+	A2_handle wp;
+	int bsize = strlen(waveplayer) + 20;
+	char *buf = malloc(bsize);
+	if(!buf)
+		return -A2_OOMEMORY;
+	snprintf(buf, bsize, waveplayer, wave);
+	wp = a2_LoadString(iface, buf, "a2play_waveplayer_module");
+	a2_Assign(iface, module, wp);
+	return a2_Get(iface, wp, A2P_WPNAME);
+}
+
+
 /* Parse the body of a -p or -M switch; <name>[,pitch[,vel[,mod[,...]]]] */
 static int play_sound(const char *cmd, int midihandler)
 {
@@ -335,9 +365,22 @@ static int play_sound(const char *cmd, int midihandler)
 	}
 	if((h = a2_Get(iface, module, program)) < 0)
 	{
-		fprintf(stderr, "a2play: a2_Get(\"%s\"): %s\n", program,
-				a2_ErrorString(-h));
-		return -2;
+		/* Fall back to the root module */
+		if((h = a2_Get(iface, A2_ROOTBANK, program)) < 0)
+		{
+			fprintf(stderr, "a2play: a2_Get(\"%s\"): %s\n",
+					program, a2_ErrorString(-h));
+			return -2;
+		}
+	}
+	if(a2_TypeOf(iface, h) == A2_TWAVE)
+	{
+		if((h = wrap_wave(h)) < 0)
+		{
+			fprintf(stderr, "a2play: wrap_wave(): %s\n",
+					a2_ErrorString(-h));
+			return -3;
+		}
 	}
 	for(i = 0; i < cnt - 1; ++i)
 		ia[i] = a[i] * 65536.0f;
@@ -345,7 +388,7 @@ static int play_sound(const char *cmd, int midihandler)
 	{
 		fprintf(stderr, "a2play: a2_Starta(): %s\n",
 				a2_ErrorString(-vh));
-		return -3;
+		return -4;
 	}
 	if(midihandler)
 		a2_MIDIHandler(iface, NULL, -1, vh);
@@ -668,6 +711,14 @@ int main(int argc, const char *argv[])
 		a2_Export(iface, A2_ROOTBANK, h, NULL);
 		module = h;
 		free(buf);
+	}
+
+	/* If we don't have a module at this point, create an empty one */
+	if(module < 0)
+	{
+		module = a2_LoadString(iface, "//", "a2play empty module");
+		if(module >= 0)
+			a2_Export(iface, A2_ROOTBANK, module, NULL);
 	}
 
 	/* Dump exports, code etc, if requested */
