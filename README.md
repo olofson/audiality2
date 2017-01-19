@@ -27,7 +27,7 @@ Installing
 ----------
 
 * Install the dependencies. You'll need SDL and/or JACK for the integrated audio I/O drivers, but it is possible to build Audiality 2 without any audio drivers at all, if you want to use Audiality 2 for offline rendering, or handle audio I/O in the host applications.
-  * SDL 1.2 (optional; needed for a2test)
+  * SDL 1.2 or 2.0 (optional; required only for a2test)
     * http://libsdl.org
   * JACK (optional; preferred for low latency audio and studio integration)
     * http://jackaudio.org
