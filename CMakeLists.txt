@@ -51,3 +51,28 @@ configure_file(audiality2.pc.cmake ${AUDIALITY2_BINARY_DIR}/audiality2.pc
 	@ONLY)
 install(FILES ${AUDIALITY2_BINARY_DIR}/audiality2.pc
 	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
+
+# CPack general
+set(CPACK_GENERATOR "DEB" "RPM" "TBZ2")
+set(CPACK_SET_DESTDIR ON)
+set(CPACK_PACKAGE_RELOCATABLE "false")
+set(CPACK_PACKAGE_NAME "audiality2")
+set(CPACK_PACKAGE_VERSION "${VERSION_STRING}")
+set(CPACK_PACKAGE_CONTACT "David Olofson <david@olofson.net>")
+set(CPACK_RESOURCE_FILE_LICENSE "${AUDIALITY2_SOURCE_DIR}/COPYING")
+set(CPACK_RESOURCE_FILE_README "${AUDIALITY2_SOURCE_DIR}/README.md")
+
+# CPack DEB
+set(CPACK_DEBIAN_PACKAGE_SECTION "Libraries")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS "libsdl2")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION_SUMMARY "Realtime scripted modular audio engine")
+set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "Audiality 2 is a realtime audio and music engine, primarily intended for video games. While it supports traditional sample playback as well as additive, subtractive and granular synthesis, the distinctive feature is subsample accurate realtime scripting.")
+
+# CPack PRM
+set(CPACK_RPM_PACKAGE_GROUP "Development/Libraries")
+set(CPACK_RPM_PACKAGE_SUMMARY "${CPACK_DEBIAN_PACKAGE_DESCRIPTION_SUMMARY}")
+set(CPACK_RPM_PACKAGE_DESCRIPTION "${CPACK_DEBIAN_PACKAGE_DESCRIPTION}")
+set(CPACK_RPM_PACKAGE_LICENSE "zlib")
+set(CPACK_RPM_PACKAGE_REQUIRES "libSDL2-2.0.so.0,libm.so.6")
+
+include(CPack)
