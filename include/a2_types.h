@@ -1,7 +1,7 @@
 /*
  * a2_types.h - Audiality 2 basic data types
  *
- * Copyright 2012-2016 David Olofson <david@olofson.net>
+ * Copyright 2012-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -226,6 +226,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(BADHEXESCAPE,	"Bad hex escape format in string literal")\
   A2_DEFERR(BADIFNEST,		"Nested 'if' without braces")\
   A2_DEFERR(BADELSE,		"Use of 'else' after non-braced statement")\
+  A2_DEFERR(BADLIBVERSION,	"Linked A2 lib incompatible with application")\
   \
   A2_DEFERR(CANTEXPORT,		"Cannot export from this scope")\
   A2_DEFERR(CANTINPUT,		"Unit cannot have inputs")\

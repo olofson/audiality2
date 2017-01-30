@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -122,8 +122,27 @@ unsigned a2_LinkedVersion(void);
  *	The 'flags' argument is only passed on to the driver 'flags' field when
  *	a driver is opened by the state! That is, flags are not passed on to a
  *	driver that is already open when a2_Open() is called.
+ *
+ * Version checking:
+ *	a2_OpenVersion() verifies that the linked library is compatible with
+ *	the header version specified by the application. If it is not, the call
+ *	will fail with A2_BADLIBVERSION, and return NULL.
+ *
+ *	a2_Open() automatically passes the version of the headers the
+ *	application is compiled against, which means that applications using
+ *	this call will not work with older library versions; only same or
+ *	newer.
+ *
+ *	When distributing binaries, it may be useful to specify the Audiality 2
+ *	version explicitly via a2_OpenVersion(), so that applications will not
+ *	be prevented from running with older libraries, unless they actually
+ *	need features added in later versions.
  */
-A2_interface *a2_Open(A2_config *config);
+A2_interface *a2_OpenVersion(A2_config *config, unsigned headerversion);
+static inline A2_interface *a2_Open(A2_config *config)
+{
+	return a2_OpenVersion(config, a2_HeaderVersion());
+}
 
 /*
  * Create a substate to the state behind interface 'master'.

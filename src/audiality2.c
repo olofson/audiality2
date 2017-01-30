@@ -514,12 +514,57 @@ static A2_errors a2_Open2(A2_state *st)
 }
 
 
-A2_interface *a2_Open(A2_config *config)
+static A2_errors a2_verify_version(unsigned headerversion)
+{
+	/* Major and minor versions need to match. */
+	if((A2_MAJOR(headerversion) == A2_MAJOR(A2_VERSION)) &&
+			(A2_MINOR(headerversion) == A2_MINOR(A2_VERSION)))
+	{
+		if(A2_MINOR(A2_VERSION) & 1)
+		{
+			/*
+			 * Development branches are assumed to break binary
+			 * compatibility with every micro release!
+			 */
+			if(A2_MICRO(headerversion) == A2_MICRO(A2_VERSION))
+				return A2_OK;
+		}
+		else
+		{
+			/*
+			 * Stable branch; lib needs to be of same or higher
+			 * micro version.
+			 */
+			if(A2_MICRO(headerversion) <= A2_MICRO(A2_VERSION))
+				return A2_OK;
+		}
+	}
+
+	/* Check failed! This will not work. */
+	fprintf(stderr, "CRITICAL: Incompatible Audiality library!\n");
+	fprintf(stderr, "This library is version %d.%d.%d.%d\n",
+			A2_MAJOR(A2_VERSION),
+			A2_MINOR(A2_VERSION),
+			A2_MICRO(A2_VERSION),
+			A2_BUILD(A2_VERSION));
+	fprintf(stderr, "Application is built for %d.%d.%d.%d\n",
+			A2_MAJOR(headerversion),
+			A2_MINOR(headerversion),
+			A2_MICRO(headerversion),
+			A2_BUILD(headerversion));
+	return A2_BADLIBVERSION;
+}
+
+
+A2_interface *a2_OpenVersion(A2_config *config, unsigned headerversion)
 {
 	A2_errors res;
 	A2_state *st;
 	A2_interface_i *j;
-	a2_last_error = A2_OK;
+
+	if((a2_last_error = a2_verify_version(headerversion)))
+		return NULL;
+
 	DUMPSIZES(
 		printf("A2_wave:\t%d\n", sizeof(A2_wave));
 		printf("A2_bank:\t%d\n", sizeof(A2_bank));
