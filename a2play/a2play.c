@@ -450,7 +450,7 @@ static void print_version(const char *exename)
 			A2_MINOR(v),
 			A2_MICRO(v),
 			A2_BUILD(v));
-	fprintf(stderr, "Copyright 2016 David Olofson\n");
+	fprintf(stderr, "Copyright 2017 David Olofson\n");
 }
 
 
