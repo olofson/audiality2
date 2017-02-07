@@ -64,7 +64,16 @@ install(FILES ${AUDIALITY2_BINARY_DIR}/audiality2.pc
 	DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/pkgconfig/")
 
 # CPack general
-set(CPACK_GENERATOR "DEB" "RPM" "TBZ2")
+if(UNIX AND NOT APPLE)
+	# OS X
+	set(CPACK_GENERATOR "DragNDrop")
+elseif()
+	# Windows ZIP archive
+	set(CPACK_GENERATOR "ZIP")
+else()
+	# Linux packages
+	set(CPACK_GENERATOR "DEB" "RPM" "TBZ2")
+endif()
 set(CPACK_SET_DESTDIR ON)
 set(CPACK_PACKAGE_RELOCATABLE "false")
 set(CPACK_PACKAGE_NAME "audiality2")
