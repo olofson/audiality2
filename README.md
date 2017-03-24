@@ -1,6 +1,6 @@
 Audiality 2
 ===========
-
+[![Build Status](https://travis-ci.org/olofson/audiality2.svg?branch=master)](https://travis-ci.org/olofson/audiality2)
 
 Overview
 --------
