@@ -1,0 +1,11 @@
+Copyright 2017 David Olofson <david@olofson.net>
+
+Some of the demo songs provided with Audiality 2, as noted in their respective
+headers, are released under the Attribution-NonCommercial-NoDerivs 3.0 license.
+
+https://creativecommons.org/licenses/by-nc-nd/3.0/
+
+You may play these songs using the Audiality test program a2test.c, and
+redistribute them along with the Audiality 2 source code.
+
+For any other uses, please contact the author!

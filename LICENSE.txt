@@ -1,13 +1,3 @@
-
-===========================================================================
-NOTE: Some of the demo songs provided with Audiality 2 are proprietary!
-NOTE: You may play these songs using the Audiality test program a2test.c.
-NOTE: For any other uses, please contact the author!
-===========================================================================
-
-The license below, commonly known as the zlib license, applies to the
-software, except for the aforementioned demo songs:
-
   Copyright 2017 David Olofson <david@olofson.net>
 
   This software is provided 'as-is', without any express or implied
