@@ -85,6 +85,7 @@ if [ -e $MXEPATH ]; then
 
 	setup_cross mingw-release Release "MXE cross" i686-w64-mingw32.shared
 	setup_cross mingw-debug Debug "MXE cross" i686-w64-mingw32.shared
+	setup_cross mingw-static Static "MXE cross" i686-w64-mingw32.static
 
 	echo
 	echo "=========================================================="
