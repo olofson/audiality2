@@ -65,6 +65,7 @@ if(SDL_FOUND)
 elseif(SDL2_FOUND)
 	add_definitions(-DA2_HAVE_SDL)
 	include_directories(${SDL2_INCLUDE_DIRS})
+	link_directories(${SDL2_LIBDIR})
 endif(SDL_FOUND)
 
 if(USE_JACK)
