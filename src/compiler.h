@@ -1,7 +1,7 @@
 /*
  * compiler.h - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -283,7 +283,6 @@ struct A2_compiler
 	int		canexport;	/* Current context allows exports! */
 	int		inhandler;	/* Disallow timing, RUN, SLEEP ,... */
 	int		nocode;		/* Disallow code in current context  */
-	int		commawarned;	/* Deprecated comma warning issued */
 	A2_jumpbuf	jumpbuf;	/* Buffer for a2c_Try()/a2c_Throw() */
 	A2_errors	error;		/* Error from a2c_Throw() */
 #ifdef THROWSOURCE

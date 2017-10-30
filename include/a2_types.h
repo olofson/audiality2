@@ -227,6 +227,7 @@ typedef enum A2_sampleformats
   A2_DEFERR(BADIFNEST,		"Nested 'if' without braces")\
   A2_DEFERR(BADELSE,		"Use of 'else' after non-braced statement")\
   A2_DEFERR(BADLIBVERSION,	"Linked A2 lib incompatible with application")\
+  A2_DEFERR(BADDELIMITER,	"Unexpected ',' delimiter (old script?)")\
   \
   A2_DEFERR(CANTEXPORT,		"Cannot export from this scope")\
   A2_DEFERR(CANTINPUT,		"Unit cannot have inputs")\
