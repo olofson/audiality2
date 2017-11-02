@@ -121,6 +121,12 @@ static A2_errors sdld_Open(A2_driver *driver)
 	cfg->samplerate = res_as.freq;
 	cfg->channels = res_as.channels;
 	cfg->buffer = res_as.samples;
+	if(cfg->buffer < 1)
+	{
+		/* What did you do, SDL...!? This will not work. */
+		sdld_Close(driver);
+		return A2_BADBUFSIZE;
+	}
 	if(!(ad->buffers = calloc(cfg->channels, sizeof(int32_t *))))
 	{
 		sdld_Close(driver);

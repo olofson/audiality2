@@ -97,8 +97,27 @@ void a2_DumpConfig(A2_config *c)
 
 A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 {
-	A2_config *c = (A2_config *)calloc(1, sizeof(A2_config));
+	A2_config *c;
 	a2_last_error = A2_OK;
+
+	/* Sanity checks */
+	if(samplerate < 1000)
+	{
+		a2_last_error = A2_BADSAMPLERATE;
+		return NULL;
+	}
+	if(buffer < 1)
+	{
+		a2_last_error = A2_BADBUFSIZE;
+		return NULL;
+	}
+	if(channels < 1)
+	{
+		a2_last_error = A2_BADCHANNELS;
+		return NULL;
+	}
+
+	c = (A2_config *)calloc(1, sizeof(A2_config));
 	if(!c)
 	{
 		a2_last_error = A2_OOMEMORY;

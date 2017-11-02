@@ -207,6 +207,9 @@ typedef enum A2_sampleformats
   A2_DEFERR(NEXPDECPOINT,	"Decimal point not expected here")\
   \
   A2_DEFERR(BADFORMAT,		"Bad file or device I/O format")\
+  A2_DEFERR(BADSAMPLERATE,	"Unsupported audio sample rate")\
+  A2_DEFERR(BADBUFSIZE,		"Unsupported audio buffer size")\
+  A2_DEFERR(BADCHANNELS,	"Unsupported audio channel count")\
   A2_DEFERR(BADTYPE,		"Invalid type ID")\
   A2_DEFERR(BADBANK,		"Invalid bank handle")\
   A2_DEFERR(BADWAVE,		"Invalid waveform handle")\
