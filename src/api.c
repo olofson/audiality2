@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -100,9 +100,8 @@ void a2_remove_api_user(void)
 	else if(!users)
 	{
 		a2_AtomicAdd(&a2_api_users, 1);
-		fprintf(stderr, "Audiality 2 INTERNAL ERROR: "
-				"a2_remove_api_user() called while "
-				"a2_api_users == 0!\n");
+		A2_LOG_INT("a2_remove_api_user() called while a2_api_users == "
+				"0!\n");
 	}
 }
 

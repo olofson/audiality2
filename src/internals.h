@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -29,6 +29,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #include <string.h>
 #include <stddef.h>
 #include "a2_units.h"
+#include "a2_log.h"
 #include "rchm.h"
 #include "sfifo.h"
 #include "platform.h"
@@ -634,6 +635,7 @@ struct A2_interface_i
 	int		tsmargin;	/* TS jitter margin (ms) */
 	int		refcount;
 	int		flags;
+	unsigned	loglevels;	/* Loglevel mask */
 };
 
 /* Audiality 2 state */

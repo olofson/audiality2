@@ -82,6 +82,16 @@ typedef enum A2_sampleformats
 #define A2_SF_FORMAT_MASK	0x0000000f
 #define A2_SF_INTERLEAVE_MASK	0x00000f00
 
+/* Log levels */
+typedef enum {
+	A2_LOG_INTERNAL =	0x00000001,
+	A2_LOG_CRITICAL =	0x00000002,
+	A2_LOG_ERROR =		0x00000010,
+	A2_LOG_WARNING =	0x00000020,
+	A2_LOG_INFO =		0x00000040,
+	A2_LOG_DEBUG =		0x00010000
+} A2_loglevels;
+
 
 /*---------------------------------------------------------
 	NULL (stolen from the GNU C Library)

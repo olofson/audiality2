@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -109,9 +109,8 @@ static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
 	if(saveregs > A2_MAXSAVEREGS)
 	{
 		a2_FreeBlock(st, se);
-		fprintf(stderr, "Audiality 2: A2S compiler bug: Too large "
-				"stack frame! %d (max: %d)\n",
-				saveregs, A2_MAXSAVEREGS);
+		A2_LOG_INT("A2S compiler bug: Too large stack frame! "
+				"%d (max: %d)", saveregs, A2_MAXSAVEREGS);
 		return A2_INTERNAL + 401;
 	}
 #endif
@@ -165,7 +164,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		A2_voice *v, A2_unit *lastunit, int32_t **scratch,
 		unsigned noutputs, int32_t **outputs)
 {
-	unsigned i;
+	DBG(A2_interface *i = &st->interfaces->interface;)
 	A2_errors res;
 	int minoutputs, maxoutputs, ninputs;
 	A2_unit *u;
@@ -195,9 +194,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(ninputs < ud->mininputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
-					" channels for unit '%s'!\n",
-					v, ud->name);)
+			A2_LOG_DBG(i, "Voice %p has too few channels for "
+					"unit '%s'!\n", v, ud->name);
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[3]");
 			return NULL;
 		}
@@ -227,9 +225,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(u->noutputs < minoutputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
-					" channels for unit '%s'!\n",
-					v, ud->name);)
+			A2_LOG_DBG(i, "Voice %p has too few channels for "
+					"unit '%s'!\n", v, ud->name);
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[4]");
 			return NULL;
 		}
@@ -249,9 +246,9 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	u->descriptor = ud;
 	u->registers = v->s.r + v->ncregs;
 	if(ud->registers)
-		for(i = 0; ud->registers[i].name; ++i)
+		for(int j = 0; ud->registers[j].name; ++j)
 		{
-			v->cregs[v->ncregs].write = ud->registers[i].write;
+			v->cregs[v->ncregs].write = ud->registers[j].write;
 			v->cregs[v->ncregs].unit = u;
 			++v->ncregs;
 		}
@@ -271,8 +268,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			return NULL;
 		}
 /*/HACK*/
-		for(i = 0; ud->coutputs[i].name; ++i)
-			u->coutputs[i].write = NULL;
+		for(int j = 0; ud->coutputs[j].name; ++j)
+			u->coutputs[j].write = NULL;
 	}
 	else
 		u->coutputs = NULL;
@@ -280,8 +277,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if((ud->flags & A2_MATCHIO) && (u->ninputs != u->noutputs))
 	{
 		a2_FreeBlock(st, u);
-		DBG(fprintf(stderr, "Audiality 2: Unit '%s' needs to have "
-				"matching input/output counts!\n", ud->name);)
+		A2_LOG_DBG(i, "Unit '%s' needs to have matching input/output "
+				"counts!\n", ud->name);
 		a2r_Error(st, A2_IODONTMATCH, "a2_AddUnit()[6]");
 		return NULL;
 	}
@@ -290,9 +287,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if((res = ud->Initialize(u, &v->s, us->statedata, si->p.unit.flags)))
 	{
 		a2_FreeBlock(st, u);
-		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed"
-				" to initialize! (%s)\n",
-				ud->name, v, a2_ErrorString(res));)
+		A2_LOG_DBG(i, "Unit '%s' on voice %p failed to initialize! "
+				"(%s)\n", ud->name, v, a2_ErrorString(res));
 		a2r_Error(st, res, "a2_AddUnit()[7]");
 		return NULL;
 	}

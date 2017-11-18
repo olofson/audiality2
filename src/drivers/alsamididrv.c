@@ -1,7 +1,7 @@
 /*
  * alsamididrv.c - Audiality 2 ALSA sequencer MIDI driver
  *
- * Copyright 2016 David Olofson <david@olofson.net>
+ * Copyright 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -26,6 +26,7 @@
 #include <string.h>
 #include <alsa/asoundlib.h>
 #include "alsamididrv.h"
+#include "a2_log.h"
 
 #define	A2_MIDI_CHANNELS	16
 
@@ -298,6 +299,7 @@ static A2_errors alsamd_Connect(A2_mididriver *driver, int channel,
 static A2_errors alsamd_Open(A2_driver *driver)
 {
 	ALSA_mididriver *amd = (ALSA_mididriver *)driver;
+	A2_interface *i = driver->config->interface;
 	const char *label = "Audiality 2";
 	/*
 	 * We use A2_NOREF instead of A2_AUTOCLOSE here, because we can't tell
@@ -308,15 +310,13 @@ static A2_errors alsamd_Open(A2_driver *driver)
 	if(!(amd->interface = a2_Interface(driver->config->interface,
 			A2_REALTIME | A2_NOREF)))
 	{
-		fprintf(stderr, "Audiality 2; Could not create realtime "
-				"interface!\n");
+		A2_LOG_ERR(i, "Could not create realtime interface!");
 		return A2_DEVICEOPEN;
 	}
 	if(snd_seq_open(&amd->seq_handle, "default", SND_SEQ_OPEN_DUPLEX,
 			SND_SEQ_NONBLOCK) < 0)
 	{
-		fprintf(stderr, "Audiality 2; alsaseq_open(): Error opening "
-				"sequencer!\n");
+		A2_LOG_ERR(i, "alsaseq_open(): Error opening sequencer!");
 		a2_Close(amd->interface);
 		return A2_DEVICEOPEN;
 	}
@@ -326,8 +326,7 @@ static A2_errors alsamd_Open(A2_driver *driver)
 			SND_SEQ_PORT_TYPE_SYNTH);
 	if(amd->port_id < 0)
 	{
-		fprintf(stderr, "Audiality 2; alsaseq_open(): Error creating "
-				"port!\n");
+		A2_LOG_ERR(i, "alsaseq_open(): Error creating port!");
 		a2_Close(amd->interface);
 		snd_seq_close(amd->seq_handle);
 		amd->seq_handle = NULL;

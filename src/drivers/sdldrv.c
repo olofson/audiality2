@@ -1,7 +1,7 @@
 /*
  * sdldrv.c - Audiality 2 SDL audio driver
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include "SDL.h"
 #include "sdldrv.h"
+#include "a2_log.h"
 
 
 /* Callback for the SDL audio API */
@@ -109,7 +110,7 @@ static A2_errors sdld_Open(A2_driver *driver)
 	as.userdata = driver;
 	if(SDL_OpenAudio(&as, &res_as) < 0)
 	{
-		fprintf(stderr, "SDL error: %s\n", SDL_GetError());
+		A2_LOG_ERR(cfg->interface, "SDL error: %s", SDL_GetError());
 		sdld_Close(driver);
 		return A2_DEVICEOPEN;
 	}

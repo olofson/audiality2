@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -134,8 +134,8 @@ int a2_UnloadAll(A2_interface *i)
 			if(rchm_Release(hm, h) == 0)
 			{
 				++count;
-				DBG(fprintf(stderr, "a2_UnloadAll(): Unloaded "
-						"object %d %s\n", h, s);)
+				A2_LOG_DBG(i, "a2_UnloadAll(): Unloaded "
+						"object %d %s", h, s);
 			}
 		}
 	}
@@ -154,7 +154,7 @@ static int a2_unlock_all(A2_state *st)
 	if(!st->ss)
 		return 0;
 	hm = &st->ss->hm;
-	DBG(fprintf(stderr, "=== a2_unlock_all() ===\n");)
+	A2_LOG_DBG(i, "=== a2_unlock_all() ===");
 	for(h = 0; h < hm->nexthandle; ++h)
 	{
 		DBG(const char *s = i ? a2_String(i, h) : "<no interface>";)
@@ -166,11 +166,11 @@ static int a2_unlock_all(A2_state *st)
 				if(rchm_Release(hm, h) == 0)
 				{
 					++count;
-					DBG(fprintf(stderr, "   %d %s\n", h, s);)
+					A2_LOG_DBG(i, "   %d %s", h, s);
 				}
 		}
 	}
-	DBG(fprintf(stderr, "=======================\n");)
+	A2_LOG_DBG(i, "=======================");
 	return count;
 }
 
@@ -541,13 +541,13 @@ static A2_errors a2_verify_version(unsigned headerversion)
 	}
 
 	/* Check failed! This will not work. */
-	fprintf(stderr, "CRITICAL: Incompatible Audiality library!\n");
-	fprintf(stderr, "This library is version %d.%d.%d.%d\n",
+	A2_LOG_CRIT("Incompatible library!\n"
+			"This library is version %d.%d.%d.%d\n"
+			"Application is built for %d.%d.%d.%d",
 			A2_MAJOR(A2_VERSION),
 			A2_MINOR(A2_VERSION),
 			A2_MICRO(A2_VERSION),
-			A2_BUILD(A2_VERSION));
-	fprintf(stderr, "Application is built for %d.%d.%d.%d\n",
+			A2_BUILD(A2_VERSION),
 			A2_MAJOR(headerversion),
 			A2_MINOR(headerversion),
 			A2_MICRO(headerversion),
@@ -595,9 +595,10 @@ A2_interface *a2_OpenVersion(A2_config *config, unsigned headerversion)
 		return NULL;
 	if((res = a2_Open2(st)))
 	{
-		a2_CloseState(st);
-		fprintf(stderr, "Audiality 2: Initialization failed; %s!\n",
+		A2_LOG_ERR(&st->interfaces->interface,
+				"Initialization failed; %s!",
 				a2_ErrorString(res));
+		a2_CloseState(st);
 		a2_last_error = res;
 		return NULL;
 	}
@@ -669,9 +670,10 @@ A2_interface *a2_SubState(A2_interface *parent, A2_config *config)
 
 	if((res = a2_Open2(st)))
 	{
-		a2_CloseState(st);
-		fprintf(stderr, "Audiality 2: Initialization failed; %s!\n",
+		A2_LOG_ERR(&st->interfaces->interface,
+				"Initialization failed; %s!\n",
 				a2_ErrorString(res));
+		a2_CloseState(st);
 		a2_last_error = res;
 		return NULL;
 	}

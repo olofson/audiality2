@@ -1,7 +1,7 @@
 /*
  * mallocdrv.c - Audiality 2 malloc system driver
  *
- * Copyright 2012-2013 David Olofson <david@olofson.net>
+ * Copyright 2012-2013, 2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mallocdrv.h"
+#include "a2_log.h"
 
 
 static void *mallocsd_RTAlloc(A2_sysdriver *driver, unsigned size)
@@ -41,11 +42,12 @@ static void *mallocsd_RTAlloc(A2_sysdriver *driver, unsigned size)
 static void mallocsd_RTFree(A2_sysdriver *driver, void *block)
 {
 #ifdef DEBUG
+	A2_interface *i = driver->driver.config->interface;
 	A2_sysdriver **b = ((A2_sysdriver **)block) - 1;
 	if(b[0] == driver)
 		free(b);
 	else
-		fprintf(stderr, "defaultsd_RTFree(): Attempted to free block "
+		A2_LOG_DBG(i, "defaultsd_RTFree(): Attempted to free block "
 				"%p with driver %p, but the block belongs to "
 				"driver %p!\n", block, driver, b[0]);
 #else
