@@ -1,7 +1,7 @@
 /*
  * units.c - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -92,11 +92,10 @@ A2_handle a2_RegisterUnit(A2_interface *i, const A2_unitdesc *ud)
 	 */
 	if(st->parent || st->next)
 	{
-		fprintf(stderr, "Audiality 2: Tried to register unit '%s' "
-				"on a state that shares data with other "
-				"states, which is not yet supported! "
-				"Please register all units before creating "
-				"substates.\n", ud->name);
+		A2_LOG_ERR(i, "Tried to register unit '%s' on a state that "
+				"shares data with other states, which is not "
+				"yet supported! Please register all units "
+				"before creating substates.", ud->name);
 		return -A2_NOTIMPLEMENTED;
 	}
 
@@ -106,18 +105,17 @@ A2_handle a2_RegisterUnit(A2_interface *i, const A2_unitdesc *ud)
 		if((ud->mininputs != ud->minoutputs) ||
 				(ud->maxinputs != ud->maxoutputs))
 		{
-			fprintf(stderr, "Audiality 2: Unit '%s' has the "
-					"A2_MATCHIO flag set, but mismatched "
-					"mininputs/minoutputs fields!\n",
-					ud->name);
+			A2_LOG_ERR(i, "Unit '%s' has the A2_MATCHIO flag set, "
+					"but mismatched mininputs/minoutputs "
+					"fields!", ud->name);
 			return -A2_IODONTMATCH;
 		}
 	}
 	if(ud->instancesize > sizeof(A2_block))
 	{
-		fprintf(stderr, "Audiality 2: Unit '%s' instance struct "
-				"(%d bytes) is too large! Max supported size: "
-				"%d bytes \n", ud->name, ud->instancesize,
+		A2_LOG_ERR(i, "Unit '%s' instance struct (%d bytes) is too "
+				"large! Max supported size: %d bytes",
+				ud->name, ud->instancesize,
 				(int)sizeof(A2_block));
 		return -A2_OOMEMORY;
 	}
@@ -153,7 +151,7 @@ A2_handle a2_RegisterUnit(A2_interface *i, const A2_unitdesc *ud)
 	if(h < 0)
 		return h;
 
-	DBG(printf("registered unit \"%s\", handle %d, instancesize %d\n",
+	DBG(A2_LOG_DBG(i, "registered unit \"%s\", handle %d, instancesize %d",
 			ud->name, h, ud->instancesize);)
 	return h;
 }

@@ -1,7 +1,7 @@
 /*
  * waves.c - Audiality 2 waveform management
  *
- * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -621,7 +621,7 @@ A2_handle a2_NewWave(A2_interface *i, A2_wavetypes wt, unsigned period,
 		free(w);
 		return -h;
 	}
-	DBG(fprintf(stderr, "New wave %p %d\n", w, h);)
+	DBG(A2_LOG_DBG(i, "New wave %p %d", w, h);)
 	return h;
 }
 

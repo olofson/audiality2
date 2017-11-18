@@ -1,7 +1,7 @@
 /*
  * jackdrv.c - Audiality 2 JACK audio driver
  *
- * Copyright 2012-2014 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -32,6 +32,7 @@
 #include <dlfcn.h>
 #include "jackdrv.h"
 #include "platform.h"
+#include "a2_log.h"
 
 
 /* JACK library entry points */
@@ -99,26 +100,26 @@ static struct
 
 static int jackd_load_jack(JACKD_audiodriver *jd)
 {
-	int i;
+	A2_interface *i = jd->ad.driver.config->interface;
 	if(jd->libjack)
 	{
-		printf("Audiality 2: WARNING: \"libjack.so\" already loaded!\n");
+		A2_LOG_WARN(i, "\"libjack.so\" already loaded!");
 		return 0;
 	}
 	jd->libjack = dlopen("libjack.so", RTLD_NOW);
 	if(!jd->libjack)
 	{
-		printf("Audiality 2: Could not load \"libjack.so\"!\n");
+		A2_LOG_ERR(i, "Could not load \"libjack.so\"!");
 		return A2_DEVICEOPEN;
 	}
-	for(i = 0; jackfuncs[i].name; ++i)
+	for(int j = 0; jackfuncs[j].name; ++j)
 	{
 		void **fns = (void **)(void *)((char *)(&jd->jack) +
-				jackfuncs[i].fn);
-		if(!(*fns = dlsym(jd->libjack, jackfuncs[i].name)))
+				jackfuncs[j].fn);
+		if(!(*fns = dlsym(jd->libjack, jackfuncs[j].name)))
 		{
-			printf("Audiality 2: Required JACK call '%s' missing!\n",
-					jackfuncs[i].name);
+			A2_LOG_ERR(i, "Required JACK call '%s' missing!",
+					jackfuncs[j].name);
 			return A2_DEVICEOPEN;
 		}
 	}
@@ -207,10 +208,10 @@ static int jackd_srate(jack_nframes_t nframes, void *arg)
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)arg;
 	A2_audiodriver *driver = &jd->ad;
 	A2_config *cfg = driver->driver.config;
+	A2_interface *i = cfg->interface;
 	if(cfg->flags & A2_ISOPEN)
-		fprintf(stderr, "Audiality 2: WARNING: Sample rate changed from "
-				"%d to %d after initialization!\n",
-	  			cfg->samplerate, nframes);
+		A2_LOG_WARN(i, "Sample rate changed from %d to %d after "
+				"initialization!", cfg->samplerate, nframes);
 	cfg->samplerate = nframes;
 	return 0;
 }
@@ -219,14 +220,13 @@ static int jackd_srate(jack_nframes_t nframes, void *arg)
 /* JACK buffer size callback */
 static int jackd_bufsize(jack_nframes_t nframes, void *arg)
 {
-	int c;
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)arg;
 	A2_audiodriver *driver = &jd->ad;
 	A2_config *cfg = driver->driver.config;
+	A2_interface *i = cfg->interface;
 	if(cfg->flags & A2_ISOPEN)
-		fprintf(stderr, "Audiality 2: WARNING: Buffer size changed from "
-				"%d to %d after initialization!\n",
-	  			cfg->buffer, nframes);
+		A2_LOG_WARN(i, "Buffer size changed from %d to %d after "
+				"initialization!", cfg->buffer, nframes);
 	a2_MutexLock(&jd->mutex);
 	jackd_free_buffers(driver);
 	cfg->buffer = nframes;
@@ -235,7 +235,7 @@ static int jackd_bufsize(jack_nframes_t nframes, void *arg)
 		a2_MutexUnlock(&jd->mutex);
 		return A2_OOMEMORY;
 	}
-	for(c = 0; c < cfg->channels; ++c)
+	for(int c = 0; c < cfg->channels; ++c)
 		if(!(driver->buffers[c] = calloc(cfg->buffer, sizeof(int32_t))))
 		{
 			a2_MutexUnlock(&jd->mutex);
@@ -285,21 +285,19 @@ static A2_errors jackd_autoconnect(A2_audiodriver *driver)
 {
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)driver;
 	A2_config *cfg = jd->ad.driver.config;
-	int c;
+	A2_interface *i = cfg->interface;
 	const char **ioports;
 	if((ioports = jd->jack.get_ports(jd->client, NULL, NULL,
 			JackPortIsPhysical|JackPortIsInput)) == NULL)
 	{
-		fprintf(stderr, "Audiality 2: Cannot find any physical JACK "
-				"playback ports!\n");
+		A2_LOG_ERR(i, "Cannot find any physical JACK playback ports!");
 		jackd_Close(&jd->ad.driver);
 		return A2_DEVICEOPEN;
 	}
-	for(c = 0; (ioports[c] != NULL) && (c < cfg->channels); ++c)
-		if(jd->jack.connect(jd->client, jd->jack.port_name(jd->ports[c]),
-				ioports[c]))
-			fprintf(stderr, "Audiality 2: Cannot connect output port"
-					" %d!\n", c);
+	for(int c = 0; (ioports[c] != NULL) && (c < cfg->channels); ++c)
+		if(jd->jack.connect(jd->client,
+				jd->jack.port_name(jd->ports[c]), ioports[c]))
+			A2_LOG_ERR(i, "Cannot connect output port %d!", c);
 	free(ioports);
 	return A2_OK;
 }
@@ -308,12 +306,12 @@ static A2_errors jackd_Open(A2_driver *driver)
 {
 	JACKD_audiodriver *jd = (JACKD_audiodriver *)driver;
 	A2_config *cfg = jd->ad.driver.config;
-	int c;
+	A2_interface *i = cfg->interface;
 	A2_errors res;
 	const char *clientname = "Audiality 2";
 
 	/* Get custom client name, if any was specified */
-	for(c = 0; c < driver->optc; ++c)
+	for(int c = 0; c < driver->optc; ++c)
 		if(driver->optv[c][0] != '-')
 			clientname = driver->optv[c];
 
@@ -328,7 +326,8 @@ static A2_errors jackd_Open(A2_driver *driver)
 	jd->ad.Unlock = jackd_unlock;
 	if((jd->client = jd->jack.client_open(clientname, 0, NULL)) == NULL)
 	{
-		fprintf(stderr, "Audiality 2: JACK server not running?\n");
+		A2_LOG_ERR(i, "Could not open JACK client! "
+				"Server not running?");
 		return A2_DEVICEOPEN;
 	}
 	jd->jack.set_sample_rate_callback(jd->client, jackd_srate, driver);
@@ -337,8 +336,9 @@ static A2_errors jackd_Open(A2_driver *driver)
 	jd->jack.set_xrun_callback(jd->client, jackd_xrun, driver);
 
 	/* Create output ports */
-	jd->ports = (jack_port_t **)calloc(cfg->channels, sizeof(jack_port_t *));
-	for(c = 0; c < cfg->channels; ++c)
+	jd->ports = (jack_port_t **)calloc(cfg->channels,
+			sizeof(jack_port_t *));
+	for(int c = 0; c < cfg->channels; ++c)
 	{
 		char buf[32];
 		snprintf(buf, sizeof(buf), "output-%d", c);
@@ -349,7 +349,7 @@ static A2_errors jackd_Open(A2_driver *driver)
 	/* Activate client */
 	if(jd->jack.activate(jd->client))
 	{
-		fprintf(stderr, "Audiality 2: Cannot activate JACK client!\n");
+		A2_LOG_ERR(i, "Could not activate JACK client!");
 		jackd_Close(&jd->ad.driver);
 		return A2_DEVICEOPEN;
 	}

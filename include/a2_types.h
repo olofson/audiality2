@@ -82,6 +82,30 @@ typedef enum A2_sampleformats
 #define A2_SF_FORMAT_MASK	0x0000000f
 #define A2_SF_INTERLEAVE_MASK	0x00000f00
 
+/* Log levels */
+typedef enum {
+	/* Log levels */
+	A2_LOG_INTERNAL =	0x00000001,
+	A2_LOG_CRITICAL =	0x00000002,
+	A2_LOG_ERROR =		0x00000010,
+	A2_LOG_WARNING =	0x00000020,
+	A2_LOG_INFO =		0x00000040,
+	A2_LOG_MESSAGE =	0x00000080,
+	A2_LOG_DEBUG =		0x00001000,
+	A2_LOG_DEVELOPER =	0x01000000,
+
+	/* Log level group masks */
+	A2_LOGM_CRITICAL =	0x0000000f,
+	A2_LOGM_NORMAL =	0x00000ff0,
+	A2_LOGM_DEBUG =		0x00fff000,
+	A2_LOGM_DEVELOPER =	0xff000000,
+
+	/* Default log level mask */
+	A2_LOGM_DEFAULT =	A2_LOGM_CRITICAL | A2_LOGM_NORMAL,
+
+	A2_LOGM_ALL =		0xffffffff
+} A2_loglevels;
+
 
 /*---------------------------------------------------------
 	NULL (stolen from the GNU C Library)
@@ -270,8 +294,8 @@ typedef enum A2_initflags
 	A2_TIMESTAMP =	0x00000200,	/* Enable the a2_Timestamp*() API */
 	A2_NOAUTOCNX =	0x00000400,	/* Disable autoconnect (JACK etc) */
 	A2_REALTIME =	0x00000800,	/* Configure for realtime operation */
-	A2_SILENT =	0x00001000,	/* No API context stderr errors */
-	A2_RTSILENT =	0x00002000,	/* No engine context stderr errors */
+	A2_SILENT =	0x00001000,	/* Disable all log levels */
+	A2_RTSILENT =	0x00002000,	/* No engine context error messages */
 	A2_NOSHARED =	0x00004000,	/* No bank sharing (also a2_Load().)*/
 
 	A2_INITFLAGS =	0x000fff00,	/* Mask for the flags above */

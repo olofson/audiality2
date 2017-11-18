@@ -1,7 +1,7 @@
 /*
  * wtosc.c - Audiality 2 wavetable oscillator unit
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -171,8 +171,8 @@ static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
 	if(w->d.wave.size[0])
 		return 0;
 #if DEBUG
-	fprintf(stderr, "Audiality 2: wtosc: Wave %d unloaded while "
-			"playing!\n", u->registers[A2OR_WAVE] >> 16);
+	A2_LOG_DBG(o->interface, "wtosc: Wave %d unloaded while playing!",
+			u->registers[A2OR_WAVE] >> 16);
 #endif
 	o->wave = NULL;
 	if(o->flags & A2_PROCADD)

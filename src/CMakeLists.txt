@@ -28,6 +28,7 @@ set(sources
 	sfifo.c
 	error.c
 	pitch.c
+	log.c
 )
 
 # Voice units

@@ -43,7 +43,7 @@ typedef struct A2_coder A2_coder;
 
 # ifdef CERRDIE
 #	define	a2c_Throw(c, x)	({					\
-			printf("THROW %s [%s:%d]\n", a2_ErrorString(x),	\
+			A2_DLOG("THROW %s [%s:%d]\n", a2_ErrorString(x),\
 					__FILE__, __LINE__);\
 			assert(0);					\
 		})
@@ -60,7 +60,7 @@ typedef struct A2_coder A2_coder;
 
 # ifdef CERRDIE
 #	define	a2c_Throw(c, x)	({					\
-			printf("THROW %s\n", a2_ErrorString(x));	\
+			A2_DLOG("THROW %s\n", a2_ErrorString(x));	\
 			assert(0);					\
 		})
 # else

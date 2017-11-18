@@ -1,7 +1,7 @@
 /*
  * properties.c - Audiality 2 Object property interface
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -68,6 +68,10 @@ A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v)
 	  case A2_PSILENCEGRACE:
 		*v = st->ss->silencegrace;
 		return A2_OK;
+	  case A2_PLOGLEVELS:
+		*v = ii->loglevels;
+		return A2_OK;
+
 	/*
 	 * FIXME:
 	 *	This might be confusing: These two are actually returning RNG
@@ -292,6 +296,9 @@ A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v)
 		return A2_OK;
 	  case A2_PNOISESEED:
 		st->noisestate = v;
+		return A2_OK;
+	  case A2_PLOGLEVELS:
+		ii->loglevels = v;
 		return A2_OK;
 
 	  /* A2_PSTATISTICS */

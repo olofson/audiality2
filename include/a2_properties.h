@@ -1,7 +1,7 @@
 /*
  * a2_properties.h - Audiality 2 property interface
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -55,7 +55,6 @@ typedef enum A2_properties
 
 	/*
 	 * Global settings (state)
-FIXME: These don't really fit here, as states don't have handles.
 	 */
 	A2_PSTATE =		0x00020000,
 
@@ -69,6 +68,7 @@ FIXME: These don't really fit here, as states don't have handles.
 	A2_PSILENCEGRACE,	/* Grace period before considering silence */
 	A2_PRANDSEED,		/* 'rand' instruction RNG seed/state */
 	A2_PNOISESEED,		/* 'wtosc' noise generator seed/state */
+	A2_PLOGLEVELS,		/* Loglevel (bit mask) */
 
 	/*
 	 * Statistics (state)

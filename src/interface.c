@@ -1,7 +1,7 @@
 /*
  * interface.c - Audiality 2 Interface implementation
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -31,8 +31,6 @@
 
 A2_errors a2_OpenAPI(A2_state *st)
 {
-	int i;
-
 	/* Initialize FIFOs for the API */
 	float buffer = (float)st->config->buffer / st->config->samplerate;
 	int nmessages = A2_MINMESSAGES + buffer * A2_TIMEMESSAGES;
@@ -40,7 +38,8 @@ A2_errors a2_OpenAPI(A2_state *st)
 	st->toapi = sfifo_Open(nmessages * sizeof(A2_apimessage));
 	if(!st->fromapi || !st->toapi)
 	{
-		fprintf(stderr, "Audiality 2: Could not open async API!\n");
+		A2_LOG_ERR(&st->interfaces->interface,
+				"Could not open async API!");
 		return A2_OOMEMORY;
 	}
 
@@ -49,20 +48,19 @@ A2_errors a2_OpenAPI(A2_state *st)
 		nmessages = st->config->eventpool;
 	else
 		nmessages = A2_MINEVENTS + buffer * A2_TIMEEVENTS;
-	for(i = 0; i < nmessages; ++i)
+	for(int j = 0; j < nmessages; ++j)
 	{
 		A2_event *e = a2_NewEvent(st);
 		if(!e)
 		{
-			fprintf(stderr, "Audiality 2: Could not initialize "
-					"internal event pool!\n");
+			A2_LOG_ERR(&st->interfaces->interface, "Could not "
+					"initialize internal event pool!");
 			return A2_OOMEMORY;
 		}
 		e->next = st->eventpool;
 		st->eventpool = e;
 	}
-	EVLEAKTRACK(fprintf(stderr, "Audiality 2: Allocated %d events.\n",
-			st->numevents);)
+	EVLEAKTRACK(A2_DLOG("Allocated %d events.\n", st->numevents);)
 	return A2_OK;
 }
 
@@ -87,8 +85,7 @@ void a2_CloseAPI(A2_state *st)
 		EVLEAKTRACK(--st->numevents;)
 	}
 	EVLEAKTRACK(if(st->numevents)
-		fprintf(stderr, "Audiality 2: %d events leaked!\n",
-				st->numevents);)
+		A2_DLOG("%d events leaked!\n", st->numevents);)
 }
 
 
@@ -157,8 +154,8 @@ static inline void a2r_em_forwardevent(A2_state *st, A2_apimessage *am,
 		if(tsdiff < 0)
 		{
 #ifdef DEBUG
-			fprintf(stderr, "Audiality 2: API message deliverad "
-					"%f frames late!\n",
+			A2_LOG_WARN(&st->interfaces->interface, "API message "
+					"delivered %f frames late!",
 					(latelimit - e->b.common.timestamp) /
 					256.0f);
 #endif
@@ -232,12 +229,10 @@ void a2r_PumpEngineMessages(A2_state *st, unsigned latelimit)
 			md->Connect(md, am.b.midih.channels, am.target);
 			break;
 		  }
-#ifdef DEBUG
 		  default:
-			fprintf(stderr, "Audiality 2: Unknown API message "
-					"%d!\n", am.b.common.action);
+			A2_LOG_INT("Unknown API message %d!",
+					am.b.common.action);
 			break;
-#endif
 		}
 	}
 }
@@ -273,16 +268,18 @@ void a2_PumpMessages(A2_interface *i)
 		A2_apimessage am;
 		if(sfifo_Read(st->toapi, &am, (unsigned)A2_APIREADSIZE) < 0)
 		{
-			fprintf(stderr, "Audiality 2: API side FIFO read"
-					" error! (27)\n");
+			/*
+			 * If this happens, we've probably failed to detect a
+			 * critical error during initialization!
+			 */
+			A2_LOG_INT("API side FIFO read error! (27)");
 			return;
 		}
 		if(am.size > A2_APIREADSIZE)
 			if(sfifo_Read(st->toapi, (char *)&am + A2_APIREADSIZE,
 					am.size - A2_APIREADSIZE) < 0)
 			{
-				fprintf(stderr, "Audiality 2: API side FIFO"
-						" read error! (28)\n");
+				A2_LOG_INT("API side FIFO read error! (28)");
 				return;
 			}
 		if(am.size < A2_MSIZE(b.common.argc))
@@ -304,7 +301,7 @@ void a2_PumpMessages(A2_interface *i)
 			break;
 		  }
 		  case A2MT_ERROR:
-			fprintf(stderr, "Audiality 2: [RT] %s (%s)\n",
+			A2_LOG_ERR(i, "[RT] %s (%s)",
 					a2_ErrorString(am.b.error.code),
 					am.b.error.info);
 			break;
@@ -319,12 +316,10 @@ void a2_PumpMessages(A2_interface *i)
 			}
 			break;
 		  }
-#ifdef DEBUG
 		  default:
-			fprintf(stderr, "Audiality 2: Unknown engine message "
-					"%d!\n", am.b.common.action);
+			A2_LOG_INT("Unknown engine message %d!",
+					am.b.common.action);
 			break;
-#endif
 		}
 	}
 }
@@ -348,20 +343,18 @@ void a2r_ProcessEOCEvents(A2_state *st, unsigned frames)
 		{
 		  case A2MT_WAHP:
 		  {
-		  	/* Just send it back as is to the API context! */
-		  	A2_apimessage am;
-		  	int ms = A2_MSIZE(b.wahp);
+			/* Just send it back as is to the API context! */
+			A2_apimessage am;
+			int ms = A2_MSIZE(b.wahp);
 			memcpy(&am.b, &e->b, ms - offsetof(A2_apimessage, b));
 			a2_writemsg(st->toapi, &am, ms);
 			break;
 		  }
-#ifdef DEBUG
 		  default:
-			fprintf(stderr, "Audiality 2: Unexpected message "
-					"%d in a2r_ProcessEOCEvents()!\n",
+			A2_LOG_INT("Unexpected message %d in "
+					"a2r_ProcessEOCEvents()!",
 					e->b.common.action);
 			break;
-#endif
 		}
 		st->eocevents = e->next;
 		a2_FreeEvent(st, e);
@@ -423,7 +416,7 @@ A2_errors a2r_Error(A2_state *st, A2_errors e, const char *info)
 	}
 	else
 	{
-		fprintf(stderr, "Audiality 2: [engine] %s (%s)\n",
+		A2_LOG_ERR(&st->interfaces->interface, "[engine] %s (%s)",
 				a2_ErrorString(e), info);
 		return A2_OK;
 	}
@@ -543,8 +536,8 @@ static int a2_API_TimestampNudge(A2_interface *i, int offset, float amount)
 	A2_timestamp intended = a2_API_TimestampNow(i) - offset;
 #if DEBUG
 	if((amount < 0.0f) || (amount > 1.0f))
-		fprintf(stderr, "Audiality 2: a2_TimestampNudge() 'amount' is "
-				"%f, but should be in [0, 1]!\n", amount);
+		A2_LOG_DBG(i, "a2_TimestampNudge() 'amount' is %f, but should "
+				"be in [0, 1]!", amount);
 #endif
 	ii->nudge_adjust = a2_TSDiff(intended, ii->timestamp) * amount;
 	return ii->nudge_adjust;
@@ -568,8 +561,8 @@ static int a2_RT_TimestampNudge(A2_interface *i, int offset, float amount)
 	A2_timestamp intended = st->now_fragstart - offset;
 #if DEBUG
 	if((amount < 0.0f) || (amount > 1.0f))
-		fprintf(stderr, "Audiality 2: a2_TimestampNudge() 'amount' is "
-				"%f, but should be in [0, 1]!\n", amount);
+		A2_LOG_DBG(i, "a2_TimestampNudge() 'amount' is %f, but should "
+				"be in [0, 1]!", amount);
 #endif
 	ii->nudge_adjust = a2_TSDiff(intended, ii->timestamp) * amount;
 	return ii->nudge_adjust;
@@ -607,8 +600,8 @@ static A2_timestamp a2_common_TimestampSet(A2_interface *i, A2_timestamp ts)
 	A2_timestamp oldts = ii->timestamp;
 #if DEBUG
 	if(a2_TSDiff(ts, ii->timestamp) < 0)
-		fprintf(stderr, "Audiality 2: API timestamp moved %f frames "
-				"backwards by a2_TimestampSet()!\n",
+		A2_LOG_DBG(i, "API timestamp moved %f frames backwards by "
+				"a2_TimestampSet()!",
 				a2_TSDiff(ts, ii->timestamp) / -256.0f);
 #endif
 	ii->timestamp = ts;
@@ -631,8 +624,8 @@ static A2_timestamp a2_common_TimestampBump(A2_interface *i, int dt)
 	ii->timestamp += dt;
 #if DEBUG
 	if(a2_TSDiff(ii->timestamp, oldts) < 0)
-		fprintf(stderr, "Audiality 2: API timestamp moved %f frames "
-				"backwards by a2_TimestampBump()!\n",
+		A2_LOG_DBG(i, "API timestamp moved %f frames backwards by "
+				"a2_TimestampBump()!",
 				a2_TSDiff(ii->timestamp, oldts) / -256.0f);
 #endif
 	return oldts;
@@ -913,6 +906,20 @@ A2_interface_i *a2_AddInterface(A2_state *st, int flags)
 
 	ii->state = st;
 	ii->flags = flags;
+
+	/*
+	 * Copy log level mask from master interface, if available, otherwise,
+	 * apply defaults depending no build type.
+	 */
+	if(st->interfaces)
+		ii->loglevels = st->interfaces->loglevels;
+	else
+	{
+		ii->loglevels = A2_LOGM_DEFAULT;
+#ifdef DEBUG
+		ii->loglevels |= A2_LOGM_DEBUG | A2_LOGM_DEVELOPER;
+#endif
+	}
 
 	/* Set default timestamp jitter margin */
 	ii->tsmargin = st->config->buffer * 1000 / st->config->samplerate;

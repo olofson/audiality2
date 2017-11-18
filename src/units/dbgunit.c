@@ -1,7 +1,7 @@
 /*
  * dbgunit.c - Audiality 2 debug unit
  *
- * Copyright 2012-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2016-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -46,20 +46,22 @@ volatile static unsigned dbgunit_instance_count = 0;
 static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
-	int i, s;
+	A2_interface *i = &du->state->interfaces->interface;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
-	for(i = 0; i < u->noutputs; ++i)
-		for(s = 0; s < frames; ++s)
+	for(int ch = 0; ch < u->noutputs; ++ch)
+	{
+		for(int s = 0; s < frames; ++s)
 		{
-			int v = u->inputs[i][offset + s];
+			int v = u->inputs[ch][offset + s];
 			if(v < min)
 				min = v;
 			if(v > max)
 				max = v;
-			u->outputs[i][offset + s] += v;
+			u->outputs[ch][offset + s] += v;
 		}
-	fprintf(stderr, "dbgunit[%u]: ProcessAdd() %p o: %u, f: %u, peak:%d/%d\n",
+	}
+	A2_LOG_MSG(i, "dbgunit[%u]: ProcessAdd() %p o: %u, f: %u, peak:%d/%d",
 			du->instance, u->outputs[0], offset, frames, min, max);
 }
 
@@ -67,20 +69,20 @@ static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 static void dbgunit_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
-	int i, s;
+	A2_interface *i = &du->state->interfaces->interface;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
-	for(i = 0; i < u->noutputs; ++i)
-		for(s = 0; s < frames; ++s)
+	for(int ch = 0; ch < u->noutputs; ++ch)
+		for(int s = 0; s < frames; ++s)
 		{
-			int v = u->inputs[i][offset + s];
+			int v = u->inputs[ch][offset + s];
 			if(v < min)
 				min = v;
 			if(v > max)
 				max = v;
-			u->outputs[i][offset + s] = v;
+			u->outputs[ch][offset + s] = v;
 		}
-	fprintf(stderr, "dbgunit[%u]: Process() %p o: %u, f: %u, peak:%d/%d\n",
+	A2_LOG_MSG(i, "dbgunit[%u]: Process() %p o: %u, f: %u, peak:%d/%d",
 			du->instance, u->outputs[0], offset, frames, min, max);
 }
 
@@ -88,19 +90,20 @@ static void dbgunit_Process(A2_unit *u, unsigned offset, unsigned frames)
 static void dbgunit_ProcessAddNI(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
-	fprintf(stderr, "dbgunit[%u]: ProcessAddNI() o: %u, f: %u\n",
-			du->instance, offset, frames);
+	A2_interface *i = &du->state->interfaces->interface;
+	A2_LOG_MSG(i, "dbgunit[%u]: ProcessAddNI() o: %u, f: %u", du->instance,
+			offset, frames);
 }
 
 
 static void dbgunit_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
-	int i;
-	fprintf(stderr, "dbgunit[%u]: ProcessNI() o: %u, f: %u\n",
-			du->instance, offset, frames);
-	for(i = 0; i < u->noutputs; ++i)
-		memset(u->outputs[i] + offset, 0, frames * sizeof(int));
+	A2_interface *i = &du->state->interfaces->interface;
+	A2_LOG_MSG(i, "dbgunit[%u]: ProcessNI() o: %u, f: %u", du->instance,
+			offset, frames);
+	for(int ch = 0; ch < u->noutputs; ++ch)
+		memset(u->outputs[ch] + offset, 0, frames * sizeof(int));
 }
 
 
@@ -108,6 +111,7 @@ static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms,
 		void *statedata, unsigned flags)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
+	A2_interface *i = &du->state->interfaces->interface;
 	if(u->ninputs && (u->ninputs != u->noutputs))
 		return A2_IODONTMATCH;
 	du->instance = ++dbgunit_instance_count;
@@ -127,7 +131,7 @@ static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms,
 		else
 			u->Process = dbgunit_ProcessNI;
 	}
-	fprintf(stderr, "dbgunit[%u]: Initialize(), %s mode\n", du->instance,
+	A2_LOG_MSG(i, "dbgunit[%u]: Initialize(), %s mode", du->instance,
 			flags & A2_PROCADD ? "adding" : "replacing");
 	return A2_OK;
 }
@@ -136,7 +140,8 @@ static A2_errors dbgunit_Initialize(A2_unit *u, A2_vmstate *vms,
 static void dbgunit_Deinitialize(A2_unit *u)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
-	fprintf(stderr, "dbgunit[%u]: Deinitialize()\n", du->instance);
+	A2_interface *i = &du->state->interfaces->interface;
+	A2_LOG_MSG(i, "dbgunit[%u]: Deinitialize()", du->instance);
 }
 
 

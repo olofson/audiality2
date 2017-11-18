@@ -416,19 +416,20 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 #ifdef DEBUG	
 	if(s->next)
 	{
-		fprintf(stderr, "INTERNAL ERROR: Tried to push symbol '%s', "
-				"which has a non-NULL 'next' field!\n",
-				s->name);
+		A2_LOG_INT("Tried to push symbol '%s', which has a non-NULL "
+				"'next' field!", s->name);
 		*(volatile char *)NULL = 0;
 	}
 #endif
 	SYMBOLDBG(
 		if(a2_IsValue(s->token))
-			fprintf(stderr, "a2_PushSymbol(\"%s\" %s (%d) v:%f)\n",
-				s->name, a2c_T2S(s->token), s->token, s->v.f);
+			A2_DLOG("a2_PushSymbol(\"%s\" %s (%d) v:%f)\n",
+					s->name, a2c_T2S(s->token), s->token,
+					s->v.f);
 		else
-			fprintf(stderr, "a2_PushSymbol(\"%s\" %s (%d) v:%d)\n",
-				s->name, a2c_T2S(s->token), s->token, s->v.i);
+			A2_DLOG("a2_PushSymbol(\"%s\" %s (%d) v:%d)\n",
+					s->name, a2c_T2S(s->token), s->token,
+					s->v.i);
 	)
 	s->next = *stack;
 	*stack = s;
@@ -437,16 +438,16 @@ static void a2_PushSymbol(A2_symbol **stack, A2_symbol *s)
 
 static A2_symbol *a2_FindSymbol(A2_state *st, A2_symbol *s, const char *name)
 {
-	SYMBOLDBG(fprintf(stderr, "a2_FindSymbol('%s'): ", name);)
+	SYMBOLDBG(A2_DLOG("a2_FindSymbol('%s'): ", name);)
 	for( ; s; s = s->next)
 		if(!strcmp(name, s->name))
 		{
-			SYMBOLDBG(fprintf(stderr, "FOUND!\n");)
+			SYMBOLDBG(A2_DLOG("FOUND!\n");)
 			while(s->token == TK_ALIAS)
 				s = s->v.alias;
 			return s;
 		}
-	SYMBOLDBG(fprintf(stderr, "NOT FOUND!\n");)
+	SYMBOLDBG(A2_DLOG("NOT FOUND!\n");)
 	return NULL;
 }
 
@@ -780,7 +781,7 @@ static void a2c_DoFixups(A2_compiler *c, A2_symbol *s)
 		s->fixups = fx->next;
 		a2c_SetA2(c, fx->pos, s->v.i);
 		DUMPCODE(
-			fprintf(stderr, "FIXUP: ");
+			A2_DLOG("FIXUP: ");
 			a2_DumpIns(c->coder->code, fx->pos);
 		)
 		free(fx);
@@ -1216,7 +1217,7 @@ static int a2c_Handle2Token(A2_compiler *c, int h)
 		a2c_SetTokenf(c, tk, a2_Value(c->interface, h));
 	else
 		a2c_SetToken(c, tk, h);
-	DUMPLSTRINGS(fprintf(stderr, "token %s (%d)] ", a2c_T2S(tk), tk);)
+	DUMPLSTRINGS(A2_DLOG("token %s (%d)] ", a2c_T2S(tk), tk);)
 	return tk;
 }
 
@@ -1336,12 +1337,12 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 		return a2c_GetOpOrChar(c, ch);
 	a2_UngetChar(c);
 	name = a2c_ndup(c->source + nstart, c->l[0].pos - nstart);
-	DUMPLSTRINGS(fprintf(stderr, " [\"%s\":  ", name);)
+	DUMPLSTRINGS(A2_DLOG(" [\"%s\":  ", name);)
 
 	/* Try the symbol stack... */
 	if((s = a2_FindSymbol(c->state, c->symbols, name)))
 	{
-		DUMPLSTRINGS(fprintf(stderr, "symbol %p] ", s);)
+		DUMPLSTRINGS(A2_DLOG("symbol %p] ", s);)
 		c->l[0].token = s->token;
 		if(a2_IsValue(s->token))
 			c->l[0].v.f = s->v.f;
@@ -1363,11 +1364,11 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 	/* No symbol, no import! Return it as a new name. */
 	if(!(s = a2_NewSymbol(name, TK_NAME)))
 	{
-		DUMPLSTRINGS(fprintf(stderr, "COULD NOT CREATE SYMBOL!] ");)
+		DUMPLSTRINGS(A2_DLOG("COULD NOT CREATE SYMBOL!] ");)
 		free(name);
 		a2c_Throw(c, A2_OOMEMORY);
 	}
-	DUMPLSTRINGS(fprintf(stderr, "name] ");)
+	DUMPLSTRINGS(A2_DLOG("name] ");)
 	s->flags |= A2_SF_TEMPORARY;
 	c->l[0].token = TK_NAME;
 	c->l[0].v.sym = s;
@@ -1380,11 +1381,11 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 static void a2c_DumpToken(A2_compiler *c, A2_lexvalue *l)
 {
 	if((l->token >= ' ') && (l->token <= 255))
-		fprintf(stderr, "%d: '%c' (%d)", l->pos, l->token, l->token);
+		A2_DLOG("%d: '%c' (%d)", l->pos, l->token, l->token);
 	else
-		fprintf(stderr, "%d: %s (%d)", l->pos, a2c_T2S(l->token), l->token);
+		A2_DLOG("%d: %s (%d)", l->pos, a2c_T2S(l->token), l->token);
 	if(l->token == TK_INSTRUCTION)
-		fprintf(stderr, " %s", a2_insnames[a2c_GetIndex(c, l)]);
+		A2_DLOG(" %s", a2_insnames[a2c_GetIndex(c, l)]);
 }
 
 
@@ -1392,16 +1393,16 @@ static int a2c_Lex(A2_compiler *c, unsigned flags)
 {
 	int i;
 	a2c_Lex2(c, flags);
-	fprintf(stderr, " [[");
+	A2_DLOG(" [[");
 	a2c_DumpToken(c, c->l);
-	fprintf(stderr, "]]");
+	A2_DLOG("]]");
 	for(i = 1; i < A2_LEXDEPTH; ++i)
 	{
-		fprintf(stderr, "[");
+		A2_DLOG("[");
 		a2c_DumpToken(c, &c->l[i]);
-		fprintf(stderr, "]");
+		A2_DLOG("]");
 	}
-	fprintf(stderr, "\n");
+	A2_DLOG("\n");
 	return c->l[0].token;
 }
 #endif
@@ -1428,11 +1429,11 @@ static void a2c_Unlex(A2_compiler *c)
 		c->l[i - 1] = c->l[i];
 	memset(&c->l[A2_LEXDEPTH - 1], 0, sizeof(A2_lexvalue));
 #ifdef DUMPTOKENS
-	fprintf(stderr, " [unlex ==> [");
+	A2_DLOG(" [unlex ==> [");
 	a2c_DumpToken(c, c->l);
-	fprintf(stderr, "]]\n");
+	A2_DLOG("]]\n");
 #else
-	DUMPLSTRINGS(fprintf(stderr, " [unlex]\n");)
+	DUMPLSTRINGS(A2_DLOG(" [unlex]\n");)
 #endif
 }
 
@@ -1441,7 +1442,7 @@ static void a2c_Unlex(A2_compiler *c)
 static void a2c_DropToken(A2_compiler *c)
 {
 	int pos = c->l[0].pos;
-	DUMPLSTRINGS(fprintf(stderr, " [drop]\n");)
+	DUMPLSTRINGS(A2_DLOG(" [drop]\n");)
 	a2c_Unlex(c);
 	c->l[0].pos = pos;
 }
@@ -1458,7 +1459,7 @@ static unsigned a2c_AllocReg(A2_compiler *c, A2_regtypes rt)
 		if(c->regmap[r] == A2RT_FREE)
 		{
 			c->regmap[r] = rt;
-			REGDBG(fprintf(stderr, "[AllocReg %d (%d)]\n", r, rt);)
+			REGDBG(A2_DLOG("[AllocReg %d (%d)]\n", r, rt);)
 			if(c->coder && (r > c->coder->topreg))
 				c->coder->topreg = r;
 			return r;
@@ -1469,12 +1470,11 @@ static unsigned a2c_AllocReg(A2_compiler *c, A2_regtypes rt)
 
 static void a2c_FreeReg(A2_compiler *c, unsigned r)
 {
-	REGDBG(fprintf(stderr, "[FreeReg %d]\n", r);)
+	REGDBG(A2_DLOG("[FreeReg %d]\n", r);)
 #ifdef DEBUG
 	if(c->regmap[r] == A2RT_FREE)
 	{
-		fprintf(stderr, "Audiality 2 INTERNAL ERROR: Tried to free "
-				"unused VM register R%d!\n", r);
+		A2_LOG_INT("Tried to free unused VM register R%d!", r);
 		a2c_Throw(c, A2_INTERNAL + 100);
 	}
 #endif
@@ -1510,7 +1510,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 	A2_nametab *p = &c->target->private;
 	memcpy(c->regmap, sc->regmap, sizeof(A2_regmap));
 
-	SCOPEDBG(fprintf(stderr, "=== end scope ===\n");)
+	SCOPEDBG(A2_DLOG("=== end scope ===\n");)
 	while(c->symbols != sc->symbols)
 	{
 		A2_symbol *s = c->symbols;
@@ -1518,7 +1518,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		c->symbols = s->next;
 		if(s->token == TK_FWDECL)
 			res = A2_UNDEFSYM;
-		SCOPEDBG(fprintf(stderr, "   %s\t", s->name);)
+		SCOPEDBG(A2_DLOG("   %s\t", s->name);)
 		switch(s->token)
 		{
 		  case TK_BANK:
@@ -1527,8 +1527,8 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 		  case TK_PROGRAM:
 		  case TK_STRING:
 			h = s->v.i;
-			SCOPEDBG(fprintf(stderr, "h: %d\t", h);)
-			SCOPEDBG(fprintf(stderr, "t: %s\t",
+			SCOPEDBG(A2_DLOG("h: %d\t", h);)
+			SCOPEDBG(A2_DLOG("t: %s\t",
 					a2_TypeName(c->interface,
 					a2_TypeOf(c->interface, h)));)
 			break;
@@ -1543,24 +1543,23 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			/* Fall-through! */
 		  default:
 			h = -1;
-			SCOPEDBG(fprintf(stderr, "(unsupported)\t");)
+			SCOPEDBG(A2_DLOG("(unsupported)\t");)
 			break;
 		}
 		SCOPEDBG(
 			if(s->flags & A2_SF_EXPORTED)
-				fprintf(stderr, "EXPORTED\n");
+				A2_DLOG("EXPORTED\n");
 			else
-				fprintf(stderr, "\n");
+				A2_DLOG("\n");
 		)
 		if(s->flags & A2_SF_EXPORTED)
 		{
 #ifdef DEBUG
 			if(!c->canexport)
 			{
-				fprintf(stderr, "Trying to export symbol "
-						"\"%s\" from a context where "
-						"exports are not allowed!\n",
-						s->name);
+				A2_LOG_INT("Trying to export symbol \"%s\" "
+						"from a context where exports "
+						"are not allowed!", s->name);
 				a2c_Throw(c, A2_INTERNAL + 120);
 			}
 #endif
@@ -1571,7 +1570,7 @@ static void a2c_EndScope(A2_compiler *c, A2_scope *sc)
 			a2nt_AddItem(p, s->name, h);
 		a2_FreeSymbol(s);
 	}
-	SCOPEDBG(fprintf(stderr, "=================\n");)
+	SCOPEDBG(A2_DLOG("=================\n");)
 	if(res)
 		a2c_Throw(c, res);
 	c->canexport = sc->canexport;
@@ -2565,7 +2564,7 @@ static void a2c_Import(A2_compiler *c, int export)
 		h = a2_Load(c->interface, name, 0);
 	if(h < 0)
 	{
-		fprintf(stderr, "Could not import \"%s\"! (%s)\n",
+		A2_LOG_ERR(c->interface, "Could not import \"%s\"! (%s)",
 				name, a2_ErrorString(-h));
 		if(nameh)
 			a2_Release(c->interface, nameh);
@@ -2726,7 +2725,7 @@ static void a2c_AddUnitRegisters(A2_compiler *c, const A2_unitdesc *ud,
 	if(!ud->registers || !ud->registers[0].name)
 		return;
 
-	DUMPSTRUCT(fprintf(stderr, " [");)
+	DUMPSTRUCT(A2_DLOG(" [");)
 	for(i = 0; ud->registers[i].name; ++i)
 	{
 		A2_symbol *s;
@@ -2736,9 +2735,9 @@ static void a2c_AddUnitRegisters(A2_compiler *c, const A2_unitdesc *ud,
 			a2c_Throw(c, A2_OOMEMORY);
 		s->v.i = a2c_AllocReg(c, A2RT_CONTROL);
 		a2_PushSymbol(namespace, s);
-		DUMPSTRUCT(fprintf(stderr, " %s:R%d", s->name, s->v.i);)
+		DUMPSTRUCT(A2_DLOG(" %s:R%d", s->name, s->v.i);)
 	}
-	DUMPSTRUCT(fprintf(stderr, " ]");)
+	DUMPSTRUCT(A2_DLOG(" ]");)
 }
 
 
@@ -2749,7 +2748,7 @@ static void a2c_AddUnitCOutputs(A2_compiler *c, const A2_unitdesc *ud,
 	if(!ud->coutputs || !ud->coutputs[0].name)
 		return;
 
-	DUMPSTRUCT(fprintf(stderr, " [");)
+	DUMPSTRUCT(A2_DLOG(" [");)
 	for(i = 0; ud->coutputs[i].name; ++i)
 	{
 		A2_symbol *s;
@@ -2760,9 +2759,9 @@ static void a2c_AddUnitCOutputs(A2_compiler *c, const A2_unitdesc *ud,
 		s->v.port.instance = instance;
 		s->v.port.index = i;
 		a2_PushSymbol(namespace, s);
-		DUMPSTRUCT(fprintf(stderr, " %s:CO%d", s->name, s->v.i);)
+		DUMPSTRUCT(A2_DLOG(" %s:CO%d", s->name, s->v.i);)
 	}
-	DUMPSTRUCT(fprintf(stderr, " ]");)
+	DUMPSTRUCT(A2_DLOG(" ]");)
 }
 
 
@@ -2773,7 +2772,7 @@ static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
 	if(!ud->constants || !ud->constants[0].name)
 		return;
 
-	DUMPSTRUCT(fprintf(stderr, " {");)
+	DUMPSTRUCT(A2_DLOG(" {");)
 	for(i = 0; ud->constants[i].name; ++i)
 	{
 		A2_symbol *s;
@@ -2783,9 +2782,9 @@ static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
 			a2c_Throw(c, A2_OOMEMORY);
 		s->v.f = ud->constants[i].value / 65536.0f;
 		a2_PushSymbol(namespace, s);
-		DUMPSTRUCT(fprintf(stderr, " %s=%f", s->name, s->v.f);)
+		DUMPSTRUCT(A2_DLOG(" %s=%f", s->name, s->v.f);)
 	}
-	DUMPSTRUCT(fprintf(stderr, " }");)
+	DUMPSTRUCT(A2_DLOG(" }");)
 }
 
 
@@ -2802,36 +2801,36 @@ static void a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 	ni->p.unit.ninputs = inputs;
 	ni->p.unit.noutputs = outputs;
 	DUMPSTRUCT(
-		fprintf(stderr, "  %s", ud->name);
+		A2_DLOG("  %s", ud->name);
 		switch(inputs)
 		{
 		  case A2_IO_MATCHOUT:
-			fprintf(stderr, " *");
+			A2_DLOG(" *");
 			break;
 		  case A2_IO_WIREOUT:
 			/* This should never happen! */
-			fprintf(stderr, " >");
+			A2_DLOG(" >");
 			break;
 		  case A2_IO_DEFAULT:
-			fprintf(stderr, " ?");
+			A2_DLOG(" ?");
 			break;
 		  default:
-			fprintf(stderr, " %d", inputs);
+			A2_DLOG(" %d", inputs);
 			break;
 		}
 		switch(outputs)
 		{
 		  case A2_IO_MATCHOUT:
-			fprintf(stderr, " *");
+			A2_DLOG(" *");
 			break;
 		  case A2_IO_WIREOUT:
-			fprintf(stderr, " >");
+			A2_DLOG(" >");
 			break;
 		  case A2_IO_DEFAULT:
-			fprintf(stderr, " ?");
+			A2_DLOG(" ?");
 			break;
 		  default:
-			fprintf(stderr, " %d", outputs);
+			A2_DLOG(" %d", outputs);
 			break;
 		}
 	)
@@ -2847,7 +2846,7 @@ static void a2c_AddUnit(A2_compiler *c, A2_symbol **namespace, unsigned uindex,
 	a2c_AddUnitCOutputs(c, ud, namespace, ind);
 	a2c_AddUnitConstants(c, ud, namespace);
 
-	DUMPSTRUCT(fprintf(stderr, "\n");)
+	DUMPSTRUCT(A2_DLOG("\n");)
 }
 
 
@@ -3001,14 +3000,14 @@ static void a2c_StructDef(A2_compiler *c)
 		a2c_Unlex(c);
 		return;
 	}
-	DUMPSTRUCT(fprintf(stderr, "struct {\n");)
+	DUMPSTRUCT(A2_DLOG("struct {\n");)
 	a2c_Expect(c, '{', A2_EXPBODY);
 	while(a2c_StructStatement(c, '}'))
 		;
-	DUMPSTRUCT(fprintf(stderr, "}\n");)
+	DUMPSTRUCT(A2_DLOG("}\n");)
 
 	/* Finalize the voice structure; autowiring etc... */
-	DUMPSTRUCT(fprintf(stderr, "Wiring:\n");)
+	DUMPSTRUCT(A2_DLOG("Wiring:\n");)
 	for(si = p->units; si; si = si->next)
 	{
 		int dsi;
@@ -3016,14 +3015,14 @@ static void a2c_StructDef(A2_compiler *c)
 #if DUMPSTRUCT(1)+0
 		if(chainchannels != prevchainchannels)
 		{
-			fprintf(stderr, "  (Chain channels: ");
+			A2_DLOG("  (Chain channels: ");
 			if(chainchannels == A2_IO_MATCHOUT)
-				fprintf(stderr, "*)\n");
+				A2_DLOG("*)\n");
 			else
-				fprintf(stderr, "%d)\n", chainchannels);
+				A2_DLOG("%d)\n", chainchannels);
 			prevchainchannels = chainchannels;
 		}
-		fprintf(stderr, "  %16.16s", ud->name);
+		A2_DLOG("  %16.16s", ud->name);
 #endif
 
 		/* Is this the 'inline' unit? */
@@ -3140,25 +3139,25 @@ static void a2c_StructDef(A2_compiler *c)
 
 #if DUMPSTRUCT(1)+0
 		if(si->p.unit.ninputs == A2_IO_MATCHOUT)
-			fprintf(stderr, "  inputs: *");
+			A2_DLOG("  inputs: *");
 		else
-			fprintf(stderr, "  inputs: %d", si->p.unit.ninputs);
+			A2_DLOG("  inputs: %d", si->p.unit.ninputs);
 		switch(si->p.unit.noutputs)
 		{
 		  case A2_IO_WIREOUT:
-			fprintf(stderr, "  outputs: >");
+			A2_DLOG("  outputs: >");
 			break;
 		  case A2_IO_MATCHOUT:
-			fprintf(stderr, "  outputs: *");
+			A2_DLOG("  outputs: *");
 			break;
 		  default:
-			fprintf(stderr, "  outputs: %d", si->p.unit.noutputs);
+			A2_DLOG("  outputs: %d", si->p.unit.noutputs);
 			break;
 		}
 		if(si->p.unit.flags & A2_PROCADD)
-			fprintf(stderr, " / adding\n");
+			A2_DLOG(" / adding\n");
 		else
-			fprintf(stderr, " / replacing\n");
+			A2_DLOG(" / replacing\n");
 #endif
 	}
 
@@ -3173,18 +3172,18 @@ static void a2c_StructDef(A2_compiler *c)
 #if DUMPSTRUCT(1)+0
 	for(si = p->wires; si; si = si->next)
 	{
-		fprintf(stderr, "  %16.16s  %d:%d R%d\n", "wire",
+		A2_DLOG("  %16.16s  %d:%d R%d\n", "wire",
 				si->p.wire.from_unit, si->p.wire.from_output,
 				si->p.wire.to_register);
 	}
 #endif
 
 #if DUMPSTRUCT(1)+0
-	fprintf(stderr, "  Scratch buffers: %d\n", p->buffers);
-	fprintf(stderr, "  Flags:");
+	A2_DLOG("  Scratch buffers: %d\n", p->buffers);
+	A2_DLOG("  Flags:");
 	if(p->vflags & A2_SUBINLINE)
-		fprintf(stderr, " SUBINLINE");
-	fprintf(stderr, "\n");
+		A2_DLOG(" SUBINLINE");
+	A2_DLOG("\n");
 #endif
 }
 
@@ -3227,7 +3226,7 @@ static void a2c_ProgDef(A2_compiler *c, A2_symbol *s, int export)
 		s->flags |= A2_SF_EXPORTED;
 	a2_PushSymbol(&c->symbols, s);
 #if (DUMPSTRUCT(1)+0) || (DUMPCODE(1)+0)
-	fprintf(stderr, "\nprogram %s(): ------------------------\n", s->name);
+	A2_DLOG("\nprogram %s(): ------------------------\n", s->name);
 #endif
 	a2c_PushCoder(c, p, 0);
 	f = c->coder->program->eps[0] = a2c_AddFunction(c);
@@ -3262,7 +3261,7 @@ static void a2c_FuncDef(A2_compiler *c, A2_symbol *s)
 	s->token = TK_FUNCTION;
 	s->v.i = f;
 	a2_PushSymbol(&c->symbols, s);
-	DUMPCODE(fprintf(stderr, "function %s() (index %d):\n", s->name, f);)
+	DUMPCODE(A2_DLOG("function %s() (index %d):\n", s->name, f);)
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
 	a2c_ArgList(c, &c->coder->program->funcs[f]);
@@ -3283,7 +3282,7 @@ static void a2c_MsgDef(A2_compiler *c, unsigned ep)
 		a2c_Throw(c, A2_BADENTRY);
 	if(!c->coder || !c->coder->program || c->inhandler)
 		a2c_Throw(c, A2_NOMSGHERE);
-	DUMPCODE(fprintf(stderr, "message %d():\n", ep);)
+	DUMPCODE(A2_DLOG("message %d():\n", ep);)
 	f = c->coder->program->eps[ep] = a2c_AddFunction(c);
 	a2c_PushCoder(c, NULL, f);
 	a2c_BeginScope(c, &sc);
@@ -3347,15 +3346,15 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 	maxargc = (a2_GetProgram(c->state, wd->program))->funcs[0].argc;
 	wd->argc = a2c_ConstArguments(c, maxargc, wd->argv);
 	RENDERDBG(
-		fprintf(stderr, ".--------------------------------\n");
-		fprintf(stderr, "| Rendering wave %s...\n", wd->symbol->name);
-		fprintf(stderr, "|        type: %d\n", wd->type);
-		fprintf(stderr, "|       flags: %x\n", wd->flags);
-		fprintf(stderr, "|      period: %d\n", wd->period);
-		fprintf(stderr, "|  samplerate: %d\n", wd->samplerate);
-		fprintf(stderr, "|      length: %d\n", wd->length);
-		fprintf(stderr, "|    randseed: %d\n", wd->randseed);
-		fprintf(stderr, "|   noiseseed: %d\n", wd->noiseseed);
+		A2_DLOG(".--------------------------------\n");
+		A2_DLOG("| Rendering wave %s...\n", wd->symbol->name);
+		A2_DLOG("|        type: %d\n", wd->type);
+		A2_DLOG("|       flags: %x\n", wd->flags);
+		A2_DLOG("|      period: %d\n", wd->period);
+		A2_DLOG("|  samplerate: %d\n", wd->samplerate);
+		A2_DLOG("|      length: %d\n", wd->length);
+		A2_DLOG("|    randseed: %d\n", wd->randseed);
+		A2_DLOG("|   noiseseed: %d\n", wd->noiseseed);
 	)
 	if((wd->symbol->v.i = a2_RenderWave(c->interface,
 			wd->type, wd->period, wd->flags,
@@ -3370,7 +3369,7 @@ static void a2c_wd_render(A2_compiler *c, A2_wavedef *wd,
 	while(a2c_Lex(c, A2_LEX_WHITENEWLINE) != terminator)
 		if(c->l[0].token != TK_EOS)
 			a2c_Throw(c, A2_EXPEOS);
-	RENDERDBG(fprintf(stderr, "'--------------------------------\n");)
+	RENDERDBG(A2_DLOG("'--------------------------------\n");)
 }
 
 
@@ -3551,7 +3550,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		{
 			a2c_SetA2(c, fixpos, c->coder->pos);
 			DUMPCODE(
-				fprintf(stderr, "FIXUP: ");
+				A2_DLOG("FIXUP: ");
 				a2_DumpIns(c->coder->code, fixpos);
 			)
 		}
@@ -3564,7 +3563,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_Statement(c, TK_EOS);
 		a2c_SetA2(c, fixelse, c->coder->pos);
 		DUMPCODE(
-			fprintf(stderr, "FIXUP: ");
+			A2_DLOG("FIXUP: ");
 			a2_DumpIns(c->coder->code, fixelse);
 		)
 		return;
@@ -3577,7 +3576,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 	{
 		a2c_SetA2(c, fixpos, c->coder->pos);
 		DUMPCODE(
-			fprintf(stderr, "FIXUP: ");
+			A2_DLOG("FIXUP: ");
 			a2_DumpIns(c->coder->code, fixpos);
 		)
 	}
@@ -3784,7 +3783,7 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 			s->token = TK_LABEL;
 			s->v.i = c->coder->pos;
 			a2_PushSymbol(&c->symbols, s);
-			DUMPCODE(fprintf(stderr, "label .%s:\n", s->name);)
+			DUMPCODE(A2_DLOG("label .%s:\n", s->name);)
 			if(c->l[0].token == TK_FWDECL)
 				a2c_DoFixups(c, s);
 			return 1;
@@ -4071,10 +4070,9 @@ A2_compiler *a2_OpenCompiler(A2_interface *i, int flags)
 				continue;
 			s = a2c_CreateNamespace(c, uns, ud->name);
 			s = a2c_CreateNamespace(c, s, "constants");
-			DUMPSTRUCT(fprintf(stderr, "units.%s.constants: ",
-					ud->name);)
+			DUMPSTRUCT(A2_DLOG("units.%s.constants: ", ud->name);)
 			a2c_AddUnitConstants(c, ud, s);
-			DUMPSTRUCT(fprintf(stderr, "\n");)
+			DUMPSTRUCT(A2_DLOG("\n");)
 		}
 	}
 	a2c_Except
@@ -4131,20 +4129,26 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 			scol = ecol;
 		}
 #ifdef THROWSOURCE
-		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
-				c->throw_file, c->throw_line);
+		A2_DLOG("[a2c_Throw() from %s:%d]\n", c->throw_file,
+				c->throw_line);
 #endif
-		fprintf(stderr, "Audiality 2: %s ", a2_ErrorString(c->error));
+		A2_LOG_ERR(c->interface, "%s ", a2_ErrorString(c->error));
 		if((sline == eline) && (scol == ecol))
-			fprintf(stderr, "at line %d, column %d", sline, scol);
+			A2_LOG_ERR(c->interface, "%s at line %d, "
+					"column %d in \"%s\"",
+					a2_ErrorString(c->error),
+					sline, scol, source);
 		else if(sline == eline)
-			fprintf(stderr, "at line %d, columns %d..%d",
-					sline, scol, ecol);
+			A2_LOG_ERR(c->interface, "%s at line %d, "
+					"columns %d..%d in \"%s\"",
+					a2_ErrorString(c->error),
+					sline, scol, ecol, source);
 		else
-			fprintf(stderr, "between line %d, column %d and "
-					"line %d, column %d",
-					sline, scol, eline, ecol);
-		fprintf(stderr, " in \"%s\"\n", source);
+			A2_LOG_ERR(c->interface, "%s between line %d, "
+					"column %d and line %d, column %d "
+					"in \"%s\"",
+					a2_ErrorString(c->error),
+					sline, scol, eline, ecol, source);
 		if((sline == eline) && (scol == ecol))
 			a2_DumpLine(c, c->l[0].pos, 1, stderr);
 		else if(sline == eline)
@@ -4166,10 +4170,11 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	a2c_Except
 	{
 #ifdef THROWSOURCE
-		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
+		A2_DLOG("[a2c_Throw() from %s:%d]\n",
 				c->throw_file, c->throw_line);
 #endif
-		fprintf(stderr, "Audiality 2: Emergency finalization 1: %s\n",
+		/* Nothing should ever go wrong here! */
+		A2_LOG_INT("Emergency finalization 1: %s",
 				a2_ErrorString(c->error));
 	}
 	a2c_Try(c)
@@ -4179,10 +4184,11 @@ static void a2_Compile(A2_compiler *c, A2_scope *sc, const char *source)
 	a2c_Except
 	{
 #ifdef THROWSOURCE
-		fprintf(stderr, "[a2c_Throw() from %s:%d]\n",
+		A2_DLOG("[a2c_Throw() from %s:%d]\n",
 				c->throw_file, c->throw_line);
 #endif
-		fprintf(stderr, "Audiality 2: Emergency finalization 2: %s\n",
+		/* Nothing should ever go wrong here either. */
+		A2_LOG_INT("Emergency finalization 2: %s",
 				a2_ErrorString(c->error));
 	}
 }

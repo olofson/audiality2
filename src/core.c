@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -109,9 +109,8 @@ static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
 	if(saveregs > A2_MAXSAVEREGS)
 	{
 		a2_FreeBlock(st, se);
-		fprintf(stderr, "Audiality 2: A2S compiler bug: Too large "
-				"stack frame! %d (max: %d)\n",
-				saveregs, A2_MAXSAVEREGS);
+		A2_LOG_INT("A2S compiler bug: Too large stack frame! "
+				"%d (max: %d)", saveregs, A2_MAXSAVEREGS);
 		return A2_INTERNAL + 401;
 	}
 #endif
@@ -165,7 +164,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		A2_voice *v, A2_unit *lastunit, int32_t **scratch,
 		unsigned noutputs, int32_t **outputs)
 {
-	unsigned i;
+	DBG(A2_interface *i = &st->interfaces->interface;)
 	A2_errors res;
 	int minoutputs, maxoutputs, ninputs;
 	A2_unit *u;
@@ -185,7 +184,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		return NULL;
 	}
 
-	DUMPSTRUCTRT(fprintf(stderr, "Wiring %s... ", ud->name);)
+	DUMPSTRUCTRT(A2_DLOG("Wiring %s... ", ud->name);)
 
 	/* Input wiring */
 	switch(si->p.unit.ninputs)
@@ -195,9 +194,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(ninputs < ud->mininputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
-					" channels for unit '%s'!\n",
-					v, ud->name);)
+			A2_LOG_DBG(i, "Voice %p has too few channels for "
+					"unit '%s'!", v, ud->name);
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[3]");
 			return NULL;
 		}
@@ -227,9 +225,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 		if(u->noutputs < minoutputs)
 		{
 			a2_FreeBlock(st, u);
-			DBG(fprintf(stderr, "Audiality 2: Voice %p has too few"
-					" channels for unit '%s'!\n",
-					v, ud->name);)
+			A2_LOG_DBG(i, "Voice %p has too few channels for "
+					"unit '%s'!", v, ud->name);
 			a2r_Error(st, A2_FEWCHANNELS, "a2_AddUnit()[4]");
 			return NULL;
 		}
@@ -249,16 +246,15 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	u->descriptor = ud;
 	u->registers = v->s.r + v->ncregs;
 	if(ud->registers)
-		for(i = 0; ud->registers[i].name; ++i)
+		for(int j = 0; ud->registers[j].name; ++j)
 		{
-			v->cregs[v->ncregs].write = ud->registers[i].write;
+			v->cregs[v->ncregs].write = ud->registers[j].write;
 			v->cregs[v->ncregs].unit = u;
 			++v->ncregs;
 		}
 	u->ninputs = ninputs;
 	u->inputs = scratch;
-	DUMPSTRUCTRT(fprintf(stderr, "in: %d\tout:%d", u->ninputs,
-			u->noutputs);)
+	DUMPSTRUCTRT(A2_DLOG("in: %d\tout:%d", u->ninputs, u->noutputs);)
 
 	/* Initialize control outputs, if any */
 	if(ud->coutputs)
@@ -271,8 +267,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			return NULL;
 		}
 /*/HACK*/
-		for(i = 0; ud->coutputs[i].name; ++i)
-			u->coutputs[i].write = NULL;
+		for(int j = 0; ud->coutputs[j].name; ++j)
+			u->coutputs[j].write = NULL;
 	}
 	else
 		u->coutputs = NULL;
@@ -280,8 +276,8 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if((ud->flags & A2_MATCHIO) && (u->ninputs != u->noutputs))
 	{
 		a2_FreeBlock(st, u);
-		DBG(fprintf(stderr, "Audiality 2: Unit '%s' needs to have "
-				"matching input/output counts!\n", ud->name);)
+		A2_LOG_DBG(i, "Unit '%s' needs to have matching input/output "
+				"counts!", ud->name);
 		a2r_Error(st, A2_IODONTMATCH, "a2_AddUnit()[6]");
 		return NULL;
 	}
@@ -290,13 +286,12 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	if((res = ud->Initialize(u, &v->s, us->statedata, si->p.unit.flags)))
 	{
 		a2_FreeBlock(st, u);
-		DBG(fprintf(stderr, "Audiality 2: Unit '%s' on voice %p failed"
-				" to initialize! (%s)\n",
-				ud->name, v, a2_ErrorString(res));)
+		A2_LOG_DBG(i, "Unit '%s' on voice %p failed to initialize! "
+				"(%s)", ud->name, v, a2_ErrorString(res));
 		a2r_Error(st, res, "a2_AddUnit()[7]");
 		return NULL;
 	}
-	DUMPSTRUCTRT(fprintf(stderr, "\n");)
+	DUMPSTRUCTRT(A2_DLOG("\n");)
 
 	/* Add to list! */
 	if(lastunit)
@@ -379,8 +374,8 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 			if(bmin < noutputs)
 				bmin = noutputs;
 		}
-		DUMPSTRUCTRT(fprintf(stderr, "%sllocating %d channel bus for "
-				"voice %p, nestlevel %d\n", *b ? "Rea" : "A",
+		DUMPSTRUCTRT(A2_DLOG("%sllocating %d channel bus for voice %p,"
+				" nestlevel %d\n", *b ? "Rea" : "A",
 				bmin, v, v->nestlevel);)
 		if(!*b)
 		{
@@ -446,9 +441,10 @@ A2_voice *a2_VoiceAlloc(A2_state *st)
 	memset(v->cregs, 0, sizeof(v->cregs));
 	++st->totalvoices;
 #ifdef DEBUG
-	if(st->audio && st->audio->Process && (st->config->flags & A2_REALTIME))
-		fprintf(stderr, "Audiality 2: Voice pool exhausted! "
-				"Allocated new voice %p.\n", v);
+	if(st->audio && st->audio->Process &&
+			(st->config->flags & A2_REALTIME))
+		A2_LOG_DBG(&st->interfaces->interface, "Voice pool exhausted! "
+				"Allocated new voice %p.", v);
 #endif
 	return v;
 }
@@ -634,8 +630,9 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 	if(argc > fn->argc)
 	{
 		/* TODO: Figure out what program and entry point this is! */
-		DBG(fprintf(stderr, "Too many arguments to function %d! "
-				"(%d/%d)\n", func, argc, fn->argc);)
+		A2_LOG_DBG(&st->interfaces->interface, "Too many arguments to "
+				"function %d! (%d/%d)",
+				func, argc, fn->argc);
 		argc = fn->argc;
 	}
 	memcpy(v->s.r + fn->argv, argv, argc * sizeof(int));
@@ -698,14 +695,14 @@ static inline void a2_AttachSubvoice(A2_voice *v, A2_voice *sv, int vid)
 #ifdef DEBUG
 	if(sv->flags & A2_APIHANDLE)
 	{
-		fprintf(stderr, "a2_AttachSubvoice(): %p already attached to "
-				" API handle %d!\n", sv, sv->handle);
+		A2_LOG_DBG(NULL, "a2_AttachSubvoice(): %p already attached to "
+				" API handle %d!", sv, sv->handle);
 		return;
 	}
 	else if(sv->flags & A2_ATTACHED)
 	{
-		fprintf(stderr, "a2_AttachSubvoice(): %p already attached; "
-				"VID %d!\n", sv, sv->handle);
+		A2_LOG_DBG(NULL, "a2_AttachSubvoice(): %p already attached; "
+				"VID %d!", sv, sv->handle);
 		return;
 	}
 #endif
@@ -812,9 +809,9 @@ DUMPMSGS(static void printargs(int argc, int *argv)
 	int i;
 	for(i = 0; i < argc; ++i)
 		if(i < argc - 1)
-			fprintf(stderr, "%f, ", argv[i] / 65536.0f);
+			A2_DLOG("%f, ", argv[i] / 65536.0f);
 		else
-			fprintf(stderr, "%f", argv[i] / 65536.0f);
+			A2_DLOG("%f", argv[i] / 65536.0f);
 })
 
 /* Start a detached new voice as specified by 'eb' under 'parent'. */
@@ -870,20 +867,21 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 	int esize;
 	A2_voice *sv = parent->sub;
 #ifdef DEBUG
+	A2_interface *i = &st->interfaces->interface;
 	switch(e->b.common.action)
 	{
 	  case A2MT_SEND:
 	  case A2MT_KILL:
 	  	break;
 	  default:
-		fprintf(stderr, "a2_event_subforward() used on unsupported "
-				"action %d!\n", e->b.common.action);
+		A2_LOG_DBG(i, "a2_event_subforward() used on unsupported "
+				"action %d!", e->b.common.action);
 		return;
 	}
 	if(!sv)
 	{
-		fprintf(stderr, "a2_event_subforward() called with no "
-				"subvoices!\n");
+		A2_LOG_DBG(i, "a2_event_subforward() called with no "
+				"subvoices!");
 		return;
 	}
 #endif
@@ -926,19 +924,20 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		A2_event *e = v->events;
 		if(e->b.common.timestamp != current)
 			return A2_OK;
-		DUMPMSGS(fprintf(stderr, "%f:\th (%p) ",
+		DUMPMSGS(A2_DLOG("%f:\th (%p) ",
 				e->b.common.timestamp / 256.0f, v);)
-		NUMMSGS(fprintf(stderr, "[ %u ] ", e->number);)
+		NUMMSGS(A2_DLOG("[ %u ] ", e->number);)
 #ifdef DEBUG
 		if(a2_TSDiff(e->b.common.timestamp, st->now_fragstart) < 0)
 		{
 			/* NOTE: Can only happen if there's a bug somewhere! */
-			fprintf(stderr, "Audiality 2: Incorrect timestamp for "
-					"voice %p! (%f frames late.)", v,
+			A2_interface *i = &st->interfaces->interface;
+			A2_LOG_DBG(i, "Incorrect timestamp for voice %p! "
+					"(%f frames late.)", v,
 					(st->now_fragstart -
 					e->b.common.timestamp) / 256.0f);
-			MSGTRACK(fprintf(stderr, "(ev %p from %s)", e, e->source);)
-			fprintf(stderr, "\n");
+			MSGTRACK(A2_LOG_DBG(i, "  Tracking: ev %p from %s",
+					e, e->source);)
 			e->b.common.timestamp = st->now_fragstart;
 		}
 #endif
@@ -946,9 +945,9 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		{
 		  case A2MT_PLAY:
 			DUMPMSGS(
-				fprintf(stderr, "PLAY(");
+				A2_DLOG("PLAY(");
 				printargs(e->b.common.argc, e->b.play.a);
-				fprintf(stderr, ")\n");
+				A2_DLOG(")\n");
 			)
 			if((res = a2_event_play(st, v, &e->b)))
 				a2r_Error(st, res, "A2MT_PLAY");
@@ -965,9 +964,9 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			}
 #endif
 			DUMPMSGS(
-				fprintf(stderr, "START(");
+				A2_DLOG("START(");
 				printargs(e->b.start.argc, e->b.start.a);
-				fprintf(stderr, ")\n");
+				A2_DLOG(")\n");
 			)
 			if((res = a2_event_start(st, v, &e->b, hi)))
 			{
@@ -982,10 +981,9 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 		  {
 			int ep;
 			DUMPMSGS(
-				fprintf(stderr, "SEND(%u: ",
-						e->b.play.program);
+				A2_DLOG("SEND(%u: ", e->b.play.program);
 				printargs(e->b.common.argc, e->b.play.a);
-				fprintf(stderr, ")\n");
+				A2_DLOG(")\n");
 			)
 			if((ep = v->program->eps[e->b.play.program]) < 0)
 			{
@@ -1010,14 +1008,14 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			DUMPMSGS(
 				if(e->b.common.action == A2MT_SENDSUB)
 				{
-					fprintf(stderr, "SENDSUB(%u: ",
+					A2_DLOG("SENDSUB(%u: ",
 							e->b.play.program);
 					printargs(e->b.common.argc,
 							e->b.play.a);
-					fprintf(stderr, ")\n");
+					A2_DLOG(")\n");
 				}
 				else
-					fprintf(stderr, "KILLSUB\n");
+					A2_DLOG("KILLSUB\n");
 			)
 			if(v->sub)
 			{
@@ -1029,20 +1027,20 @@ static inline A2_errors a2_VoiceProcessEvents(A2_state *st, A2_voice *v)
 			}
 			break;
 		  case A2MT_KILL:
-			DUMPMSGS(fprintf(stderr, "KILL\n");)
+			DUMPMSGS(A2_DLOG("KILL\n");)
 			return A2_END;
 		  case A2MT_ADDXIC:
-			DUMPMSGS(fprintf(stderr, "ADDXIC\n");)
+			DUMPMSGS(A2_DLOG("ADDXIC\n");)
 			if((res = a2_XinsertAddClient(st, v, e->b.xic.client)))
 				a2r_Error(st, res, "A2MT_ADDXIC");
 			break;
 		  case A2MT_REMOVEXIC:
-			DUMPMSGS(fprintf(stderr, "REMOVEXIC\n");)
+			DUMPMSGS(A2_DLOG("REMOVEXIC\n");)
 			if((res = a2_XinsertRemoveClient(e->b.xic.client)))
 				a2r_Error(st, res, "A2MT_REMOVEXIC");
 			break;
 		  case A2MT_RELEASE:
-			DUMPMSGS(fprintf(stderr, "RELEASE\n");)
+			DUMPMSGS(A2_DLOG("RELEASE\n");)
 			a2r_DetachHandle(st, v->handle);
 			v->handle = -1;
 			v->flags &= ~A2_APIHANDLE;
@@ -1177,7 +1175,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		unsigned dt;
 		A2_instruction *ins = (A2_instruction *)(code + v->s.pc);
 		DUMPCODERT(
-			fprintf(stderr, "%p: ", v);
+			A2_DLOG("%p: ", v);
 			a2_DumpIns(code, v->s.pc);
 		)
 		if(!--inscount)
@@ -1197,10 +1195,10 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 				st->instructions += A2_INSLIMIT - inscount;
 				DUMPCODERT(
 				  if(v->sub)
-				    fprintf(stderr, "%p: [still waiting for "
+				    A2_DLOG("%p: [still waiting for "
 				        "subvoices]\n", v);
 				  else
-				    fprintf(stderr, "%p: [end]\n", v);
+				    A2_DLOG("%p: [end]\n", v);
 				)
 				return v->sub ? A2_OK : A2_END;
 			}
@@ -1209,7 +1207,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			{
 				/* Hang around until detached! */
 				st->instructions += A2_INSLIMIT - inscount;
-				DUMPCODERT(fprintf(stderr, "%p: [waiting for "
+				DUMPCODERT(A2_DLOG("%p: [waiting for "
 						"detach]\n", v);)
 				return A2_OK;
 			}
@@ -1218,7 +1216,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			{
 				/* That's it - all done! */
 				st->instructions += A2_INSLIMIT - inscount;
-				DUMPCODERT(fprintf(stderr, "%p: [end]\n", v);)
+				DUMPCODERT(A2_DLOG("%p: [end]\n", v);)
 				return A2_END;
 			}
 			/* Detach subvoices, then wait for them to terminate */
@@ -1228,8 +1226,8 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			for(v = v->sub; v; v = v->next)
 				a2_VoiceDetach(v, now);
 			st->instructions += A2_INSLIMIT - inscount;
-			DUMPCODERT(fprintf(stderr, "%p: [waiting for "
-					"subvoices]\n", v);)
+			DUMPCODERT(A2_DLOG("%p: [waiting for subvoices]\n",
+					v);)
 			return A2_OK;
 		  }
 		  case OP_RETURN:
@@ -1253,17 +1251,22 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			}
 		  }
 		  case OP_CALL:
-			DBG(if(!ins->a2)
-				fprintf(stderr, "CALL to function 0!\n");)
-			DBG(if(ins->a2 >= v->program->nfuncs)
-				fprintf(stderr, "Function index %d out of "
-						"range!\n", ins->a2);)
+		  {
+#ifdef DEBUG
+			A2_interface *i = &st->interfaces->interface;
+			if(!ins->a2)
+				A2_LOG_DBG(i, "CALL to function 0!");
+			if(ins->a2 >= v->program->nfuncs)
+				A2_LOG_DBG(i, "Function index %d out of "
+						"range!", ins->a2);
+#endif
 			if((res = a2_VoiceCall(st, v, ins->a2, cargc, cargv,
 					0)))
 				A2_VMABORT(res, "VM:CALL");
 			code = v->program->funcs[v->s.func].code;
 			cargc = 0;
 			continue;
+		  }
 
 		/* Local flow control */
 		  case OP_JUMP:
@@ -1542,8 +1545,11 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_SEND:
 		  {
 			A2_voice *sv;
-			DBG(if(!ins->a2)
-				fprintf(stderr, "Weird...! SEND to EP0...\n");)
+#ifdef DEBUG
+			A2_interface *i = &st->interfaces->interface;
+			if(!ins->a2)
+				A2_LOG_DBG(i, "Weird...! SEND to EP0...");
+#endif
 			if((sv = a2_FindSubvoice(v, ins->a1)))
 				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
 						cargc, cargv);
@@ -1582,7 +1588,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			v->s.waketime = st->now_fragstart + (A2_MAXFRAG << 8);
 			v->s.state = A2_WAITING;
 			st->instructions += A2_INSLIMIT - inscount;
-			DUMPCODERT(fprintf(stderr, "%p: [waiting]\n", v);)
+			DUMPCODERT(A2_DLOG("%p: [waiting]\n", v);)
 			return A2_OK;
 		  }
 		  case OP_KILLR:
@@ -1676,15 +1682,20 @@ TODO:
 
 		/* Debugging */
 		  case OP_DEBUGR:
-			fprintf(stderr, ":: Audiality 2 DEBUG: R%d=%f\t(%p)\n",
-					ins->a1,
+		  {
+			A2_interface *i = &st->interfaces->interface;
+			A2_LOG_MSG(i, "debug R%d=%f\t(%p)", ins->a1,
 					r[ins->a1] * (1.0f / 65536.0f), v);
 			break;
+		  }
 		  case OP_DEBUG:
-			fprintf(stderr, ":: Audiality 2 DEBUG: %f\t(%p)\n",
+		  {
+			A2_interface *i = &st->interfaces->interface;
+			A2_LOG_MSG(i, "debug %f\t(%p)",
 					ins->a3 * (1.0f / 65536.0f), v);
 			++v->s.pc;
 			break;
+		  }
 
 		/* Special instructions */
 		  case OP_INITV:
@@ -1719,7 +1730,7 @@ TODO:
 		a2_RTApply(&rt, st, v, v->s.waketime, dt);
 		if(!dt)
 			continue;
-		DUMPCODERT(fprintf(stderr, "%p: [reschedule; dt=%f]\n",
+		DUMPCODERT(A2_DLOG("%p: [reschedule; dt=%f]\n",
 				v, dt / 256.0f);)
 		v->s.state = A2_WAITING;
 		st->instructions += A2_INSLIMIT - inscount;
@@ -1787,12 +1798,14 @@ static inline int a2_VoiceProcessVMEv(A2_state *st, A2_voice *v, unsigned now)
 			res = a2_VoiceProcessEvents(st, v);
 		if(res)
 		{
-			DBG(if(res != A2_END)
-				fprintf(stderr, "a2_VoiceProcess%s(): %s!\n",
+#ifdef DEBUG
+			A2_interface *i = &st->interfaces->interface;
+			if(res != A2_END)
+				A2_LOG_DBG(i, "a2_VoiceProcess%s(): %s!",
 						nextvm <= nextev ?
-						"Events" :
-						"VMP",
-						a2_ErrorString(res));)
+						"Events" : "VMP",
+						a2_ErrorString(res));
+#endif
 			return -res;
 		}
 	}
@@ -1806,9 +1819,12 @@ static inline int a2_VoiceProcessVMEv(A2_state *st, A2_voice *v, unsigned now)
 			return nextvm >> 8;
 		if((res = a2_VoiceProcessVM(st, v)))
 		{
-			DBG(if(res != A2_END)
-				fprintf(stderr, "a2_VoiceProcessVM(): %s!\n",
-						a2_ErrorString(res));)
+#ifdef DEBUG
+			A2_interface *i = &st->interfaces->interface;
+			if(res != A2_END)
+				A2_LOG_DBG(i, "a2_VoiceProcessVM(): %s!",
+						a2_ErrorString(res));
+#endif
 			return -res;
 		}
 	}
@@ -1845,9 +1861,11 @@ static inline A2_errors a2_VoiceProcess(A2_state *st, A2_voice *v,
 #endif
 			return -res;
 		}
-		DBG(if(!res)
-			fprintf(stderr, "a2_VoiceProcessVMEv() returned 0!\n");
-		)
+#ifdef DEBUG
+		if(!res)
+			A2_LOG_DBG(&st->interfaces->interface,
+					"a2_VoiceProcessVMEv() returned 0!");
+#endif
 		if(s + res > s_stop)
 			res = s_stop - s;
 		for(u = v->units; u; u = u->next)

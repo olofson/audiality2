@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2017 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -29,6 +29,7 @@ WARNING: Calls with the a2c_ prefix MUST ONLY be used with a2c_Try()!
 #include <string.h>
 #include <stddef.h>
 #include "a2_units.h"
+#include "a2_log.h"
 #include "rchm.h"
 #include "sfifo.h"
 #include "platform.h"
@@ -634,6 +635,7 @@ struct A2_interface_i
 	int		tsmargin;	/* TS jitter margin (ms) */
 	int		refcount;
 	int		flags;
+	unsigned	loglevels;	/* Loglevel mask */
 };
 
 /* Audiality 2 state */
@@ -787,8 +789,8 @@ static inline A2_block *a2_NewBlock(A2_state *st)
 		return NULL;
 #ifdef DEBUG
 	if(st->config->flags & A2_REALTIME)
-		fprintf(stderr, "Audiality 2: Block pool exhausted! "
-				"Allocated new block %p.\n", b);
+		A2_LOG_DBG(&st->interfaces->interface, "Block pool exhausted! "
+				"Allocated new block %p.", b);
 #endif
 	return b;
 }
@@ -883,8 +885,9 @@ static inline A2_event *a2_AllocEvent(A2_state *st)
 		e = a2_NewEvent(st);
 #ifdef DEBUG
 		if(st->config->flags & A2_REALTIME)
-			fprintf(stderr, "Audiality 2: Event pool exhausted! "
-					"Allocated new event %p.\n", e);
+			A2_LOG_DBG(&st->interfaces->interface, "Event pool "
+					"exhausted! Allocated new event %p.",
+					e);
 #endif
 	}
 	NUMMSGS(e->number = st->msgnum++;)
@@ -1050,8 +1053,8 @@ static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
 {
 #ifdef DEBUG
 	if(size < A2_APIREADSIZE)
-		fprintf(stderr, "WARNING: Too small message in a2_writemsg()! "
-				"%d bytes (min: %d)\n", size, A2_APIREADSIZE);
+		A2_LOG_INT("Too small message in a2_writemsg()! "
+				"%d bytes (min: %d)", size, A2_APIREADSIZE);
 #endif
 	if(sfifo_Space(f) < size)
 		return A2_OVERFLOW;
