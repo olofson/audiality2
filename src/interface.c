@@ -909,9 +909,12 @@ A2_interface_i *a2_AddInterface(A2_state *st, int flags)
 
 	/*
 	 * Copy log level mask from master interface, if available, otherwise,
-	 * apply defaults depending no build type.
+	 * apply defaults depending no build type. Or, if A2_SILENT is set,
+	 * just disable all log levels.
 	 */
-	if(st->interfaces)
+	if(flags & A2_SILENT)
+		ii->loglevels = 0;
+	else if(st->interfaces)
 		ii->loglevels = st->interfaces->loglevels;
 	else
 	{
