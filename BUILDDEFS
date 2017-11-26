@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#--------------------
+# --- Directories ---
+#--------------------
+
+# Root of the source tree
+SOURCEDIR="$(pwd)"
+
+# CMake top-level build directory. (NOTE: The actual build directories are
+# inside this one!)
+BUILDDIR="$(pwd)/build"
+
+
+#------------
+# --- MXE ---
+#------------
+
+# MinGW32 cross build using MXE (http://mxe.cc/)
+if [ -z $MXEPATH ]; then
+	# This is where Dave keeps his MXE.
+	MXEPATH=~/src/mxe
+fi

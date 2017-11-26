@@ -1,0 +1,114 @@
+#!/bin/bash
+. ./BUILDDEFS
+
+shopt -s extglob
+shopt -s nullglob
+
+if [ $# -eq 0 ]; then
+	FILTER=@(release)
+elif [ $1 == all ]; then
+	FILTER="*"
+else
+	FILTER="$1"
+fi
+
+if [ ! -e $BUILDDIR ]; then
+	mkdir $BUILDDIR
+fi
+
+create_build_dir() {
+	local dname=$1
+	local btype=$2
+	local desc=$3
+	echo
+	echo "=== build/$dname ($btype, $desc) ==="
+	if [ ! -e $BUILDDIR/$dname ]; then
+		mkdir $BUILDDIR/$dname
+	fi
+	if [ ! -e $BUILDDIR/$dname/test ]; then
+		mkdir $BUILDDIR/$dname/test
+	fi
+	if [ ! -e $BUILDDIR/$dname/test/data ]; then
+		ln -s $SOURCEDIR/test/data $BUILDDIR/$dname/test/data
+	fi
+	cd $BUILDDIR/$dname
+}
+
+setup_header() {
+	local dname=$1
+	local desc=$2
+	echo
+	echo "=========================================================="
+	echo "Setting up build dirs for ${dname} ($desc)"
+	echo "=========================================================="
+}
+
+setup_footer() {
+	echo
+	echo "=========================================================="
+	echo "Done!"
+	echo "=========================================================="
+	echo
+}
+
+setup_native() {
+	local dname=$1
+	local btype=$2
+	local desc=$3
+	local prefix=$4
+	local opts="$5"
+	setup_header $dname "$desc"
+	create_build_dir $dname $btype "$desc"
+	cd $BUILDDIR/$dname
+	cmake $opts $SOURCEDIR -DCMAKE_INSTALL_PREFIX=$prefix -DCMAKE_BUILD_TYPE="$btype"
+	cd $SOURCEDIR
+	setup_footer
+}
+
+setup_cross() {
+	local dname=$1
+	local btype=$2
+	local desc=$3
+	local target=$4
+	local opts="$5"
+	if [ -e $MXEPATH ]; then
+		setup_header $dname "$desc"
+		create_build_dir $dname $btype "$desc"
+		cmake $opts $SOURCEDIR -DCMAKE_TOOLCHAIN_FILE=$SOURCEDIR/mingw32-cross.cmake -DCMAKE_BUILD_TYPE="$btype" -DCMAKE_TOOLCHAIN_FILE=$MXEPATH/usr/$target/share/cmake/mxe-conf.cmake -DBUILD_SHARED_LIBS=ON
+		cd $SOURCEDIR
+		setup_footer
+	else
+		echo "MXE not found! Skipping target ${dname} ($desc)."
+	fi
+}
+
+if [[ "release" = ${FILTER} ]] ; then
+	setup_native release Release "host native" /usr
+fi
+
+if [[ "release32" = ${FILTER} ]] ; then
+	# Explicitly disabling SDL and ALSA here, because I can't get package
+	# detection to care about architecture, and the 32 bit SDL2 packages
+	# on Ubuntu 16.04 seem to be broken right now...
+	setup_native release32 Release "host native 32 bit" /usr "-DFORCE_32BIT=ON -DUSE_SDL=OFF -DUSE_ALSA=OFF"
+fi
+
+if [[ "maintainer" = ${FILTER} ]] ; then
+	setup_native maintainer Maintainer "host native" /usr
+fi
+
+if [[ "debug" = ${FILTER} ]] ; then
+	setup_native debug Debug "host native" /usr
+fi
+
+if [[ "mingw-release" = ${FILTER} ]] ; then
+	setup_cross mingw-release Release "MXE cross" i686-w64-mingw32.shared
+fi
+
+if [[ "mingw-debug" = ${FILTER} ]] ; then
+	setup_cross mingw-debug Debug "MXE cross" i686-w64-mingw32.shared
+fi
+
+if [[ "mingw-static" = ${FILTER} ]] ; then
+	setup_cross mingw-static Static "MXE cross" i686-w64-mingw32.static
+fi
