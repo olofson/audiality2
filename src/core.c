@@ -246,12 +246,15 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	u->descriptor = ud;
 	u->registers = v->s.r + v->ncregs;
 	if(ud->registers)
-		for(int j = 0; ud->registers[j].name; ++j)
+	{
+		int j;
+		for(j = 0; ud->registers[j].name; ++j)
 		{
 			v->cregs[v->ncregs].write = ud->registers[j].write;
 			v->cregs[v->ncregs].unit = u;
 			++v->ncregs;
 		}
+	}
 	u->ninputs = ninputs;
 	u->inputs = scratch;
 	DUMPSTRUCTRT(A2_DLOG("in: %d\tout:%d", u->ninputs, u->noutputs);)
@@ -259,6 +262,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 	/* Initialize control outputs, if any */
 	if(ud->coutputs)
 	{
+		int j;
 /*HACK*/
 		if(!(u->coutputs = (A2_cport *)a2_AllocBlock(st)))
 		{
@@ -267,7 +271,7 @@ static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
 			return NULL;
 		}
 /*/HACK*/
-		for(int j = 0; ud->coutputs[j].name; ++j)
+		for(j = 0; ud->coutputs[j].name; ++j)
 			u->coutputs[j].write = NULL;
 	}
 	else

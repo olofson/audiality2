@@ -49,9 +49,10 @@ static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 	A2_interface *i = &du->state->interfaces->interface;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
-	for(int ch = 0; ch < u->noutputs; ++ch)
+	int ch, s;
+	for(ch = 0; ch < u->noutputs; ++ch)
 	{
-		for(int s = 0; s < frames; ++s)
+		for(s = 0; s < frames; ++s)
 		{
 			int v = u->inputs[ch][offset + s];
 			if(v < min)
@@ -72,8 +73,9 @@ static void dbgunit_Process(A2_unit *u, unsigned offset, unsigned frames)
 	A2_interface *i = &du->state->interfaces->interface;
 	int min = 0x7fffffff;
 	int max = 0x80000000;
-	for(int ch = 0; ch < u->noutputs; ++ch)
-		for(int s = 0; s < frames; ++s)
+	int ch, s;
+	for(ch = 0; ch < u->noutputs; ++ch)
+		for(s = 0; s < frames; ++s)
 		{
 			int v = u->inputs[ch][offset + s];
 			if(v < min)
@@ -100,9 +102,10 @@ static void dbgunit_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
 	A2_interface *i = &du->state->interfaces->interface;
+	int ch;
 	A2_LOG_MSG(i, "dbgunit[%u]: ProcessNI() o: %u, f: %u", du->instance,
 			offset, frames);
-	for(int ch = 0; ch < u->noutputs; ++ch)
+	for(ch = 0; ch < u->noutputs; ++ch)
 		memset(u->outputs[ch] + offset, 0, frames * sizeof(int));
 }
 

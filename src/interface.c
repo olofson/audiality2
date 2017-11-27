@@ -34,6 +34,7 @@ A2_errors a2_OpenAPI(A2_state *st)
 	/* Initialize FIFOs for the API */
 	float buffer = (float)st->config->buffer / st->config->samplerate;
 	int nmessages = A2_MINMESSAGES + buffer * A2_TIMEMESSAGES;
+	int j;
 	st->fromapi = sfifo_Open(nmessages * sizeof(A2_apimessage));
 	st->toapi = sfifo_Open(nmessages * sizeof(A2_apimessage));
 	if(!st->fromapi || !st->toapi)
@@ -48,7 +49,7 @@ A2_errors a2_OpenAPI(A2_state *st)
 		nmessages = st->config->eventpool;
 	else
 		nmessages = A2_MINEVENTS + buffer * A2_TIMEEVENTS;
-	for(int j = 0; j < nmessages; ++j)
+	for(j = 0; j < nmessages; ++j)
 	{
 		A2_event *e = a2_NewEvent(st);
 		if(!e)
