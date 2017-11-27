@@ -86,6 +86,10 @@ if [[ "release" = ${FILTER} ]] ; then
 	setup_native release Release "host native" /usr
 fi
 
+if [[ "static" = ${FILTER} ]] ; then
+	setup_native static Static "host native" /usr "-DBUILD_SHARED_LIBS=OFF"
+fi
+
 if [[ "release32" = ${FILTER} ]] ; then
 	# Explicitly disabling SDL and ALSA here, because I can't get package
 	# detection to care about architecture, and the 32 bit SDL2 packages

@@ -45,6 +45,9 @@ endif(SDL_FOUND)
 # Release build: full optimization, no debug features, no debug info
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
+# Static release build: full optimization, no debug features, no debug info
+set(CMAKE_C_FLAGS_STATIC "-O3 -DNDEBUG")
+
 set(f "-Wall -Wwrite-strings -Wcast-align")
 set(f "${f} -Wbad-function-cast -Waggregate-return")
 set(f "${f} -Wstrict-prototypes -fno-builtin -Wshadow")
@@ -59,3 +62,4 @@ set(CMAKE_C_FLAGS_DEBUG "${f} -O0 -g -DDEBUG")
 
 # Maintainer build: Few optimizations, lots of warnings, fail on warnings
 set(CMAKE_C_FLAGS_MAINTAINER "${f} -O1 -g -Werror")
+
