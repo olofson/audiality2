@@ -87,7 +87,7 @@ if [[ "release" = ${FILTER} ]] ; then
 fi
 
 if [[ "static" = ${FILTER} ]] ; then
-	setup_native static Static "host native" /usr "-DBUILD_SHARED_LIBS=OFF"
+	setup_native static Static "host native" /usr "-DBUILD_SHARED_LIBS=OFF -DUSE_ALSA=OFF"
 fi
 
 if [[ "release32" = ${FILTER} ]] ; then

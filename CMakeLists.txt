@@ -47,6 +47,10 @@ else(SDL_FOUND)
 	set(A2_PC_LIBS "")
 endif(SDL_FOUND)
 
+if(NOT WIN32 AND NOT BUILD_SHARED_LIBS)
+	set(AUDIALITY2_EXTRA_LIBRARIES "${A2_PC_LIBS} -lpthread -ldl -lm")
+endif()
+
 add_subdirectory(src)
 add_subdirectory(a2play)
 add_subdirectory(test)
