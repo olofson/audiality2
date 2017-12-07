@@ -145,6 +145,7 @@ typedef enum {
   A2_DEFERR(LATEMESSAGE,	"API message arrived late to engine context")\
   A2_DEFERR(MANYARGS,		"Too many arguments to VM program")\
   \
+  A2_DEFERR(MSGOVERFLOW,	"API message buffer overflow")\
   A2_DEFERR(BUFOVERFLOW,	"Buffer overflow")\
   A2_DEFERR(BUFUNDERFLOW,	"Buffer underflow")\
   A2_DEFERR(DIVBYZERO,		"Division by zero")\

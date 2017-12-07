@@ -920,7 +920,7 @@ static inline A2_event **a2_GetEventQueue(A2_state *st, A2_handle handle)
 	  case A2_TVOICE:
 		return &((A2_voice *)hi->d.data)->events;
 	  default:
-	  	return NULL;
+		return NULL;
 	}
 }
 
@@ -1057,7 +1057,7 @@ static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
 				"%d bytes (min: %d)", size, A2_APIREADSIZE);
 #endif
 	if(sfifo_Space(f) < size)
-		return A2_OVERFLOW;
+		return A2_MSGOVERFLOW;
 	m->size = size;
 	m->b.common.argc = 0;
 	if(sfifo_Write(f, m, size) != size)
@@ -1079,7 +1079,7 @@ static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
 	if(argc > A2_MAXARGS)
 		return A2_MANYARGS;
 	if(sfifo_Space(f) < size)
-		return A2_OVERFLOW;
+		return A2_MSGOVERFLOW;
 	m->size = size;
 	m->b.common.argc = argc;
 	memcpy((char *)m + argoffs, argv, argsize);

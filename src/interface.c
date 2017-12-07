@@ -654,7 +654,7 @@ static A2_handle a2_API_Starta(A2_interface *i, A2_handle parent,
 		return am.b.start.voice;
 	if((res = a2_writemsgargs(st->fromapi, &am, argc, argv,
 			offsetof(A2_apimessage, b.start.a))))
-		return res;
+		return -res;
 	return am.b.start.voice;
 }
 
