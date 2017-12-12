@@ -100,6 +100,16 @@ A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 	A2_config *c;
 	a2_last_error = A2_OK;
 
+	/* Substitute defaults */
+	if(samplerate == -1)
+		samplerate = 48000;
+	if(buffer == -1)
+		buffer = 1024;
+	if(channels == -1)
+		channels = 2;
+	if(flags == -1)
+		flags = 0;
+
 	/* Sanity checks */
 	if(samplerate < 1000)
 	{
@@ -124,19 +134,10 @@ A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 		return NULL;
 	}
 
+	c->samplerate = samplerate;
+	c->buffer = buffer;
+	c->channels = channels;
 	c->flags = flags;
-	if(samplerate >= 0)
-		c->samplerate = samplerate;
-	else
-		c->samplerate = 48000;
-	if(buffer >= 0)
-		c->buffer = buffer;
-	else
-		c->buffer = 1024;
-	if(channels >= 0)
-		c->channels = channels;
-	else
-		c->channels = 2;
 
 #ifdef DEBUG
 	printf("Created A2_config %p: ------\n", c);
