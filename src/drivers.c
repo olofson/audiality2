@@ -100,6 +100,11 @@ A2_config *a2_OpenConfig(int samplerate, int buffer, int channels, int flags)
 	A2_config *c;
 	a2_last_error = A2_OK;
 
+#ifdef DEBUG
+	printf("a2_OpenConfig(%d, %d, %d, %x)\n", samplerate, buffer, channels,
+			flags);
+#endif
+
 	/* Substitute defaults */
 	if(samplerate == -1)
 		samplerate = 48000;
