@@ -60,13 +60,10 @@ set(sources ${sources}
 	drivers/mallocdrv.c
 )
 
-if(SDL_FOUND)
-	add_definitions(-DA2_HAVE_SDL)
-	include_directories(${SDL_INCLUDE_DIR})
-elseif(SDL2_FOUND)
+if(SDL2_FOUND)
 	add_definitions(-DA2_HAVE_SDL)
 	include_directories(${SDL2_INCLUDE_DIRS})
-endif(SDL_FOUND)
+endif(SDL2_FOUND)
 
 if(USE_JACK)
 	CHECK_INCLUDE_FILES(jack/jack.h HAVE_JACK_H)
@@ -88,11 +85,9 @@ if(UNIX)
 	target_link_libraries(audiality2 m)
 endif(UNIX)
 
-if(SDL_FOUND)
-	target_link_libraries(audiality2 ${SDL_LIBRARY})
-elseif(SDL2_FOUND)
+if(SDL2_FOUND)
 	target_link_libraries(audiality2 ${SDL2_LIBRARIES})
-endif(SDL_FOUND)
+endif(SDL2_FOUND)
 
 if(HAVE_JACK_H AND CMAKE_DL_LIBS AND Threads_FOUND)
 	add_definitions(-DA2_HAVE_JACK)
