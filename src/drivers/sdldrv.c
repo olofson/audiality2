@@ -30,54 +30,68 @@
 #include "a2_log.h"
 
 
+/* Extended A2_audiodriver struct */
+typedef struct SDLD_audiodriver
+{
+	A2_audiodriver		ad;
+	SDL_AudioDeviceID	device;
+} SDLD_audiodriver;
+
+
 /* Callback for the SDL audio API */
 static void sdld_callback(void *ud, Uint8 *stream, int len)
 {
-	A2_audiodriver *driver = (A2_audiodriver *)ud;
-	A2_config *cfg = driver->driver.config;
-	int frames = len / 4;
+	SDLD_audiodriver *sd = (SDLD_audiodriver *)ud;
+	A2_audiodriver *ad = &sd->ad;
+	A2_config *cfg = ad->driver.config;
+	int frames = len / 8;
 	int c, i;
-	Sint16 *out = (Sint16 *)(void *)stream;
-	if(driver->Process)
-		driver->Process(driver, frames);
+	float *out = (float *)(void *)stream;
+	if(ad->Process)
+		ad->Process(ad, frames);
 	else
 		for(c = 0; c < cfg->channels; ++c)
-			memset(driver->buffers[c], 0, sizeof(int32_t) * frames);
+			memset(ad->buffers[c], 0, sizeof(int32_t) * frames);
 	for(c = 0; c < cfg->channels; ++c)
 	{
-		/* Clipping + 16 bit output conversion */
-		int32_t *buf = driver->buffers[c];
+		/*
+		 * NOTE: We're expecting SDL or the underlying API to do any
+		 * necessary clipping here!
+		 */
+		int32_t *buf = ad->buffers[c];
 		for(i = 0; i < frames; ++i)
-		{
-			int s = buf[i] >> 8;
-			if(s < -32768)
-				s = -32768;
-			else if(s > 32767)
-				s = 32767;
-			out[i * cfg->channels + c] = s;
-		}
+			out[i * cfg->channels + c] =
+					buf[i] * (1.0f / 8388608.0f);
 	}
 }
 
 
 static void sdld_lock(A2_audiodriver *driver)
 {
-	SDL_LockAudio();
+	SDLD_audiodriver *sd = (SDLD_audiodriver *)driver;
+	SDL_LockAudioDevice(sd->device);
 }
 
 
 static void sdld_unlock(A2_audiodriver *driver)
 {
-	SDL_UnlockAudio();
+	SDLD_audiodriver *sd = (SDLD_audiodriver *)driver;
+	SDL_UnlockAudioDevice(sd->device);
 }
 
 
 static void sdld_Close(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)driver;
+	SDLD_audiodriver *sd = (SDLD_audiodriver *)driver;
+	A2_audiodriver *ad = &sd->ad;
 	A2_config *cfg = driver->config;
-	SDL_CloseAudio();
+	SDL_CloseAudioDevice(sd->device);
+#if 0
+	/* We should probably not close this here, as there may be other
+	 * devices still up, with the SDL 2.0 API.
+	 */
 	SDL_QuitSubSystem(SDL_INIT_AUDIO);
+#endif
 	if(ad->buffers)
 	{
 		int c;
@@ -93,7 +107,8 @@ static void sdld_Close(A2_driver *driver)
 
 static A2_errors sdld_Open(A2_driver *driver)
 {
-	A2_audiodriver *ad = (A2_audiodriver *)driver;
+	SDLD_audiodriver *sd = (SDLD_audiodriver *)driver;
+	A2_audiodriver *ad = &sd->ad;
 	A2_config *cfg = driver->config;
 	SDL_AudioSpec as, res_as;
 	int c;
@@ -102,20 +117,25 @@ static A2_errors sdld_Open(A2_driver *driver)
 	ad->Unlock = sdld_unlock;
 	if(SDL_InitSubSystem(SDL_INIT_AUDIO) < 0)
 		return A2_DEVICEOPEN;
+	memset(&as, 0, sizeof(as));
 	as.freq = cfg->samplerate;
-	as.format = AUDIO_S16SYS;
+	as.format = AUDIO_F32SYS;
 	as.channels = cfg->channels;
 	as.samples = cfg->buffer;
 	as.callback = sdld_callback;
-	as.userdata = driver;
-	if(SDL_OpenAudio(&as, &res_as) < 0)
+	as.userdata = ad;
+	sd->device = SDL_OpenAudioDevice(NULL, 0, &as, &res_as,
+			SDL_AUDIO_ALLOW_FREQUENCY_CHANGE |
+			SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+	if(!sd->device)
 	{
 		A2_LOG_ERR(cfg->interface, "SDL error: %s", SDL_GetError());
 		sdld_Close(driver);
 		return A2_DEVICEOPEN;
 	}
-	if(res_as.format != AUDIO_S16SYS)
+	if(res_as.format != as.format)
 	{
+		/* Should no longer be possible, but... */
 		sdld_Close(driver);
 		return A2_BADFORMAT;
 	}
@@ -139,14 +159,14 @@ static A2_errors sdld_Open(A2_driver *driver)
 				sdld_Close(driver);
 				return A2_OOMEMORY;
 			}
-	SDL_PauseAudio(0);
+	SDL_PauseAudioDevice(sd->device, 0);
 	return A2_OK;
 }
 
 
 A2_driver *a2_sdl_audiodriver(A2_drivertypes type, const char *name)
 {
-	A2_audiodriver *ad = calloc(1, sizeof(A2_audiodriver));
+	A2_audiodriver *ad = calloc(1, sizeof(SDLD_audiodriver));
 	A2_driver *d = &ad->driver;
 	if(!ad)
 		return NULL;
