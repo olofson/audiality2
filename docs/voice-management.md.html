@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+<head>
+	<meta charset="UTF-8" />
+	<title>Audiality 2 - Voice Management</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11" />
+	<link rel='index' title='Audiality 2 Documentation' href='http://olofson.github.io/audiality2/' />
+	<link rel='canonical' href='http://olofson.github.io/audiality2/audiality2/voice-management.md.html' />
+	<style class="fallback">body{visibility:hidden;}</style>
+    <link rel="stylesheet" href="a2docs.css" />
+</head>
+<body>
+
+**Audiality 2 Voice Management**
+ [Index](index.html) | [Processing](audio-processing.md.html) | Voice Management | [Units](unit-control.md.html) | [Builtin Units](units.md.html) | [Scripting](scripting.md.html) | [Examples](examples.md.html) | [API](api.md.html)
+
+# Overview
+All processing in Audiality 2 is performed in a [tree graph of voices](audio-processing.md.html), each with an optional graph of [audio processing units](units.md.html), and a [scripting](scripting.md.html) VM instance. Every voice in the processing graph can have zero or more subvoices, that can be managed in three different fashions: Detached, Anonymous and Attached.
+
+## Detached
+Detached voices are started by spawning a program using only the program name, or ":" followed by the program name or handle. They will terminate if/when they reach the end of their main program. These voices do not have handles, but they will receive messages sent to all subvoices using the "\*<" construct.
+```
+// voice-management-detached.a2s
+// Play major chord using three detached subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+	@a V
+	a 0
+	d 1000
+}
+
+Program()
+{
+	SubProgram 0n .2
+	SubProgram 4n .2
+	SubProgram 7n .2
+	d 1000
+}
+```
+
+## Anonymous
+Anonymous subvoices are started by using ' * ' as the voice handle, and are attached, so they will pause instead of terminating if they reach the end of their main program, allowing them to be brought back to life via messages. They do not have unique handles, but will receive messages sent to all subvoices using the '* <' construct.
+```
+// voice-management-anonymous.a2s
+// Play major chord using three anonymous subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+
+.retrig	a V
+	d 100
+	end
+
+.stop	a 0
+	d 100
+
+	1() {
+		force stop
+	}
+
+	2() {
+		force retrig
+	}
+}
+
+Program()
+{
+	// Start three voices
+	*:SubProgram 0n .2
+	*:SubProgram 4n .2
+	*:SubProgram 7n .2
+
+	// Stop all voices
+	d 500
+	*<1
+
+	// Retrig all voices
+	d 500
+	*<2
+
+	// Stop all voices
+	d 500
+	*<1
+
+	d 500
+}
+```
+!!!
+    Note that the example above would not work with detached voices, since SubProgram() would instantly terminate (with nasty clicks) right after the initial ramp up to the intended note amplitude. When using Anonymous (or Attached) voices however, SubProgram() will pause at the 'end' instruction, waiting indefinitely for messages, while running its audio graph.
+
+## Attached
+Attached subvoices are started with 'handle:program', where 'handle' needs to be an integer greater than or equal to 0. Like Anonymous voices, Attached voices will pause instead of terminating if they reach the end of their main program. However, messages can be addressed to individual Attached voices using the 'handle < message' construct. Attached voices will also receive any messages sent to all subvoices using the '* <' construct.
+```
+// voice-management-attached.a2s
+// Play major chord using three attached subvoices
+
+SubProgram(P V=1)
+{
+	struct {
+		wtosc
+	}
+	w sine
+	p P
+	a V
+	d 100
+	end
+
+.stop	a 0
+	d 100
+
+	1() {
+		force stop
+	}
+}
+
+Program()
+{
+	// Start three voices
+	1:SubProgram 0n .2
+	2:SubProgram 4n .2
+	3:SubProgram 7n .2
+
+	// Stop third voice after .5 s
+	d 500
+	3<1
+
+	// Stop second voice after 1 s
+	d 500
+	2<1
+
+	// Stop first voice after 1.5 s
+	d 500
+	1<1
+
+	d 500
+}
+```
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>
+</html>

@@ -16,6 +16,11 @@ Each voice is controlled by a program (user defined script code) that can be giv
 
 Timing is subsample accurate, and durations can be specified in milliseconds, or in terms of user defined musical ticks.
 
+Documentation
+-------------
+
+HTML ([Markdeep](https://casual-effects.com/markdeep/)) documentation is found in 'docs', and can be viewed online [here](http://olofson.github.io/audiality2/).
+
 The name Audiality...
 ---------------------
 

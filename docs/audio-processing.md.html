@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+<head>
+	<meta charset="UTF-8" />
+	<title>Audiality 2 - Audio Processing</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11" />
+	<link rel='index' title='Audiality 2 Documentation' href='http://olofson.github.io/audiality2/' />
+	<link rel='canonical' href='http://olofson.github.io/audiality2/audiality2/audio-processing.md.html' />
+	<style class="fallback">body{visibility:hidden;}</style>
+    <link rel="stylesheet" href="a2docs.css" />
+</head>
+<body>
+
+**Audiality 2 Audio Processing**
+ [Index](index.html) | Processing | [Voice Management](voice-management.md.html) | [Units](unit-control.md.html) | [Builtin Units](units.md.html) | [Scripting](scripting.md.html) | [Examples](examples.md.html) | [API](api.md.html)
+
+# Overview
+Audio processing in Audiality 2 is performed in a tree graph of voices, each with an optional graph of [audio processing units](unit-control.md.html).
+
+The root node of the voice graph interfaces to the outside world through either an actual audio driver for real time operation, or a buffering or streaming driver for asynchronous operation, or offline rendering.
+**********************************************************************
+* Voice graph: "Everything is a Voice"                            +  *
+*                                                 .----.         /|  *
+*                                                |      |    .--+ |  *
+*                                                | Root +--->|  | |  *
+*                                                |      |    '--+ |  *
+*                                                 '----'         \|  *
+*              .-----.                              ^             +  *
+*             |       |                             |                *
+*             | Group +---------------------------->*                *
+*             |       |                             ^                *
+*              '-----'          .-----.             |                *
+*     .-----.     ^            |       |            |                *
+*    |       |    |            | Group +----------->*                *
+*    | Voice +--->*            |       |            ^                *
+*    |       |    ^             '-----'             |                *
+*     '-----'     |    .-----.     ^       .        .                *
+*     .-----.     |   |       |    |       .        .                *
+*    |       |    |   | Voice +--->*       .        .                *
+*    | Voice +--->*   |       |    ^    .-----.     ^                *
+*    |       |    ^    '-----'     |   |       |    |                *
+*     '-----'     |    .-----.     |   | Group +---'                 *
+*      .          .   |       |    |   |       |                     *
+*      .          .   | Voice +--->*    '-----'                      *
+*      .          .   |       |    ^                                 *
+*     .-----.     ^    '-----'     |                                 *
+*    |       |    |     .          .                                 *
+*    | Voice +---'      .          .                                 *
+*    |       |          .          .                                 *
+*     '-----'          .-----.     ^                                 *
+*                     |       |    |                                 *
+*                     | Voice +---'                                  *
+*                     |       |                                      *
+*                      '-----'                                       *
+**********************************************************************
+
+A voice in the graph can serve as a group, bus, or similar construct. A voice with subvoices can either have the output from those mixed with its own output, or pass it through its graph of Units, as if the subvoices were local oscillators.
+**********************************************************************
+* Default behavior: Subvoices feeding "up the tree".                 *
+*   .----------------------------------------------------.           *
+*  | Voice                                                |          *
+*  |     .-------.     .-------.              .-------.   |          *
+*  |     |        |    |        |             |        |  |          *
+*  |     | (Unit) +--->| (Unit) +---> ... --->| (Unit) +----->*--->  *
+*  |     |        |    |        |             |        |  |   ^      *
+*  |      '-------'     '-------'              '-------'  |   |      *
+*  |                                                      |   |      *
+*   '----------------------------------------------------'    |      *
+*                                              .--------.     |      *
+*                                             |          |    |      *
+*                                             | Subvoice +--->*      *
+*                                             |          |    ^      *
+*                                              '--------'     |      *
+*                                              .--------.     |      *
+*                                             |          |    |      *
+*                                             | Subvoice +--->*      *
+*                                             |          |    ^      *
+*                                              '--------'     |      *
+*                                                  .          .      *
+*                                                  .          .      *
+*                                                  .          .      *
+*                                              .--------.     ^      *
+*                                             |          |    |      *
+*                                             | Subvoice +---'       *
+*                                             |          |           *
+*                                              '--------'            *
+**********************************************************************
+**********************************************************************
+*                                                                    *
+* Inline mode: Subvoices feeding into their parent's Unit graph.     *
+*   .---------------------------------------------------------.      *
+*  | Voice                                                     |     *
+*  |          .-------.     .-------.     .-------.            |     *
+*  |          |        |    |        |    |        |           |     *
+*  |          | inline +--->| (Unit) +--->| (Unit) +---> ... ----->  *
+*  |          |        |    |        |    |        |           |     *
+*  |           '-------'     '-------'     '-------'           |     *
+*  |               ^                                           |     *
+*   '--------------|------------------------------------------'      *
+*   .--------.     |                                                 *
+*  |          |    |                                                 *
+*  | Subvoice +--->*                                                 *
+*  |          |    ^                                                 *
+*   '--------'     |                                                 *
+*   .--------.     |                                                 *
+*  |          |    |                                                 *
+*  | Subvoice +--->*                                                 *
+*  |          |    ^                                                 *
+*   '--------'     |                                                 *
+*       .          .                                                 *
+*       .          .                                                 *
+*       .          .                                                 *
+*   .--------.     ^                                                 *
+*  |          |    |                                                 *
+*  | Subvoice +---'                                                  *
+*  |          |                                                      *
+*   '--------'                                                       *
+**********************************************************************
+ 
+The leaf nodes of the voice graph are what actually corresponds most closely to what ordinary synths and samplers typically refer to as "voices." Each one of the leaf nodes typically plays a single musical note, or sound effect, while the remaining nodes in the tree [create and manage voices](voice-management.md.html), and route and process audio from them.
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>
+</html>

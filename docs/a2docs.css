@@ -1,0 +1,123 @@
+/* Style sheet for Audiality 2 Markdeep documentation.
+
+Based on Markdeep dark.css: https://casual-effects.com/markdeep/latest/dark.css
+
+*/
+
+@import url('https://fonts.googleapis.com/css?family=Teko:700');
+
+@media screen {
+body {
+  background: #eee;
+  color: #000;
+  font-family: Arial, Helvetica, "sans serif";
+/*  text-align: left;*/
+}
+}
+
+.md div.title {
+  color: #555;
+  font-family: Teko, Arial;
+  font-size: 200%;
+  background: #555;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.md a:link {
+  color:#059;
+  font-family: Arial, Helvetica, "sans serif";
+}
+
+.md a:visited{
+  color:#075;
+  font-family: Arial, Helvetica, "sans serif";
+}
+
+.md hr {
+  height: 0px;
+  border: none;
+  border-top: 0.1pt solid #777;
+}
+
+.md h1, .md h2, .md h3, .md h4, .md h5, .md h6, .md div.nonumberh1, .md div.nonumberh2,.md div.nonumberh3, .md div.nonumberh4, .md div.nonumberh5, .md div.nonumberh6 {
+  color: #aaa;
+  border-color: #aaa;
+  font-family: Teko, Arial;
+  font-size: 150%;
+  padding-bottom: 0px;
+}
+
+@media screen {
+  .md h1, .md h2, .md h3, .md h4, .md h5, .md h6, .md div.nonumberh1, .md div.nonumberh2,.md div.nonumberh3, .md div.nonumberh4, .md div.nonumberh5, .md div.nonumberh6 {
+    background: #666;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+.md svg.diagram {
+	background: #dcdcdc;
+	border: 1px solid #aaa;
+	stroke: #686;
+	fill: #242;
+}
+
+.md svg.diagram .opendot {
+	fill: #242;
+}
+
+.md .listing {
+	background: #d4e2d4;
+	padding: 4px;
+	border: 1px solid #aaa;
+}
+
+.md .tilde code {
+  color: #000;
+}
+
+.md .backtick code {
+  color: #000;
+}
+
+b, em.asterisk {
+    font-style: normal; font-weight: bold;
+}
+
+@media screen {
+    b, em.asterisk {
+        color: #333;
+    }
+}
+
+a em.asterisk {
+    color: #000;
+}
+
+.md h2, .md .nonumberh2 {
+    font-size: 125%
+}
+.md h3, .md h4, .md h5, .md h6, .md div.nonumberh3, .md div.nonumberh4, .md div.nonumberh5, .md div.nonumberh6 {
+    font-size: 115%
+}
+
+@media screen {
+    .md table.table td {
+        border: 1px solid #aaa;
+    }
+    
+    .md table.table th {
+        background: #8a8;
+        background: -webkit-linear-gradient(#9b9, #797);
+        border: 1px solid #686;
+    }
+        
+    .md table.table tr:nth-child(odd) {
+        background-color: #d4e2d4;
+    }
+
+    .md table.table tr:nth-child(even) {
+        background-color: #dcdcdc;
+    }
+}

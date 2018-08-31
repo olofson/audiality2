@@ -1,30 +1,45 @@
-## Audiality 2 Scripting
+<!DOCTYPE html>
+<html dir="ltr" lang="en-US">
+<head>
+	<meta charset="UTF-8" />
+	<title>Audiality 2 - Scripting</title>
+	<link rel="profile" href="http://gmpg.org/xfn/11" />
+	<link rel='index' title='Audiality 2 Documentation' href='http://olofson.github.io/audiality2/' />
+	<link rel='canonical' href='http://olofson.github.io/audiality2/audiality2/scripting.md.html' />
+	<style class="fallback">body{visibility:hidden;}</style>
+    <link rel="stylesheet" href="a2docs.css" />
+</head>
+<body>
 
-	WIP! This document is incomplete, and may not be entirely correct in all parts at this point.
+**Audiality 2 Scripting**
+ [Index](index.html) | [Processing](audio-processing.md.html) | [Voice Management](voice-management.md.html) | [Units](unit-control.md.html) | [Builtin Units](units.md.html) | Scripting | [Examples](examples.md.html) | [API](api.md.html)
 
-### TL;DR
+!!! WARNING
+    WIP! This document is incomplete and outdated.
+
+# TL;DR
 * No operator precedence!
 * Keywords and symbol names are case sensitive.
 * C and C++ style comments.
 * Statements end with ';' or newline.
 * A2S code runs in realtime, along with the audio processing.
 
-### Overview
+# Overview
 Audiality 2 is a modular synthesizer with subsample accurate realtime scripting capabilities. The scripting language used for this purpose, A2S (Audiality 2 Script), is also used for declaring voice structures, rendering custom waves, and various other things. In short, A2S covers most things that Audiality 2 can do.
 
 A2S is a small, domain specific language. It has control flow instructions, expressions, and integrated cooperative threading with message passing. It also has declarative constructs for programs, voice structures, functions, and waves.
 
 The language itself has only a single type: real number. (In the current implementation, 16:16 fixed point.) However, Audiality 2 also has objects, such as waves and programs, which are referenced by handle, represented as integer values in A2S.
 
-### Design Guidelines
+# Design Guidelines
 A2S allows for a lot of flexibility in how applications integrate with Audiality 2, as there is essentially custom code running on both sides of the Audiality 2 C API. However, the general idea is that A2S is used to implement abstract, high level interfaces to the audio and music content, so that application code doesn't have to deal with specific details of the content.
 
 For example, one could implement the sounds of a vehicle as a single A2S program that accepts messages for vehicle controls, damage, and destruction, leaving all details of how events are handled to the scripts. Rather than just triggering different sound effects, these messages could dynamically affect parameters of continous waveforms, to make the vehicle sound like a set of interacting subsystems, rather than a bunch of separate sound effects.
 
 
-### A2S Syntax
+# A2S Syntax
 
-#### Comments
+## Comments
 ```
 	// Single line comment
 
@@ -36,7 +51,7 @@ A single line comment can start anywhere, begins with // and ends with a "newlin
 
 A multiline comment starts with /*, ends with */, and may contain newlines. Code may follow a multiline comment on the same line, after the terminating */.
 
-#### Immediate Values
+## Immediate Values
 ```
 	[-][integer][.[fractional]][conversion]
 ```
@@ -50,14 +65,14 @@ Note that conversions have no effect on code generation or run-time operation; t
 |f|"Frequency." The value is interpreted as a frequency in Hz, and is converted to linear pitch.|
 |n|"Note." The value is interpreted as a twelvetone note number, and is converted to linear pitch. That is, the value is divided by 12.|
 
-#### Labels
+## Labels
 ```
 	.label
 ```
 
 Labels are declared with a preceding '.'. Label names must start with a letter ('a'..'z'), followed by any number of letters or decimal figures. It is allowed to continue with another statement directly on the same line, after a label declaration.
 
-#### Variables
+## Variables
 ```
 	!var 2; p var	// Declare 'var', init to 2 and write to p
 	rand !random 42	// Declare !random and init using rand
@@ -67,13 +82,13 @@ Variable naming rules are the same as for labels.
 
 A variable can only be declared in a way that will guarantee that it is initialized before reading. Due to the simplicity of the parser/assembler, this currently means that a variable has to be initialized by the statement in which it occurs, ie it has to be the target of an assignment or a write-only target term of a statement.
 
-#### Directives
+## Directives
 ```
 	def <symbol> <value>
 ```
 Define <symbol> to <value>, so that any occurences of <symbol> evaluate to <value>.
 
-#### Instructions
+## Instructions
 ```
 	<instruction> <arg> <EOS>
 	<instruction> <args...> <EOS>
@@ -94,7 +109,7 @@ Instructions:
 	phase	set
 ```
 
-#### Expressions
+## Expressions
 ```
 	(<arg> [<op> <arg> [<op> <arg> ...]])
 ```
@@ -107,7 +122,7 @@ Operators:
 	quant	rand	p2d
 ```
 
-#### In-place Operations
+## In-place Operations
 ```
 	<op> <arg>
 	<op> <arg1> <arg2>
@@ -115,10 +130,14 @@ Operators:
 
 Most operators can be used for in-place operations on variables and control registers. This can be thought of as the operator being shorthand for an instruction that takes the target as the first argument.
 
-#### Assignment Shorthand
+## Assignment Shorthand
 ```
 	<register> <value>
 	<register> <register>
 ```
 
 A variable name followed by another variable name, or an immediate value, is used as a shorthand assignment syntax.
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+</body>
+</html>
