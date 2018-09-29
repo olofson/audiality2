@@ -19,7 +19,7 @@ Timing is subsample accurate, and durations can be specified in milliseconds, or
 Documentation
 -------------
 
-HTML ([Markdeep](https://casual-effects.com/markdeep/)) documentation is found in 'docs', and can be viewed online [here](http://olofson.github.io/audiality2/).
+HTML ([Markdeep](https://casual-effects.com/markdeep/)) documentation is found in 'docs', and can be viewed online [here](https://olofson.github.io/audiality2/).
 
 The name Audiality...
 ---------------------
