@@ -2,7 +2,7 @@
 <html dir="ltr" lang="en-US">
 <head>
 	<meta charset="UTF-8" />
-	<title>Audiality 2 - Audio Processing Units</title>
+	<title>Audiality 2 - Audio Unit Control</title>
 	<link rel="profile" href="http://gmpg.org/xfn/11" />
 	<link rel='index' title='Audiality 2 Documentation' href='http://olofson.github.io/audiality2/' />
 	<link rel='canonical' href='http://olofson.github.io/audiality2/audiality2/unit-control.md.html' />
@@ -11,27 +11,27 @@
 </head>
 <body>
 
-**Audiality 2 Audio Processing Units**
+**Audiality 2 Audio Unit Control**
  [Index](index.html) | [Processing](audio-processing.md.html) | [Voice Management](voice-management.md.html) | Units | [Builtin Units](units.md.html) | [Scripting](scripting.md.html) | [Examples](examples.md.html) | [API](api.md.html)
 
 # Overview
 Audio generation and processing in Audiality 2 is performed by units, which are arranged and wired into graphs inside voices (see [Audio Processing](audio-processing.md) and [Voice Management](voice-management.md)), and controlled by [scripts](scripting.md). Units can have various numbers of audio inputs, audio outputs, control registers, and control outputs.
 
 # Audio
-## Inputs and Outputs
+## Audio Inputs and Outputs
 Audio inputs and outputs are all mono, and running at the nominal audio sample rate of the current voice graph. An output wired to multiple inputs will send the same audio to each input. Multiple outputs wired to the same input will be summed (mixed) on that input.
 
-## Autowiring
+## Audio Autowiring
 By default, audio inputs and outputs of units are connected automatically, according to certain rules, allowing the construction of basic graphs without explicit wiring instructions.
 
 !!!
     TODO: Explain the wiring rules!
 
 # Control
-## Registers
+## Control Registers
 Control registers can (depending on unit implementation) support linear ramping and subsample accurate timing, and may be updated at audio rate and beyond. Control registers can be controlled either directly by [scripts](scripting.md), or by control outputs of other units.
 
-## Outputs
+## Control Outputs
 Control outputs offer an alternative way of operating control inputs, without directly involving scripting. Control outputs can support linear ramping and subsample accurate timing, allowing for the same accurate and smooth operation as with scripting.
 
 <!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
