@@ -15,7 +15,40 @@
  [Index](index.html) | Processing | [Voice Management](voice-management.md.html) | [Units](unit-control.md.html) | [Builtin Units](units.md.html) | [Scripting](scripting.md.html) | [Examples](examples.md.html) | [API](api.md.html)
 
 # Overview
-Audio processing in Audiality 2 is performed in a tree graph of voices, each with an optional graph of [audio processing units](unit-control.md.html).
+Audio processing in Audiality 2 is performed in a tree graph of voices, where each voice runs a [realtime scripting](scripting.md.html) VM instance, and a graph of [audio processing units](unit-control.md.html). The scripting is done along with the audio processing, and allows for control of Unit parameters with sub-sample accurate timing. Scripts can receive timestamped messages in an interrupt-like fashion, via handlers that can change unit control registers, and interact with the main program via variables, or by directly changing the main program flow.
+**********************************************************************
+* Voice structure                                                    *
+*   .---------------------------------------------------------.      *
+*  | Voice                                                     |     *
+*  |         .-------.     .-------.              .-------.    |     *
+*  |         |        |    |        |             |        |   |     *
+*  |         |  Unit  +--->|  Unit  +---> ... --->|  Unit  +------>  *
+*  |         |        |    |        |             |        |   |     *
+*  |          '-------'     '-------'              '-------'   |     *
+*  |              ^             ^                      ^       |     *
+*  |              |             |                      |       |     *
+*  |          .---+-------------+----------------------+--.    |     *
+*  |         | Scripting VM                                |   |     *
+*  |         |  .----------------------.                   |   |     *
+*  |         |  | Main program         +-----------------. |   |     *
+*  |         |  | {                    | Message handler | |   |     *
+*  |         |  |    ----------------- +-----------------+ |   |     *
+*  |         |  |    ----------------- |       ...       | |   |     *
+*  |         |  |    ----------------- +-----------------+ |   |     *
+*  |         |  |    ----------------- | Message handler | |   |     *
+*  |         |  | }                    +-----------------' |   |     *
+*  |         |  '----------------------'        ^          |   |     *
+*  |          '---------------------------------|---------'    |     *
+*  |                                            |              |     *
+*   '-------------------------------------------|-------------'      *
+*                                               |                    *
+*                                     .---------+---------.          *
+*                                     | Messages          |          *
+*                                     | ----------------- |          *
+*                                     | ----------------- |          *
+*                                     | ----------------- |          *
+*                                     '-------------------'          *
+**********************************************************************
 
 The root node of the voice graph interfaces to the outside world through either an actual audio driver for real time operation, or a buffering or streaming driver for asynchronous operation, or offline rendering.
 **********************************************************************
