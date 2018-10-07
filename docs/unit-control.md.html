@@ -20,6 +20,55 @@ Audio generation and processing in Audiality 2 is performed by units, which are 
 # Audio
 ## Audio Inputs and Outputs
 Audio inputs and outputs are all mono, and running at the nominal audio sample rate of the current voice graph. An output wired to multiple inputs will send the same audio to each input. Multiple outputs wired to the same input will be summed (mixed) on that input.
+**********************************************************************
+* 1:1 routing                                                        *
+*    .-------.     .-------.          .-------.     .-------.        *
+*    |        |    |        |         |        +--->|        +--->   *
+*    |  Unit  +--->|  Unit  +--->     |        |    |        |       *
+*    |        |    |        |         |  Unit  |    |  Unit  |       *
+*     '-------'     '-------'         |        |    |        |       *
+*                                     |        +--->|        +--->   *
+*                                      '-------'     '-------'       *
+**********************************************************************
+**********************************************************************
+* One-to-many routing (all inputs receive the exact same audio data) *
+*                      .-------.                                     *
+*   .-------.      .-->|        |                                    *
+*   |        |    |    |        |                                    *
+*   |  Unit  +--->*    |  Unit  +--->                                *
+*   |        |    |    |        |                                    *
+*    '-------'     '-->|        |                    .-------.       *
+*                       '-------'                    |        |      *
+*                                                .-->|  Unit  +--->  *
+*                                 .-------.     |    |        |      *
+*                                 |        |    |     '-------'      *
+*                                 |  Unit  +--->*                    *
+*                                 |        |    |    .-------.       *
+*                                  '-------'    |    |        |      *
+*                                                '-->|  Unit  +--->  *
+*                                                    |        |      *
+*                                                     '-------'      *
+**********************************************************************
+**********************************************************************
+* Many-to-one routing (outputs are summed and fed to the input)      *
+*                      .-------.                                     *
+*   .-------.          |        |                                    *
+*   |        +--->*--->|  Unit  +--->                                *
+*   |        |    ^    |        |                                    *
+*   |  Unit  |    |     '-------'                                    *
+*   |        |    |                                                  *
+*   |        +---'                .-------.                          *
+*    '-------'                    |        |                         *
+*                                 |  Unit  +---.                     *
+*                                 |        |    |    .-------.       *
+*                                  '-------'    v    |        |      *
+*                                               *--->|  Unit  +--->  *
+*                                 .-------.     ^    |        |      *
+*                                 |        |    |     '-------'      *
+*                                 |  Unit  +---'                     *
+*                                 |        |                         *
+*                                  '-------'                         *
+**********************************************************************
 
 ## Audio Autowiring
 By default, audio inputs and outputs of units are connected automatically, according to certain rules, allowing the construction of basic graphs without explicit wiring instructions.
