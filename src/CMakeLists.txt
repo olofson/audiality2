@@ -112,9 +112,6 @@ set_target_properties(audiality2 PROPERTIES VERSION ${VERSION_STRING}
 # Release build: full optimization, no debug features, no debug info
 set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
 
-# Static release build: full optimization, no debug features, no debug info
-set(CMAKE_C_FLAGS_STATIC "-O3 -DNDEBUG")
-
 set(f "-Wall -Wwrite-strings -Wcast-align")
 set(f "${f} -Wbad-function-cast -Waggregate-return")
 set(f "${f} -Wstrict-prototypes -fno-builtin -Wshadow")
