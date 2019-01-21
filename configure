@@ -106,10 +106,6 @@ if [[ "static" = ${FILTER} ]] ; then
 	setup_native static Release "host native static" /usr "-DBUILD_SHARED_LIBS=OFF -DUSE_ALSA=OFF"
 fi
 
-if [[ "release32" = ${FILTER} ]] ; then
-	setup_native release32 Release "host native 32 bit" /usr "-DFORCE_32BIT=ON"
-fi
-
 if [[ "maintainer" = ${FILTER} ]] ; then
 	setup_native maintainer Maintainer "host native maintainer" /usr
 fi

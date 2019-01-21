@@ -11,10 +11,6 @@ set(AUDIALITY2_LIBRARIES audiality2 ${AUDIALITY2_EXTRA_LIBRARIES})
 function(a2_add_test testname)
 	add_executable(${testname} WIN32 MACOSX_BUNDLE ${testname}.c ${ARGN})
 	target_link_libraries(${testname} ${AUDIALITY2_LIBRARIES})
-	if(FORCE_32BIT)
-		set_target_properties(${testname} PROPERTIES
-			COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-	endif(FORCE_32BIT)
 endfunction(a2_add_test)
 
 a2_add_test(waveupload)

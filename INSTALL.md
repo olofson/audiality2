@@ -28,7 +28,6 @@ Installing
       * Currently available targets:
         * release
         * static
-        * release32
         * maintainer
         * debug
         * mingw-release

@@ -11,7 +11,6 @@ set(VERSION_STRING "${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}")
 set(PACKAGE "audiality2-${VERSION_STRING}")
 
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
-option(FORCE_32BIT "Force 32 bit build." OFF)
 option(USE_SDL "Use SDL (2.0) if present." ON)
 option(USE_ALSA "Use ALSA if present." ON)
 option(USE_JACK "Use JACK if present." ON)

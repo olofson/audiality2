@@ -76,10 +76,6 @@ if(USE_ALSA)
 endif(USE_ALSA)
 
 add_library(audiality2 ${sources})
-if(FORCE_32BIT)
-	set_target_properties(audiality2 PROPERTIES
-		COMPILE_FLAGS "-m32" LINK_FLAGS "-m32")
-endif(FORCE_32BIT)
 
 if(UNIX)
 	target_link_libraries(audiality2 m)
