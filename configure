@@ -6,7 +6,7 @@ shopt -s nullglob
 
 if [ $# -eq 0 ]; then
 	FILTER=@(release)
-elif [ $1 == all ]; then
+elif [ "$1" == all ]; then
 	FILTER="*"
 else
 	FILTER="$1"
@@ -72,9 +72,15 @@ setup_cross() {
 	local opts="$5"
 	setup_header $dname "$desc"
 	if [ -e $MXEPATH ]; then
+		if [ ! -e "$MXEPATH/usr/$target" ]; then
+			echo "MXE target $target not available!"
+			echo "Skipping target ${dname} ($desc)."
+			echo
+			return
+		fi
 		local cmk="$MXEPATH/usr/bin/$target-cmake"
 		if [ ! -e "$cmk" ]; then
-			echo "MXE target $target not available!"
+			echo "Could not find CMake for MXE target $target!"
 			echo "Skipping target ${dname} ($desc)."
 			echo
 			return
