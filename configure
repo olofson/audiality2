@@ -102,8 +102,12 @@ if [[ "release" = ${FILTER} ]] ; then
 fi
 
 if [[ "static" = ${FILTER} ]] ; then
+	setup_native static Release "host native static" /usr "-DBUILD_SHARED_LIBS=OFF"
+fi
+
+if [[ "static-noalsa" = ${FILTER} ]] ; then
 	# Disabling the ALSA driver, as it (unlike the SDL one) has a hard dependency on the library
-	setup_native static Release "host native static" /usr "-DBUILD_SHARED_LIBS=OFF -DUSE_ALSA=OFF"
+	setup_native static-noalsa Release "host native static" /usr "-DBUILD_SHARED_LIBS=OFF -DUSE_ALSA=OFF"
 fi
 
 if [[ "maintainer" = ${FILTER} ]] ; then
