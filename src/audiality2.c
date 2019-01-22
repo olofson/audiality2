@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017. 2019 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -603,7 +603,7 @@ A2_interface *a2_OpenVersion(A2_config *config, unsigned headerversion)
 		return NULL;
 	}
 #ifdef DEBUG
-	printf("a2_Open(), resulting config: ------\n", st->config);
+	printf("a2_Open(), resulting config: ------\n");
 	a2_DumpConfig(st->config);
 	printf("------\n");
 #endif
