@@ -1,7 +1,7 @@
 /*
  * audiality2.c - Audiality 2 main file - configuration, open/close etc
  *
- * Copyright 2010-2014, 2016-2017. 2019 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017. 2019-2020 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -566,20 +566,20 @@ A2_interface *a2_OpenVersion(A2_config *config, unsigned headerversion)
 		return NULL;
 
 	DUMPSIZES(
-		printf("A2_wave:\t%d\n", sizeof(A2_wave));
-		printf("A2_bank:\t%d\n", sizeof(A2_bank));
-		printf("A2_program:\t%d\n", sizeof(A2_program));
-		printf("A2_string:\t%d\n", sizeof(A2_string));
-		printf("A2_stackentry:\t%d\n", sizeof(A2_stackentry));
-		printf("A2_event:\t%d\n", sizeof(A2_event));
-		printf("A2_apimessage:\t%d\n", sizeof(A2_apimessage));
-		printf("A2_voice:\t%d\n", sizeof(A2_voice));
-		printf("A2_block:\t%d\n", sizeof(A2_block));
-		printf("A2_unit:\t%d\n", sizeof(A2_unit));
-		printf("A2_unitdesc:\t%d\n", sizeof(A2_unitdesc));
-		printf("A2_stream:\t%d\n", sizeof(A2_stream));
+		printf("A2_wave:\t%d\n", (int)sizeof(A2_wave));
+		printf("A2_bank:\t%d\n", (int)sizeof(A2_bank));
+		printf("A2_program:\t%d\n", (int)sizeof(A2_program));
+		printf("A2_string:\t%d\n", (int)sizeof(A2_string));
+		printf("A2_stackentry:\t%d\n", (int)sizeof(A2_stackentry));
+		printf("A2_event:\t%d\n", (int)sizeof(A2_event));
+		printf("A2_apimessage:\t%d\n", (int)sizeof(A2_apimessage));
+		printf("A2_voice:\t%d\n", (int)sizeof(A2_voice));
+		printf("A2_block:\t%d\n", (int)sizeof(A2_block));
+		printf("A2_unit:\t%d\n", (int)sizeof(A2_unit));
+		printf("A2_unitdesc:\t%d\n", (int)sizeof(A2_unitdesc));
+		printf("A2_stream:\t%d\n", (int)sizeof(A2_stream));
 		printf("A2_OPCODES:\t%d\n", A2_OPCODES);
-		printf("A2_MAXSAVEREGS:\t%d\n", A2_MAXSAVEREGS);
+		printf("A2_MAXSAVEREGS:\t%d\n", (int)A2_MAXSAVEREGS);
 	)
 #ifdef DEBUG
 	if(config)
