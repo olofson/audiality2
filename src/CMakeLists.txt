@@ -58,6 +58,7 @@ set(sources ${sources}
 	drivers/dummydrv.c
 	drivers/alsamididrv.c
 	drivers/mallocdrv.c
+	drivers/coreaudiodrv.c
 )
 
 if(SDL2_FOUND)
@@ -76,6 +77,13 @@ if(USE_ALSA)
 endif(USE_ALSA)
 
 add_library(audiality2 ${sources})
+
+if(APPLE)
+	find_library(CORE_AUDIO CoreAudio)
+	find_library(AUDIO_TOOLBOX AudioToolbox)
+
+	target_link_libraries(audiality2 ${CORE_AUDIO} ${AUDIO_TOOLBOX})
+endif(APPLE)
 
 if(UNIX)
 	target_link_libraries(audiality2 m)

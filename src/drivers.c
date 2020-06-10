@@ -35,6 +35,7 @@
 #include "jackdrv.h"
 #include "dummydrv.h"
 #include "bufferdrv.h"
+#include "coreaudiodrv.h"
 
 /* Builtin MIDI drivers */
 #include "alsamididrv.h"
@@ -45,6 +46,8 @@
 # define A2_DEFAULT_AUDIODRIVER	a2_sdl_audiodriver
 #elif defined(A2_HAVE_JACK)
 # define A2_DEFAULT_AUDIODRIVER	a2_jack_audiodriver
+#elif defined(__APPLE__) && !defined(A2_DEFAULT_AUDIODRIVER)
+# define A2_DEFAULT_AUDIODRIVER a2_coreaudio_audiodriver
 #else
 # define A2_DEFAULT_AUDIODRIVER	a2_dummy_audiodriver
 #endif
@@ -321,6 +324,9 @@ static A2_regdriver a2_builtin_drivers[] = {
 #endif
 #ifdef A2_HAVE_JACK
 	{ NULL, A2_AUDIODRIVER, 1, "jack", a2_jack_audiodriver },
+#endif
+#ifdef __APPLE__
+	{ NULL, A2_AUDIODRIVER, 1, "coreaudio", a2_coreaudio_audiodriver },
 #endif
 	{ NULL, A2_AUDIODRIVER, 1, "dummy", a2_dummy_audiodriver },
 	{ NULL, A2_AUDIODRIVER, 1, "buffer", a2_buffer_audiodriver },
