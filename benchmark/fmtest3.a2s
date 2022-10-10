@@ -1,0 +1,126 @@
+def title	"FMTest3"
+def version	"1.0"
+def description	"Comparison of the 'fm4' and fm4p' units"
+def author	"David Olofson"
+def copyright	"Copyright 2014, 2016 David Olofson"
+def license	"Public domain. Do what you like with it. NO WARRANTY!"
+def a2sversion	"1.9"
+
+import chords;
+
+// A simple swelling pad with detuned octaves.
+PadFM4(P V=1)
+{
+	struct { fm4; panmix }
+	p (P - .005); p1 .005; p2 .995; p3 2.005
+	fb .25; fb1 .25; fb2 .125; fb3 .125;
+	set
+
+	!D (-P / 5 + 1)
+	if D < .5 { D .5 }
+
+	a V;				d 100
+		a1 D; a2 D; a3 D;	d 3000
+	end
+.rel	a 0;	a1 0; a2 0; a3 0;	d 2000
+	d 10
+	1() { force rel }
+}
+
+// Same, but with the operators in parallel.
+PadFM4P(P V=1)
+{
+	struct { fm4p; panmix }
+	p (P - .005); p1 .005; p2 .995; p3 2.005
+	fb .25; fb1 .25; fb2 .125; fb3 .125;
+	set
+
+	!D (1.5 - P)
+	if D < .5 { D .5 }
+
+	a V;				d 100
+		a1 D; a2 D; a3 D;	d 3000
+	end
+.rel	a 0;	a1 0; a2 0; a3 0;	d 2000
+	d 10
+	1() { force rel }
+}
+
+// Same again, but now with two chains of 2 ops, combined via ring modulation.
+PadFM4R(P V=1)
+{
+	struct { fm4r; panmix }
+	p (P - .005); p1 .005; p2 .995; p3 2.005
+	fb .25; fb1 .25; fb2 .125; fb3 .125;
+	set
+
+	!D (1.25 - (P * 1.25))
+	if D < .5 { D .5 }
+
+	a V; a1 2;			d 100
+			a2 D; a3 D;	d 3000
+	end
+.rel	a 0; a1 0;	a2 0; a3 0;	d 2000
+	d 10
+	1() { force rel }
+}
+
+export Song(P V=1 L=0)
+{
+	struct {
+		inline 0 *
+		fbdelay D * *
+		fbdelay D2 * *
+		panmix PM * >
+	}
+
+	tempo 80 4
+	D.fbdelay (tick * 5.05);	D.fbgain .02
+	D.ldelay (tick * 6.05);		D.lgain .05
+	D.rdelay (tick * 8.03);		D.rgain .05
+	D2.fbdelay (tick * 6.95);	D2.fbgain .02
+	D2.ldelay (tick * 9.01);	D2.lgain .05
+	D2.rdelay (tick * 11.03);	D2.rgain .05
+	PM.vol .5
+	set
+
+	tr (P - 5n)
+	for {
+		1:PadFM4 -3 .6;		td 12
+		1<1;			td 4
+		1:PadFM4 -2 .6;		td 12
+		1<1;			td 1
+		Chords PadFM4 .25;	td 64
+					td 8
+
+		1:PadFM4P -3 .6;	td 12
+		1<1;			td 4
+		1:PadFM4P -2 .6;	td 12
+		1<1;			td 4
+		Chords PadFM4P .25;	td 64
+					td 8
+
+		1:PadFM4R -3 .6;	td 12
+		1<1;			td 4
+		1:PadFM4R -2 .6;	td 12
+		1<1;			td 4
+		Chords PadFM4R .25;	td 64
+					td 16
+
+		ifz L {
+			d 5000
+			end
+		}
+	}
+
+.stop	10 {
+		*PM.vol .7
+		d 100
+	}
+	PM.vol 0;	d 100
+	kill
+
+	1() {
+		force stop
+	}
+}

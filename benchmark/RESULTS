@@ -1,41 +1,42 @@
-
 =====================================================================
-20131026
+20221010 (pre-floating point run)
+
+Updated benchmark:
+	* Adds dctest, fmtest3, fmtest4, and wstest
+	* Fixed scripts so the -v option works
+	* Updated vm-benchmark.sh to 1000 Hz, so it won't get A2_BADSAMPLERATE
+	* Doubled the render time to 500 s
 
 Version:
-	Audiality 2 1.9.0 + various commits
+	Audiality 2 1.9.4 + bunch of commits
 	https://github.com/olofson/audiality2.git
-	c7d59898611301dc427a105dbc55111ddb6da3c5
+	13c660bec792acd857e2b6948f94dbb92fd2c7c6
 
 Test system:
-	Linux 3.8.1-gentoo SMP PREEMPT x86_64
-	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
+	Linux Tetradeca 4.4.0-19041-Microsoft #1237-Microsoft Sat Sep 11 14:32:00 PST 2021 x86_64 x86_64 x86_64 GNU/Linux
+	Intel(R) Core(TM) i9-7940X CPU @ 3.10GHz (4 GHz OC)
 
-Normal (LERP 2x):
-	k2epilogue.a2s		8.307s
-	k2intro.a2s		7.178s
-	k2loader.a2s		8.519s
-	k2trance.a2s		7.127s
-	pulsetronic.a2s		7.013s
+A2_HIFI, normal benchmark:
+	dctest.a2s		0.438s
+	fmtest3.a2s		1.719s
+	fmtest4.a2s		0.359s
+	k2epilogue.a2s		10.406s
+	k2intro.a2s		9.891s
+	k2loader.a2s		11.531s
+	k2trance.a2s		8.766s
+	pulsetronic.a2s		9.906s
+	wstest.a2s		1.891s
 
-=====================================================================
-20131027
-
-Version:
-	Audiality 2 1.9.0 + various commits
-	https://github.com/olofson/audiality2.git
-	1c2bbe732ee1e906e5b5419afe95c34bc86e6597
-
-Test system:
-	Linux 3.8.1-gentoo SMP PREEMPT x86_64
-	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
-
-Normal (LERP 2x):
-	k2epilogue.a2s		8.462s
-	k2intro.a2s		7.122s
-	k2loader.a2s		8.536s
-	k2trance.a2s		7.128s
-	pulsetronic.a2s		7.033s
+A2_HIFI, VM benchmark:
+	dctest.a2s		0.266s
+	fmtest3.a2s		0.313s
+	fmtest4.a2s		0.078s
+	k2epilogue.a2s		7.344s
+	k2intro.a2s		6.000s
+	k2loader.a2s		14.219s
+	k2trance.a2s		7.219s
+	pulsetronic.a2s		4.656s
+	wstest.a2s		0.656s
 
 =====================================================================
 20131219
@@ -69,5 +70,43 @@ A2_LOFI (LERP):
 	k2loader.a2s		7.853s
 	k2trance.a2s		6.386s
 	pulsetronic.a2s		6.098s
+
+=====================================================================
+20131027
+
+Version:
+	Audiality 2 1.9.0 + various commits
+	https://github.com/olofson/audiality2.git
+	1c2bbe732ee1e906e5b5419afe95c34bc86e6597
+
+Test system:
+	Linux 3.8.1-gentoo SMP PREEMPT x86_64
+	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
+
+Normal (LERP 2x):
+	k2epilogue.a2s		8.462s
+	k2intro.a2s		7.122s
+	k2loader.a2s		8.536s
+	k2trance.a2s		7.128s
+	pulsetronic.a2s		7.033s
+
+=====================================================================
+20131026
+
+Version:
+	Audiality 2 1.9.0 + various commits
+	https://github.com/olofson/audiality2.git
+	c7d59898611301dc427a105dbc55111ddb6da3c5
+
+Test system:
+	Linux 3.8.1-gentoo SMP PREEMPT x86_64
+	Intel(R) Core(TM)2 Quad CPU Q6600 @ 2.40GHz
+
+Normal (LERP 2x):
+	k2epilogue.a2s		8.307s
+	k2intro.a2s		7.178s
+	k2loader.a2s		8.519s
+	k2trance.a2s		7.127s
+	pulsetronic.a2s		7.013s
 
 =====================================================================

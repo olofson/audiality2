@@ -1,6 +1,6 @@
 #/bin/sh
 
-player=${1:-a2play}
+player=a2play
 
 usage()
 {
@@ -35,7 +35,7 @@ do
    esac
 done
 
-a2play -v
+${player} -v
 
 echo ===================================================
 
@@ -47,9 +47,9 @@ do
    do
       echo Pass $i
       if [ ! -z $VERBOSE ]; then
-         time ${player} -dbuffer -r44100 $SONGNAME -pSong -st250
+         time ${player} -dbuffer -r44100 $SONGNAME -pSong -st500
       else
-         time $(${player} -dbuffer -r44100 $SONGNAME -pSong -st250 > /dev/null 2>&1)
+         time $(${player} -dbuffer -r44100 $SONGNAME -pSong -st500 > /dev/null 2>&1)
       fi
       echo
    done
