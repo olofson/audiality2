@@ -10,7 +10,7 @@
  *	is hard to avoid while maintaining the unity transfer function when the
  *	shaping amount is 0.
  *
- * Copyright 2014-2016 David Olofson <david@olofson.net>
+ * Copyright 2014-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -57,7 +57,7 @@ static inline void waveshaper_process(A2_unit *u, unsigned offset,
 {
 	A2_waveshaper *ws = waveshaper_cast(u);
 	unsigned s, c, end = offset + frames;
-	int32_t *in[A2WS_MAXCHANNELS], *out[A2WS_MAXCHANNELS];
+	float *in[A2WS_MAXCHANNELS], *out[A2WS_MAXCHANNELS];
 	a2_PrepareRamper(&ws->amount, frames);
 	for(c = 0; c < channels; ++c)
 	{
@@ -82,21 +82,19 @@ static inline void waveshaper_process(A2_unit *u, unsigned offset,
 				out[c][s] = vout * 32768.0f * 256.0f;
 		}
 #else
-		/* Fixed point implementation */
-		int32_t a = ws->amount.value;
-		int32_t a3p1 = (a << 1) + a + (1 << 24);	// 8:24
-		int32_t asqr = (int64_t)(a >> 4) * (a >> 4) >> 24; // 16:16
+		float a = ws->amount.value;
+		float asqr = a * a;
 		for(c = 0; c < channels; ++c)
 		{
-			int32_t v = in[c][s];			// 9:23
-			int32_t vsqr = (int64_t)v * v >> 22;	// 8:24
-			int64_t vout = (int64_t)v * a3p1;	// 17:47
-			int64_t sqrsub = (int64_t)a * vsqr;	// 17:47
-			if(v >= 0)
+			float v = in[c][s];
+			float vsqr = v * v;
+			float vout = v * 3.0f * a + 1.0f;
+			float sqrsub = a * vsqr;
+			if(v >= 0.0f)
 				vout -= sqrsub;
 			else
 				vout += sqrsub;
-			vout /= ((int64_t)asqr * vsqr >> 16) + (1 << 24);
+			vout /= asqr * vsqr + 1.0f;
 			if(add)
 				out[c][s] += vout;
 			else
@@ -134,11 +132,11 @@ static A2_errors waveshaper_Initialize(A2_unit *u, A2_vmstate *vms,
 		void *statedata, unsigned flags)
 {
 	A2_waveshaper *ws = waveshaper_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
-	a2_InitRamper(&ws->amount, 0);
+	a2_InitRamper(&ws->amount, 0.0f);
 
-	ur[A2WSR_AMOUNT] = 0;
+	ur[A2WSR_AMOUNT] = 0.0f;
 
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
@@ -157,7 +155,7 @@ static A2_errors waveshaper_Initialize(A2_unit *u, A2_vmstate *vms,
 }
 
 
-static void waveshaper_Amount(A2_unit *u, int v, unsigned start, unsigned dur)
+static void waveshaper_Amount(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&waveshaper_cast(u)->amount, v, start, dur);
 }

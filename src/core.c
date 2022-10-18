@@ -1,7 +1,7 @@
 /*
  * core.c - Audiality 2 realtime core and scripting VM
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -114,7 +114,7 @@ static inline A2_errors a2_VoicePush(A2_state *st, A2_voice *v, int firstreg,
 		return A2_INTERNAL + 401;
 	}
 #endif
-	memcpy(se->r, v->s.r + firstreg, sizeof(int) * saveregs);
+	memcpy(se->r, v->s.r + firstreg, sizeof(float) * saveregs);
 	return A2_OK;
 }
 
@@ -133,7 +133,7 @@ static inline int a2_VoicePop(A2_state *st, A2_voice *v)
 	}
 	else
 		v->s.pc = se->pc + 1;
-	memcpy(v->s.r + se->firstreg, se->r, sizeof(int) * saveregs);
+	memcpy(v->s.r + se->firstreg, se->r, sizeof(float) * saveregs);
 	v->stack = se->prev;
 	a2_FreeBlock(st, se);
 	return inter;
@@ -161,8 +161,8 @@ static inline void a2_VoiceControl(A2_state *st, A2_voice *v, unsigned reg,
  *	instead.
  */
 static inline A2_unit *a2_AddUnit(A2_state *st, const A2_structitem *si,
-		A2_voice *v, A2_unit *lastunit, int32_t **scratch,
-		unsigned noutputs, int32_t **outputs)
+		A2_voice *v, A2_unit *lastunit, float **scratch,
+		unsigned noutputs, float **outputs)
 {
 	DBG(A2_interface *i = &st->interfaces->interface;)
 	A2_errors res;
@@ -352,11 +352,11 @@ static inline A2_errors a2_PopulateVoice(A2_state *st, const A2_program *p,
 {
 	A2_structitem *si;
 	A2_unit *lastu = NULL;
-	int32_t **scratch = NULL;
+	float **scratch = NULL;
 
 	/* The 'inline' unit changes these! */
 	unsigned noutputs = v->noutputs;
-	int32_t **outputs = v->outputs;
+	float **outputs = v->outputs;
 
 	if(!p->units)
 		return A2_OK;	/* No units - all done! */
@@ -603,7 +603,7 @@ A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 	/* Grab the arguments! */
 	if(argc > p->funcs[0].argc)
 		argc = p->funcs[0].argc;
-	memcpy(v->s.r + p->funcs[0].argv, argv, argc * sizeof(int));
+	memcpy(v->s.r + p->funcs[0].argv, argv, argc * sizeof(float));
 
 	/* Get the defaults for any unspecified arguments */
 	for(i = argc; i < p->funcs[0].argc; ++i)
@@ -639,7 +639,7 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 				func, argc, fn->argc);
 		argc = fn->argc;
 	}
-	memcpy(v->s.r + fn->argv, argv, argc * sizeof(int));
+	memcpy(v->s.r + fn->argv, argv, argc * sizeof(float));
 	for(i = argc; i < fn->argc; ++i)
 		v->s.r[i + fn->argv] = fn->argdefs[i];
 	return A2_OK;
@@ -658,7 +658,7 @@ static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
 	e->b.common.timestamp = when;
 	e->b.play.program = ep;
 	e->b.common.argc = argc;
-	memcpy(e->b.play.a, argv, argc * sizeof(int));
+	memcpy(e->b.play.a, argv, argc * sizeof(float));
 	a2_SendEvent(&v->events, e);
 	return A2_OK;
 }
@@ -894,7 +894,7 @@ static inline void a2_event_subforward(A2_state *st, A2_voice *parent,
 		return;
 	if(e->b.common.argc)
 		esize = offsetof(A2_eventbody, play.a) +
-				sizeof(int) * (e->b.common.argc);
+				sizeof(float) * (e->b.common.argc);
 	else
 		esize = offsetof(A2_eventbody, play.program);
 	while(sv->next)
@@ -1119,36 +1119,36 @@ static inline void a2_RTSetAll(A2_regtracker *rt, A2_state *st, A2_voice *v,
 /* Convert musical tick duration to audio frame delta time */
 static inline unsigned a2_ticks2t(A2_state *st, A2_voice *v, int d)
 {
-	return ((((uint64_t)d * v->s.r[R_TICK] + 127) >> 8) *
-			st->msdur + 0x7fffffff) >> 32;
+	return d * v->s.r[R_TICK] * st->msdur * 256.0f + 0.5f;
 }
 
 
 /* Convert milliseconds to audio frame delta time */
 static inline unsigned a2_ms2t(A2_state *st, int d)
 {
-	return ((int64_t)d * st->msdur + 0x7fffff) >> 24;
+	return d * st->msdur * 256.0f + 0.5f;
 }
 
 
 /* Get the size (number of elements) of an indexable object */
+/* FIXME: Currently, all this can do is return the number of periods in a wave... */
 static int a2_sizeof_object(A2_state *st, int handle)
 {
 	A2_wave *w;
 	A2_interface *i = &st->interfaces->interface;
 	if(handle < 0)
-		return -A2_INVALIDHANDLE << 16;
+		return -A2_INVALIDHANDLE;
 	if(!(w = a2_GetWave(i, handle)))
-		return -A2_WRONGTYPE << 16;
+		return -A2_WRONGTYPE;
 	switch(w->type)
 	{
 	  case A2_WWAVE:
 	  case A2_WMIPWAVE:
 		break;
 	  default:
-		return -A2_WRONGTYPE << 16;
+		return -A2_WRONGTYPE;
 	}
-	return ((int64_t)(w->d.wave.size[0]) << 16) / w->period;
+	return w->d.wave.size[0] / w->period;
 }
 
 /*
@@ -1168,7 +1168,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 	int res;
 	int cargc = 0, cargv[A2_MAXARGS];	/* run/spawn argument stack */
 	unsigned *code = v->program->funcs[v->s.func].code;
-	int *r = v->s.r;
+	float *r = v->s.r;
 	unsigned inscount = A2_INSLIMIT;
 	A2_regtracker rt;
 	if(v->s.state == A2_WAITING)
@@ -1367,90 +1367,88 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_MUL:
-			r[ins->a1] = (int64_t)r[ins->a1] * ins->a3 >> 16;
+			r[ins->a1] = r[ins->a1] * ins->a3;
 			a2_RTMark(&rt, ins->a1);
 			++v->s.pc;
 			break;
 		  case OP_MULR:
-			r[ins->a1] = (int64_t)r[ins->a1] * r[ins->a2] >> 16;
+			r[ins->a1] = r[ins->a1] * r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_MOD:
-			r[ins->a1] %= ins->a3;
+			r[ins->a1] = fmod(r[ins->a1], ins->a3);
 			a2_RTMark(&rt, ins->a1);
 			++v->s.pc;
 			break;
 		  case OP_MODR:
 			if(!r[ins->a2])
 				A2_VMABORT(A2_DIVBYZERO, "VM:MODR");
-			r[ins->a1] %= r[ins->a2];
+			r[ins->a1] = fmod(r[ins->a1], r[ins->a2]);
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_QUANT:
-			r[ins->a1] = r[ins->a1] / ins->a3 * ins->a3;
+			r[ins->a1] = (int)(r[ins->a1] / ins->a3) * ins->a3;
 			a2_RTMark(&rt, ins->a1);
 			++v->s.pc;
 			break;
 		  case OP_QUANTR:
 			if(!r[ins->a2])
 				A2_VMABORT(A2_DIVBYZERO, "VM:QUANTR");
-			r[ins->a1] = r[ins->a1] / r[ins->a2] * r[ins->a2];
+			r[ins->a1] = (int)(r[ins->a1] / r[ins->a2]) * r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_RAND:
-			r[ins->a1] = (int64_t)a2_Noise(&st->noisestate) *
-					ins->a3 >> 16;
+			r[ins->a1] = a2_Random(&st->noisestate) * ins->a3;
 			a2_RTMark(&rt, ins->a1);
 			++v->s.pc;
 			break;
 		  case OP_RANDR:
-			r[ins->a1] = (int64_t)a2_Noise(&st->noisestate) *
-					r[ins->a2] >> 16;
+			r[ins->a1] = a2_Random(&st->noisestate) * r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 
 		/* Comparison operators */
 /*TODO: Versions with an immediate second operand! */
 		  case OP_GR:
-			r[ins->a1] = (r[ins->a1] > r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] > r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_LR:
-			r[ins->a1] = (r[ins->a1] < r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] < r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_GER:
-			r[ins->a1] = (r[ins->a1] >= r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] >= r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_LER:
-			r[ins->a1] = (r[ins->a1] <= r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] <= r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_EQR:
-			r[ins->a1] = (r[ins->a1] == r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] == r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NER:
-			r[ins->a1] = (r[ins->a1] != r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] != r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 
 		/* Boolean operators */
 		  case OP_ANDR:
-			r[ins->a1] = (r[ins->a1] && r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] && r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_ORR:
-			r[ins->a1] = (r[ins->a1] || r[ins->a2]) << 16;
+			r[ins->a1] = r[ins->a1] || r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_XORR:
-			r[ins->a1] = (!r[ins->a1] != !r[ins->a2]) << 16;
+			r[ins->a1] = !r[ins->a1] != !r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_NOTR:
-			r[ins->a1] = (!r[ins->a2]) << 16;
+			r[ins->a1] = !r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 
@@ -1501,17 +1499,17 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			cargv[cargc++] = r[ins->a1];
 			break;
 		  case OP_SPAWNVR:
-			a2_VoiceSpawn(st, v, r[ins->a1] >> 16,
-					r[ins->a2] >> 16, cargc, cargv);
+			a2_VoiceSpawn(st, v, r[ins->a1],
+					r[ins->a2], cargc, cargv);
 			cargc = 0;
 			break;
 		  case OP_SPAWNV:
-			a2_VoiceSpawn(st, v, r[ins->a1] >> 16,
+			a2_VoiceSpawn(st, v, r[ins->a1],
 					ins->a2, cargc, cargv);
 			cargc = 0;
 			break;
 		  case OP_SPAWNR:
-			a2_VoiceSpawn(st, v, ins->a1, r[ins->a2] >> 16,
+			a2_VoiceSpawn(st, v, ins->a1, r[ins->a2],
 					cargc, cargv);
 			cargc = 0;
 			break;
@@ -1520,7 +1518,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			cargc = 0;
 			break;
 		  case OP_SPAWNDR:
-			a2_VoiceSpawn(st, v, -1, r[ins->a1] >> 16, cargc,
+			a2_VoiceSpawn(st, v, -1, r[ins->a1], cargc,
 					cargv);
 			cargc = 0;
 			break;
@@ -1529,7 +1527,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			cargc = 0;
 			break;
 		  case OP_SPAWNAR:
-			a2_VoiceSpawn(st, v, -2, r[ins->a1] >> 16, cargc,
+			a2_VoiceSpawn(st, v, -2, r[ins->a1], cargc,
 					cargv);
 			cargc = 0;
 			break;
@@ -1540,7 +1538,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_SENDR:
 		  {
 			A2_voice *sv;
-			if((sv = a2_FindSubvoice(v, r[ins->a1] >> 16)))
+			if((sv = a2_FindSubvoice(v, r[ins->a1])))
 				a2_VoiceSend(st, sv, v->s.waketime, ins->a2,
 						cargc, cargv);
 			cargc = 0;
@@ -1597,8 +1595,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  }
 		  case OP_KILLR:
 		  {
-			unsigned vid = r[ins->a1] >> 16;
-			a2_KillSubvoice(st, v, vid);
+			a2_KillSubvoice(st, v, r[ins->a1]);
 			break;
 		  }
 		  case OP_KILL:
@@ -1616,8 +1613,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  }
 		  case OP_DETACHR:
 		  {
-			unsigned vid = r[ins->a1] >> 16;
-			a2_DetachSubvoice(v, vid);
+			a2_DetachSubvoice(v, r[ins->a1]);
 			break;
 		  }
 		  case OP_DETACH:
@@ -1711,13 +1707,13 @@ TODO:
 			break;
 		  case OP_SIZEOF:
 			if((res = a2_sizeof_object(st, ins->a2) < 0))
-				A2_VMABORT(-res >> 16, "VM:SIZEOF");
+				A2_VMABORT(-res, "VM:SIZEOF");
 			r[ins->a1] = res;
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_SIZEOFR:
-			if((res = a2_sizeof_object(st, r[ins->a2] >> 16)) < 0)
-				A2_VMABORT(-res >> 16, "VM:SIZEOFR");
+			if((res = a2_sizeof_object(st, r[ins->a2])) < 0)
+				A2_VMABORT(-res, "VM:SIZEOFR");
 			r[ins->a1] = res;
 			a2_RTMark(&rt, ins->a1);
 			break;
@@ -1771,7 +1767,7 @@ void a2_inline_Process(A2_unit *u, unsigned offset, unsigned frames)
 	A2_inline *il = a2_inline_cast(u);
 	int i;
 	for(i = 0; i < u->noutputs; ++i)
-		memset(u->outputs[i] + offset, 0, frames * sizeof(int));
+		memset(u->outputs[i] + offset, 0, frames * sizeof(float));
 	a2_ProcessSubvoices(il->state, il->voice, offset, frames);
 }
 
@@ -1900,10 +1896,10 @@ void a2_ProcessVoices(A2_state *st, A2_voice **head, unsigned offset,
 static void a2_ProcessMaster(A2_state *st, unsigned offset, unsigned frames)
 {
 	int c;
-	int32_t **in = st->master->buffers;
-	int32_t **bufs = st->audio->buffers;
+	float **in = st->master->buffers;
+	float **bufs = st->audio->buffers;
 	for(c = 0; c < st->config->channels; ++c)
-		memcpy(bufs[c] + offset, in[c], frames * sizeof(int32_t));
+		memcpy(bufs[c] + offset, in[c], frames * sizeof(float));
 }
 
 

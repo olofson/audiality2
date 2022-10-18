@@ -1,7 +1,7 @@
 /*
  * waves.c - Audiality 2 waveform management
  *
- * Copyright 2010-2014, 2016-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -77,9 +77,9 @@ static A2_errors a2_wave_alloc(A2_wave *w, unsigned length)
 		ww->size[i] = size;
 		size = A2_WAVEPRE + size + A2_WAVEPOST;
 		if(w->flags & A2_CLEAR)
-			ww->data[i] = (int16_t *)calloc(size, sizeof(int16_t));
+			ww->data[i] = (float *)calloc(size, sizeof(float));
 		else
-			ww->data[i] = (int16_t *)malloc(size * sizeof(int16_t));
+			ww->data[i] = (float *)malloc(size * sizeof(float));
 		if(!ww->data[i])
 			return A2_OOMEMORY;
 	}
@@ -89,7 +89,7 @@ static A2_errors a2_wave_alloc(A2_wave *w, unsigned length)
 
 static void a2_fix_pad(A2_wave *w, unsigned miplevel)
 {
-	int16_t *d = w->d.wave.data[miplevel];
+	float *d = w->d.wave.data[miplevel];
 	unsigned size = w->d.wave.size[miplevel];
 	if((w->flags & A2_LOOPED) && size)
 	{
@@ -121,11 +121,11 @@ static void a2_render_mipmaps(A2_wave *w)
 	for(i = 1; i < A2_MIPLEVELS; ++i)
 	{
 		int s;
-		int16_t *sd = w->d.wave.data[i - 1] + A2_WAVEPRE;
-		int16_t *d = w->d.wave.data[i] + A2_WAVEPRE;
+		float *sd = w->d.wave.data[i - 1] + A2_WAVEPRE;
+		float *d = w->d.wave.data[i] + A2_WAVEPRE;
 		for(s = 0; s < w->d.wave.size[i]; ++s)
-			d[s] = (((int)sd[s * 2] << 1) + sd[s * 2 - 1] +
-					sd[s * 2 + 1]) >> 2;
+			d[s] = .5f * sd[s * 2] +
+					.25f * (sd[s * 2 - 1] + sd[s * 2 + 1]);
 		a2_fix_pad(w, i);
 	}
 #if 0
@@ -157,7 +157,7 @@ static A2_errors a2_do_write(A2_wave *w, unsigned offset, float gain,
 {
 	int s;
 	int size = w->d.wave.size[0];
-	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE + offset;
+	float *d = w->d.wave.data[0] + A2_WAVEPRE + offset;
 	if(offset + length > size)
 		return A2_INDEXRANGE;
 	if(gain == 1.0f)
@@ -165,23 +165,23 @@ static A2_errors a2_do_write(A2_wave *w, unsigned offset, float gain,
 		{
 		  case A2_I8:
 			for(s = 0; s < length; ++s)
-				d[s] = ((int8_t *)data)[s] << 8;
+				d[s] = ((int8_t *)data)[s] * A2_ONEDIV128;
 			break;
 		  case A2_I16:
 			for(s = 0; s < length; ++s)
-				d[s] = ((int16_t *)data)[s];
+				d[s] = ((int16_t *)data)[s] * A2_ONEDIV32K;
 			break;
 		  case A2_I24:
 			for(s = 0; s < length; ++s)
-				d[s] = ((int32_t *)data)[s] >> 8;
+				d[s] = ((int32_t *)data)[s] * A2_ONEDIV8M;
 			break;
 		  case A2_I32:
 			for(s = 0; s < length; ++s)
-				d[s] = ((int32_t *)data)[s] >> 16;
+				d[s] = ((int32_t *)data)[s] * A2_ONEDIV2G;
 			break;
 		  case A2_F32:
 			for(s = 0; s < length; ++s)
-				d[s] = ((float *)data)[s] * 32767.0f;
+				d[s] = ((float *)data)[s];
 			break;
 		  default:
 			return A2_BADFORMAT;
@@ -191,18 +191,18 @@ static A2_errors a2_do_write(A2_wave *w, unsigned offset, float gain,
 		switch(fmt)
 		{
 		  case A2_I8:
-			gain *= 256.0f;
+			gain *= A2_ONEDIV128;
 			break;
 		  case A2_I16:
+			gain *= A2_ONEDIV32K;
 			break;
 		  case A2_I24:
-			gain /= 256.0f;
+			gain *= A2_ONEDIV8M;
 			break;
 		  case A2_I32:
-			gain /= 65536.0f;
+			gain *= A2_ONEDIV2G;
 			break;
 		  case A2_F32:
-			gain *= 32767.0f;
 			break;
 		  default:
 			return A2_BADFORMAT;
@@ -312,12 +312,12 @@ static A2_errors a2_postprocess(A2_wave *w)
 	int i;
 	int size = w->d.wave.size[0];
 	int sh = size / 2;
-	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
+	float *d = w->d.wave.data[0] + A2_WAVEPRE;
 	if(w->flags & A2_REVMIX)
 	{
 		/* Generate the first half */
 		for(i = 0; i < sh; ++i)
-			d[i] = ((int)d[i] + (int)d[size - i]) >> 1;
+			d[i] = (d[i] + d[size - i]) * 0.5f;
 
 		/* The second half is the first half reversed! */
 		for(i = 0; i < sh; ++i)
@@ -325,7 +325,6 @@ static A2_errors a2_postprocess(A2_wave *w)
 	}
 	if(w->flags & A2_XFADE)
 	{
-		/*FIXME: Can we do this inplace without LSB rounding errors? */
 		double g = 0.0f;
 		double dg = 1.0f / sh;
 
@@ -626,6 +625,7 @@ A2_handle a2_NewWave(A2_interface *i, A2_wavetypes wt, unsigned period,
 }
 
 
+/* TODO: Do this in F32, since that's now the native wave format! */
 A2_errors a2_InitWaves(A2_interface *i, A2_handle bank)
 {
 	int j, s, h;
@@ -642,9 +642,9 @@ A2_errors a2_InitWaves(A2_interface *i, A2_handle bank)
 		char name[16];
 		int s1 = (A2_WAVEPERIOD * j + 50) / 100;
 		for(s = 0; s < s1; ++s)
-			buf[s] = 32767;
+			buf[s] = 1.0f;
 		for(++s; s < A2_WAVEPERIOD; ++s)
-			buf[s] = -32767;
+			buf[s] = -1.0f;
 		snprintf(name, sizeof(name), "pulse%d", j);
 		h = a2_upload_export(i, bank, name, A2_WMIPWAVE, A2_WAVEPERIOD,
 				A2_LOOPED, A2_I16, buf, sizeof(buf));

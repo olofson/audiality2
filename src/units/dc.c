@@ -1,7 +1,7 @@
 /*
  * dc.c - Audiality 2 ramping DC generator unit
  *
- * Copyright 2016 David Olofson <david@olofson.net>
+ * Copyright 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -60,7 +60,7 @@ static inline void dc_process(A2_unit *u, unsigned offset, unsigned frames,
 	A2_dc *dc = dc_cast(u);
 	A2_ramper *v = &dc->value;
 	unsigned s, o, end = offset + frames;
-	int32_t **out = u->outputs;
+	float **out = u->outputs;
 	switch(dc->mode)
 	{
 	  case A2DCRM_STEP:
@@ -93,9 +93,8 @@ static inline void dc_process(A2_unit *u, unsigned offset, unsigned frames,
 		if((v->timer < 256) && (s < end))
 		{
 			/* TODO: minBLEP or similar */
-			int tv = ((v->value >> 4) * v->timer +
-					(v->target >> 4) * (256 - v->timer)
-					) >> 4;
+			float x = v->timer * A2_ONEDIV256;
+			float tv = v->value * x + v->target * (1.0f - x);
 			for(o = 0; o < outputs; ++o)
 				if(add)
 					out[o][s] += tv;
@@ -167,15 +166,15 @@ static A2_errors dc_Initialize(A2_unit *u, A2_vmstate *vms,
 		void *statedata, unsigned flags)
 {
 	A2_dc *dc = dc_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
 	/* Internal state initialization */
 	a2_InitRamper(&dc->value, 0);
 	dc->mode = A2DCRM_LINEAR;
 
 	/* Initialize VM registers */
-	ur[A2DCR_VALUE] = 0;
-	ur[A2DCR_MODE] = A2DCRM_LINEAR << 16;
+	ur[A2DCR_VALUE] = 0.0f;
+	ur[A2DCR_MODE] = A2DCRM_LINEAR;
 
 	/* Install Process callback */
 	if(flags & A2_PROCADD)
@@ -195,14 +194,14 @@ static A2_errors dc_Initialize(A2_unit *u, A2_vmstate *vms,
 }
 
 
-static void dc_Value(A2_unit *u, int v, unsigned start, unsigned dur)
+static void dc_Value(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_dc *dc = dc_cast(u);
 	switch(dc->mode)
 	{
 	  case A2DCRM_STEP:
 		/* TODO: Handle value/target switch within current frame */
-		dc->value.target = v << 8;
+		dc->value.target = v;
 		dc->value.timer = (dur >> 1) - start;
 		if(dc->value.timer <= 0)
 		{
@@ -223,10 +222,10 @@ static void dc_Value(A2_unit *u, int v, unsigned start, unsigned dur)
 }
 
 
-static void dc_Mode(A2_unit *u, int v, unsigned start, unsigned dur)
+static void dc_Mode(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_dc *dc = dc_cast(u);
-	dc->mode = v >> 16;
+	dc->mode = (A2DC_rampmodes)v;
 	switch(dc->mode)
 	{
 	  default:
@@ -255,11 +254,11 @@ static const A2_crdesc regs[] =
 
 static const A2_constdesc constants[] =
 {
-	{ "STEP",	A2DCRM_STEP << 16	},
-	{ "LINEAR",	A2DCRM_LINEAR << 16	},
+	{ "STEP",	A2DCRM_STEP		},
+	{ "LINEAR",	A2DCRM_LINEAR		},
 #if 0
-	{ "QUADRATIC",	A2DCRM_QUADRATIC << 16	},
-	{ "CUBIC",	A2DCRM_CUBIC << 16	},
+	{ "QUADRATIC",	A2DCRM_QUADRATIC	},
+	{ "CUBIC",	A2DCRM_CUBIC		},
 #endif
 	{ NULL,	0				}
 };

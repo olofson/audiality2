@@ -1,7 +1,7 @@
 /*
  * audiality2.h - Audiality 2 Realtime Scriptable Audio Engine
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -404,7 +404,7 @@ int a2_Run(A2_interface *i, unsigned frames);
 int a2_Render(A2_interface *i,
 		A2_handle stream,
 		unsigned samplerate, unsigned length, A2_property *props,
-		A2_handle program, unsigned argc, int *argv);
+		A2_handle program, unsigned argc, float *argv);
 
 
 /*---------------------------------------------------------
@@ -478,7 +478,7 @@ void a2_PumpMessages(A2_interface *i);
  * This will be called with (NULL, 0, 0, <userdata>) as notification when the
  * callback is removed/replaced, or the 'x*' unit is destroyed.
  */
-typedef A2_errors (*A2_xinsert_cb)(int32_t **buffers, unsigned nbuffers,
+typedef A2_errors (*A2_xinsert_cb)(float **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata);
 
 /*

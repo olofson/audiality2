@@ -1,7 +1,7 @@
 /*
  * a2_waves.h - Audiality 2 waveform API and unit programming interface
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -87,7 +87,7 @@ typedef enum A2_wavetypes
 /* A2_wave data for plain and mipmapped wavetables */
 typedef struct A2_wave_wave
 {
-	int16_t		*data[A2_MIPLEVELS];	/* One buffer per mip level */
+	float		*data[A2_MIPLEVELS];	/* One buffer per mip level */
 	unsigned	size[A2_MIPLEVELS];	/* Sizes EXCLUDING pre/post! */
 } A2_wave_wave;
 
@@ -204,7 +204,7 @@ A2_wave *a2_GetWave(A2_interface *i, A2_handle handle);
 A2_handle a2_RenderWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length, A2_property *props,
-		A2_handle program, unsigned argc, int *argv);
+		A2_handle program, unsigned argc, float *argv);
 
 #ifdef __cplusplus
 };

@@ -1,7 +1,7 @@
 /*
  * dcblock.c - Audiality 2 12 dB/oct DC blocker filter unit
  *
- * Copyright 2014-2016 David Olofson <david@olofson.net>
+ * Copyright 2014-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -36,15 +36,15 @@ typedef struct A2_dcblock
 
 	/* Needed for pitch calculations */
 	int		samplerate;
-	int		*transpose;
+	float		*transpose;
 
 	/* Parameters */
-	int		cutoff;	/* Filter f0 (linear pitch) */
+	float		cutoff;	/* Filter f0 (linear pitch) */
 
 	/* State */
-	int		f1;	/* Current pitch coefficient */
-	int		d1[A2DCB_MAXCHANNELS];
-	int		d2[A2DCB_MAXCHANNELS];
+	float		f1;	/* Current pitch coefficient */
+	float		d1[A2DCB_MAXCHANNELS];
+	float		d2[A2DCB_MAXCHANNELS];
 } A2_dcblock;
 
 
@@ -53,13 +53,13 @@ static inline A2_dcblock *dcb_cast(A2_unit *u)
 	return (A2_dcblock *)u;
 }
 
-static inline int dcb_pitch2coeff(A2_dcblock *dcb)
+static inline float dcb_pitch2coeff(A2_dcblock *dcb)
 {
-	float f = a2_P2I(dcb->cutoff) * (A2_MIDDLEC / 16777216.0f);
+	float f = a2_P2If(dcb->cutoff) * A2_MIDDLEC;
 	/* This filter explodes above Nyqvist / 2! (Needs oversampling...) */
-	if(f > dcb->samplerate >> 2)
-		return 362 << 16;
-	return (int)(512.0f * 65536.0f * sin(M_PI * f / dcb->samplerate));
+	if(f > dcb->samplerate * 0.25f)
+		f = dcb->samplerate * 0.25f;
+	return 2.0f * sin(M_PI * f / dcb->samplerate);
 }
 
 static inline void dcb_process(A2_unit *u, unsigned offset, unsigned frames,
@@ -67,8 +67,8 @@ static inline void dcb_process(A2_unit *u, unsigned offset, unsigned frames,
 {
 	A2_dcblock *dcb = dcb_cast(u);
 	unsigned s, c, end = offset + frames;
-	int32_t *in[A2DCB_MAXCHANNELS], *out[A2DCB_MAXCHANNELS];
-	int f = dcb->f1 >> 12;
+	float *in[A2DCB_MAXCHANNELS], *out[A2DCB_MAXCHANNELS];
+	float f = dcb->f1;
 	for(c = 0; c < channels; ++c)
 	{
 		in[c] = u->inputs[c];
@@ -78,17 +78,16 @@ static inline void dcb_process(A2_unit *u, unsigned offset, unsigned frames,
 	{
 		for(c = 0; c < channels; ++c)
 		{
-			int d1 = dcb->d1[c] >> 4;
-			int l = dcb->d2[c] + (f * d1 >> 8);
-			int h = (in[c][s] >> 5) - l - (d1 << 4);
-			int b = (f * (h >> 4) >> 8) + dcb->d1[c];
-			int fout = h << 5;
+			float d1 = dcb->d1[c];
+			float low = dcb->d2[c] + f * d1;
+			float high = in[c][s] * 0.5f - low - d1;
+			float band = f * high + dcb->d1[c];
 			if(add)
-				out[c][s] += fout;
+				out[c][s] += high;
 			else
-				out[c][s] = fout;
-			dcb->d1[c] = b;
-			dcb->d2[c] = l;
+				out[c][s] = high;
+			dcb->d1[c] = band;
+			dcb->d2[c] = low;
 		}
 	}
 }
@@ -113,7 +112,7 @@ static void dcb_Process22(A2_unit *u, unsigned offset, unsigned frames)
 	dcb_process(u, offset, frames, 0, 2);
 }
 
-static void dcb_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
+static void dcb_CutOff(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_dcblock *dcb = dcb_cast(u);
 	dcb->cutoff = v + *dcb->transpose;
@@ -125,17 +124,17 @@ static A2_errors dcb_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 {
 	A2_config *cfg = (A2_config *)statedata;
 	A2_dcblock *dcb = dcb_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 	int c;
 
 	dcb->samplerate = cfg->samplerate;
 	dcb->transpose = vms->r + R_TRANSPOSE;
 
-	ur[A2DCBR_CUTOFF] = -5 << 16;	/* 8.175813 Hz */
+	ur[A2DCBR_CUTOFF] = -5.0f;	/* 8.175813 Hz */
 	dcb_CutOff(u, ur[A2DCBR_CUTOFF], 0, 0);
 
 	for(c = 0; c < u->ninputs; ++c)
-		dcb->d1[c] = dcb->d2[c] = 0;
+		dcb->d1[c] = dcb->d2[c] = 0.0f;
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
 		{

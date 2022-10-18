@@ -1,7 +1,7 @@
 /*
  * xinsertapi.c - Audiality 2 xinsert callback and buffered stream APIs
  *
- * Copyright 2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -243,7 +243,7 @@ static A2_handle a2_open_xic_stream(A2_interface *i, A2_handle voice,
 }
 
 
-static A2_errors a2_sinkstream_process(int **buffers, unsigned nbuffers,
+static A2_errors a2_sinkstream_process(float **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;
@@ -284,7 +284,7 @@ A2_handle a2_OpenSink(A2_interface *i, A2_handle voice,
 }
 
 
-static A2_errors a2_sourcestream_process(int **buffers, unsigned nbuffers,
+static A2_errors a2_sourcestream_process(float **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int res;

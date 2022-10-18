@@ -3,7 +3,7 @@
  *
  * This code is in the public domain. Do what you like with it. NO WARRANTY!
  *
- * 2011-2016 David Olofson
+ * 2011-2016, 2022 David Olofson
  */
 
 #include <stdlib.h>
@@ -85,18 +85,20 @@ static const char *demofiles[] = {
 -------------------------------------------------------------------*/
 
 /* Grab data for the oscilloscopes */
-static A2_errors grab_process(int **buffers, unsigned nbuffers, unsigned frames,
+static A2_errors grab_process(float **buffers, unsigned nbuffers, unsigned frames,
 		void *userdata)
 {
 	int i;
 	for(i = 0; i < frames; ++i)
-		osc_left[(oscpos + i) % dbuffer] = buffers[0][i];
+		osc_left[(oscpos + i) % dbuffer] = buffers[0][i] * 8388608.0f;
 	if(nbuffers >= 2)
 		for(i = 0; i < frames; ++i)
-			osc_right[(oscpos + i) % dbuffer] = buffers[1][i];
+			osc_right[(oscpos + i) % dbuffer] =
+					buffers[1][i] * 8388608.0f;
 	else
 		for(i = 0; i < frames; ++i)
-			osc_right[(oscpos + i) % dbuffer] = buffers[0][i];
+			osc_right[(oscpos + i) % dbuffer] =
+					buffers[0][i] * 8388608.0f;
 	oscpos = (oscpos + frames) % dbuffer;
 	plotpos = oscpos;
 	return A2_OK;

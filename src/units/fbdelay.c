@@ -1,7 +1,7 @@
 /*
  * fbdelay.c - Audiality 2 feedback delay unit
  *
- * Copyright 2013-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2013-2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -44,17 +44,17 @@ typedef struct A2_fbdelay
 	int		samplerate;
 
 	/* Parameters */
-	int		fbdelay;	/* Timings (sample frames) */
-	int		ldelay;
-	int		rdelay;
-	int		drygain;	/* Gains (16:16 fixp) */
-	int		fbgain;
-	int		lgain;
-	int		rgain;
+	float		fbdelay;	/* Timings (sample frames) */
+	float		ldelay;
+	float		rdelay;
+	float		drygain;	/* Gains */
+	float		fbgain;
+	float		lgain;
+	float		rgain;
 
 	/* Delay buffers */
-	int32_t		*lbuf;
-	int32_t		*rbuf;
+	float		*lbuf;
+	float		*rbuf;
 	int		bufpos;
 } A2_fbdelay;
 
@@ -65,40 +65,40 @@ static inline A2_fbdelay *fbdelay_cast(A2_unit *u)
 }
 
 
-#define	WI(x)	((fbd->bufpos - (x)) & (A2FBD_BUFSIZE - 1))
+#define	WI(x)	((fbd->bufpos - (int)(x)) & (A2FBD_BUFSIZE - 1))
 static inline void fbdelay_process(A2_unit *u, unsigned offset,
 		unsigned frames, int add, int stereoin, int stereoout)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t	*b0 = fbd->lbuf;
-	int32_t	*b1 = fbd->rbuf;
-	int32_t *in0 = u->inputs[0];
-	int32_t *in1 = u->inputs[stereoin ? 1 : 0];
-	int32_t *out0 = u->outputs[0];
-	int32_t *out1;
+	float *b0 = fbd->lbuf;
+	float *b1 = fbd->rbuf;
+	float *in0 = u->inputs[0];
+	float *in1 = u->inputs[stereoin ? 1 : 0];
+	float *out0 = u->outputs[0];
+	float *out1;
 	if(stereoout)
 		out1 = u->outputs[1];
 	for(s = offset; s < end; ++s)
 	{
-		int i0 = in0[s];
-		int i1 = in1[s];
+		float i0 = in0[s];
+		float i1 = in1[s];
 
 		/* Feedback delay taps (NOTE: Reverse stereo!) */
-		int o0 = (int64_t)b1[WI(fbd->fbdelay)] * fbd->fbgain >> 16;
-		int o1 = (int64_t)b0[WI(fbd->fbdelay)] * fbd->fbgain >> 16;
+		float o0 = b1[WI(fbd->fbdelay)] * fbd->fbgain;
+		float o1 = b0[WI(fbd->fbdelay)] * fbd->fbgain;
 
 		/* Inject input + feedback into the buffers */
 		b0[WI(0)] = i0 + o0;
 		b1[WI(0)] = i1 + o1;
 
 		/* Delay taps */
-		o0 += (int64_t)b0[WI(fbd->ldelay)] * fbd->lgain >> 16;
-		o1 += (int64_t)b1[WI(fbd->rdelay)] * fbd->rgain >> 16;
+		o0 += b0[WI(fbd->ldelay)] * fbd->lgain;
+		o1 += b1[WI(fbd->rdelay)] * fbd->rgain;
 
 		/* Dry bypass */
-		o0 += (int64_t)i0 * fbd->drygain >> 16;
-		o1 += (int64_t)i1 * fbd->drygain >> 16;
+		o0 += i0 * fbd->drygain;
+		o1 += i1 * fbd->drygain;
 
 		/* Output */
 		if(add)
@@ -109,7 +109,7 @@ static inline void fbdelay_process(A2_unit *u, unsigned offset,
 				out1[s] += o1;
 			}
 			else
-				out0[s] += (o0 + o1) >> 1;
+				out0[s] += (o0 + o1) * 0.5f;
 		}
 		else
 		{
@@ -119,7 +119,7 @@ static inline void fbdelay_process(A2_unit *u, unsigned offset,
 				out1[s] = o1;
 			}
 			else
-				out0[s] = (o0 + o1) >> 1;
+				out0[s] = (o0 + o1) * 0.5f;
 		}
 		++fbd->bufpos;
 	}
@@ -172,13 +172,13 @@ static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms,
 {
 	A2_config *cfg = (A2_config *)statedata;
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
 	fbd->samplerate = cfg->samplerate;
 
 /*FIXME: Select buffer size based on sample rate and maximum delay allowed! */
-	fbd->lbuf = calloc(A2FBD_BUFSIZE, sizeof(int32_t));
-	fbd->rbuf = calloc(A2FBD_BUFSIZE, sizeof(int32_t));
+	fbd->lbuf = calloc(A2FBD_BUFSIZE, sizeof(float));
+	fbd->rbuf = calloc(A2FBD_BUFSIZE, sizeof(float));
 	if(!fbd->lbuf || !fbd->rbuf)
 	{
 /*FIXME: Use realtime safe memory manager! */
@@ -188,16 +188,16 @@ static A2_errors fbdelay_Initialize(A2_unit *u, A2_vmstate *vms,
 	}
 	fbd->bufpos = 0;
 
-	ur[A2FBDR_FBDELAY] = 400 << 16;
-	ur[A2FBDR_LDELAY] = 280 << 16;
-	ur[A2FBDR_RDELAY] = 320 << 16;
-	fbd->fbdelay = (int64_t)ur[A2FBDR_FBDELAY] * fbd->samplerate / 65536000;
-	fbd->ldelay = (int64_t)ur[A2FBDR_LDELAY] * fbd->samplerate / 65536000;
-	fbd->rdelay = (int64_t)ur[A2FBDR_RDELAY] * fbd->samplerate / 65536000;
-	fbd->drygain = ur[A2FBDR_DRYGAIN] = 65536;
-	fbd->fbgain = ur[A2FBDR_FBGAIN] = 16384;
-	fbd->lgain = ur[A2FBDR_LGAIN] = 32768;
-	fbd->rgain = ur[A2FBDR_RGAIN] = 32768;
+	ur[A2FBDR_FBDELAY] = 400.0f;
+	ur[A2FBDR_LDELAY] = 280.0f;
+	ur[A2FBDR_RDELAY] = 320.0f;
+	fbd->fbdelay = ur[A2FBDR_FBDELAY] * fbd->samplerate * 0.001f;
+	fbd->ldelay = ur[A2FBDR_LDELAY] * fbd->samplerate * 0.001f;
+	fbd->rdelay = ur[A2FBDR_RDELAY] * fbd->samplerate * 0.001f;
+	fbd->drygain = ur[A2FBDR_DRYGAIN] = 1.0f;
+	fbd->fbgain = ur[A2FBDR_FBGAIN] = 0.25f;
+	fbd->lgain = ur[A2FBDR_LGAIN] = 0.5f;
+	fbd->rgain = ur[A2FBDR_RGAIN] = 0.5f;
 
 	if(flags & A2_PROCADD)
 		switch(((u->ninputs - 1) << 1) + (u->noutputs - 1))
@@ -228,40 +228,40 @@ static void fbdelay_Deinitialize(A2_unit *u)
 }
 
 
-static void fbdelay_FBDelay(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_FBDelay(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->fbdelay = (int64_t)v * fbd->samplerate / 65536000;
+	fbd->fbdelay = v * fbd->samplerate * 0.001f;
 }
 
-static void fbdelay_LDelay(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_LDelay(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->ldelay = (int64_t)v * fbd->samplerate / 65536000;
+	fbd->ldelay = v * fbd->samplerate  * 0.001f;
 }
 
-static void fbdelay_RDelay(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_RDelay(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fbdelay *fbd = fbdelay_cast(u);
-	fbd->rdelay = (int64_t)v * fbd->samplerate / 65536000;
+	fbd->rdelay = v * fbd->samplerate  * 0.001f;
 }
 
-static void fbdelay_DryGain(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_DryGain(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	fbdelay_cast(u)->drygain = v;
 }
 
-static void fbdelay_FBGain(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_FBGain(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	fbdelay_cast(u)->fbgain = v;
 }
 
-static void fbdelay_LGain(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_LGain(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	fbdelay_cast(u)->lgain = v;
 }
 
-static void fbdelay_RGain(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fbdelay_RGain(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	fbdelay_cast(u)->rgain = v;
 }

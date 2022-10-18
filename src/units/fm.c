@@ -1,7 +1,7 @@
 /*
  * fm.c - Audiality 2 1/2/3/4-operator FM oscillator units
  *
- * Copyright 2014-2016 David Olofson <david@olofson.net>
+ * Copyright 2014-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -83,10 +83,10 @@ typedef struct A2_fmosc
 	A2_ramper	a;		/* Amplitude/depth */
 	A2_ramper	fb;		/* Feedback modulation depth */
 	A2_ramper	p;		/* Linear pitch ramper */
-	int		last_pitch;	/* Previous pitch with detune */
+	float		last_pitch;	/* Previous pitch with detune */
 	unsigned	phase;		/* Phase (24:8 fixp, 1.0/sample) */
 	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/period) */
-	int		last;		/* Previous raw sine value */
+	float		last;		/* Previous raw sine value */
 } A2_fmosc;
 
 typedef struct A2_fm
@@ -94,8 +94,8 @@ typedef struct A2_fm
 	A2_unit		header;
 
 	/* Needed for op0 pitch calculations */
-	int		basepitch;	/* Pitch of middle C (1.0/octave) */
-	int		*transpose;
+	float		basepitch;	/* Pitch of middle C (1.0/octave) */
+	float		*transpose;
 
 	/* Oscillators/operators */
 	unsigned	nops;
@@ -105,12 +105,12 @@ typedef struct A2_fm
 
 /* Process-wide sin() table */
 static int sinerc = 0;
-static int16_t *sine = NULL;
+static float *sine = NULL;
 
 
-static inline int32_t fm_osc(A2_fmosc *o, int mod)
+static inline float fm_osc(A2_fmosc *o, int mod)
 {
-	int fb = (int64_t)(o->last) * o->fb.value >> 17;
+	int fb = o->last * 16384.0f * o->fb.value;
 	unsigned ph = (o->phase + mod + fb) >> (24 - 8 - A2FM_WAVEPERIOD_BITS);
 #ifdef A2_LOFI
 	o->last = sine[(ph >> 8) & A2FM_WAVEPERIOD_MASK];
@@ -118,23 +118,23 @@ static inline int32_t fm_osc(A2_fmosc *o, int mod)
 	/* We don't go beyond linear here, so "standard" == A2_HIFI. */
 	o->last = a2_Lerp(sine, ph & ((A2FM_WAVEPERIOD << 8) - 1));
 #endif
-	return (int64_t)(o->last) * o->a.value >> 16;
+	return o->last * o->a.value;
 }
 
 
-static inline void fm_run_pitch(A2_fmosc *o, unsigned frames, int detune)
+static inline void fm_run_pitch(A2_fmosc *o, unsigned frames, float detune)
 {
-	int newpitch;
+	float newpitch;
 	a2_PrepareRamper(&o->p, frames);
 
 	/* Use halfway value while still ramping */
 	a2_RunRamper(&o->p, frames >> 1);
 
 	/* Calculate new phase delta */
-	newpitch = (o->p.value + detune) >> 8;
+	newpitch = o->p.value + detune;
 	if(newpitch != o->last_pitch)
 	{
-		o->dphase = a2_P2I(newpitch);
+		o->dphase = a2_P2I(newpitch * 65536.0f);
 		o->last_pitch = newpitch;
 	}
 }
@@ -184,7 +184,7 @@ static inline int fm_sample_rm(A2_fm *fm, int osbits, int operators)
 			fm->op[i].phase += fm->op[i].dphase >> osbits;
 			fm->op[i + 2].phase += fm->op[i + 2].dphase >> osbits;
 		}
-	return (int64_t)v[0] * v[1] >> 23;		/* RM */
+	return v[0] * v[1];		/* RM */
 #if 0
 	return ((int64_t)v[0] * v[1] >> 24) - (v[0] >> 1);	/* RM/AM mix */
 	return ((int64_t)v[0] * v[1] >> 24) - v[0];	/* AM */
@@ -198,9 +198,10 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 	int i;
 	unsigned s;
 	unsigned oversample = 1 << osbits;
+	float os_scale = 1.0f / oversample;
 	unsigned end = offset + frames;
-	int32_t *out = u->outputs[0];
-	int detune = 0;
+	float *out = u->outputs[0];
+	float detune = 0.0f;
 	for(i = 0; i < operators; ++i)
 	{
 		a2_PrepareRamper(&fm->op[i].a, frames);
@@ -211,7 +212,7 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 	for(s = offset; s < end; ++s)
 	{
 		int os;
-		int vsum = 0;
+		float vsum = 0;
 		for(os = 0; os < oversample; ++os)
 			if(parallel == 2)
 				vsum += fm_sample_rm(fm, osbits, operators);
@@ -226,9 +227,9 @@ static inline void fm_process(A2_unit *u, unsigned offset, unsigned frames,
 			fm->op[i].phase += fm->op[i].dphase & (oversample - 1);
 		}
 		if(add)
-			out[s] += vsum >> osbits;
+			out[s] += vsum * os_scale;
 		else
-			out[s] = vsum >> osbits;
+			out[s] = vsum * os_scale;
 	}
 }
 
@@ -356,23 +357,23 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 
 	for(i = 0; i < fm->nops; ++i)
 	{
-		a2_InitRamper(&fm->op[i].a, 0);
-		a2_InitRamper(&fm->op[i].fb, 0);
+		a2_InitRamper(&fm->op[i].a, 0.0f);
+		a2_InitRamper(&fm->op[i].fb, 0.0f);
 		a2_InitRamper(&fm->op[i].p, *fm->transpose + fm->basepitch);
-		fm->op[i].last_pitch = 0;
-		fm->op[i].last = 0;
+		fm->op[i].last_pitch = 0.0f;
+		fm->op[i].last = 0.0f;
 	}
 
-	fm->op[0].dphase = a2_P2I(fm->op[0].p.value >> 8);
+	fm->op[0].dphase = a2_P2I(fm->op[0].p.value * 65536.0f);
 	for(i = 1; i < fm->nops; ++i)
 		fm->op[i].dphase = fm->op[0].dphase;
 
 	fm_set_phase(fm, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
-	u->registers[A2FMR_PHASE] = 0;
+	u->registers[A2FMR_PHASE] = 0.0f;
 	memset(u->registers + A2FMR_PITCH0, 0,
-			sizeof(int) * A2FMR_OP_SIZE * fm->nops);
+			sizeof(float) * A2FMR_OP_SIZE * fm->nops);
 
 	/* Install Process callback */
 	if(flags & A2_PROCADD)
@@ -408,76 +409,76 @@ static A2_errors fm_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 }
 
 
-static void fm_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Phase(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	fm_set_phase(fm_cast(u), v, start);
 }
 
 
-static void fm_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Pitch(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
 	a2_SetRamper(&fm->op[0].p, v + *fm->transpose + fm->basepitch,
 			start, dur);
 }
 
-static void fm_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Amplitude(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[0].a, v, start, dur);
 }
 
-static void fm_Feedback(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Feedback(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[0].fb, v, start, dur);
 }
 
 
-static void fm_Pitch1(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Pitch1(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
 	a2_SetRamper(&fm->op[1].p, v, start, dur);
 }
 
-static void fm_Amplitude1(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Amplitude1(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[1].a, v, start, dur);
 }
 
-static void fm_Feedback1(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Feedback1(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[1].fb, v, start, dur);
 }
 
 
-static void fm_Pitch2(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Pitch2(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
 	a2_SetRamper(&fm->op[2].p, v, start, dur);
 }
 
-static void fm_Amplitude2(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Amplitude2(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[2].a, v, start, dur);
 }
 
-static void fm_Feedback2(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Feedback2(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[2].fb, v, start, dur);
 }
 
 
-static void fm_Pitch3(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Pitch3(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_fm *fm = fm_cast(u);
 	a2_SetRamper(&fm->op[3].p, v, start, dur);
 }
 
-static void fm_Amplitude3(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Amplitude3(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[3].a, v, start, dur);
 }
 
-static void fm_Feedback3(A2_unit *u, int v, unsigned start, unsigned dur)
+static void fm_Feedback3(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&fm_cast(u)->op[3].fb, v, start, dur);
 }
@@ -490,11 +491,10 @@ static A2_errors fm_OpenState(A2_config *cfg, void **statedata)
 	{
 		int s;
 		int len = A2FM_WAVEPERIOD + A2FM_WAVEPAD;
-		if(!(sine = malloc(sizeof(int16_t) * len)))
+		if(!(sine = malloc(sizeof(float) * len)))
 			return A2_OOMEMORY;
 		for(s = 0; s < len; ++s)
-			sine[s] = sin(s * 2.0f * M_PI / A2FM_WAVEPERIOD) *
-					32767.0f;
+			sine[s] = sin(s * 2.0f * M_PI / A2FM_WAVEPERIOD);
 	}
 	++sinerc;
 	return A2_OK;

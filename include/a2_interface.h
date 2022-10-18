@@ -1,7 +1,7 @@
 /*
  * a2_interface.h - Audiality 2 Interface
  *
- * Copyright 2016 David Olofson <david@olofson.net>
+ * Copyright 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -53,13 +53,13 @@ struct A2_interface
 	/* Playing and controlling */
 	A2_handle (*NewGroup)(A2_interface *i, A2_handle parent);
 	A2_handle (*Starta)(A2_interface *i, A2_handle parent,
-			A2_handle program, unsigned argc, int *argv);
+			A2_handle program, unsigned argc, float *argv);
 	A2_errors (*Playa)(A2_interface *i, A2_handle parent,
-			A2_handle program, unsigned argc, int *argv);
+			A2_handle program, unsigned argc, float *argv);
 	A2_errors (*Senda)(A2_interface *i, A2_handle voice, unsigned ep,
-			unsigned argc, int *argv);
+			unsigned argc, float *argv);
 	A2_errors (*SendSuba)(A2_interface *i, A2_handle voice,
-			unsigned ep, unsigned argc, int *argv);
+			unsigned ep, unsigned argc, float *argv);
 	A2_errors (*Kill)(A2_interface *i, A2_handle voice);
 	A2_errors (*KillSub)(A2_interface *i, A2_handle voice);
 
@@ -194,18 +194,15 @@ static inline A2_handle a2_NewGroup(A2_interface *i, A2_handle parent)
  * Returns a handle, or a negative error code.
  */
 static inline A2_handle a2_Starta(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	return i->Starta(i, parent, program, argc, argv);
 }
 
 #define a2_Start(i, p, prg, args...)					\
 	({								\
-		float fa[] = { args };					\
-		int j, ia[sizeof(fa) / sizeof(float)];			\
-		for(j = 0; j < (int)(sizeof(ia) / sizeof(int)); ++j)	\
-			ia[j] = fa[j] * 65536.0f;			\
-		a2_Starta(i, p, prg, sizeof(ia) / sizeof(int), ia);	\
+		float _a[] = { args };					\
+		a2_Starta(i, p, prg, sizeof(_a) / sizeof(float), _a);	\
 	})
 
 /*
@@ -217,50 +214,41 @@ static inline A2_handle a2_Starta(A2_interface *i, A2_handle parent,
  *	recieve messages sent to all voices in the group!
  */
 static inline A2_errors a2_Playa(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	return i->Playa(i, parent, program, argc, argv);
 }
 
 #define a2_Play(i, p, prg, args...)					\
 	({								\
-		float fa[] = { args };					\
-		int j, ia[sizeof(fa) / sizeof(float)];			\
-		for(j = 0; j < (int)(sizeof(ia) / sizeof(int)); ++j)	\
-			ia[j] = fa[j] * 65536.0f;			\
-		a2_Playa(i, p, prg, sizeof(ia) / sizeof(int), ia);	\
+		float _a[] = { args };					\
+		a2_Playa(i, p, prg, sizeof(_a) / sizeof(float), _a);	\
 	})
 
 /* Send a message to entry point 'ep' of the program running on 'voice'. */
 static inline A2_errors a2_Senda(A2_interface *i, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv)
+		unsigned argc, float *argv)
 {
 	return i->Senda(i, voice, ep, argc, argv);
 }
 
 #define a2_Send(i, v, ep, args...)					\
 	({								\
-		float fa[] = { args };					\
-		int j, ia[sizeof(fa) / sizeof(float)];			\
-		for(j = 0; j < (int)(sizeof(ia) / sizeof(int)); ++j)	\
-			ia[j] = fa[j] * 65536.0f;			\
-		a2_Senda(i, v, ep, sizeof(ia) / sizeof(int), ia);	\
+		float _a[] = { args };					\
+		a2_Senda(i, v, ep, sizeof(_a) / sizeof(float), _a);	\
 	})
 
 /* Send a message to entry point 'ep' of all subvoices of 'voice'. */
 static inline A2_errors a2_SendSuba(A2_interface *i, A2_handle voice,
-		unsigned ep, unsigned argc, int *argv)
+		unsigned ep, unsigned argc, float *argv)
 {
 	return i->SendSuba(i, voice, ep, argc, argv);
 }
 
 #define a2_SendSub(i, v, ep, args...)					\
 	({								\
-		float fa[] = { args };					\
-		int j, ia[sizeof(fa) / sizeof(float)];			\
-		for(j = 0; j < (int)(sizeof(ia) / sizeof(int)); ++j)	\
-			ia[j] = fa[j] * 65536.0f;			\
-		a2_SendSuba(i, v, ep, sizeof(ia) / sizeof(int), ia);	\
+		float _a[] = { args };					\
+		a2_SendSuba(i, v, ep, sizeof(_a) / sizeof(float), _a);	\
 	})
 
 /*

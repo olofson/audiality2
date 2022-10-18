@@ -1,7 +1,7 @@
 /*
  * render.c - Audiality 2 off-line and asynchronous rendering
  *
- * Copyright 2013-2016 David Olofson <david@olofson.net>
+ * Copyright 2013-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -34,7 +34,7 @@
 int a2_Render(A2_interface *i,
 		A2_handle stream,
 		unsigned samplerate, unsigned length, A2_property *props,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	int res;
 	A2_handle h;
@@ -43,10 +43,11 @@ int a2_Render(A2_interface *i,
 	A2_interface *ssi;
 	int frames = 0;
 	unsigned lastpeak = 0; /* Frames since last peak > abs(silencelevel) */
-	int offlinebuffer, silencelevel, silencewindow, silencegrace;
+	int offlinebuffer, silencewindow, silencegrace;
+	float silencelevel;
 
 	a2_GetStateProperty(i, A2_POFFLINEBUFFER, &offlinebuffer);
-	a2_GetStateProperty(i, A2_PSILENCELEVEL, &silencelevel);
+	a2_GetStatePropertyf(i, A2_PSILENCELEVEL, &silencelevel);
 	a2_GetStateProperty(i, A2_PSILENCEWINDOW, &silencewindow);
 	a2_GetStateProperty(i, A2_PSILENCEGRACE, &silencegrace);
 
@@ -72,7 +73,7 @@ int a2_Render(A2_interface *i,
 	while(1)
 	{
 		int j;
-		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
+		float *buf = ((A2_audiodriver *)drv)->buffers[0];
 		unsigned frag = cfg->buffer;
 		if(length && (frag > length - frames))
 			frag = length - frames;
@@ -91,8 +92,8 @@ int a2_Render(A2_interface *i,
 						(-buf[j] > silencelevel))
 					lastpeak = frag - j;
 		}
-		if((res = a2_Write(i, stream, A2_I24, buf,
-				frag * sizeof(int32_t))))
+		if((res = a2_Write(i, stream, A2_F32, buf,
+				frag * sizeof(float))))
 		{
 			a2_Close(ssi);
 			return -res;
@@ -144,7 +145,7 @@ int a2_Render(A2_interface *i,
 A2_handle a2_RenderWave(A2_interface *i,
 		A2_wavetypes wt, unsigned period, int flags,
 		unsigned samplerate, unsigned length, A2_property *props,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	int res;
 	A2_handle wh, sh;

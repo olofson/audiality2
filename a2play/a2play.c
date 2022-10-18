@@ -1,7 +1,7 @@
 /*
  * a2play.c - Audiality 2 command line player
  *
- * Copyright 2013-2017 David Olofson <david@olofson.net>
+ * Copyright 2013-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -62,7 +62,7 @@ static A2_handle module = -1;	/* Handle of last loaded module */
 static double stoptime = 0.0f;	/* (Need final sample rate for stopframes!) */
 static int stopframes = 0;
 static int playedframes = 0;
-static int silencelevel = -1;
+static float silencelevel = -1.0f;
 static unsigned silencewindow;
 
 static int do_exit = 0;
@@ -76,7 +76,7 @@ static unsigned lastpeak = 0;
 -------------------------------------------------------------------*/
 
 /* Callback for automatic stop logic */
-static A2_errors sink_process(int **buffers, unsigned nbuffers,
+static A2_errors sink_process(float **buffers, unsigned nbuffers,
 		unsigned frames, void *userdata)
 {
 	int i, j;
@@ -89,13 +89,13 @@ static A2_errors sink_process(int **buffers, unsigned nbuffers,
 	for(j = 0; j < nbuffers; ++j)
 		for(i = 0; i < frames; ++i)
 		{
-			int s = buffers[j][i];
+			float s = buffers[j][i];
 			if((s > silencelevel) || (-s > silencelevel))
 				lastpeak = 0;
 		}
 
 	/* Stop conditions */
-	if(stopframes && (silencelevel >= 0))
+	if(stopframes && (silencelevel >= 0.0f))
 	{
 		if((playedframes >= stopframes) && (lastpeak >= silencewindow))
 			do_exit = 1;
@@ -348,10 +348,8 @@ static A2_handle wrap_wave(A2_handle wave)
 static int play_sound(const char *cmd, int midihandler)
 {
 	A2_handle h, vh;
-	int i;
 	char program[256];
 	float a[A2_MAXARGS];
-	int ia[A2_MAXARGS];
 	int cnt;
 	printf("Playing %s/%s%s...\n", a2_Name(iface, module), cmd,
 			midihandler ? "(MIDI handler)" : "");
@@ -382,9 +380,7 @@ static int play_sound(const char *cmd, int midihandler)
 			return -3;
 		}
 	}
-	for(i = 0; i < cnt - 1; ++i)
-		ia[i] = a[i] * 65536.0f;
-	if((vh = a2_Starta(iface, a2_RootVoice(iface), h, cnt - 1, ia)) < 0)
+	if((vh = a2_Starta(iface, a2_RootVoice(iface), h, cnt - 1, a)) < 0)
 	{
 		fprintf(stderr, "a2play: a2_Starta(): %s\n",
 				a2_ErrorString(-vh));

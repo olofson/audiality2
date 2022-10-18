@@ -1,7 +1,7 @@
 /*
  * a2_dsp.h - Handy DSP tools for Audiality 2 internals and units
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -29,40 +29,68 @@
 extern "C" {
 #endif
 
+#define	A2_ONEDIV128	(0.0078125f)
+#define	A2_ONEDIV256	(0.00390625f)
+#define	A2_ONEDIV8K	(1.220703125e-4)
+#define	A2_ONEDIV32K	(3.0517578125e-5)
+#define	A2_ONEDIV65K	(1.52587890625e-5)
+#define	A2_ONEDIV8M	(1.192092896e-7)
+#define	A2_ONEDIV2G	(4.656612873e-10)
+
+
 /*---------------------------------------------------------
 	Pseudo-random numbers
 ---------------------------------------------------------*/
 
 /* Returns a pseudo random number in the range [0, 65535] */
-static inline int a2_Noise(uint32_t *nstate)
+static inline int a2_IntRandom(uint32_t *nstate)
 {
 	*nstate *= 1566083941UL;
 	(*nstate)++;
 	return *nstate * (*nstate >> 16) >> 16;
 }
 
+/* Returns a pseudo random number in the range [0.0, 1.0] */
+static inline float a2_Random(uint32_t *nstate)
+{
+	int out;
+	*nstate *= 1566083941UL;
+	(*nstate)++;
+	out = (int)(*nstate * (*nstate >> 16) >> 16);
+	return (float)(out * A2_ONEDIV65K);
+}
+
+/* Returns a pseudo random number in the range [-1.0, 1.0] */
+static inline float a2_Noise(uint32_t *nstate)
+{
+	int out;
+	*nstate *= 1566083941UL;
+	(*nstate)++;
+	out = (int)(*nstate * (*nstate >> 16) >> 16);
+	return (float)(out - 32767) * A2_ONEDIV32K;
+}
+
 
 /*---------------------------------------------------------
-	Interpolators for 16 bit integer data
+	Interpolators
 ---------------------------------------------------------*/
 
 /* Linear interpolation */
-static inline int a2_Lerp(int16_t *d, unsigned ph)
+static inline float a2_Lerp(float *d, unsigned ph)
 {
 	int i = ph >> 8;
-	int x = ph & 0xff;
-	return (d[i] * (256 - x) + d[i + 1] * x) >> 8;
+	float x = (ph & 0xff) * A2_ONEDIV256;
+	return d[i] * (1.0f - x) + d[i + 1] * x;
 }
-
-/*TODO: These could use some analysis and tweaking to maximize accuracy... */
 
 /*
  * Cubic Hermite interpolation
  *
  *	NOTE: ph == 0 will index d[-1] through d[2]!
  */
-static inline int a2_Hermite(int16_t *d, unsigned ph)
+static inline float a2_Hermite(float *d, unsigned ph)
 {
+#if 0
 	int i = ph >> 8;
 	int x = (ph & 0xff) << 7;
 	int c = (d[i + 1] - d[i - 1]) >> 1;
@@ -71,57 +99,54 @@ static inline int a2_Hermite(int16_t *d, unsigned ph)
 	a = a * x >> 15;
 	a = (a + b) * x >> 15;
 	return d[i] + ((a + c) * x >> 15);
+#endif
+	int i = ph >> 8;
+	float x = (ph & 0xff) * A2_ONEDIV256;
+	float c = (d[i + 1] - d[i - 1]) * 0.5f;
+	float a = (d[i] - d[i + 1]) * 1.5f + (d[i + 2] - d[i - 1]) * 0.5f;
+	float b = d[i - 1] - d[i] + c - a;
+	return d[i] + (((a * x) + b) * x + c) * x;
 }
 
 /*
  * Two-stage cubic Hermite interpolation: Coefficient calculation
  *
  *	NOTE: ph == 0 will index d[-1] through d[2]!
- *
-FIXME: Do we actually need 32 bit coefficients?
  */
-static inline void a2_Hermite2c(int16_t *d, int32_t *cf)
+static inline void a2_Hermite2c(float *d, float *cf)
 {
 	cf[0] = d[0];
-	cf[1] = (3 * (d[0] - d[1]) + d[2] - d[-1]) >> 1;
-	cf[3] = (d[1] - d[-1]) >> 1;
+	cf[1] = (d[0] - d[1]) * 1.5f + (d[2] - d[-1]) * 0.5f;
+	cf[3] = (d[1] - d[-1]) * 0.5f;
 	cf[2] = d[-1] - d[0] + cf[3] - cf[1];
 }
 
 /* Two-stage cubic Hermite interpolation: The actual interpolation */
-static inline int a2_Hermite2(int32_t *cf, unsigned ph)
+static inline float a2_Hermite2(int32_t *cf, unsigned ph)
 {
-	int x = (ph & 0xff) << 7;
-	return ((((((cf[1] * x >> 15) +
-			cf[2]) * x >> 15) +
-			cf[3]) * x) >> 15) + cf[0];
+	float x = (ph & 0xff) * A2_ONEDIV256;
+	return (((cf[1] * x + cf[2]) * x) + cf[3]) * x + cf[0];
 }
 
 
 /*---------------------------------------------------------
-	8:24 control ramping device
+	Linear ramping device
 ---------------------------------------------------------*/
 
 typedef struct A2_ramper
 {
-	int	value;		/* Current value (8:24) */
-	int	target;		/* Target value (8:24) */
-	int	delta;		/* Per-sample delta (8:24) */
+	float	value;		/* Current value */
+	float	target;		/* Target value */
+	float	delta;		/* Per-sample delta */
 	int	timer;		/* Frames to end of ramp (24:8) */
 } A2_ramper;
 
-/*
- * NOTE:
- *	Internal calculations are 8:24 fixed point, so this won't work if
- *	registers are operated outside the [-128.0, 127.0] range! This could be
- *	fixed quite easily, but it would be rather expensive on 32 bit CPUs.
- */
-
 /* Initialize an A2_ramper to a constant value of 'v' */
-static inline void a2_InitRamper(A2_ramper *rr, int v)
+static inline void a2_InitRamper(A2_ramper *rr, float v)
 {
-	rr->value = rr->target = v << 8;
-	rr->delta = rr->timer = 0;
+	rr->value = rr->target = v;
+	rr->delta = 0.0f;
+	rr->timer = 0;
 }
 
 /* Prepare ramper for some processing */
@@ -130,11 +155,11 @@ static inline void a2_PrepareRamper(A2_ramper *rr, int frames)
 	if(!rr->timer)
 	{
 		rr->value = rr->target;
-		rr->delta = 0;
+		rr->delta = 0.0f;
 	}
 	else if(frames <= (rr->timer >> 8))
 	{
-		rr->delta = ((int64_t)(rr->target - rr->value) << 8) / rr->timer;
+		rr->delta = (rr->target - rr->value) / rr->timer;
 		rr->timer -= frames << 8;
 	}
 	else
@@ -151,22 +176,22 @@ static inline void a2_PrepareRamper(A2_ramper *rr, int frames)
 /* Advance ramper by 'frames' */
 static inline void a2_RunRamper(A2_ramper *rr, int frames)
 {
-	rr->value += rr->delta * frames;
+	rr->value += rr->delta * (frames * A2_ONEDIV256);
 }
 
 /*
  * Set up subsample accurate ramp starting at 'start' (24:8), ramping to
- * 'target' (16:16) over 'duration' (24:8) sample frames.
+ * 'target' (float) over 'duration' (24:8) sample frames.
  */
-static inline void a2_SetRamper(A2_ramper *rr, int target, int start,
+static inline void a2_SetRamper(A2_ramper *rr, float target, int start,
 		int duration)
 {
-	rr->target = target << 8;
+	rr->target = target;
 	rr->timer = duration + start;
 	if(rr->timer < 256)
 		rr->value = rr->target;
 	else
-		rr->value += rr->delta * start >> 8;
+		rr->value += rr->delta * (start * A2_ONEDIV256);
 }
 
 #ifdef __cplusplus

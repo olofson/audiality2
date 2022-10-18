@@ -1,7 +1,7 @@
 /*
  * panmix.c - Audiality 2 PanMix unit
  *
- * Copyright 2012-2016 David Olofson <david@olofson.net>
+ * Copyright 2012-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -51,15 +51,15 @@ static inline void panmix_process11(A2_unit *u, unsigned offset,
 {
 	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in = u->inputs[0];
-	int32_t *out = u->outputs[0];
+	float *in = u->inputs[0];
+	float *out = u->outputs[0];
 	a2_PrepareRamper(&pm->vol, frames);
 	for(s = offset; s < end; ++s)
 	{
 		if(add)
-			out[s] += (int64_t)in[s] * pm->vol.value >> 24;
+			out[s] += in[s] * pm->vol.value;
 		else
-			out[s] = (int64_t)in[s] * pm->vol.value >> 24;
+			out[s] = in[s] * pm->vol.value;
 		a2_RunRamper(&pm->vol, 1);
 	}
 }
@@ -80,34 +80,34 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 {
 	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in = u->inputs[0];
-	int32_t *out0 = u->outputs[0];
-	int32_t *out1 = u->outputs[1];
+	float *in = u->inputs[0];
+	float *out0 = u->outputs[0];
+	float *out1 = u->outputs[1];
 /* TODO: Proper constant power panning! */
 	a2_PrepareRamper(&pm->vol, frames);
 	a2_PrepareRamper(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
-		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
-		int v0 = pm->vol.value - vp;
-		int v1 = pm->vol.value + vp;
-		int ins = in[s];
+		float vp = pm->pan.value * pm->vol.value;
+		float v0 = pm->vol.value - vp;
+		float v1 = pm->vol.value + vp;
+		float ins = in[s];
 		if(clamp)
 		{
-			if(v0 > pm->vol.value << 1)
-				v0 = pm->vol.value << 1;
-			if(v1 > pm->vol.value << 1)
-				v1 = pm->vol.value << 1;
+			if(v0 > pm->vol.value * 2.0f)
+				v0 = pm->vol.value * 2.0f;
+			if(v1 > pm->vol.value * 2.0f)
+				v1 = pm->vol.value * 2.0f;
 		}
 		if(add)
 		{
-			out0[s] += (int64_t)ins * v0 >> 24;
-			out1[s] += (int64_t)ins * v1 >> 24;
+			out0[s] += ins * v0;
+			out1[s] += ins * v1;
 		}
 		else
 		{
-			out0[s] = (int64_t)ins * v0 >> 24;
-			out1[s] = (int64_t)ins * v1 >> 24;
+			out0[s] = ins * v0;
+			out1[s] = ins * v1;
 		}
 		a2_RunRamper(&pm->vol, 1);
 		a2_RunRamper(&pm->pan, 1);
@@ -117,8 +117,8 @@ static inline void panmix_process12(A2_unit *u, unsigned offset,
 static void panmix_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process12(u, offset, frames, 1, 1);
 	else
 		panmix_process12(u, offset, frames, 1, 0);
@@ -127,8 +127,8 @@ static void panmix_Process12Add(A2_unit *u, unsigned offset, unsigned frames)
 static void panmix_Process12(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process12(u, offset, frames, 0, 1);
 	else
 		panmix_process12(u, offset, frames, 0, 0);
@@ -139,29 +139,27 @@ static inline void panmix_process21(A2_unit *u, unsigned offset,
 {
 	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in0 = u->inputs[0];
-	int32_t *in1 = u->inputs[1];
-	int32_t *out = u->outputs[0];
+	float *in0 = u->inputs[0];
+	float *in1 = u->inputs[1];
+	float *out = u->outputs[0];
 	a2_PrepareRamper(&pm->vol, frames);
 	a2_PrepareRamper(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
-		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
-		int v0 = pm->vol.value - vp;
-		int v1 = pm->vol.value + vp;
+		float vp = pm->pan.value * pm->vol.value;
+		float v0 = pm->vol.value - vp;
+		float v1 = pm->vol.value + vp;
 		if(clamp)
 		{
-			if(v0 > pm->vol.value << 1)
-				v0 = pm->vol.value << 1;
-			if(v1 > pm->vol.value << 1)
-				v1 = pm->vol.value << 1;
+			if(v0 > pm->vol.value * 2.0f)
+				v0 = pm->vol.value * 2.0f;
+			if(v1 > pm->vol.value * 2.0f)
+				v1 = pm->vol.value * 2.0f;
 		}
 		if(add)
-			out[s] += ((int64_t)in0[s] * v0 +
-					(int64_t)in1[s] * v1) >> 25;
+			out[s] += in0[s] * v0 + in1[s] * v1;
 		else
-			out[s] = ((int64_t)in0[s] * v0 +
-					(int64_t)in1[s] * v1) >> 25;
+			out[s] = in0[s] * v0 + in1[s] * v1;
 		a2_RunRamper(&pm->vol, 1);
 		a2_RunRamper(&pm->pan, 1);
 	}
@@ -170,8 +168,8 @@ static inline void panmix_process21(A2_unit *u, unsigned offset,
 static void panmix_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process21(u, offset, frames, 1, 1);
 	else
 		panmix_process21(u, offset, frames, 1, 0);
@@ -180,8 +178,8 @@ static void panmix_Process21Add(A2_unit *u, unsigned offset, unsigned frames)
 static void panmix_Process21(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process21(u, offset, frames, 0, 1);
 	else
 		panmix_process21(u, offset, frames, 0, 0);
@@ -193,35 +191,35 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 {
 	A2_panmix *pm = panmix_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in0 = u->inputs[0];
-	int32_t *in1 = u->inputs[1];
-	int32_t *out0 = u->outputs[0];
-	int32_t *out1 = u->outputs[1];
+	float *in0 = u->inputs[0];
+	float *in1 = u->inputs[1];
+	float *out0 = u->outputs[0];
+	float *out1 = u->outputs[1];
 	a2_PrepareRamper(&pm->vol, frames);
 	a2_PrepareRamper(&pm->pan, frames);
 	for(s = offset; s < end; ++s)
 	{
-		int vp = (int64_t)pm->pan.value * pm->vol.value >> 24;
-		int v0 = pm->vol.value - vp;
-		int v1 = pm->vol.value + vp;
-		int in0s = in0[s];
-		int in1s = in1[s];
+		float vp = pm->pan.value * pm->vol.value;
+		float v0 = pm->vol.value - vp;
+		float v1 = pm->vol.value + vp;
+		float in0s = in0[s];
+		float in1s = in1[s];
 		if(clamp)
 		{
-			if(v0 > pm->vol.value << 1)
-				v0 = pm->vol.value << 1;
-			if(v1 > pm->vol.value << 1)
-				v1 = pm->vol.value << 1;
+			if(v0 > pm->vol.value * 2.0f)
+				v0 = pm->vol.value * 2.0f;
+			if(v1 > pm->vol.value * 2.0f)
+				v1 = pm->vol.value * 2.0f;
 		}
 		if(add)
 		{
-			out0[s] += (int64_t)in0s * v0 >> 24;
-			out1[s] += (int64_t)in1s * v1 >> 24;
+			out0[s] += in0s * v0;
+			out1[s] += in1s * v1;
 		}
 		else
 		{
-			out0[s] = (int64_t)in0s * v0 >> 24;
-			out1[s] = (int64_t)in1s * v1 >> 24;
+			out0[s] = in0s * v0;
+			out1[s] = in1s * v1;
 		}
 		a2_RunRamper(&pm->vol, 1);
 		a2_RunRamper(&pm->pan, 1);
@@ -231,8 +229,8 @@ static inline void panmix_process22(A2_unit *u, unsigned offset,
 static void panmix_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process22(u, offset, frames, 1, 1);
 	else
 		panmix_process22(u, offset, frames, 1, 0);
@@ -241,8 +239,8 @@ static void panmix_Process22Add(A2_unit *u, unsigned offset, unsigned frames)
 static void panmix_Process22(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_panmix *pm = panmix_cast(u);
-	if(pm->pan.target > 0xffffff || pm->pan.target < -0xffffff ||
-			pm->pan.value > 0xffffff || pm->pan.value < -0xffffff)
+	if(pm->pan.target > 1.0f || pm->pan.target < -1.0f ||
+			pm->pan.value > 1.0f || pm->pan.value < -1.0f)
 		panmix_process22(u, offset, frames, 0, 1);
 	else
 		panmix_process22(u, offset, frames, 0, 0);
@@ -253,15 +251,15 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms,
 		void *statedata, unsigned flags)
 {
 	A2_panmix *pm = panmix_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
 	/* Internal state initialization */
-	a2_InitRamper(&pm->vol, 65536);
-	a2_InitRamper(&pm->pan, 0);
+	a2_InitRamper(&pm->vol, 1.0f);
+	a2_InitRamper(&pm->pan, 0.0f);
 
 	/* Initialize VM registers */
-	ur[A2PMR_VOL] = 65536;
-	ur[A2PMR_PAN] = 0;
+	ur[A2PMR_VOL] = 1.0f;
+	ur[A2PMR_PAN] = 0.0f;
 
 	/* Install Process callback */
 	if(flags & A2_PROCADD)
@@ -284,12 +282,12 @@ static A2_errors panmix_Initialize(A2_unit *u, A2_vmstate *vms,
 }
 
 
-static void panmix_Vol(A2_unit *u, int v, unsigned start, unsigned dur)
+static void panmix_Vol(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&panmix_cast(u)->vol, v, start, dur);
 }
 
-static void panmix_Pan(A2_unit *u, int v, unsigned start, unsigned dur)
+static void panmix_Pan(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&panmix_cast(u)->pan, v, start, dur);
 }
@@ -304,9 +302,9 @@ static const A2_crdesc regs[] =
 
 static const A2_constdesc constants[] =
 {
-	{ "CENTER",	0			},
-	{ "LEFT",	(-1) << 16		},
-	{ "RIGHT",	1 << 16			},
+	{ "CENTER",	0.0f			},
+	{ "LEFT",	-1.0f			},
+	{ "RIGHT",	1.0f			},
 	{ NULL,	0				}
 };
 

@@ -1,7 +1,7 @@
 /*
  * api.c - Audiality 2 asynchronous API implementation
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -361,7 +361,7 @@ float a2_Rand(A2_interface *i, float max)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
-	return a2_Noise(&st->noisestate) * max / 65536.0f;
+	return a2_Random(&st->noisestate) * max;
 }
 
 

@@ -1,7 +1,7 @@
 /*
  * properties.c - Audiality 2 Object property interface
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -60,6 +60,7 @@ A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v)
 		*v = st->ss->offlinebuffer;
 		return A2_OK;
 	  case A2_PSILENCELEVEL:
+		/* FIXME: Maybe just fail here? Almost invariably <1.0f. */
 		*v = st->ss->silencelevel;
 		return A2_OK;
 	  case A2_PSILENCEWINDOW:
@@ -141,6 +142,29 @@ A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v)
 
 	  default:
 		return A2_NOTFOUND;
+	}
+}
+
+A2_errors a2_GetStatePropertyf(A2_interface *i, A2_properties p, float *v)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	switch(p)
+	{
+	  case A2_PSILENCELEVEL:
+		*v = st->ss->silencelevel;
+		return A2_OK;
+
+	  /* TODO: Move anything relevant here, for those decimals! */
+
+	  default:
+	  {
+		int iv;
+		A2_errors res = a2_GetStateProperty(i, p, &iv);
+		if (res == A2_OK)
+			*v = (float)iv;
+		return res;
+	  }
 	}
 }
 
@@ -283,6 +307,7 @@ A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v)
 		st->ss->offlinebuffer = v;
 		return A2_OK;
 	  case A2_PSILENCELEVEL:
+		/* FIXME: This one's not very useful as integer now... */
 		st->ss->silencelevel = v;
 		return A2_OK;
 	  case A2_PSILENCEWINDOW:
@@ -329,6 +354,24 @@ A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v)
 
 	  default:
 		return A2_NOTFOUND;
+	}
+}
+
+
+A2_errors a2_SetStatePropertyf(A2_interface *i, A2_properties p, float v)
+{
+	A2_interface_i *ii = (A2_interface_i *)i;
+	A2_state *st = ii->state;
+	switch(p)
+	{
+	  case A2_PSILENCELEVEL:
+		st->ss->silencelevel = v;
+		return A2_OK;
+
+	  /* TODO: Move anything relevant here, for those decimals! */
+
+	  default:
+		return a2_SetStateProperty(i, p, (int)v);
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
  * a2_units.h - Audiality 2 Voice Unit API
  *
- * Copyright 2010-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -101,7 +101,7 @@ typedef enum A2_unitflags
  *	still fairly accurate, as processing fragment size is restricted to
  *	A2_MAXFRAGMENT sample frames for cache footprint reasons.
  *
- *	'duration' is just a target point for ramping, so it may be land way
+ *	'duration' is just a target point for ramping, so it may land way
  *	beyond the end of the next fragment to be processed. Do not rely on it
  *	being directly related to processing fragment or buffer sizes!
  *
@@ -112,7 +112,7 @@ typedef enum A2_unitflags
  *	register writes so that only the final value is applied to the mapped
  *	control register as a timing instruction is executed.)
  */
-typedef void (*A2_write_cb)(A2_unit *u, int value, unsigned start,
+typedef void (*A2_write_cb)(A2_unit *u, float value, unsigned start,
 		unsigned duration);
 
 /*
@@ -212,12 +212,12 @@ struct A2_codesc
 
 
 /*
- * Constant definition descriptor. (End array with { NULL, 0 }!)
+ * Constant definition descriptor. (End array with { NULL, 0.0f }!)
  */
 struct A2_constdesc
 {
 	const char	*name;		/* Symbol name */
-	int		value;		/* Value (16:16 fixed point) */
+	float		value;		/* Value */
 };
 
 
@@ -296,11 +296,11 @@ struct A2_unit
 	 */
 	uint16_t	ninputs;	/* Number of input channels */
 	uint16_t	noutputs;	/* Number of output channels */
-	int32_t		**inputs;	/* Ptrs to arrays of buffer pointers */
-	int32_t		**outputs;
+	float		**inputs;	/* Ptrs to arrays of buffer pointers */
+	float		**outputs;
 
 	/* Control */
-	int		*registers;
+	float		*registers;
 	A2_cport	*coutputs;
 
 	/* Processing */

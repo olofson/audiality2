@@ -1,7 +1,7 @@
 /*
  * xinsert.c - Audiality 2 External Insert unit
  *
- * Copyright 2012-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,7 +24,7 @@
 #include "internals.h"
 #include <stdlib.h>
 
-static inline void xi_copy(int32_t *in, int32_t *out, unsigned offset,
+static inline void xi_copy(float *in, float *out, unsigned offset,
 		unsigned frames)
 {
 	int s;
@@ -32,7 +32,7 @@ static inline void xi_copy(int32_t *in, int32_t *out, unsigned offset,
 		out[s] = in[s];
 }
 
-static inline void xi_add(int32_t *in, int32_t *out, unsigned offset,
+static inline void xi_add(float *in, float *out, unsigned offset,
 		unsigned frames)
 {
 	int s;
@@ -42,11 +42,11 @@ static inline void xi_add(int32_t *in, int32_t *out, unsigned offset,
 
 
 static inline void xi_run_callback(A2_unit *u, A2_xinsert_client *xic,
-		unsigned offset, unsigned frames, int32_t **bufs)
+		unsigned offset, unsigned frames, float **bufs)
 {
 	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
-	int32_t *bufp[A2_MAXCHANNELS];
+	float *bufp[A2_MAXCHANNELS];
 	int i;
 
 	/* API doesn't support 'offset', so we need adjusted pointers! */
@@ -63,10 +63,10 @@ static inline void xi_process(A2_unit *u, unsigned o, unsigned f, int add)
 	int i;
 	A2_xinsert_client *xic;
 	A2_xinsert *xi = a2_xinsert_cast(u);
-	int32_t bufs[A2_MAXCHANNELS][A2_MAXFRAG];
-	int32_t *bufp[A2_MAXCHANNELS];
-	int32_t obufs[A2_MAXCHANNELS][A2_MAXFRAG];
-	int32_t *obufp[A2_MAXCHANNELS];
+	float bufs[A2_MAXCHANNELS][A2_MAXFRAG];
+	float *bufp[A2_MAXCHANNELS];
+	float obufs[A2_MAXCHANNELS][A2_MAXFRAG];
+	float *obufp[A2_MAXCHANNELS];
 	int has_inserts = 0;
 
 	/*
@@ -89,7 +89,7 @@ static inline void xi_process(A2_unit *u, unsigned o, unsigned f, int add)
 		else
 			obufp[i] = obufs[i];
 		if(!add)
-			memset(obufp[i], 0, sizeof(int32_t) * A2_MAXFRAG);
+			memset(obufp[i], 0, sizeof(float) * A2_MAXFRAG);
 	}
 
 	for(xic = xi->clients; xic; xic = xic->next)

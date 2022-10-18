@@ -1,7 +1,7 @@
 /*
  * internals.h - Audiality 2 internals
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -219,7 +219,7 @@ typedef struct A2_instruction
 	uint8_t		opcode;
 	uint8_t		a1;
 	uint16_t	a2;
-	int32_t		a3;
+	float		a3;
 } A2_instruction;
 
 unsigned a2_InsSize(A2_opcodes op);
@@ -582,14 +582,14 @@ struct A2_voice
 #endif
 
 	unsigned	noutputs;
-	int32_t		**outputs;
+	float		**outputs;
 };
 
 /* Audio bus */
 struct A2_bus
 {
 	unsigned	channels;	/* Number of channels allocated */
-	int32_t		*buffers[A2_MAXCHANNELS];
+	float		*buffers[A2_MAXCHANNELS];
 };
 
 /* Block - allocation unit for A2_stackentry and mixing buffers */
@@ -599,7 +599,7 @@ union A2_block
 	A2_block	*next;			/* Free list link */
 	A2_stackentry	stackentry;		/* VM stack entry */
 	A2_unit		unit;			/* Voice unit instance */
-	int32_t		buffer[A2_MAXFRAG];	/* Audio buffer */
+	float		buffer[A2_MAXFRAG];	/* Audio buffer */
 	A2_bus		bus;			/* Audio bus */
 	char		minsize[A2_BLOCK_SIZE];
 };
@@ -614,7 +614,7 @@ struct A2_sharedstate
 
 	unsigned	offlinebuffer;	/* A2_POFFLINEBUFFER */
 
-	unsigned	silencelevel;	/* A2_PSILENCELEVEL */
+	float		silencelevel;	/* A2_PSILENCELEVEL */
 	unsigned	silencewindow;	/* A2_PSILENCEWINDOW */
 	unsigned	silencegrace;	/* A2_PSILENCEGRACE */
 
@@ -677,7 +677,7 @@ struct A2_state
 	NUMMSGS(unsigned msgnum;)
 	EVLEAKTRACK(unsigned numevents;)
 
-	unsigned	msdur;		/* One ms in sample frames (16:16) */
+	float		msdur;		/* One ms in sample frames */
 	uint32_t	randstate;	/* RAND* instruction RNG state */
 	uint32_t	noisestate;	/* 'wtosc' noise generator state */
 
@@ -825,7 +825,7 @@ static inline A2_bus *a2_AllocBus(A2_state *st, unsigned channels)
 		return NULL;
 	b->channels = channels;
 	for(i = 0; i < channels; ++i)
-		if(!(b->buffers[i] = (int32_t *)a2_AllocBlock(st)))
+		if(!(b->buffers[i] = (float *)a2_AllocBlock(st)))
 		{
 			while(--i >= 0)
 				a2_FreeBlock(st, b->buffers[i]);
@@ -839,7 +839,7 @@ static inline A2_bus *a2_AllocBus(A2_state *st, unsigned channels)
 static inline int a2_ReallocBus(A2_state *st, A2_bus *bus, unsigned channels)
 {
 	for( ; bus->channels < channels; ++bus->channels)
-		if(!(bus->buffers[bus->channels] = (int32_t *)a2_AllocBlock(st)))
+		if(!(bus->buffers[bus->channels] = (float *)a2_AllocBlock(st)))
 			return 0;
 	return 1;
 }
@@ -849,7 +849,7 @@ static inline void a2_ClearBus(A2_bus *bus, unsigned offset, unsigned frames)
 {
 	int i;
 	for(i = 0; i < bus->channels; ++i)
-		memset(bus->buffers[i] + offset, 0, sizeof(int32_t) * frames);
+		memset(bus->buffers[i] + offset, 0, sizeof(float) * frames);
 }
 
 /* Free a bus, including any buffers it may be using */
@@ -1072,7 +1072,7 @@ static inline A2_errors a2_writemsg(SFIFO *f, A2_apimessage *m, unsigned size)
  * NOTE: This is for events using the 'start' and 'play' fields only!
  */
 static inline A2_errors a2_writemsgargs(SFIFO *f, A2_apimessage *m,
-		unsigned argc, int *argv, unsigned argoffs)
+		unsigned argc, float *argv, unsigned argoffs)
 {
 	unsigned argsize = sizeof(int) * argc;
 	unsigned size = argoffs + argsize;

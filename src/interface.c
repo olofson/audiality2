@@ -527,7 +527,7 @@ static A2_timestamp a2_API_TimestampNow(A2_interface *i)
 	dt = a2_GetTicks() - dt + ii->tsmargin;
 	if(dt < 0)
 		dt = 0;	/* Audio has been off for a looooong time... */
-	return nf + ((int64_t)st->msdur * dt >> 8);
+	return nf + st->msdur * dt * 256.0f;
 }
 
 
@@ -583,7 +583,7 @@ static int a2_common_ms2Timestamp(A2_interface *i, double t)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
-	return (unsigned)(st->msdur * t / 256.0f);
+	return (unsigned)(st->msdur * t * 256.0f);
 }
 
 
@@ -591,7 +591,7 @@ static double a2_common_Timestamp2ms(A2_interface *i, int ts)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
-	return ts * 256.0f / st->msdur;
+	return ts * A2_ONEDIV256 / st->msdur;
 }
 
 
@@ -640,7 +640,7 @@ static A2_timestamp a2_common_TimestampBump(A2_interface *i, int dt)
 /*----- API context implementation ----------------------*/
 
 static A2_handle a2_API_Starta(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -660,7 +660,7 @@ static A2_handle a2_API_Starta(A2_interface *i, A2_handle parent,
 
 
 static A2_errors a2_API_Playa(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -678,7 +678,7 @@ static A2_errors a2_API_Playa(A2_interface *i, A2_handle parent,
 
 
 static A2_errors a2_API_Senda(A2_interface *i, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv)
+		unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -698,7 +698,7 @@ static A2_errors a2_API_Senda(A2_interface *i, A2_handle voice, unsigned ep,
 
 
 static A2_errors a2_API_SendSuba(A2_interface *i, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv)
+		unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -744,7 +744,7 @@ static A2_errors a2_API_KillSub(A2_interface *i, A2_handle voice)
 /*----- Engine context implementation -------------------*/
 
 static A2_handle a2_RT_Starta(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -777,7 +777,7 @@ static A2_handle a2_RT_Starta(A2_interface *i, A2_handle parent,
 
 
 static A2_errors a2_RT_Playa(A2_interface *i, A2_handle parent,
-		A2_handle program, unsigned argc, int *argv)
+		A2_handle program, unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -800,7 +800,7 @@ static A2_errors a2_RT_Playa(A2_interface *i, A2_handle parent,
 
 
 static A2_errors a2_RT_Senda(A2_interface *i, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv)
+		unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;
@@ -825,7 +825,7 @@ static A2_errors a2_RT_Senda(A2_interface *i, A2_handle voice, unsigned ep,
 
 
 static A2_errors a2_RT_SendSuba(A2_interface *i, A2_handle voice, unsigned ep,
-		unsigned argc, int *argv)
+		unsigned argc, float *argv)
 {
 	A2_interface_i *ii = (A2_interface_i *)i;
 	A2_state *st = ii->state;

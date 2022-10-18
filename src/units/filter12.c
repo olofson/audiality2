@@ -1,7 +1,7 @@
 /*
  * filter12.c - Audiality 2 12 dB/oct resonant filter unit
  *
- * Copyright 2013-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2013-2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -40,19 +40,19 @@ typedef struct A2_filter12
 
 	/* Needed for pitch calculations */
 	int		samplerate;
-	int		*transpose;
+	float		*transpose;
 
 	/* Parameters */
 	A2_ramper	cutoff;	/* Filter f0 (linear pitch) */
 	A2_ramper	q;	/* Filter resonance */
-	int		lp;	/* 24:8 fixed point */
-	int		bp;
-	int		hp;
+	float		lp;
+	float		bp;
+	float		hp;
 
 	/* State */
-	int		f1;	/* Current pitch coefficient */
-	int		d1[A2F12_MAXCHANNELS];
-	int		d2[A2F12_MAXCHANNELS];
+	float		f1;	/* Current pitch coefficient */
+	float		d1[A2F12_MAXCHANNELS];
+	float		d2[A2F12_MAXCHANNELS];
 } A2_filter12;
 
 
@@ -64,11 +64,11 @@ static inline A2_filter12 *f12_cast(A2_unit *u)
 
 static inline int f12_pitch2coeff(A2_filter12 *f12)
 {
-	float f = a2_P2I(f12->cutoff.value >> 8) * (A2_MIDDLEC / 16777216.0f);
+	float f = a2_P2If(f12->cutoff.value) * A2_MIDDLEC;
 	/* This filter explodes above Nyqvist / 2! (Needs oversampling...) */
-	if(f > f12->samplerate >> 2)
-		return 362 << 16;
-	return (int)(512.0f * 65536.0f * sin(M_PI * f / f12->samplerate));
+	if(f > f12->samplerate * 0.25f)
+		f = f12->samplerate * 0.25f;
+	return 2.0f * sin(M_PI * f / f12->samplerate);
 }
 
 static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
@@ -76,9 +76,9 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 {
 	A2_filter12 *f12 = f12_cast(u);
 	unsigned s, c, end = offset + frames;
-	int32_t *in[A2F12_MAXCHANNELS], *out[A2F12_MAXCHANNELS];
-	int df;
-	int f0 = f12->f1;
+	float *in[A2F12_MAXCHANNELS], *out[A2F12_MAXCHANNELS];
+	float df;
+	float f0 = f12->f1;
 	for(c = 0; c < channels; ++c)
 	{
 		in[c] = u->inputs[c];
@@ -90,28 +90,28 @@ static inline void f12_process(A2_unit *u, unsigned offset, unsigned frames,
 	{
 		a2_RunRamper(&f12->cutoff, frames);
 		f12->f1 = f12_pitch2coeff(f12);
-		df = (f12->f1 - f0 + ((int)frames >> 1)) / (int)frames;
+		df = (f12->f1 - f0) / frames;
 	}
 	else
-		df = 0;
+		df = 0.0f;
 	for(s = offset; s < end; ++s)
 	{
-		int f = f0 >> 12;
-		int q = f12->q.value >> 12;
+		float f = f0;
+		float q = f12->q.value;
 		for(c = 0; c < channels; ++c)
 		{
-			int d1 = f12->d1[c] >> 4;
-			int l = f12->d2[c] + (f * d1 >> 8);
-			int h = (in[c][s] >> 5) - l - (q * d1 >> 8);
-			int b = (f * (h >> 4) >> 8) + f12->d1[c];
-			int fout = (l * f12->lp + b * f12->bp +
-					h * f12->hp) >> 3;
+			float d1 = f12->d1[c];
+			float low = f12->d2[c] + f * d1;
+			float high = in[c][s] * 0.5f - low - q * d1;
+			float band = f * high + f12->d1[c];
+			float fout = low * f12->lp + band * f12->bp +
+					high * f12->hp;
 			if(add)
 				out[c][s] += fout;
 			else
 				out[c][s] = fout;
-			f12->d1[c] = b;
-			f12->d2[c] = l;
+			f12->d1[c] = band;
+			f12->d2[c] = low;
 		}
 		f0 += df;
 		a2_RunRamper(&f12->q, 1);
@@ -138,7 +138,7 @@ static void f12_Process22(A2_unit *u, unsigned offset, unsigned frames)
 	f12_process(u, offset, frames, 0, 2);
 }
 
-static void f12_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
+static void f12_CutOff(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_filter12 *f12 = f12_cast(u);
 	a2_SetRamper(&f12->cutoff, v + *f12->transpose, start, dur);
@@ -146,34 +146,34 @@ static void f12_CutOff(A2_unit *u, int v, unsigned start, unsigned dur)
 		f12->f1 = f12_pitch2coeff(f12);
 }
 
-static void f12_Q(A2_unit *u, int v, unsigned start, unsigned dur)
+static void f12_Q(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_filter12 *f12 = f12_cast(u);
 #if 1
-	/* FIXME: The filter explodes at high cutoffs with the 256 limit! */
-	if(v < 512)
-		a2_SetRamper(&f12->q, 32768, start, dur);
+	/* FIXME: The filter explodes at high cutoffs with the 1.0 limit! */
+	if(v < 2.0f)
+		a2_SetRamper(&f12->q, 0.5f, start, dur);
 #else
-	if(v < 256)
-		a2_SetRamper(&f12->q, 65536, start, dur);
+	if(v < 1.0f)
+		a2_SetRamper(&f12->q, 1.0f, start, dur);
 #endif
 	else
-		a2_SetRamper(&f12->q, (65536 << 8) / v, start, dur);
+		a2_SetRamper(&f12->q, 1.0f / v, start, dur);
 }
 
-static void f12_LP(A2_unit *u, int v, unsigned start, unsigned dur)
+static void f12_LP(A2_unit *u, float v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->lp = v >> 8;
+	f12_cast(u)->lp = v;
 }
 
-static void f12_BP(A2_unit *u, int v, unsigned start, unsigned dur)
+static void f12_BP(A2_unit *u, float v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->bp = v >> 8;
+	f12_cast(u)->bp = v;
 }
 
-static void f12_HP(A2_unit *u, int v, unsigned start, unsigned dur)
+static void f12_HP(A2_unit *u, float v, unsigned start, unsigned dur)
 {
-	f12_cast(u)->hp = v >> 8;
+	f12_cast(u)->hp = v;
 }
 
 
@@ -182,28 +182,28 @@ static A2_errors f12_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 {
 	A2_config *cfg = (A2_config *)statedata;
 	A2_filter12 *f12 = f12_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 	int c;
 
 	f12->samplerate = cfg->samplerate;
 	f12->transpose = vms->r + R_TRANSPOSE;
 
-	ur[A2F12R_CUTOFF] = 0;
-	ur[A2F12R_Q] = 0;
-	ur[A2F12R_LP] = 65536;
-	ur[A2F12R_BP] = 0;
-	ur[A2F12R_HP] = 0;
+	ur[A2F12R_CUTOFF] = 0.0f;
+	ur[A2F12R_Q] = 0.0f;
+	ur[A2F12R_LP] = 1.0f;
+	ur[A2F12R_BP] = 0.0f;
+	ur[A2F12R_HP] = 0.0f;
 
-	a2_InitRamper(&f12->cutoff, 0);
-	a2_InitRamper(&f12->q, 0);
+	a2_InitRamper(&f12->cutoff, 0.0f);
+	a2_InitRamper(&f12->q, 0.0f);
 	f12_CutOff(u, ur[A2F12R_CUTOFF], 0, 0);
 	f12_Q(u, ur[A2F12R_Q], 0, 0);
-	f12->lp = ur[A2F12R_LP] >> 8;
-	f12->bp = ur[A2F12R_BP] >> 8;
-	f12->hp = ur[A2F12R_HP] >> 8;
+	f12->lp = ur[A2F12R_LP];
+	f12->bp = ur[A2F12R_BP];
+	f12->hp = ur[A2F12R_HP];
 
 	for(c = 0; c < u->ninputs; ++c)
-		f12->d1[c] = f12->d2[c] = 0;
+		f12->d1[c] = f12->d2[c] = 0.0f;
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
 		{

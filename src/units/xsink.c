@@ -1,7 +1,7 @@
 /*
  * xsink.c - Audiality 2 External Sink unit
  *
- * Copyright 2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -30,7 +30,7 @@ static void xsink_Process(A2_unit *u, unsigned offset, unsigned frames)
 	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	A2_xinsert_client *xic = xi->clients;
-	int32_t *bufp[A2_MAXCHANNELS];
+	float *bufp[A2_MAXCHANNELS];
 
 	if(!xic)
 		return;

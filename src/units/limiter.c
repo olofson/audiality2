@@ -1,7 +1,7 @@
 /*
  * limiter.c - Audiality 2 compressor/limiter unit
  *
- * Copyright 2001-2002, 2009, 2012, 2016 David Olofson <david@olofson.net>
+ * Copyright 2001-2002, 2009, 2012, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -20,7 +20,7 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#include <stdlib.h>
+#include <math.h>
 #include "limiter.h"
 
 #define	A2L_MAXCHANNELS	2
@@ -36,9 +36,9 @@ typedef struct A2_limiter
 {
 	A2_unit		header;
 	int		samplerate;
-	unsigned	threshold;	/* Reaction threshold */
-	int		release;	/* Release "speed" */
-	unsigned	peak;		/* Filtered peak value */
+	float		threshold;	/* Reaction threshold */
+	float		release;	/* Release "speed" */
+	float		peak;		/* Filtered peak value */
 } A2_limiter;
 
 
@@ -53,12 +53,12 @@ static inline void limiter_process11(A2_unit *u, unsigned offset,
 {
 	A2_limiter *lim = limiter_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in = u->inputs[0];
-	int32_t *out = u->outputs[0];
+	float *in = u->inputs[0];
+	float *out = u->outputs[0];
 	for(s = offset; s < end; ++s)
 	{
 		int gain;
-		unsigned p = (unsigned)abs(in[s]);
+		float p = fabs(in[s]);
 		if(p > lim->peak)
 			lim->peak = p;
 		else
@@ -68,11 +68,11 @@ static inline void limiter_process11(A2_unit *u, unsigned offset,
 				lim->peak = lim->threshold;
 			p = lim->peak;
 		}
-		gain = (32767LL << 16) / ((p + 511) >> 9);
+		gain = 1.0f / p;
 		if(add)
-			out[s] += (int64_t)in[s] * gain >> 16;
+			out[s] += in[s] * gain;
 		else
-			out[s] = (int64_t)in[s] * gain >> 16;
+			out[s] = in[s] * gain;
 	}
 }
 
@@ -108,17 +108,17 @@ static inline void limiter_process22(A2_unit *u, unsigned offset,
 {
 	A2_limiter *lim = limiter_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *in0 = u->inputs[0];
-	int32_t *in1 = u->inputs[1];
-	int32_t *out0 = u->outputs[0];
-	int32_t *out1 = u->outputs[1];
+	float *in0 = u->inputs[0];
+	float *in1 = u->inputs[1];
+	float *out0 = u->outputs[0];
+	float *out1 = u->outputs[1];
 	for(s = offset; s < end; ++s)
 	{
-		int gain;
-		int lp = abs(in0[s]);
-		int rp = abs(in1[s]);
-		unsigned p = (unsigned)(lp > rp ? lp : rp);
-		p = p + ((p - abs(lp - rp)) >> 1);
+		float gain;
+		float lp = fabs(in0[s]);
+		float rp = fabs(in1[s]);
+		float p = lp > rp ? lp : rp;
+		p = p + 0.5f * (p - fabs(lp - rp));
 		if(p > lim->peak)
 			lim->peak = p;
 		else
@@ -128,16 +128,16 @@ static inline void limiter_process22(A2_unit *u, unsigned offset,
 				lim->peak = lim->threshold;
 			p = lim->peak;
 		}
-		gain = (32767LL << 16) / ((p + 511) >> 9);
+		gain = 1.0f / p;
 		if(add)
 		{
-			out0[s] += (int64_t)in0[s] * gain >> 16;
-			out1[s] += (int64_t)in1[s] * gain >> 16;
+			out0[s] += in0[s] * gain;
+			out1[s] += in1[s] * gain;
 		}
 		else
 		{
-			out0[s] = (int64_t)in0[s] * gain >> 16;
-			out1[s] = (int64_t)in1[s] * gain >> 16;
+			out0[s] = in0[s] * gain;
+			out1[s] = in1[s] * gain;
 		}
 	}
 }
@@ -158,15 +158,15 @@ static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms,
 {
 	A2_config *cfg = (A2_config *)statedata;
 	A2_limiter *lim = limiter_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
-	ur[A2LR_RELEASE] = 64 << 16;
-	ur[A2LR_THRESHOLD] = 1 << 16;
+	ur[A2LR_RELEASE] = 64.0f;
+	ur[A2LR_THRESHOLD] = 1.0f;
 
 	lim->samplerate = cfg->samplerate;
-	lim->release = (ur[A2LR_RELEASE] << 8) / cfg->samplerate;
-	lim->threshold = (unsigned)(ur[A2LR_THRESHOLD] << 8);
-	lim->peak = 32768 << 8;
+	lim->release = ur[A2LR_RELEASE] / cfg->samplerate;
+	lim->threshold = ur[A2LR_THRESHOLD];
+	lim->peak = 1.0f;
 
 	if(flags & A2_PROCADD)
 		switch(u->ninputs)
@@ -185,18 +185,18 @@ static A2_errors limiter_Initialize(A2_unit *u, A2_vmstate *vms,
 }
 
 
-static void limiter_Release(A2_unit *u, int v, unsigned start, unsigned dur)
+static void limiter_Release(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_limiter *lim = limiter_cast(u);
-	lim->release = (v << 8) / lim->samplerate;
+	lim->release = v / lim->samplerate;
 }
 
-static void limiter_Threshold(A2_unit *u, int v, unsigned start, unsigned dur)
+static void limiter_Threshold(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_limiter *lim = limiter_cast(u);
-	lim->threshold = (unsigned)(v << 8);
-	if(lim->threshold < 256)
-		lim->threshold = 256;
+	lim->threshold = v;
+	if(lim->threshold < 0.001f)
+		lim->threshold = 0.001f;
 }
 
 

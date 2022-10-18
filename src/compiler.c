@@ -2221,7 +2221,7 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 }
 
 
-static int a2c_ConstArguments(A2_compiler *c, int maxargc, int *argv)
+static int a2c_ConstArguments(A2_compiler *c, int maxargc, float *argv)
 {
 	int argc;
 	for(argc = 0; argc <= maxargc; ++argc)
@@ -3310,7 +3310,7 @@ typedef struct A2_wavedef {
 	unsigned	length;
 	A2_handle	program;
 	unsigned	argc;
-	int		argv[A2_MAXARGS];
+	float		argv[A2_MAXARGS];
 	double		duration;
 	uint32_t	randseed;
 	uint32_t	noiseseed;

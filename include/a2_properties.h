@@ -1,7 +1,7 @@
 /*
  * a2_properties.h - Audiality 2 property interface
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -92,6 +92,7 @@ typedef enum A2_properties
 
 } A2_properties;
 
+/* Integer values */
 A2_errors a2_GetProperty(A2_interface *i, A2_handle h, A2_properties p,
 		int *v);
 A2_errors a2_SetProperty(A2_interface *i, A2_handle h, A2_properties p, int v);
@@ -106,6 +107,15 @@ A2_errors a2_SetProperties(A2_interface *i, A2_handle h, A2_property *props);
 A2_errors a2_GetStateProperty(A2_interface *i, A2_properties p, int *v);
 A2_errors a2_SetStateProperty(A2_interface *i, A2_properties p, int v);
 A2_errors a2_SetStateProperties(A2_interface *i, A2_property *props);
+
+/* Floating point values */
+A2_errors a2_GetPropertyf(A2_interface *i, A2_handle h, A2_properties p,
+		float *v);
+A2_errors a2_SetPropertyf(A2_interface *i, A2_handle h, A2_properties p,
+		float v);
+
+A2_errors a2_GetStatePropertyf(A2_interface *i, A2_properties p, float *v);
+A2_errors a2_SetStatePropertyf(A2_interface *i, A2_properties p, float v);
 
 #if 0
 /* TODO: */

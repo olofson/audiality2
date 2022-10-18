@@ -1,7 +1,7 @@
 /*
  * sdldrv.c - Audiality 2 SDL audio driver
  *
- * Copyright 2012-2014, 2017 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -51,17 +51,16 @@ static void sdld_callback(void *ud, Uint8 *stream, int len)
 		ad->Process(ad, frames);
 	else
 		for(c = 0; c < cfg->channels; ++c)
-			memset(ad->buffers[c], 0, sizeof(int32_t) * frames);
+			memset(ad->buffers[c], 0, sizeof(float) * frames);
 	for(c = 0; c < cfg->channels; ++c)
 	{
 		/*
 		 * NOTE: We're expecting SDL or the underlying API to do any
 		 * necessary clipping here!
 		 */
-		int32_t *buf = ad->buffers[c];
+		float *buf = ad->buffers[c];
 		for(i = 0; i < frames; ++i)
-			out[i * cfg->channels + c] =
-					buf[i] * (1.0f / 8388608.0f);
+			out[i * cfg->channels + c] = buf[i];
 	}
 }
 
@@ -148,13 +147,13 @@ static A2_errors sdld_Open(A2_driver *driver)
 		sdld_Close(driver);
 		return A2_BADBUFSIZE;
 	}
-	if(!(ad->buffers = calloc(cfg->channels, sizeof(int32_t *))))
+	if(!(ad->buffers = calloc(cfg->channels, sizeof(float *))))
 	{
 		sdld_Close(driver);
 		return A2_OOMEMORY;
 	}
 	for(c = 0; c < cfg->channels; ++c)
-		if(!(ad->buffers[c] = calloc(cfg->buffer, sizeof(int32_t))))
+		if(!(ad->buffers[c] = calloc(cfg->buffer, sizeof(float))))
 			{
 				sdld_Close(driver);
 				return A2_OOMEMORY;

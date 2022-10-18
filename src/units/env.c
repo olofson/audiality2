@@ -1,7 +1,7 @@
 /*
  * env.c - Audiality 2 envelope generator unit
  *
- * Copyright 2016 David Olofson <david@olofson.net>
+ * Copyright 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,14 +24,13 @@
 #include <stdlib.h>
 #include "env.h"
 
-#define	A2ENV_LUTSHIFT	6
-#define	A2ENV_LUTSIZE	(1 << A2ENV_LUTSHIFT)
+#define	A2ENV_LUTSIZE	64
 
 
 /* Process-wide lookup tables */
 typedef struct A2ENV_lut
 {
-	uint16_t	lut[A2ENV_LUTSIZE + 2];
+	float		lut[A2ENV_LUTSIZE + 2];
 } A2ENV_lut;
 
 typedef enum A2ENV_luts
@@ -90,25 +89,18 @@ typedef struct A2_env
 	A2_unit		header;
 	A2ENV_lut	*lut;
 	A2_ramper	ramper;
-	unsigned	msdur;		/* One ms in sample frames (16:16) */
+	float		msdur;		/* One ms in sample frames */
 
 	/* Output transform for non-linear modes */
-	int		scale;
-	int		offset;
-	int		out;
+	float		scale;
+	float		offset;
+	float		out;
 } A2_env;
 
 
 static inline A2_env *env_cast(A2_unit *u)
 {
 	return (A2_env *)u;
-}
-
-
-static inline unsigned env_ms2t(A2_unit *u, int d)
-{
-	A2_env *env = env_cast(u);
-	return ((int64_t)d * env->msdur + 0x7fffff) >> 24;
 }
 
 
@@ -124,40 +116,41 @@ static void env_ProcessLUT(A2_unit *u, unsigned offset, unsigned frames)
 	A2_env *env = env_cast(u);
 	A2_cport *co = &u->coutputs[A2ENVCO_OUT];
 	A2_ramper *r = &env->ramper;
-	uint16_t *t = env->lut->lut;
-	uint32_t i, f;
+	float *t = env->lut->lut;
+	uint32_t i;
+	float f;
 	a2_PrepareRamper(r, frames);
 	a2_RunRamper(r, frames);
-	i = r->value >> (24 - A2ENV_LUTSHIFT);
-	f = (r->value >> (24 - 16 - A2ENV_LUTSHIFT)) & 65535;
-	env->out = (f * t[i + 1] + (65536 - f) * t[i]) >> 7;
-	env->out = ((int64_t)env->out * env->scale >> 24) + env->offset;
+	i = r->value * A2ENV_LUTSIZE;
+	f = r->value - i * A2ENV_LUTSIZE;
+	env->out = (f * t[i + 1] + (1.0f - f) * t[i]) * env->scale + env->offset;
 	co->write(co->unit, env->out, offset, frames << 8);
 	if(!r->delta)
 		u->Process = env_ProcessOff;	/* Done! */
 }
 
 
-static void env_Target(A2_unit *u, int v, unsigned start, unsigned dur)
+static void env_Target(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_env *env = env_cast(u);
-	int *ci = u->registers;
+	float *ci = u->registers;
 	A2_cport *co = &u->coutputs[A2ENVCO_OUT];
 	A2_ramper *r = &env->ramper;
-	int rstart, rend, mode;
+	float rstart, rend;
+	int mode;
 	if(!co->write)
 		return;
 
 	/* Ramp duration override */
 	if(ci[A2ENVCI_TIME])
-		dur = env_ms2t(u, ci[A2ENVCI_TIME]);
+		dur = ci[A2ENVCI_TIME] * env->msdur * 256.0f;
 
 	if(dur >= 256 - start)
 	{
 		/* Select direction */
-		mode = ci[A2ENVCI_DOWN] >> 16;
+		mode = ci[A2ENVCI_DOWN];
 		if((v >= env->out) || (mode == A2ENVRM_LINK))
-			mode = ci[A2ENVCI_MODE] >> 16;
+			mode = ci[A2ENVCI_MODE];
 	}
 	else
 	{
@@ -206,22 +199,22 @@ static void env_Target(A2_unit *u, int v, unsigned start, unsigned dur)
 	if(mode >= 0)
 	{
 		/* Forward */
-		rstart = 0;
-		rend = 1 << 16;
+		rstart = 0.0f;
+		rend = 1.0f;
 		env->scale = v - env->out;
 		env->offset = env->out;
 	}
 	else
 	{
 		/* Reverse */
-		rstart = 1 << 16;
-		rend = 0;
+		rstart = 1.0f;
+		rend = 0.0f;
 		env->scale = env->out - v;
 		env->offset = env->out - env->scale;
 	}
 
 	/* Set up a unity ramp. (Translation done in env_Process*().) */
-	r->value = rstart << 8;
+	r->value = rstart;
 	a2_SetRamper(r, rend, start, dur);
 	u->Process = env_ProcessLUT;
 }
@@ -232,18 +225,18 @@ static A2_errors env_Initialize(A2_unit *u, A2_vmstate *vms,
 {
 	A2_env *env = env_cast(u);
 	A2_config *cfg = (A2_config *)statedata;
-	int *ci = u->registers;
-	env->msdur = cfg->samplerate * 65.536f + .5f;
+	float *ci = u->registers;
+	env->msdur = cfg->samplerate * 0.001f;
 
 	/* Internal state initialization */
-	a2_InitRamper(&env->ramper, 0);
-	env->out = 0;
+	a2_InitRamper(&env->ramper, 0.0f);
+	env->out = 0.0f;
 
 	/* Initialize VM registers */
-	ci[A2ENVCI_TARGET] = 0;
+	ci[A2ENVCI_TARGET] = 0.0f;
 	ci[A2ENVCI_MODE] = A2ENVRM_LINEAR;
 	ci[A2ENVCI_DOWN] = A2ENVRM_LINK;
-	ci[A2ENVCI_TIME] = 0;
+	ci[A2ENVCI_TIME] = 0.0f;
 
 	/* Install Process callback */
 	u->Process = env_ProcessOff;
@@ -262,8 +255,7 @@ static A2_errors env_InitLUTs(void)
 	/* Cosine spline table */
 	t = &luts[A2ENVLUT_SPLINE];
 	for(i = 0; i < A2ENV_LUTSIZE; ++i)
-		t->lut[i] = (1.0f - cos(i * M_PI / (A2ENV_LUTSIZE - 1))) *
-				16384.0f + 0.5f;
+		t->lut[i] = 0.5f - 0.5f * cos(i * M_PI / (A2ENV_LUTSIZE - 1));
 
 	/*
 	 * "Tapered" exponential curves that are scaled and superimposed over
@@ -283,15 +275,15 @@ static A2_errors env_InitLUTs(void)
 		{
 			double x = 1.0f - (double)i / A2ENV_LUTSIZE;
 			double r = (1.0f - x) * rc;
-			t->lut[i] = (pow(c, x) * (1.0f - r) + r - c * x) *
-					32768.0f + 0.5f;
+			t->lut[i] = pow(c, x) * (1.0f - r) + r - c * x;
 		}
 	}
 
 	/* Set the 1.0 points at the end of each LUT! */
-	for(i = 0; i < A2ENVLUT__COUNT; ++i)
-		luts[i].lut[A2ENV_LUTSIZE] = luts[i].lut[A2ENV_LUTSIZE + 1] =
-				32768;
+	for(i = 0; i < A2ENVLUT__COUNT; ++i) {
+		luts[i].lut[A2ENV_LUTSIZE] = 1.0f;
+		luts[i].lut[A2ENV_LUTSIZE + 1] = 1.0f;
+	}
 
 	return A2_OK;
 }

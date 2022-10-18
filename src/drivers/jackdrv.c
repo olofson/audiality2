@@ -1,7 +1,7 @@
 /*
  * jackdrv.c - Audiality 2 JACK audio driver
  *
- * Copyright 2012-2014, 2017 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -148,26 +148,26 @@ static int jackd_process(jack_nframes_t nframes, void *arg)
 		--jd->overload;
 	if(need_clear)
 		for(c = 0; c < cfg->channels; ++c)
-			memset(driver->buffers[c], 0, sizeof(int32_t) * nframes);
+			memset(driver->buffers[c], 0, sizeof(float) * nframes);
 	for(c = 0; c < cfg->channels; ++c)
 	{
-		int32_t *buf = driver->buffers[c];
+		float *buf = driver->buffers[c];
 		jack_default_audio_sample_t *out =
 				(jack_default_audio_sample_t *)
 				jd->jack.port_get_buffer(jd->ports[c], nframes);
 #ifdef JACKD_CLIPOUTPUT
 		for(i = 0; i < nframes; ++i)
 		{
-			int s = buf[i] >> 8;
-			if(s < -32768)
-				s = -32768;
-			else if(s > 32767)
-				s = 32767;
-			out[i] = s * (1.0f / 32768.0f);
+			float s = buf[i];
+			if(s < -1.0f)
+				s = -1.0f;
+			else if(s > 1.0f)
+				s = 1.0f;
+			out[i] = s;
 		}
 #else
 		for(i = 0; i < nframes; ++i)
-			out[i] = buf[i] * (1.0f / 8388608.0f);
+			out[i] = buf[i];
 #endif
 	}
 	return 0;

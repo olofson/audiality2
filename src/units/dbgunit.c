@@ -1,7 +1,7 @@
 /*
  * dbgunit.c - Audiality 2 debug unit
  *
- * Copyright 2012-2014, 2016-2017 David Olofson <david@olofson.net>
+ * Copyright 2012-2014, 2016-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -21,6 +21,7 @@
  */
 
 #include <stdio.h>
+#include <float.h>
 #include "dbgunit.h"
 #include "internals.h"
 
@@ -47,14 +48,14 @@ static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
 	A2_interface *i = &du->state->interfaces->interface;
-	int min = 0x7fffffff;
-	int max = 0x80000000;
+	float min = FLT_MAX;
+	float max = FLT_MIN;
 	int ch, s;
 	for(ch = 0; ch < u->noutputs; ++ch)
 	{
 		for(s = 0; s < frames; ++s)
 		{
-			int v = u->inputs[ch][offset + s];
+			float v = u->inputs[ch][offset + s];
 			if(v < min)
 				min = v;
 			if(v > max)
@@ -62,7 +63,7 @@ static void dbgunit_ProcessAdd(A2_unit *u, unsigned offset, unsigned frames)
 			u->outputs[ch][offset + s] += v;
 		}
 	}
-	A2_LOG_MSG(i, "dbgunit[%u]: ProcessAdd() %p o: %u, f: %u, peak:%d/%d",
+	A2_LOG_MSG(i, "dbgunit[%u]: ProcessAdd() %p o: %u, f: %u, peak:%f/%f",
 			du->instance, u->outputs[0], offset, frames, min, max);
 }
 
@@ -71,20 +72,20 @@ static void dbgunit_Process(A2_unit *u, unsigned offset, unsigned frames)
 {
 	A2_dbgunit *du = dbgunit_cast(u);
 	A2_interface *i = &du->state->interfaces->interface;
-	int min = 0x7fffffff;
-	int max = 0x80000000;
+	float min = FLT_MAX;
+	float max = FLT_MIN;
 	int ch, s;
 	for(ch = 0; ch < u->noutputs; ++ch)
 		for(s = 0; s < frames; ++s)
 		{
-			int v = u->inputs[ch][offset + s];
+			float v = u->inputs[ch][offset + s];
 			if(v < min)
 				min = v;
 			if(v > max)
 				max = v;
 			u->outputs[ch][offset + s] = v;
 		}
-	A2_LOG_MSG(i, "dbgunit[%u]: Process() %p o: %u, f: %u, peak:%d/%d",
+	A2_LOG_MSG(i, "dbgunit[%u]: Process() %p o: %u, f: %u, peak:%f/%f",
 			du->instance, u->outputs[0], offset, frames, min, max);
 }
 
@@ -106,7 +107,7 @@ static void dbgunit_ProcessNI(A2_unit *u, unsigned offset, unsigned frames)
 	A2_LOG_MSG(i, "dbgunit[%u]: ProcessNI() o: %u, f: %u", du->instance,
 			offset, frames);
 	for(ch = 0; ch < u->noutputs; ++ch)
-		memset(u->outputs[ch] + offset, 0, frames * sizeof(int));
+		memset(u->outputs[ch] + offset, 0, frames * sizeof(float));
 }
 
 

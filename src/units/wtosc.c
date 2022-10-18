@@ -1,7 +1,7 @@
 /*
  * wtosc.c - Audiality 2 wavetable oscillator unit
  *
- * Copyright 2010-2017 David Olofson <david@olofson.net>
+ * Copyright 2010-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,19 +27,19 @@
 /* NOTE: These all return doubled amplitude samples! */
 #ifdef A2_HIFI
 /* Hermite interpolation with 2x oversampling */
-static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
 	return a2_Hermite(d, ph) + a2_Hermite(d, ph + (dph >> 1));
 }
 #elif (defined A2_LOFI)
 /* Linear interpolation */
-static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
 	return a2_Lerp(d, ph) << 1;
 }
 #else
 /* Linear interpolation with 2x oversampling */
-static inline int wtosc_Inter(int16_t *d, unsigned ph, unsigned dph)
+static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
 	return a2_Lerp(d, ph) + a2_Lerp(d, ph + (dph >> 1));
 }
@@ -69,14 +69,14 @@ typedef struct A2_wtosc
 	unsigned	flags;		/* Init flags (for wave changing) */
 	unsigned	dphase;		/* Increment (8:24 fixp, 1.0/period) */
 	uint64_t	phase;		/* Phase (48:24 fixp, 1.0/sample) */
-	int		noise;		/* Current noise sample (S&H) */
+	float		noise;		/* Current noise sample (S&H) */
 	int		p_ramping;	/* Previous state of 'p' ramper */
-	int		basepitch;	/* Pitch of middle C (1.0/octave) */
+	float		basepitch;	/* Pitch of middle C (1.0/octave) */
 	A2_ramper	p;		/* Linear pitch ramper */
 	A2_ramper	a;		/* Amplitude ramper */
 	A2_wave		*wave;		/* Current waveform */
 	A2_interface	*interface;	/* For changing waves */
-	int		*transpose;	/* Needed for pitch calculations */
+	float		*transpose;	/* Needed for pitch calculations */
 } A2_wtosc;
 
 
@@ -98,10 +98,10 @@ static inline void wtosc_run_pitch(A2_wtosc *o, unsigned frames)
 	a2_RunRamper(&o->p, frames);
 
 	/* We'll need an extra update after the end of a ramp! */
-	o->p_ramping = o->p.delta;
+	o->p_ramping = (o->p.delta != 0.0f);
 
 	/* Calculate new phase delta */
-	o->dphase = a2_P2I((lastv + o->p.value) >> 9);
+	o->dphase = a2_P2I((lastv + o->p.value) * 32768.0f);
 }
 
 
@@ -131,7 +131,7 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 {
 	A2_wtosc *o = wtosc_cast(u);
 	unsigned s, end = offset + frames;
-	int32_t *out = u->outputs[0];
+	float *out = u->outputs[0];
 	A2_state *st = ((A2_interface_i *)o->interface)->state;
 	uint32_t *nstate = &st->noisestate;
 	wtosc_run_pitch(o, frames);
@@ -141,12 +141,12 @@ static inline void wtosc_noise(A2_unit *u, unsigned offset, unsigned frames,
 	{
 		uint64_t nph = o->phase + o->dphase;
 		if((o->dphase >= (1 << 23)) || ((nph ^ o->phase) >> 23))
-			o->noise = a2_Noise(nstate) - 32767;
+			o->noise = a2_Noise(nstate);
 		o->phase = nph;
 		if(add)
-			out[s] += o->noise * (o->a.value >> 10) >> 6;
+			out[s] += o->noise * o->a.value;
 		else
-			out[s] = o->noise * (o->a.value >> 10) >> 6;
+			out[s] = o->noise * o->a.value;
 		a2_RunRamper(&o->a, 1);
 	}
 }
@@ -172,7 +172,7 @@ static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
 		return 0;
 #if DEBUG
 	A2_LOG_DBG(o->interface, "wtosc: Wave %d unloaded while playing!",
-			u->registers[A2OR_WAVE] >> 16);
+			(int)u->registers[A2OR_WAVE]);
 #endif
 	o->wave = NULL;
 	if(o->flags & A2_PROCADD)
@@ -197,7 +197,7 @@ static inline int wtosc_check_unloaded(A2_unit *u, A2_wave *w)
  *
  * Returns the final state of the phase accumulator.
  */
-static inline uint64_t wtosc_do_fragment(A2_wtosc *o, int16_t *d, int32_t *out,
+static inline uint64_t wtosc_do_fragment(A2_wtosc *o, float *d, float *out,
 		unsigned offset, unsigned frames, uint64_t ph, unsigned dph,
 		int add, int looped, unsigned wsize)
 {
@@ -226,9 +226,9 @@ static inline uint64_t wtosc_do_fragment(A2_wtosc *o, int16_t *d, int32_t *out,
 		}
 		v = wtosc_Inter(d, ph >> 16, dph >> 16);
 		if(add)
-			out[s] += (int64_t)v * o->a.value >> (16 + 1);
+			out[s] += v * o->a.value;
 		else
-			out[s] = (int64_t)v * o->a.value >> (16 + 1);
+			out[s] = v * o->a.value;
 		ph += dph;
 		a2_RunRamper(&o->a, 1);
 	}
@@ -242,7 +242,7 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
 	A2_wtosc *o = wtosc_cast(u);
 	unsigned mm, dph;
 	uint64_t ph;
-	int32_t *out = u->outputs[0];
+	float *out = u->outputs[0];
 	A2_wave *w = o->wave;
 	if(wtosc_check_unloaded(u, w))
 		return;
@@ -303,9 +303,9 @@ static inline void wtosc_wavetable_no_mip(A2_unit *u, unsigned offset,
 {
 	A2_wtosc *o = wtosc_cast(u);
 	uint64_t dph;
-	int32_t *out = u->outputs[0];
+	float *out = u->outputs[0];
 	A2_wave *w = o->wave;
-	int16_t *d = w->d.wave.data[0] + A2_WAVEPRE;
+	float *d = w->d.wave.data[0] + A2_WAVEPRE;
 	if(wtosc_check_unloaded(u, w))
 		return;
 
@@ -392,25 +392,25 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 {
 	A2_config *cfg = (A2_config *)statedata;
 	A2_wtosc *o = wtosc_cast(u);
-	int *ur = u->registers;
+	float *ur = u->registers;
 
 	/* Internal state initialization */
 	o->interface = cfg->interface;
 	o->basepitch = cfg->basepitch;
 	o->transpose = vms->r + R_TRANSPOSE;
-	o->noise = 0;
+	o->noise = 0.0f;
 	o->wave = NULL;
-	a2_InitRamper(&o->a, 0);
+	a2_InitRamper(&o->a, 0.0f);
 	a2_InitRamper(&o->p, *o->transpose + o->basepitch);
-	o->dphase = a2_P2I(o->p.value >> 8);
+	o->dphase = a2_P2I(o->p.value * 65536.0f);
 	o->p_ramping = 0;
 	wtosc_set_phase(o, 0, vms->waketime & 0xff);
 
 	/* Initialize VM registers */
-	ur[A2OR_WAVE] = 0;
-	ur[A2OR_PITCH] = 0;
-	ur[A2OR_AMPLITUDE] = 0;
-	ur[A2OR_PHASE] = 0;
+	ur[A2OR_WAVE] = 0.0f;
+	ur[A2OR_PITCH] = 0.0f;
+	ur[A2OR_AMPLITUDE] = 0.0f;
+	ur[A2OR_PHASE] = 0.0f;
 
 	/* Install Process callback (Can change at run-time as needed!) */
 	o->flags = flags;
@@ -430,11 +430,10 @@ static A2_errors wtosc_OpenState(A2_config *cfg, void **statedata)
 }
 
 
-static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
+static void wtosc_Wave(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
 	A2_wavetypes wt = A2_WOFF;
-	v >>= 16;
 	if((o->wave = a2_GetWave(o->interface, v)))
 		wt = o->wave->type;
 	switch(wt)
@@ -483,7 +482,7 @@ static void wtosc_Wave(A2_unit *u, int v, unsigned start, unsigned dur)
 }
 
 
-static void wtosc_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
+static void wtosc_Pitch(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	A2_wtosc *o = wtosc_cast(u);
 	a2_SetRamper(&o->p, v + *o->transpose + o->basepitch, start, dur);
@@ -492,13 +491,13 @@ static void wtosc_Pitch(A2_unit *u, int v, unsigned start, unsigned dur)
 }
 
 
-static void wtosc_Amplitude(A2_unit *u, int v, unsigned start, unsigned dur)
+static void wtosc_Amplitude(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	a2_SetRamper(&wtosc_cast(u)->a, v, start, dur);
 }
 
 
-static void wtosc_Phase(A2_unit *u, int v, unsigned start, unsigned dur)
+static void wtosc_Phase(A2_unit *u, float v, unsigned start, unsigned dur)
 {
 	wtosc_set_phase(wtosc_cast(u), v, start);
 }

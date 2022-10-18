@@ -496,7 +496,7 @@ static A2_errors a2_Open2(A2_state *st)
 	st->statreset = 1;
 
 	/* Start the root voice! */
-	st->msdur = st->config->samplerate * 65.536f + .5f;
+	st->msdur = st->config->samplerate * 0.001f;
 	if((res = a2_init_root_voice(st)))
 		return res;
 

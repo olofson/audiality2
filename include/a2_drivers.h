@@ -1,7 +1,7 @@
 /*
  * a2_drivers.h - Audiality 2 device driver and configuration interfaces
  *
- * Copyright 2012-2017 David Olofson <david@olofson.net>
+ * Copyright 2012-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -59,7 +59,7 @@ struct A2_config
 	int		eventpool;	/* Initial event pool size */
 
 	/* Information (read-only; valid only after a2_Open()!) */
-	int		basepitch;	/* Middle C pitch (1.0/oct, 16:16) */
+	float		basepitch;	/* Middle C pitch (1.0/oct) */
 };
 
 /*
@@ -298,7 +298,7 @@ struct A2_audiodriver
 	/* Engine interface */
 	void		*state;		/* State data for Process() */
 	void (*Process)(A2_audiodriver *driver, unsigned frames);
-	int32_t		**buffers;	/* Array of 8:24 fixp audio buffers */
+	float		**buffers;	/* Array of audio buffers */
 
 	/* (Implementation specific data may follow) */
 };

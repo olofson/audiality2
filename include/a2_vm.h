@@ -1,7 +1,7 @@
 /*
  * a2_vm.h - Public Audiality 2 VM declarations
  *
- * Copyright 2010-2012, 2015-2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2012, 2015-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -65,7 +65,7 @@ typedef struct A2_vmstate
 	uint8_t		state;		/* Current state */
 	uint8_t		func;		/* Current function index */
 	uint16_t	pc;		/* PC of calling instruction */
-	int		r[A2_REGISTERS];	/* VM registers */
+	float		r[A2_REGISTERS];	/* VM registers */
 }  A2_vmstate;
 
 #ifdef __cplusplus

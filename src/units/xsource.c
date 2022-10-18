@@ -1,7 +1,7 @@
 /*
  * xsource.c - Audiality 2 External Source unit
  *
- * Copyright 2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -24,13 +24,13 @@
 #include "internals.h"
 #include <stdlib.h>
 
-static inline void xsrc_clear(int32_t *out, unsigned offset, unsigned frames)
+static inline void xsrc_clear(float *out, unsigned offset, unsigned frames)
 {
-	memset(out + offset, 0, frames * sizeof(int32_t));
+	memset(out + offset, 0, frames * sizeof(float));
 }
 
 
-static inline void xsrc_add(int32_t *in, int32_t *out, unsigned offset,
+static inline void xsrc_add(float *in, float *out, unsigned offset,
 		unsigned frames)
 {
 	int s;
@@ -45,8 +45,8 @@ static inline void xsrc_process(A2_unit *u, unsigned o, unsigned f, int add)
 	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	A2_xinsert_client *xic;
-	int32_t bufs[A2_MAXCHANNELS][A2_MAXFRAG];
-	int32_t *bufp[A2_MAXCHANNELS];
+	float bufs[A2_MAXCHANNELS][A2_MAXFRAG];
+	float *bufp[A2_MAXCHANNELS];
 	for(i = 0; i < u->noutputs; ++i)
 		if(add)
 			bufp[i] = bufs[i] + o;
@@ -86,7 +86,7 @@ static void xsrc_ProcessSingle(A2_unit *u, unsigned offset, unsigned frames)
 	A2_errors res;
 	A2_xinsert *xi = a2_xinsert_cast(u);
 	A2_xinsert_client *xic = xi->clients;
-	int32_t *bufp[A2_MAXCHANNELS];
+	float *bufp[A2_MAXCHANNELS];
 	for(i = 0; i < u->noutputs; ++i)
 		bufp[i] = u->outputs[i] + offset;
 	if((res = xic->callback(bufp, u->noutputs, frames, xic->userdata)))

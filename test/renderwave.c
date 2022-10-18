@@ -5,7 +5,7 @@
  *	latter to render sound into a wave, and then plays that on the realtime
  *	iface.
  *
- * Copyright 2013-2016 David Olofson <david@olofson.net>
+ * Copyright 2013-2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -30,6 +30,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include "audiality2.h"
+#include "a2_dsp.h"
 
 /* Configuration */
 typedef struct TEST_settings {
@@ -180,8 +181,8 @@ static A2_handle render_wave(A2_interface *iface, A2_handle h)
 	while(1)
 	{
 		int i;
-		int32_t *buf = ((A2_audiodriver *)drv)->buffers[0];
-		int32_t max = 0x80000000;
+		float *buf = ((A2_audiodriver *)drv)->buffers[0];
+		float max = 0.0f;
 		if((res = a2_Run(ssiface, cfg->buffer)) < 0)
 		{
 			fprintf(stderr, "a2_Run() failed!\n");
@@ -194,11 +195,11 @@ static A2_handle render_wave(A2_interface *iface, A2_handle h)
 				max = buf[i];
 			else if(-buf[i] > max)
 				max = -buf[i];
-		if((frames > 1000) && (max < 256))
+		if((frames > 1000) && (max < A2_ONEDIV65K))
 			break;
 		frames += cfg->buffer;
 		if((res = a2_Write(iface, sh, A2_I24, buf,
-				cfg->buffer * sizeof(int32_t))))
+				cfg->buffer * sizeof(float))))
 		{
 			fprintf(stderr, "a2_Write() failed!\n");
 			a2_Close(ssiface);

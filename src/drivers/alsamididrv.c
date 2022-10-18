@@ -1,7 +1,7 @@
 /*
  * alsamididrv.c - Audiality 2 ALSA sequencer MIDI driver
  *
- * Copyright 2016-2017 David Olofson <david@olofson.net>
+ * Copyright 2016-2017, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -27,8 +27,10 @@
 #include <alsa/asoundlib.h>
 #include "alsamididrv.h"
 #include "a2_log.h"
+#include "a2_dsp.h"
 
 #define	A2_MIDI_CHANNELS	16
+#define	A2_7BIT2UNITY		(1.0f / 127.0f)
 
 /*
  * MIDI event types/program entry points
@@ -77,21 +79,21 @@ typedef struct ALSA_mididriver
 
 
 static inline void alsamd_send3(ALSA_mididriver *amd, int type,
-		int ch, int arg)
+		int ch, float arg)
 {
-	int args[3];
-	args[0] = type << 16;
-	args[1] = ch << 16;
+	float args[3];
+	args[0] = type;
+	args[1] = ch;
 	args[2] = arg;
 	a2_Senda(amd->interface, amd->channels[ch].voice, 7, 3, args);
 }
 
 static inline void alsamd_send4(ALSA_mididriver *amd, int type,
-		int ch, int arg1, int arg2)
+		int ch, float arg1, float arg2)
 {
-	int args[4];
-	args[0] = type << 16;
-	args[1] = ch << 16;
+	float args[4];
+	args[0] = type;
+	args[1] = ch;
 	args[2] = arg1;
 	args[3] = arg2;
 	a2_Senda(amd->interface, amd->channels[ch].voice, 7, 4, args);
@@ -100,37 +102,37 @@ static inline void alsamd_send4(ALSA_mididriver *amd, int type,
 static inline void alsamd_off(ALSA_mididriver *amd,
 		unsigned ch, unsigned pitch, unsigned vel)
 {
-	alsamd_send4(amd, ME_NOTEOFF, ch, pitch << 16, vel << 9);
+	alsamd_send4(amd, ME_NOTEOFF, ch, pitch, vel * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_on(ALSA_mididriver *amd,
 		unsigned ch, unsigned pitch, unsigned vel)
 {
-	alsamd_send4(amd, ME_NOTEON, ch, pitch << 16, vel << 9);
+	alsamd_send4(amd, ME_NOTEON, ch, pitch, vel * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_aftertouch(ALSA_mididriver *amd,
 		unsigned ch, unsigned pitch, unsigned press)
 {
-	alsamd_send4(amd, ME_AFTERTOUCH, ch, pitch << 16, press << 9);
+	alsamd_send4(amd, ME_AFTERTOUCH, ch, pitch, press * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_control(ALSA_mididriver *amd,
 		unsigned ch, unsigned ctrl, unsigned amt)
 {
-	alsamd_send4(amd, ME_CONTROLCHANGE, ch, ctrl << 16, amt << 9);
+	alsamd_send4(amd, ME_CONTROLCHANGE, ch, ctrl, amt * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_rpn(ALSA_mididriver *amd,
 		unsigned ch, unsigned ctrl, unsigned amt)
 {
-	alsamd_send4(amd, ME_RPN, ch, ctrl << 16, amt << 2);
+	alsamd_send4(amd, ME_RPN, ch, ctrl, amt * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_nrpn(ALSA_mididriver *amd,
 		unsigned ch, unsigned ctrl, unsigned amt)
 {
-	alsamd_send4(amd, ME_NRPN, ch, ctrl << 16, amt << 2);
+	alsamd_send4(amd, ME_NRPN, ch, ctrl, amt * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_do_rpn(ALSA_mididriver *amd, unsigned ch)
@@ -147,13 +149,13 @@ static inline void alsamd_do_rpn(ALSA_mididriver *amd, unsigned ch)
 static inline void alsamd_program(ALSA_mididriver *amd,
 		unsigned ch, unsigned prog)
 {
-	alsamd_send3(amd, ME_PROGRAMCHANGE, ch, prog << 16);
+	alsamd_send3(amd, ME_PROGRAMCHANGE, ch, prog);
 }
 
 static inline void alsamd_pressure(ALSA_mididriver *amd,
 		unsigned ch, unsigned press)
 {
-	alsamd_send3(amd, ME_CHANNELPRESSURE, ch, press << 9);
+	alsamd_send3(amd, ME_CHANNELPRESSURE, ch, press * A2_7BIT2UNITY);
 }
 
 static inline void alsamd_bend(ALSA_mididriver *amd,
@@ -161,7 +163,7 @@ static inline void alsamd_bend(ALSA_mididriver *amd,
 {
 	if(amt == 8191)
 		amt = 8192;
-	alsamd_send3(amd, ME_PITCHBEND, ch, amt << 3);
+	alsamd_send3(amd, ME_PITCHBEND, ch, amt * A2_ONEDIV8K);
 }
 
 static void alsamd_handle_event(ALSA_mididriver *amd, snd_seq_event_t *ev)
