@@ -24,24 +24,23 @@
 #include "wtosc.h"
 #include "internals.h"
 
-/* NOTE: These all return doubled amplitude samples! */
 #ifdef A2_HIFI
 /* Hermite interpolation with 2x oversampling */
-static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
+static inline float wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
-	return a2_Hermite(d, ph) + a2_Hermite(d, ph + (dph >> 1));
+	return (a2_Hermite(d, ph) + a2_Hermite(d, ph + (dph >> 1))) * 0.5f;
 }
 #elif (defined A2_LOFI)
 /* Linear interpolation */
-static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
+static inline float wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
-	return a2_Lerp(d, ph) << 1;
+	return a2_Lerp(d, ph);
 }
 #else
 /* Linear interpolation with 2x oversampling */
-static inline int wtosc_Inter(float *d, unsigned ph, unsigned dph)
+static inline float wtosc_Inter(float *d, unsigned ph, unsigned dph)
 {
-	return a2_Lerp(d, ph) + a2_Lerp(d, ph + (dph >> 1));
+	return (a2_Lerp(d, ph) + a2_Lerp(d, ph + (dph >> 1))) * 0.5f;
 }
 #endif
 
@@ -205,7 +204,7 @@ static inline uint64_t wtosc_do_fragment(A2_wtosc *o, float *d, float *out,
 	unsigned end = offset + frames;
 	for(s = offset; s < end; ++s)
 	{
-		int v;
+		float v;
 		if(wsize)
 		{
 			if(looped)
@@ -244,6 +243,7 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
 	uint64_t ph;
 	float *out = u->outputs[0];
 	A2_wave *w = o->wave;
+printf("wtosc_wavetable(%p, %u, %u)\n", u, offset, frames);
 	if(wtosc_check_unloaded(u, w))
 		return;
 
@@ -419,6 +419,8 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	else
 		u->Process = wtosc_Off;
 
+printf("============= wtosc %p initialized!\n", u);
+
 	return A2_OK;
 }
 
@@ -436,6 +438,7 @@ static void wtosc_Wave(A2_unit *u, float v, unsigned start, unsigned dur)
 	A2_wavetypes wt = A2_WOFF;
 	if((o->wave = a2_GetWave(o->interface, v)))
 		wt = o->wave->type;
+printf("wtosc_Wave(%p, %f\n", u, v);
 	switch(wt)
 	{
 	  case A2_WWAVE:

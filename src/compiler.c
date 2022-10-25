@@ -159,13 +159,13 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 	  case OP_SIZEOF:
 		fprintf(stream, "%d", ins->a2);
 		break;
-	  /* <16:16(a3)> */
+	  /* <float(a3)> */
 	  case OP_DELAY:
 	  case OP_TDELAY:
 	  case OP_PUSH:
 	  case OP_DEBUG:
 	  case OP_RAMPALL:
-		fprintf(stream, "%f", ins->a3 / 65536.0f);
+		fprintf(stream, "%f", ins->a3);
 		break;
 	  /* <register(a1)> */
 	  case OP_DELAYR:
@@ -181,7 +181,7 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 	  case OP_RAMPALLR:
 		a2_PrintRegName(ins->a1, stream);
 		break;
-	  /* <register(a1), 16:16(a3)> */
+	  /* <register(a1), float(a3)> */
 	  case OP_LOAD:
 	  case OP_ADD:
 	  case OP_MUL:
@@ -190,7 +190,7 @@ void a2_DumpIns(unsigned *code, unsigned pc, FILE *stream)
 	  case OP_RAND:
 	  case OP_RAMP:
 		a2_PrintRegName(ins->a1, stream);
-		fprintf(stream, " %f", ins->a3 / 65536.0f);
+		fprintf(stream, " %f", ins->a3);
 		break;
 	  /* <register(a1), integer(a2)> */
 	  case OP_LOOP:
@@ -268,7 +268,7 @@ static inline void a2_DumpFunction(A2_program *p, unsigned fn, FILE *stream,
 	{
 		fprintf(stream, "%s | %d args; defaults: ", prefix, f->argc);
 		for(j = 0; j < f->argc; j++)
-			fprintf(stream, "%g ", f->argdefs[j] / 65536.0f);
+			fprintf(stream, "%f ", f->argdefs[j]);
 		fprintf(stream, "\n");
 	}
 	fprintf(stream, "%s | size: %d; topreg: %d\n", prefix,
@@ -485,22 +485,6 @@ static void a2c_AddDependency(A2_compiler *c, A2_handle h)
 	VM code generator
 ---------------------------------------------------------*/
 
-/*
- * Convert a double precision value into 16:16 fixed point for the VM. May
- * throw the following exceptions:
- *	A2_OVERFLOW if the parsed value is too large to fit in a 16:16 fixp
- *	A2_UNDERFLOW if a non-zero parsed value is truncated to zero
- */
-static int a2c_Num2VM(A2_compiler *c, double v)
-{
-	int fxv = floor(v * 65536.0f + 0.5f);
-	if((v > 32767.0f) && (v < -32768.0f))
-		a2c_Throw(c, A2_OVERFLOW);
-	if(v && !fxv)
-		a2c_Throw(c, A2_UNDERFLOW);
-	return fxv;
-}
-
 
 /*
  * Convert a double precision value into int, verifying that the value actually
@@ -562,10 +546,10 @@ static void a2c_PopCoder(A2_compiler *c)
 
 /*
  * Issue VM instruction 'op' with arguments 'reg' and 'arg'.
- * Argument range checking is done, and 'arg' is treated as integer or 16:16
- * and handled appropriately, based on the opcode.
+ * Argument range checking is done, and 'arg' is checked and
+ * cast appropriately, based on the opcode.
  */
-static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
+static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, double arg)
 {
 	A2_instruction *ins;
 	A2_coder *cdr = c->coder;
@@ -750,14 +734,8 @@ static void a2c_Code(A2_compiler *c, unsigned op, unsigned reg, int arg)
 			a2c_Throw(c, A2_BADIMMARG);
 		ins->a2 = arg;
 	}
-	DUMPCODE(a2_DumpIns(cdr->code, cdr->pos);)
+	DUMPCODE(a2_DumpIns(cdr->code, cdr->pos, stdout);)
 	cdr->pos += inssize;
-}
-
-
-static void a2c_Codef(A2_compiler *c, unsigned op, unsigned reg, double arg)
-{
-	a2c_Code(c, op, reg, a2c_Num2VM(c, arg));
 }
 
 
@@ -782,7 +760,7 @@ static void a2c_DoFixups(A2_compiler *c, A2_symbol *s)
 		a2c_SetA2(c, fx->pos, s->v.i);
 		DUMPCODE(
 			A2_DLOG("FIXUP: ");
-			a2_DumpIns(c->coder->code, fx->pos);
+			a2_DumpIns(c->coder->code, fx->pos, stdout);
 		)
 		free(fx);
 	}
@@ -1630,7 +1608,7 @@ static void a2c_Branch(A2_compiler *c, A2_opcodes op, unsigned to, int *fixpos)
 		 *	at compile time instead.
 		 */
 		r = a2c_AllocReg(c, A2RT_TEMPORARY);
-		a2c_Codef(c, OP_LOAD, r, a2c_GetValue(c, c->l));
+		a2c_Code(c, OP_LOAD, r, a2c_GetValue(c, c->l));
 		if(fixpos)
 			*fixpos = c->coder->pos;
 		a2c_Code(c, op, r, to);
@@ -1782,15 +1760,15 @@ static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 	  case OP_DELAY:	/* ('to' is not used by these last three) */
 	  case OP_TDELAY:
 	  case OP_DEBUG:
-		a2c_Codef(c, op, to, v);
+		a2c_Code(c, op, to, v);
 		break;
 	  case OP_SUBR:
-		a2c_Codef(c, OP_ADD, to, -v);
+		a2c_Code(c, OP_ADD, to, -v);
 		break;
 	  case OP_DIVR:
 		if(!v)
 			a2c_Throw(c, A2_DIVBYZERO);
-		a2c_Codef(c, OP_MUL, to, 1.0f / v);
+		a2c_Code(c, OP_MUL, to, 1.0f / v);
 		break;
 	  default:
 		switch(op)
@@ -1805,7 +1783,7 @@ static void a2c_code_op_v(A2_compiler *c, A2_opcodes op, int to, double v)
 			tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
 			break;
 		}
-		a2c_Codef(c, OP_LOAD, tmpr, v);
+		a2c_Code(c, OP_LOAD, tmpr, v);
 		a2c_code_op_r(c, op, to, tmpr);
 		if(tmpr != to)
 			a2c_FreeReg(c, tmpr);
@@ -1820,10 +1798,8 @@ static void a2c_code_op_h(A2_compiler *c, A2_opcodes op, int to, unsigned h)
 	switch(op)
 	{
 	  case OP_SIZEOF:
-		a2c_Code(c, op, to, h);
-		break;
 	  case OP_LOAD:
-		a2c_Code(c, op, to, h << 16);
+		a2c_Code(c, op, to, h);
 		break;
 	  default:
 		a2c_Throw(c, A2_INTERNAL + 105);
@@ -2202,7 +2178,7 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 		a2c_Unlex(c);
 		a2c_SimplExp(c, -1);
 		if(a2_IsValue(c->l[0].token))
-			a2c_Codef(c, OP_PUSH, 0, a2c_GetValue(c, c->l));
+			a2c_Code(c, OP_PUSH, 0, a2c_GetValue(c, c->l));
 		else if(a2_IsHandle(c->l[0].token))
 			a2c_Code(c, OP_PUSH, 0,
 					a2c_GetHandle(c, c->l) << 16);
@@ -2239,7 +2215,7 @@ TODO: the rendered program!
 */
 		a2c_SimplExp(c, -1);
 		if(a2_IsValue(c->l[0].token))
-			argv[argc] = a2c_Num2VM(c, a2c_GetValue(c, c->l));
+			argv[argc] = a2c_GetValue(c, c->l);
 		else if(a2_IsHandle(c->l[0].token))
 			argv[argc] = a2c_GetHandle(c, c->l) << 16;
 		else
@@ -2310,7 +2286,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		else if((op == OP_SPAWN || op == OP_SPAWNR) && (r > 255))
 		{
 			int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
-			a2c_Codef(c, OP_LOAD, tmpr, r);
+			a2c_Code(c, OP_LOAD, tmpr, r);
 			a2c_Code(c, op, tmpr, p);
 			a2c_FreeReg(c, tmpr);
 		}
@@ -2342,7 +2318,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		if((op == OP_SEND) && (r > 255))
 		{
 			int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
-			a2c_Codef(c, OP_LOAD, tmpr, r);
+			a2c_Code(c, OP_LOAD, tmpr, r);
 			a2c_Code(c, op, tmpr, p);
 			a2c_FreeReg(c, tmpr);
 		}
@@ -2367,7 +2343,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 			if(r > 255)
 			{
 				int tmpr = a2c_AllocReg(c, A2RT_TEMPORARY);
-				a2c_Codef(c, OP_LOAD, tmpr, r);
+				a2c_Code(c, OP_LOAD, tmpr, r);
 				a2c_Code(c, op, tmpr, 0);
 				a2c_FreeReg(c, tmpr);
 			}
@@ -2431,7 +2407,7 @@ static void a2c_Instruction(A2_compiler *c, A2_opcodes op, int r)
 		else if(a2_IsValue(c->l[0].token))
 		{
 			/* target (if any) in R[a1], duration in a3 */
-			a2c_Codef(c, op, r, a2c_GetValue(c, c->l));
+			a2c_Code(c, op, r, a2c_GetValue(c, c->l));
 		}
 		else
 			a2c_Throw(c, A2_EXPEXPRESSION);
@@ -2666,13 +2642,13 @@ static void a2c_ArgList(A2_compiler *c, A2_function *fn)
 		++nextr;
 		if(a2c_Lex(c, 0) == '=')
 		{
-			int v;
+			double v;
 			a2c_Lex(c, 0);
 			a2c_Namespace(c);
 			if(a2_IsValue(c->l[0].token))
-				v = a2c_Num2VM(c, a2c_GetValue(c, c->l));
+				v = a2c_GetValue(c, c->l);
 			else if(a2_IsHandle(c->l[0].token))
-				v = a2c_GetHandle(c, c->l) << 16;
+				v = a2c_GetHandle(c, c->l);
 			else
 				a2c_Throw(c, A2_EXPVALUEHANDLE);
 			fn->argdefs[*argc] = v;
@@ -2780,7 +2756,7 @@ static void a2c_AddUnitConstants(A2_compiler *c, const A2_unitdesc *ud,
 			a2c_Throw(c, A2_SYMBOLDEF);
 		if(!(s = a2_NewSymbol(ud->constants[i].name, TK_VALUE)))
 			a2c_Throw(c, A2_OOMEMORY);
-		s->v.f = ud->constants[i].value / 65536.0f;
+		s->v.f = ud->constants[i].value;
 		a2_PushSymbol(namespace, s);
 		DUMPSTRUCT(A2_DLOG(" %s=%f", s->name, s->v.f);)
 	}
@@ -3551,7 +3527,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 			a2c_SetA2(c, fixpos, c->coder->pos);
 			DUMPCODE(
 				A2_DLOG("FIXUP: ");
-				a2_DumpIns(c->coder->code, fixpos);
+				a2_DumpIns(c->coder->code, fixpos, stdout);
 			)
 		}
 
@@ -3564,7 +3540,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_SetA2(c, fixelse, c->coder->pos);
 		DUMPCODE(
 			A2_DLOG("FIXUP: ");
-			a2_DumpIns(c->coder->code, fixelse);
+			a2_DumpIns(c->coder->code, fixelse, stdout);
 		)
 		return;
 	}
@@ -3577,7 +3553,7 @@ static void a2c_IfWhile(A2_compiler *c, A2_opcodes op, int loop)
 		a2c_SetA2(c, fixpos, c->coder->pos);
 		DUMPCODE(
 			A2_DLOG("FIXUP: ");
-			a2_DumpIns(c->coder->code, fixpos);
+			a2_DumpIns(c->coder->code, fixpos, stdout);
 		)
 	}
 }
@@ -3877,10 +3853,10 @@ static int a2c_Statement(A2_compiler *c, A2_tokens terminator)
 		r = a2c_AllocReg(c, A2RT_TEMPORARY);
 		a2c_SimplExp(c, r);
 		a2c_CodeOpL(c, OP_LOAD, r, c->l);
-		a2c_Codef(c, OP_MUL, r, 1.0f / 60.0f);
+		a2c_Code(c, OP_MUL, r, 1.0f / 60.0f);
 		a2c_SimplExp(c, r);
 		a2c_CodeOpL(c, OP_MUL, r, c->l);
-		a2c_Codef(c, OP_LOAD, R_TICK, 1000.0f);
+		a2c_Code(c, OP_LOAD, R_TICK, 1000.0f);
 		a2c_Code(c, OP_DIVR, R_TICK, r);
 		a2c_FreeReg(c, r);
 		break;

@@ -417,7 +417,7 @@ TODO: registers in future versions!
 typedef struct A2_function
 {
 	unsigned	*code;		/* VM code */
-	int		argdefs[A2_MAXARGS];	/* Argument default values */
+	float		argdefs[A2_MAXARGS];	/* Argument default values */
 	uint16_t	size;		/* Size of 'code' (32 bit words) */
 	uint8_t		argv;		/* First register of argument list */
 	uint8_t		argc;		/* Number of arguments */

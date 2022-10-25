@@ -1180,7 +1180,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		A2_instruction *ins = (A2_instruction *)(code + v->s.pc);
 		DUMPCODERT(
 			A2_DLOG("%p: ", v);
-			a2_DumpIns(code, v->s.pc);
+			a2_DumpIns(code, v->s.pc, stdout);
 		)
 		if(!--inscount)
 			A2_VMABORT(A2_OVERLOAD, "VM");
@@ -1337,7 +1337,7 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 		  case OP_DIVR:
 			if(!r[ins->a2])
 				A2_VMABORT(A2_DIVBYZERO, "VM:DIVR");
-			r[ins->a1] = ((int64_t)r[ins->a1] << 16) / r[ins->a2];
+			r[ins->a1] = r[ins->a1] / r[ins->a2];
 			a2_RTMark(&rt, ins->a1);
 			break;
 		  case OP_P2DR:

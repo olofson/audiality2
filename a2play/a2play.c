@@ -227,8 +227,7 @@ static void print_info(int indent, const char *xname, A2_handle h)
 			const A2_constdesc *cd;
 			printf("   C:");
 			for(cd = ud->constants; cd->name; cd++)
-				printf(" %s:%g", cd->name,
-						cd->value / 65536.0f);
+				printf(" %s:%g", cd->name, cd->value);
 		}
 		break;
 	  }
