@@ -159,7 +159,7 @@ static inline void a2_PrepareRamper(A2_ramper *rr, int frames)
 	}
 	else if(frames <= (rr->timer >> 8))
 	{
-		rr->delta = (rr->target - rr->value) / rr->timer;
+		rr->delta = (rr->target - rr->value) / rr->timer * 256.0f;
 		rr->timer -= frames << 8;
 	}
 	else
@@ -176,7 +176,7 @@ static inline void a2_PrepareRamper(A2_ramper *rr, int frames)
 /* Advance ramper by 'frames' */
 static inline void a2_RunRamper(A2_ramper *rr, int frames)
 {
-	rr->value += rr->delta * (frames * A2_ONEDIV256);
+	rr->value += rr->delta * frames;
 }
 
 /*

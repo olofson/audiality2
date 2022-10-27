@@ -1,7 +1,7 @@
 /*
  * compiler.c - Audiality 2 Script (A2S) compiler
  *
- * Copyright 2010-2014, 2016 David Olofson <david@olofson.net>
+ * Copyright 2010-2014, 2016, 2022 David Olofson <david@olofson.net>
  *
  * This software is provided 'as-is', without any express or implied warranty.
  * In no event will the authors be held liable for any damages arising from the
@@ -2180,8 +2180,7 @@ static void a2c_Arguments(A2_compiler *c, int maxargc)
 		if(a2_IsValue(c->l[0].token))
 			a2c_Code(c, OP_PUSH, 0, a2c_GetValue(c, c->l));
 		else if(a2_IsHandle(c->l[0].token))
-			a2c_Code(c, OP_PUSH, 0,
-					a2c_GetHandle(c, c->l) << 16);
+			a2c_Code(c, OP_PUSH, 0, a2c_GetHandle(c, c->l));
 		else if(a2_IsRegister(c->l[0].token))
 		{
 			int r = a2c_GetIndex(c, c->l);
@@ -2217,7 +2216,7 @@ TODO: the rendered program!
 		if(a2_IsValue(c->l[0].token))
 			argv[argc] = a2c_GetValue(c, c->l);
 		else if(a2_IsHandle(c->l[0].token))
-			argv[argc] = a2c_GetHandle(c, c->l) << 16;
+			argv[argc] = a2c_GetHandle(c, c->l);
 		else
 			a2c_Throw(c, A2_EXPCONSTANT);
 	}

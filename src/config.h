@@ -31,16 +31,16 @@
 #	define	MSGTRACK(x)		/* Track origin of messages */
 #	define	EVLEAKTRACK(x)		/* Check for event leaks */
 #	define	DUMPMSGS(x)		/* Dump messages from audio context */
-#	define	DUMPCODE(x)		/* Enable compiler VM code output */
-#	define	DUMPSOURCE(x)		/* Dump source lines while compiling */
+#	define	DUMPCODE(x)	x	/* Enable compiler VM code output */
+#	define	DUMPSOURCE(x)	x	/* Dump source lines while compiling */
 #	define	SYMBOLDBG(x)		/* Compiler symbol table debugging */
 #	define	REGDBG(x)		/* Register allocation debugging */
 #	define	SCOPEDBG(x)		/* Compiler scope management */
-#	define	RENDERDBG(x)		/* Compiler 'wave' rendering info */
+#	define	RENDERDBG(x)	x	/* Compiler 'wave' rendering info */
 #	define	DUMPLSTRINGS(x)		/* Lexer string processing output */
 #	define	DUMPSTRUCT(x)	x	/* Compiler voice structure dumping */
 #	define	DUMPSTRUCTRT(x)	x	/* Realtime voice structure dumping */
-#	define	DUMPCODERT(x)	x	/* Enable realtime VM code dumping */
+#	define	DUMPCODERT(x)		/* Enable realtime VM code dumping */
 #	define	DUMPSIZES(x)	x	/* Dump engine struct sizes at init */
 #	define	PITCHDEBUG(x)	x	/* a2_Pitch2PhI() table debugging */
 #	undef	CERRDIE			/* Die in assert(0) on compile errs */

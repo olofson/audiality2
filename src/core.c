@@ -591,7 +591,7 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
  *	initialized and started at the exact start time of the program.
  */
 A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
-		A2_program *p, int argc, int *argv)
+		A2_program *p, int argc, float *argv)
 {
 	int i;
 	v->program = p;
@@ -620,7 +620,7 @@ A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
  * Make a function or interrupt call to function 'func' of the current program.
  */
 A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
-		int argc, int *argv, int interrupt)
+		int argc, float *argv, int interrupt)
 {
 	int i;
 	A2_function *fn = v->program->funcs + func;
@@ -648,7 +648,7 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 
 /* Enqueue a timestamped event for entry point 'ep' of the specified voice. */
 static inline A2_errors a2_VoiceSend(A2_state *st, A2_voice *v, unsigned when,
-		unsigned ep, int argc, int *argv)
+		unsigned ep, int argc, float *argv)
 {
 	A2_event *e;
 	if(!(e = a2_AllocEvent(st)))
@@ -786,7 +786,7 @@ static inline void a2_KillSubvoice(A2_state *st, A2_voice *v, int vid)
  * anonymous.
  */
 static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, int vid,
-		A2_handle program, int argc, int *argv)
+		A2_handle program, int argc, float *argv)
 {
 	int res;
 	A2_voice *nv;
@@ -808,14 +808,14 @@ static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, int vid,
 }
 
 
-DUMPMSGS(static void printargs(int argc, int *argv)
+DUMPMSGS(static void printargs(int argc, float *argv)
 {
 	int i;
 	for(i = 0; i < argc; ++i)
 		if(i < argc - 1)
-			A2_DLOG("%f, ", argv[i] / 65536.0f);
+			A2_DLOG("%f, ", argv[i]);
 		else
-			A2_DLOG("%f", argv[i] / 65536.0f);
+			A2_DLOG("%f", argv[i]);
 })
 
 /* Start a detached new voice as specified by 'eb' under 'parent'. */
@@ -1166,7 +1166,8 @@ static int a2_sizeof_object(A2_state *st, int handle)
 static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 {
 	int res;
-	int cargc = 0, cargv[A2_MAXARGS];	/* run/spawn argument stack */
+	int cargc = 0;
+	float cargv[A2_MAXARGS];	/* run/spawn argument stack */
 	unsigned *code = v->program->funcs[v->s.func].code;
 	float *r = v->s.r;
 	unsigned inscount = A2_INSLIMIT;

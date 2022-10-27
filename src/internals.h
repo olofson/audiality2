@@ -507,14 +507,14 @@ typedef union A2_eventbody
 		A2_EVENT_COMMON
 		A2_handle	program;	/* Program handle */
 		A2_handle	voice;		/* New voice handle */
-		int		a[A2_MAXARGS];	/* Arguments (16:16 fixp) */
+		float		a[A2_MAXARGS];	/* Arguments */
 	} start;
 	struct
 	{
 		A2_EVENT_COMMON
 		/* Fields for PLAY, SEND and SENDSUB actions */
 		A2_handle	program;	/* Handle or entry point */
-		int		a[A2_MAXARGS];	/* Arguments (16:16 fixp) */
+		float		a[A2_MAXARGS];	/* Arguments */
 	} play;
 	struct
 	{
@@ -958,9 +958,9 @@ A2_voice *a2_VoiceAlloc(A2_state *st);
 A2_errors a2_init_root_voice(A2_state *st);
 A2_voice *a2_VoiceNew(A2_state *st, A2_voice *parent, unsigned when);
 A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
-		A2_program *p, int argc, int *argv);
+		A2_program *p, int argc, float *argv);
 A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
-		int argc, int *argv, int interrupt);
+		int argc, float *argv, int interrupt);
 void a2_VoiceFree(A2_state *st, A2_voice **head);
 
 static inline void a2_VoiceDetach(A2_voice *v, unsigned when)

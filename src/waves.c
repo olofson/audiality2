@@ -592,8 +592,8 @@ A2_handle a2_UploadWave(A2_interface *i,
 	{
 		float min = 0;
 		float max = 0;
-		for(int i = 0; i < w->d.wave.size[0]; ++i) {
-			float s = w->d.wave.data[0][i];
+		for(int p = 0; p < w->d.wave.size[0]; ++p) {
+			float s = w->d.wave.data[0][p];
 			if(s < min)
 				min = s;
 			if(s > max)

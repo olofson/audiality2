@@ -87,7 +87,7 @@ static inline A2_wtosc *wtosc_cast(A2_unit *u)
 
 static inline void wtosc_run_pitch(A2_wtosc *o, unsigned frames)
 {
-	unsigned lastv;
+	float lastv;
 	a2_PrepareRamper(&o->p, frames);
 	if(o->dphase && (!o->p.timer && !o->p_ramping))
 		return;	/* No update needed */
@@ -243,7 +243,6 @@ static inline void wtosc_wavetable(A2_unit *u, unsigned offset,
 	uint64_t ph;
 	float *out = u->outputs[0];
 	A2_wave *w = o->wave;
-printf("wtosc_wavetable(%p, %u, %u)\n", u, offset, frames);
 	if(wtosc_check_unloaded(u, w))
 		return;
 
@@ -419,8 +418,6 @@ static A2_errors wtosc_Initialize(A2_unit *u, A2_vmstate *vms, void *statedata,
 	else
 		u->Process = wtosc_Off;
 
-printf("============= wtosc %p initialized!\n", u);
-
 	return A2_OK;
 }
 
@@ -438,7 +435,6 @@ static void wtosc_Wave(A2_unit *u, float v, unsigned start, unsigned dur)
 	A2_wavetypes wt = A2_WOFF;
 	if((o->wave = a2_GetWave(o->interface, v)))
 		wt = o->wave->type;
-printf("wtosc_Wave(%p, %f\n", u, v);
 	switch(wt)
 	{
 	  case A2_WWAVE:
