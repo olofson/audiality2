@@ -582,6 +582,19 @@ void a2_VoiceFree(A2_state *st, A2_voice **head)
  *===========================================================================*/
 
 
+#if (DUMPMSGS(1)+0) || (DUMPCODERT(1)+0)
+static void printargs(int argc, float *argv)
+{
+	int i;
+	for(i = 0; i < argc; ++i)
+		if(i < argc - 1)
+			A2_DLOG("%f, ", argv[i]);
+		else
+			A2_DLOG("%f", argv[i]);
+}
+#endif
+
+
 /*
  * Start program 'p' on voice 'v'.
  *
@@ -612,6 +625,11 @@ A2_errors a2_VoiceStart(A2_state *st, A2_voice *v,
 	/* Unit control registers start after the main program arguments! */
 	v->ncregs = p->funcs->argv + p->funcs->argc;
 
+	DUMPCODERT(
+		A2_DLOG("%p: a2_VoiceStart(", v);
+		printargs(p->funcs[0].argc, v->s.r + p->funcs[0].argv);
+		A2_DLOG(")\n");
+	)
 	return A2_OK;
 }
 
@@ -642,6 +660,12 @@ A2_errors a2_VoiceCall(A2_state *st, A2_voice *v, unsigned func,
 	memcpy(v->s.r + fn->argv, argv, argc * sizeof(float));
 	for(i = argc; i < fn->argc; ++i)
 		v->s.r[i + fn->argv] = fn->argdefs[i];
+
+	DUMPCODERT(
+		A2_DLOG("%p: a2_VoiceCall(%u: ", v, func);
+		printargs(fn->argc, v->s.r + fn->argv);
+		A2_DLOG(")\n");
+	)
 	return A2_OK;
 }
 
@@ -806,17 +830,6 @@ static A2_errors a2_VoiceSpawn(A2_state *st, A2_voice *v, int vid,
 		a2_VoiceFree(st, &v->sub);
 	return res;
 }
-
-
-DUMPMSGS(static void printargs(int argc, float *argv)
-{
-	int i;
-	for(i = 0; i < argc; ++i)
-		if(i < argc - 1)
-			A2_DLOG("%f, ", argv[i]);
-		else
-			A2_DLOG("%f", argv[i]);
-})
 
 /* Start a detached new voice as specified by 'eb' under 'parent'. */
 static inline A2_errors a2_event_play(A2_state *st, A2_voice *parent,
@@ -1117,14 +1130,14 @@ static inline void a2_RTSetAll(A2_regtracker *rt, A2_state *st, A2_voice *v,
 
 
 /* Convert musical tick duration to audio frame delta time */
-static inline unsigned a2_ticks2t(A2_state *st, A2_voice *v, int d)
+static inline unsigned a2_ticks2t(A2_state *st, A2_voice *v, float d)
 {
 	return d * v->s.r[R_TICK] * st->msdur * 256.0f + 0.5f;
 }
 
 
 /* Convert milliseconds to audio frame delta time */
-static inline unsigned a2_ms2t(A2_state *st, int d)
+static inline unsigned a2_ms2t(A2_state *st, float d)
 {
 	return d * st->msdur * 256.0f + 0.5f;
 }
@@ -1278,8 +1291,8 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			v->s.pc = ins->a2;
 			continue;
 		  case OP_LOOP:
-			r[ins->a1] -= 65536;
-			if(r[ins->a1] <= 0)
+			r[ins->a1] -= 1.0f;
+			if(r[ins->a1] <= 0.0f)
 				break;
 			v->s.pc = ins->a2;
 			continue;
@@ -1294,22 +1307,22 @@ static inline A2_errors a2_VoiceProcessVM(A2_state *st, A2_voice *v)
 			v->s.pc = ins->a2;
 			continue;
 		  case OP_JG:
-			if(r[ins->a1] <= 0)
+			if(r[ins->a1] <= 0.0f)
 				break;
 			v->s.pc = ins->a2;
 			continue;
 		  case OP_JL:
-			if(r[ins->a1] >= 0)
+			if(r[ins->a1] >= 0.0f)
 				break;
 			v->s.pc = ins->a2;
 			continue;
 		  case OP_JGE:
-			if(r[ins->a1] < 0)
+			if(r[ins->a1] < 0.0f)
 				break;
 			v->s.pc = ins->a2;
 			continue;
 		  case OP_JLE:
-			if(r[ins->a1] > 0)
+			if(r[ins->a1] > 0.0f)
 				break;
 			v->s.pc = ins->a2;
 			continue;
